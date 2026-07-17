@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<octopus scheme="1.0">
+  <project_title>Concert Ticketing System</project_title>
+
+  <tags>
+    <tag color="#10B981">Public</tag>
+    <tag color="#3B82F6">Customer</tag>
+    <tag color="#8B5CF6">Organizer</tag>
+    <tag color="#EF4444">Admin</tag>
+  </tags>
+
+  <tree>
+    <!-- SECTION 1: PUBLIC & CUSTOMER AREA -->
+    <section>
+      <node tag="Public">
+        <node_title>Home</node_title>
+        <seo>
+          <slug>/</slug>
+          <description>หน้าหลักระบบจองตั๋วคอนเสิร์ต</description>
+        </seo>
+        <blocks>
+          <block>
+            <block_title>Header &amp; Nav</block_title>
+            <wireframe>header</wireframe>
+          </block>
+          <block>
+            <block_title>Hero Banners</block_title>
+            <wireframe>hero_with_arrows</wireframe>
+          </block>
+          <block>
+            <block_title>Featured Concerts</block_title>
+            <wireframe>cards</wireframe>
+          </block>
+        </blocks>
+        <children/>
+      </node>
+
+      <node tag="Public">
+        <node_title>Concerts</node_title>
+        <seo>
+          <slug>/concerts</slug>
+        </seo>
+        <blocks>
+          <block>
+            <block_title>Search &amp; Filters</block_title>
+            <wireframe>filter, searchbar</wireframe>
+          </block>
+          <block>
+            <block_title>All Concerts Grid</block_title>
+            <wireframe>catalog</wireframe>
+          </block>
+        </blocks>
+        <children>
+          <node tag="Public">
+            <node_title>Concert Detail</node_title>
+            <seo>
+              <slug>/concerts/[id]</slug>
+            </seo>
+            <blocks>
+              <block>
+                <block_title>Concert Info</block_title>
+                <wireframe>text_and_sidebar_form</wireframe>
+              </block>
+            </blocks>
+            <children>
+              <node tag="Customer">
+                <node_title>Seat Selection</node_title>
+                <seo>
+                  <slug>/concerts/[id]/seat-selection</slug>
+                </seo>
+                <blocks>
+                  <block>
+                    <block_title>Interactive Seat Map</block_title>
+                    <wireframe>map</wireframe>
+                  </block>
+                </blocks>
+                <children/>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+
+      <node tag="Public">
+        <node_title>Auth</node_title>
+        <children>
+          <node tag="Public">
+            <node_title>Login</node_title>
+            <seo>
+              <slug>/login</slug>
+            </seo>
+            <blocks>
+              <block>
+                <block_title>Login Form</block_title>
+                <wireframe>form</wireframe>
+              </block>
+            </blocks>
+            <children/>
+          </node>
+          <node tag="Public">
+            <node_title>Register</node_title>
+            <seo>
+              <slug>/register</slug>
+            </seo>
+            <blocks>
+              <block>
+                <block_title>Registration Form</block_title>
+                <wireframe>sign_up</wireframe>
+              </block>
+            </blocks>
+            <children/>
+          </node>
+        </children>
+      </node>
+
+      <node tag="Customer">
+        <node_title>Customer Profile</node_title>
+        <children>
+          <node tag="Customer">
+            <node_title>My Tickets</node_title>
+            <seo>
+              <slug>/my-tickets</slug>
+            </seo>
+            <blocks>
+              <block>
+                <block_title>Booking History</block_title>
+                <wireframe>cards</wireframe>
+              </block>
+            </blocks>
+            <children>
+              <node tag="Customer">
+                <node_title>E-Ticket Detail</node_title>
+                <seo>
+                  <slug>/my-tickets/[ticketId]</slug>
+                </seo>
+                <blocks>
+                  <block>
+                    <block_title>Ticket &amp; QR Code</block_title>
+                    <wireframe>qr_code, text</wireframe>
+                  </block>
+                </blocks>
+                <children/>
+              </node>
+            </children>
+          </node>
+          <node tag="Customer">
+            <node_title>Manage Profile</node_title>
+            <seo>
+              <slug>/profile</slug>
+            </seo>
+            <blocks>
+              <block>
+                <block_title>Profile Settings</block_title>
+                <wireframe>profile</wireframe>
+              </block>
+            </blocks>
+            <children/>
+          </node>
+        </children>
+      </node>
+
+      <node tag="Customer">
+        <node_title>Checkout System</node_title>
+        <children>
+          <node tag="Customer">
+            <node_title>Order Summary</node_title>
+            <seo>
+              <slug>/checkout</slug>
+            </seo>
+            <blocks>
+              <block>
+                <block_title>Booking Details</block_title>
+                <wireframe>invoice</wireframe>
+              </block>
+            </blocks>
+            <children>
+              <node tag="Customer">
+                <node_title>Payment</node_title>
+                <seo>
+                  <slug>/checkout/payment</slug>
+                </seo>
+                <blocks>
+                  <block>
+                    <block_title>Payment Options</block_title>
+                    <wireframe>form_3</wireframe>
+                  </block>
+                </blocks>
+                <children>
+                  <node tag="Customer">
+                    <node_title>Success &amp; Ticket</node_title>
+                    <seo>
+                      <slug>/checkout/success</slug>
+                    </seo>
+                    <blocks>
+                      <block>
+                        <block_title>Success Message</block_title>
+                        <wireframe>cta</wireframe>
+                      </block>
+                    </blocks>
+                    <children/>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </section>
+
+    <!-- SECTION 2: ORGANIZER AREA -->
+    <section>
+      <node tag="Organizer">
+        <node_title>Organizer Dashboard</node_title>
+        <seo>
+          <slug>/organizer</slug>
+        </seo>
+        <blocks>
+          <block>
+            <block_title>Overview Stats</block_title>
+            <wireframe>chart</wireframe>
+          </block>
+        </blocks>
+        <children>
+          <node tag="Organizer">
+            <node_title>Manage Concerts</node_title>
+            <seo>
+              <slug>/organizer/concerts</slug>
+            </seo>
+            <blocks>
+              <block>
+                <block_title>Concert List</block_title>
+                <wireframe>table_2</wireframe>
+              </block>
+            </blocks>
+            <children>
+              <node tag="Organizer">
+                <node_title>Create Concert</node_title>
+                <seo>
+                  <slug>/organizer/concerts/create</slug>
+                </seo>
+                <blocks>
+                  <block>
+                    <block_title>Creation Form</block_title>
+                    <wireframe>form_3</wireframe>
+                  </block>
+                </blocks>
+                <children/>
+              </node>
+              <node tag="Organizer">
+                <node_title>Edit Concert</node_title>
+                <seo>
+                  <slug>/organizer/concerts/[id]/edit</slug>
+                </seo>
+                <blocks>
+                  <block>
+                    <block_title>Edit Form</block_title>
+                    <wireframe>form_3</wireframe>
+                  </block>
+                </blocks>
+                <children/>
+              </node>
+              <node tag="Organizer">
+                <node_title>Seat Map Setup</node_title>
+                <seo>
+                  <slug>/organizer/concerts/[id]/seat-map</slug>
+                </seo>
+                <blocks>
+                  <block>
+                    <block_title>Seat Grid Builder</block_title>
+                    <wireframe>map_2</wireframe>
+                  </block>
+                </blocks>
+                <children/>
+              </node>
+            </children>
+          </node>
+          <node tag="Organizer">
+            <node_title>Reports &amp; Sales</node_title>
+            <seo>
+              <slug>/organizer/reports</slug>
+            </seo>
+            <blocks>
+              <block>
+                <block_title>Revenue Charts</block_title>
+                <wireframe>pie_chart, table</wireframe>
+              </block>
+            </blocks>
+            <children/>
+          </node>
+          <node tag="Organizer">
+            <node_title>Scan QR Ticket</node_title>
+            <seo>
+              <slug>/organizer/scan</slug>
+            </seo>
+            <blocks>
+              <block>
+                <block_title>QR Scanner</block_title>
+                <wireframe>image_placeholder</wireframe>
+              </block>
+            </blocks>
+            <children/>
+          </node>
+        </children>
+      </node>
+    </section>
+
+    <!-- SECTION 3: ADMIN AREA -->
+    <section>
+      <node tag="Admin">
+        <node_title>Admin Dashboard</node_title>
+        <seo>
+          <slug>/admin</slug>
+        </seo>
+        <children>
+          <node tag="Admin">
+            <node_title>Manage Users</node_title>
+            <seo>
+              <slug>/admin/users</slug>
+            </seo>
+            <blocks>
+              <block>
+                <block_title>Users List</block_title>
+                <wireframe>table_2</wireframe>
+              </block>
+            </blocks>
+            <children/>
+          </node>
+          <node tag="Admin">
+            <node_title>Manage Bookings</node_title>
+            <seo>
+              <slug>/admin/bookings</slug>
+            </seo>
+            <blocks>
+              <block>
+                <block_title>All Bookings Data</block_title>
+                <wireframe>table_2</wireframe>
+              </block>
+            </blocks>
+            <children/>
+          </node>
+          <node tag="Admin">
+            <node_title>System Logs</node_title>
+            <seo>
+              <slug>/admin/logs</slug>
+            </seo>
+            <blocks>
+              <block>
+                <block_title>Server &amp; Error Logs</block_title>
+                <wireframe>table</wireframe>
+              </block>
+            </blocks>
+            <children/>
+          </node>
+        </children>
+      </node>
+    </section>
+  </tree>
+</octopus>

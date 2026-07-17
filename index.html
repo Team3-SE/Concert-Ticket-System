@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIXORA — Concert Ticketing System (Prototype)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d0d14;
+    --surface:#16161f;
+    --surface-alt:#1d1d29;
+    --surface-hover:#23232f;
+    --border:#2a2a38;
+    --text:#f1f1f6;
+    --text-muted:#9494a6;
+    --accent:#ff2e6a;
+    --accent-dim:#4d1226;
+    --accent-2:#ffb020;
+    --accent-3:#37e2c4;
+    --danger:#ff5c5c;
+    --radius:12px;
+    --radius-sm:8px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Prompt",-apple-system,sans-serif;
+    font-weight:400;
+    min-height:100vh;
+  }
+  a{ color:inherit; text-decoration:none; }
+  button{ font-family:inherit; cursor:pointer; }
+  ::selection{ background:var(--accent); color:#fff; }
+
+  /* ---------- Layout shells ---------- */
+  #app{ min-height:100vh; display:flex; flex-direction:column; }
+  .storefront-shell{ display:flex; flex-direction:column; min-height:100vh; }
+  .backoffice-shell{ display:flex; min-height:100vh; }
+
+  /* ---------- Topbar (Public/Customer) ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 32px;
+    border-bottom:1px solid var(--border);
+    background:rgba(13,13,20,0.9);
+    backdrop-filter:blur(8px);
+    position:sticky; top:0; z-index:40;
+    gap:20px; flex-wrap:wrap;
+  }
+  .logo{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:20px; letter-spacing:.02em; }
+  .logo .dot{ width:9px; height:9px; border-radius:50%; background:var(--accent); box-shadow:0 0 10px var(--accent); }
+  .nav-links{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .nav-link{
+    padding:8px 14px; border-radius:20px; font-size:14px; color:var(--text-muted);
+    transition:.15s; white-space:nowrap;
+  }
+  .nav-link:hover{ background:var(--surface-alt); color:var(--text); }
+  .nav-link.active{ background:var(--accent-dim); color:var(--accent); font-weight:500; }
+  .topbar-right{ display:flex; align-items:center; gap:10px; }
+
+  /* ---------- Role switcher (demo aid) ---------- */
+  .role-switch{
+    display:flex; align-items:center; gap:8px;
+    background:var(--surface); border:1px solid var(--border);
+    padding:6px 10px; border-radius:20px; font-size:12px; color:var(--text-muted);
+  }
+  .role-switch select{
+    background:transparent; color:var(--text); border:none; font-family:inherit;
+    font-size:12px; font-weight:600; outline:none; cursor:pointer;
+  }
+  .role-switch select option{ background:var(--surface-alt); color:var(--text); }
+
+  /* ---------- Backoffice sidebar (Organizer/Admin) ---------- */
+  .sidebar{
+    width:230px; flex-shrink:0; background:var(--surface);
+    border-right:1px solid var(--border);
+    display:flex; flex-direction:column; padding:20px 14px;
+    position:sticky; top:0; height:100vh;
+  }
+  .sidebar .logo{ padding:0 10px 20px; }
+  .side-section-label{ font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); padding:14px 10px 6px; }
+  .side-link{
+    display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:var(--radius-sm);
+    font-size:14px; color:var(--text-muted); margin-bottom:2px; transition:.15s;
+  }
+  .side-link:hover{ background:var(--surface-alt); color:var(--text); }
+  .side-link.active{ background:var(--accent-dim); color:var(--accent); font-weight:500; }
+  .side-link .ic{ width:18px; text-align:center; opacity:.9; }
+  .sidebar-footer{ margin-top:auto; }
+
+  .backoffice-main{ flex:1; min-width:0; }
+  .backoffice-topbar{
+    padding:16px 32px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; background:rgba(13,13,20,0.9); backdrop-filter:blur(8px); z-index:30;
+  }
+  .backoffice-topbar h2{ margin:0; font-size:18px; font-weight:600; }
+  .breadcrumb{ font-size:12px; color:var(--text-muted); }
+
+  /* ---------- Page container ---------- */
+  .page{ padding:36px 32px 80px; max-width:1180px; margin:0 auto; width:100%; }
+  .page-narrow{ max-width:480px; }
+  .page-header{ margin-bottom:28px; }
+  .page-header h1{ font-size:26px; margin:0 0 6px; font-weight:700; }
+  .page-header p{ color:var(--text-muted); margin:0; font-size:14px; }
+  .eyebrow{ font-size:12px; color:var(--accent); font-weight:600; letter-spacing:.06em; text-transform:uppercase; margin-bottom:6px; }
+
+  /* ---------- Hero (Home) ---------- */
+  .hero{
+    position:relative; overflow:hidden;
+    background:
+      radial-gradient(60% 90% at 20% 0%, rgba(255,46,106,0.28), transparent 60%),
+      radial-gradient(50% 80% at 90% 10%, rgba(255,176,32,0.18), transparent 60%),
+      var(--surface);
+    border-bottom:1px solid var(--border);
+    padding:70px 32px;
+  }
+  .hero-inner{ max-width:720px; margin:0 auto; text-align:center; }
+  .hero h1{ font-size:44px; font-weight:700; line-height:1.15; margin:0 0 14px; }
+  .hero h1 span{ color:var(--accent); }
+  .hero p{ color:var(--text-muted); font-size:16px; margin:0 0 28px; }
+  .hero-search{
+    display:flex; gap:8px; background:var(--surface-alt); border:1px solid var(--border);
+    padding:6px; border-radius:40px; max-width:520px; margin:0 auto;
+  }
+  .hero-search input{
+    flex:1; background:transparent; border:none; outline:none; color:var(--text);
+    padding:10px 14px; font-family:inherit; font-size:14px;
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    padding:11px 20px; border-radius:24px; font-size:14px; font-weight:600;
+    border:1px solid transparent; transition:.15s;
+  }
+  .btn-primary{ background:var(--accent); color:#fff; }
+  .btn-primary:hover{ background:#ff4b7e; }
+  .btn-secondary{ background:var(--surface-alt); color:var(--text); border-color:var(--border); }
+  .btn-secondary:hover{ background:var(--surface-hover); }
+  .btn-ghost{ background:transparent; color:var(--text-muted); }
+  .btn-ghost:hover{ color:var(--text); }
+  .btn-block{ width:100%; }
+  .btn-sm{ padding:7px 14px; font-size:12px; border-radius:18px; }
+  .btn-danger{ background:transparent; border-color:var(--danger); color:var(--danger); }
+  .btn-danger:hover{ background:rgba(255,92,92,0.1); }
+  .btn[disabled]{ opacity:.4; cursor:not-allowed; }
+
+  /* ---------- Card / grid ---------- */
+  .grid{ display:grid; gap:20px; }
+  .grid-3{ grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); }
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    overflow:hidden; transition:.15s;
+  }
+  .card:hover{ border-color:#3a3a4a; transform:translateY(-2px); }
+  .card-media{
+    height:130px;
+    background:linear-gradient(135deg, var(--m1,#ff2e6a), var(--m2,#ffb020));
+    display:flex; align-items:flex-end; padding:12px;
+  }
+  .card-media .tag{ background:rgba(0,0,0,0.4); font-size:11px; padding:4px 10px; border-radius:20px; backdrop-filter:blur(4px); }
+  .card-body{ padding:16px; }
+  .card-body h3{ margin:0 0 6px; font-size:16px; }
+  .card-meta{ color:var(--text-muted); font-size:12.5px; line-height:1.7; }
+  .card-footer{ display:flex; align-items:center; justify-content:space-between; padding:0 16px 16px; }
+  .price{ font-weight:600; color:var(--accent-2); }
+
+  /* ---------- Forms ---------- */
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px; }
+  .field input, .field select, .field textarea{
+    width:100%; background:var(--surface-alt); border:1px solid var(--border); color:var(--text);
+    padding:11px 14px; border-radius:var(--radius-sm); font-family:inherit; font-size:14px; outline:none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{ border-color:var(--accent); }
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .auth-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:32px; margin:40px auto 0;
+  }
+  .auth-switch{ text-align:center; font-size:13px; color:var(--text-muted); margin-top:16px; }
+  .auth-switch a{ color:var(--accent); font-weight:500; }
+
+  /* ---------- Badge ---------- */
+  .badge{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:4px 10px; border-radius:20px; }
+  .badge-success{ background:rgba(55,226,196,0.14); color:var(--accent-3); }
+  .badge-warning{ background:rgba(255,176,32,0.14); color:var(--accent-2); }
+  .badge-danger{ background:rgba(255,92,92,0.14); color:var(--danger); }
+  .badge-muted{ background:var(--surface-alt); color:var(--text-muted); }
+
+  /* ---------- Table ---------- */
+  .table-wrap{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  th{ text-align:left; padding:12px 16px; color:var(--text-muted); font-weight:500; font-size:12px; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--border); }
+  td{ padding:13px 16px; border-bottom:1px solid var(--border); }
+  tr:last-child td{ border-bottom:none; }
+  tr:hover td{ background:var(--surface-alt); }
+
+  /* ---------- Stat cards ---------- */
+  .stat-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; }
+  .stat-card .label{ color:var(--text-muted); font-size:12.5px; margin-bottom:8px; }
+  .stat-card .value{ font-size:26px; font-weight:700; }
+  .stat-card .delta{ font-size:12px; color:var(--accent-3); margin-top:4px; }
+
+  /* ---------- Seat map ---------- */
+  .seatmap-wrap{ display:flex; gap:32px; flex-wrap:wrap; }
+  .stage{
+    text-align:center; padding:12px; margin-bottom:24px; color:var(--text-muted);
+    font-size:11px; letter-spacing:.2em; text-transform:uppercase;
+    border-bottom:2px solid var(--accent); border-radius:50%/6px;
+  }
+  .seat-grid{ display:flex; flex-direction:column; gap:8px; }
+  .seat-row{ display:flex; gap:8px; align-items:center; }
+  .row-label{ width:18px; font-size:11px; color:var(--text-muted); text-align:right; }
+  .seat{
+    width:26px; height:26px; border-radius:6px; background:var(--surface-alt);
+    border:1px solid var(--border); font-size:9px; display:flex; align-items:center; justify-content:center;
+    color:var(--text-muted); transition:.1s; flex-shrink:0;
+  }
+  .seat.available:hover{ border-color:var(--accent); cursor:pointer; color:var(--text); }
+  .seat.vip{ background:rgba(255,176,32,0.12); border-color:rgba(255,176,32,0.3); }
+  .seat.booked{ background:var(--surface); color:#4a4a58; cursor:not-allowed; border-color:var(--border); }
+  .seat.selected{ background:var(--accent); border-color:var(--accent); color:#fff; cursor:pointer; }
+  .legend-row{ display:flex; gap:18px; flex-wrap:wrap; font-size:12px; color:var(--text-muted); margin-top:16px; }
+  .legend-row span{ display:inline-flex; align-items:center; gap:6px; }
+  .legend-swatch{ width:14px; height:14px; border-radius:4px; }
+
+  .seat-summary{
+    width:280px; flex-shrink:0; background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:20px; align-self:flex-start; position:sticky; top:90px;
+  }
+  .seat-summary h3{ margin:0 0 14px; font-size:15px; }
+  .seat-summary-row{ display:flex; justify-content:space-between; font-size:13px; color:var(--text-muted); padding:6px 0; border-bottom:1px dashed var(--border); }
+  .seat-summary-total{ display:flex; justify-content:space-between; font-size:16px; font-weight:700; margin:14px 0 18px; }
+
+  /* ---------- Steps ---------- */
+  .steps{ display:flex; align-items:center; gap:6px; margin-bottom:32px; justify-content:center; flex-wrap:wrap; }
+  .step{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-muted); }
+  .step-dot{ width:24px; height:24px; border-radius:50%; background:var(--surface-alt); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; }
+  .step.done .step-dot{ background:var(--accent-3); color:#062621; border-color:var(--accent-3); }
+  .step.current .step-dot{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .step.current{ color:var(--text); font-weight:600; }
+  .step-line{ width:30px; height:1px; background:var(--border); }
+
+  /* ---------- Ticket ---------- */
+  .ticket{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    max-width:380px; margin:0 auto; overflow:hidden;
+  }
+  .ticket-top{ padding:22px; background:linear-gradient(135deg,#ff2e6a,#ffb020); }
+  .ticket-top .eyebrow{ color:rgba(255,255,255,0.85); }
+  .ticket-top h2{ margin:0; font-size:20px; color:#fff; }
+  .ticket-dash{ height:0; border-top:2px dashed var(--border); position:relative; }
+  .ticket-dash::before, .ticket-dash::after{
+    content:""; position:absolute; top:-10px; width:20px; height:20px; border-radius:50%; background:var(--bg);
+  }
+  .ticket-dash::before{ left:-10px; }
+  .ticket-dash::after{ right:-10px; }
+  .ticket-body{ padding:22px; text-align:center; }
+  .qr-box{
+    width:150px; height:150px; margin:0 auto 16px; background:#fff; border-radius:8px;
+    display:flex; align-items:center; justify-content:center; color:#111; font-size:11px; font-weight:600;
+  }
+  .qr-box svg{ width:120px; height:120px; }
+
+  /* ---------- Empty / callout ---------- */
+  .callout{
+    border:1px dashed var(--border); border-radius:var(--radius); padding:30px; text-align:center; color:var(--text-muted);
+  }
+
+  /* ---------- Toast ---------- */
+  #toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--surface-alt); border:1px solid var(--border); padding:12px 20px; border-radius:24px;
+    font-size:13.5px; opacity:0; pointer-events:none; transition:.25s; z-index:200; display:flex; align-items:center; gap:8px;
+  }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  #toast .dot{ width:8px; height:8px; border-radius:50%; background:var(--accent-3); }
+
+  footer{ text-align:center; padding:26px; color:var(--text-muted); font-size:12px; border-top:1px solid var(--border); }
+
+  @media (max-width:800px){
+    .backoffice-shell{ flex-direction:column; }
+    .sidebar{ width:100%; height:auto; position:relative; flex-direction:row; overflow-x:auto; padding:10px 12px; }
+    .sidebar .logo{ padding:0 10px; }
+    .side-section-label{ display:none; }
+    .side-link{ white-space:nowrap; }
+    .sidebar-footer{ margin-top:0; }
+    .seatmap-wrap{ flex-direction:column; }
+    .seat-summary{ width:100%; position:static; }
+    .hero h1{ font-size:30px; }
+    .field-row{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div id="toast"><span class="dot"></span><span id="toast-text"></span></div>
+
+<script>
+/* ============================================================
+   STATE + MOCK DATA
+============================================================ */
+let state = {
+  role: 'guest',        // guest | customer | organizer | admin
+  route: 'home',
+  params: {},
+  selectedSeats: []
+};
+
+const concerts = [
+  { id:1, name:'NEON NIGHTS TOUR', artist:'Wave City', date:'12 ก.ย. 2569', venue:'Impact Arena, กรุงเทพฯ', m1:'#ff2e6a', m2:'#ffb020', price:'1,200 - 4,500' },
+  { id:2, name:'MIDNIGHT ECHO', artist:'The Silhouettes', date:'2 ต.ค. 2569', venue:'Centara Grand Hall', m1:'#7c3aed', m2:'#ff2e6a', price:'900 - 3,200' },
+  { id:3, name:'SUNSET FREQUENCY', artist:'Kora & The Waves', date:'20 ต.ค. 2569', venue:'Live Park, ชลบุรี', m1:'#37e2c4', m2:'#1c7ed6', price:'800 - 2,800' },
+  { id:4, name:'GOLDEN HOUR LIVE', artist:'Ploy Aisawa', date:'9 พ.ย. 2569', venue:'Thunder Dome เมืองทองธานี', m1:'#ffb020', m2:'#ff2e6a', price:'1,500 - 5,000' },
+];
+
+const orgConcerts = [
+  { id:1, name:'NEON NIGHTS TOUR', date:'12 ก.ย. 2569', sold:842, total:1200, status:'on-sale' },
+  { id:2, name:'MIDNIGHT ECHO', date:'2 ต.ค. 2569', sold:1200, total:1200, status:'sold-out' },
+  { id:3, name:'SUNSET FREQUENCY', date:'20 ต.ค. 2569', sold:0, total:900, status:'draft' },
+];
+
+const adminUsers = [
+  { name:'chirano.w', email:'chirano@example.com', role:'Customer', status:'active' },
+  { name:'lalana.p', email:'lalana@example.com', role:'Organizer', status:'active' },
+  { name:'pichai.k', email:'pichai@example.com', role:'Customer', status:'banned' },
+  { name:'nattapong.s', email:'natta@example.com', role:'Customer', status:'active' },
+];
+
+const adminBookings = [
+  { id:'BK-10231', user:'chirano.w', concert:'NEON NIGHTS TOUR', seats:2, amount:'฿9,000', status:'flagged' },
+  { id:'BK-10230', user:'natta.s', concert:'MIDNIGHT ECHO', seats:1, amount:'฿1,800', status:'ok' },
+  { id:'BK-10229', user:'ploy.a', concert:'GOLDEN HOUR LIVE', seats:4, amount:'฿12,000', status:'ok' },
+];
+
+const myTickets = [
+  { id:'TK-88213', concert:'NEON NIGHTS TOUR', date:'12 ก.ย. 2569', seat:'Zone A / A-14', m1:'#ff2e6a', m2:'#ffb020' },
+  { id:'TK-88099', concert:'SUNSET FREQUENCY', date:'20 ต.ค. 2569', seat:'Zone B / C-05', m1:'#37e2c4', m2:'#1c7ed6' },
+];
+
+function findConcert(id){ return concerts.find(c => c.id == id) || concerts[0]; }
+
+/* ============================================================
+   ROUTER
+============================================================ */
+const NAV = {
+  guest: [
+    { route:'home', label:'หน้าแรก' },
+    { route:'concerts', label:'คอนเสิร์ต' },
+    { route:'login', label:'เข้าสู่ระบบ' },
+  ],
+  customer: [
+    { route:'home', label:'หน้าแรก' },
+    { route:'concerts', label:'คอนเสิร์ต' },
+    { route:'my-tickets', label:'ตั๋วของฉัน' },
+    { route:'profile', label:'โปรไฟล์' },
+  ],
+  organizer: [
+    { route:'organizer-dashboard', label:'Dashboard', ic:'◆' },
+    { route:'organizer-concerts', label:'จัดการคอนเสิร์ต', ic:'▤' },
+    { route:'organizer-reports', label:'รายงานยอดขาย', ic:'▲' },
+    { route:'organizer-scan', label:'สแกน QR', ic:'▣' },
+  ],
+  admin: [
+    { route:'admin-dashboard', label:'Dashboard', ic:'◆' },
+    { route:'admin-users', label:'จัดการผู้ใช้', ic:'●' },
+    { route:'admin-bookings', label:'ตรวจสอบการจอง', ic:'▤' },
+    { route:'admin-logs', label:'System Logs', ic:'≡' },
+  ]
+};
+
+const DEFAULT_ROUTE = { guest:'home', customer:'home', organizer:'organizer-dashboard', admin:'admin-dashboard' };
+
+function navigate(route, params){
+  state.route = route;
+  state.params = params || {};
+  window.scrollTo(0,0);
+  render();
+}
+
+function setRole(role){
+  state.role = role;
+  navigate(DEFAULT_ROUTE[role]);
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  document.getElementById('toast-text').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(()=> t.classList.remove('show'), 2200);
+}
+
+/* ============================================================
+   SHARED UI PIECES
+============================================================ */
+function roleSwitcher(){
+  return `
+    <div class="role-switch">
+      <span>Demo:</span>
+      <select onchange="setRole(this.value)">
+        <option value="guest" ${state.role==='guest'?'selected':''}>Guest</option>
+        <option value="customer" ${state.role==='customer'?'selected':''}>Customer</option>
+        <option value="organizer" ${state.role==='organizer'?'selected':''}>Event Organizer</option>
+        <option value="admin" ${state.role==='admin'?'selected':''}>Admin</option>
+      </select>
+    </div>`;
+}
+
+function storefrontTopbar(){
+  const links = NAV[state.role].map(n =>
+    `<a class="nav-link ${state.route===n.route?'active':''}" onclick="navigate('${n.route}')">${n.label}</a>`
+  ).join('');
+  return `
+    <div class="topbar">
+      <div class="logo"><span class="dot"></span>TIXORA</div>
+      <div class="nav-links">${links}</div>
+      <div class="topbar-right">
+        ${state.role==='customer' ? `<a class="nav-link" onclick="setRole('guest')">ออกจากระบบ</a>` : ''}
+        ${roleSwitcher()}
+      </div>
+    </div>`;
+}
+
+function sidebar(){
+  const links = NAV[state.role].map(n =>
+    `<a class="side-link ${state.route===n.route?'active':''}" onclick="navigate('${n.route}')">
+       <span class="ic">${n.ic}</span>${n.label}
+     </a>`
+  ).join('');
+  return `
+    <div class="sidebar">
+      <div class="logo"><span class="dot"></span>TIXORA</div>
+      <div class="side-section-label">${state.role==='organizer' ? 'Organizer Panel' : 'Admin Panel'}</div>
+      ${links}
+      <div class="sidebar-footer">
+        <div class="side-section-label">Demo</div>
+        ${roleSwitcher()}
+        <a class="side-link" onclick="setRole('guest')" style="margin-top:8px;">⏻ ออกจากระบบ</a>
+      </div>
+    </div>`;
+}
+
+function pageHeader(eyebrow, title, desc){
+  return `
+    <div class="page-header">
+      ${eyebrow ? `<div class="eyebrow">${eyebrow}</div>` : ''}
+      <h1>${title}</h1>
+      ${desc ? `<p>${desc}</p>` : ''}
+    </div>`;
+}
+
+function steps(items, currentIdx){
+  return `<div class="steps">${items.map((label,i)=>{
+    const cls = i<currentIdx ? 'done' : (i===currentIdx ? 'current' : '');
+    const mark = i<currentIdx ? '✓' : (i+1);
+    return `<div class="step ${cls}"><div class="step-dot">${mark}</div>${label}</div>${i<items.length-1?'<div class="step-line"></div>':''}`;
+  }).join('')}</div>`;
+}
+
+/* ============================================================
+   GUEST / CUSTOMER PAGES
+============================================================ */
+function pageHome(){
+  return `
+    <div class="hero">
+      <div class="hero-inner">
+        <div class="eyebrow">Concert Ticketing System</div>
+        <h1>หาโชว์ที่ใช่ <span>จองที่นั่งที่ชอบ</span></h1>
+        <p>ค้นหาคอนเสิร์ต เลือกที่นั่งแบบเรียลไทม์ และรับ E-Ticket ทันทีหลังชำระเงิน</p>
+        <div class="hero-search">
+          <input placeholder="ค้นหาศิลปิน, คอนเสิร์ต หรือสถานที่..." />
+          <button class="btn btn-primary" onclick="navigate('concerts')">ค้นหา</button>
+        </div>
+      </div>
+    </div>
+    <div class="page">
+      <div class="page-header" style="margin-bottom:18px;">
+        <h1 style="font-size:20px;">คอนเสิร์ตแนะนำ</h1>
+      </div>
+      ${concertGrid(concerts)}
+    </div>`;
+}
+
+function concertGrid(list){
+  return `<div class="grid grid-3">
+    ${list.map(c => `
+      <div class="card" onclick="navigate('concert-detail',{id:${c.id}})">
+        <div class="card-media" style="--m1:${c.m1};--m2:${c.m2}"><span class="tag">${c.date}</span></div>
+        <div class="card-body">
+          <h3>${c.name}</h3>
+          <div class="card-meta">${c.artist}<br>${c.venue}</div>
+        </div>
+        <div class="card-footer">
+          <span class="price">฿${c.price}</span>
+          <span class="btn btn-secondary btn-sm">ดูรายละเอียด</span>
+        </div>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+function pageConcerts(){
+  return `<div class="page">
+    ${pageHeader('Browse','คอนเสิร์ตทั้งหมด','ค้นหาตามชื่อศิลปิน วันที่จัด หรือสถานที่')}
+    <div class="field" style="max-width:360px;margin-bottom:24px;">
+      <input placeholder="🔍 ค้นหาคอนเสิร์ต..." />
+    </div>
+    ${concertGrid(concerts)}
+  </div>`;
+}
+
+function pageConcertDetail(){
+  const c = findConcert(state.params.id);
+  return `<div class="page">
+    <div class="card-media" style="--m1:${c.m1};--m2:${c.m2}; height:220px; border-radius:var(--radius); margin-bottom:24px;"></div>
+    ${pageHeader(c.date, c.name, c.artist + ' · ' + c.venue)}
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:26px;">
+      <span class="badge badge-warning">ราคาตั๋ว ฿${c.price}</span>
+      <span class="badge badge-success">เปิดจำหน่ายแล้ว</span>
+    </div>
+    <p style="color:var(--text-muted); line-height:1.9; max-width:640px; margin-bottom:30px;">
+      รายละเอียดคอนเสิร์ต (ข้อความตัวอย่างสำหรับ Prototype) — ผังที่นั่งแบ่งเป็นโซน VIP / Regular / Standing
+      ประตูเปิด 17:00 น. เริ่มการแสดง 19:00 น. โปรดเตรียมบัตรประชาชนหรือ E-Ticket สำหรับเข้างาน
+    </p>
+    <button class="btn btn-primary" onclick="navigate('seat-selection',{id:${c.id}})">เลือกที่นั่ง</button>
+  </div>`;
+}
+
+function buildSeatRows(){
+  const zones = [
+    { label:'VIP', rows:2, cls:'vip' },
+    { label:'Regular', rows:4, cls:'' },
+  ];
+  let rows = [];
+  let rowChar = 65; // 'A'
+  zones.forEach(z => {
+    for(let r=0; r<z.rows; r++){
+      const seats = [];
+      for(let s=1; s<=10; s++){
+        const seed = (rowChar + s) % 7;
+        const booked = seed === 0 || seed === 3;
+        seats.push({ id:String.fromCharCode(rowChar)+s, cls:z.cls, booked });
+      }
+      rows.push({ label:String.fromCharCode(rowChar), seats });
+      rowChar++;
+    }
+  });
+  return rows;
+}
+const seatRows = buildSeatRows();
+
+function pageSeatSelection(){
+  const c = findConcert(state.params.id);
+  const rowsHtml = seatRows.map(row => `
+    <div class="seat-row">
+      <div class="row-label">${row.label}</div>
+      ${row.seats.map(seat => {
+        const selected = state.selectedSeats.includes(seat.id);
+        let cls = 'seat';
+        if(seat.booked) cls += ' booked';
+        else if(selected) cls += ' selected';
+        else { cls += ' available'; if(seat.cls) cls += ' ' + seat.cls; }
+        const click = seat.booked ? '' : `onclick="toggleSeat('${seat.id}')"`;
+        return `<div class="${cls}" ${click}>${selected? '✓' : seat.id.replace(/[A-Z]/,'')}</div>`;
+      }).join('')}
+    </div>
+  `).join('');
+
+  const price = 1200;
+  const total = state.selectedSeats.length * price;
+
+  return `<div class="page">
+    ${pageHeader('Seat Selection', c.name, 'เลือกที่นั่งที่ต้องการ (คลิกเพื่อเลือก/ยกเลิก)')}
+    <div class="seatmap-wrap">
+      <div style="flex:1; min-width:280px;">
+        <div class="stage">STAGE</div>
+        <div class="seat-grid">${rowsHtml}</div>
+        <div class="legend-row">
+          <span><i class="legend-swatch" style="background:var(--surface-alt);border:1px solid var(--border)"></i>ว่าง</span>
+          <span><i class="legend-swatch" style="background:rgba(255,176,32,0.12);border:1px solid rgba(255,176,32,0.3)"></i>VIP</span>
+          <span><i class="legend-swatch" style="background:var(--accent)"></i>เลือกอยู่</span>
+          <span><i class="legend-swatch" style="background:var(--surface)"></i>ถูกจองแล้ว</span>
+        </div>
+      </div>
+      <div class="seat-summary">
+        <h3>สรุปการเลือกที่นั่ง</h3>
+        ${state.selectedSeats.length === 0
+          ? `<p style="color:var(--text-muted); font-size:13px;">ยังไม่ได้เลือกที่นั่ง</p>`
+          : state.selectedSeats.map(s=>`<div class="seat-summary-row"><span>ที่นั่ง ${s}</span><span>฿${price.toLocaleString()}</span></div>`).join('')
+        }
+        <div class="seat-summary-total"><span>รวมทั้งหมด</span><span>฿${total.toLocaleString()}</span></div>
+        <button class="btn btn-primary btn-block" ${state.selectedSeats.length===0?'disabled':''} onclick="goCheckout()">ไปหน้าชำระเงิน</button>
+      </div>
+    </div>
+  </div>`;
+}
+function toggleSeat(id){
+  const i = state.selectedSeats.indexOf(id);
+  if(i>-1) state.selectedSeats.splice(i,1); else state.selectedSeats.push(id);
+  render();
+}
+function goCheckout(){
+  if(state.role === 'guest'){ showToast('กรุณาเข้าสู่ระบบก่อนทำการจอง'); navigate('login'); return; }
+  navigate('checkout');
+}
+
+function pageLogin(){
+  return `<div class="page page-narrow">
+    <div class="auth-card">
+      ${pageHeader('Welcome back','เข้าสู่ระบบ')}
+      <form onsubmit="event.preventDefault(); setRole('customer'); showToast('เข้าสู่ระบบสำเร็จ (Demo)');">
+        <div class="field"><label>อีเมล หรือ เบอร์โทรศัพท์</label><input type="text" placeholder="you@example.com" required></div>
+        <div class="field"><label>รหัสผ่าน</label><input type="password" placeholder="••••••••" required></div>
+        <button class="btn btn-primary btn-block" type="submit">เข้าสู่ระบบ</button>
+      </form>
+      <div class="auth-switch">ยังไม่มีบัญชี? <a onclick="navigate('register')">สมัครสมาชิก</a></div>
+    </div>
+  </div>`;
+}
+
+function pageRegister(){
+  return `<div class="page page-narrow">
+    <div class="auth-card">
+      ${pageHeader('Join Tixora','สมัครสมาชิก')}
+      <form onsubmit="event.preventDefault(); setRole('customer'); showToast('สมัครสมาชิกสำเร็จ (Demo)');">
+        <div class="field"><label>ชื่อ-นามสกุล</label><input type="text" placeholder="ชื่อของคุณ" required></div>
+        <div class="field"><label>อีเมล หรือ เบอร์โทรศัพท์</label><input type="text" placeholder="you@example.com" required></div>
+        <div class="field"><label>รหัสผ่าน</label><input type="password" placeholder="••••••••" required></div>
+        <button class="btn btn-primary btn-block" type="submit">สมัครสมาชิก</button>
+      </form>
+      <div class="auth-switch">มีบัญชีอยู่แล้ว? <a onclick="navigate('login')">เข้าสู่ระบบ</a></div>
+    </div>
+  </div>`;
+}
+
+function pageMyTickets(){
+  return `<div class="page">
+    ${pageHeader('Customer','ตั๋วของฉัน')}
+    <div class="grid grid-3">
+      ${myTickets.map(t=>`
+        <div class="card" onclick="navigate('ticket-detail',{id:'${t.id}'})">
+          <div class="card-media" style="--m1:${t.m1};--m2:${t.m2}"><span class="tag">${t.date}</span></div>
+          <div class="card-body"><h3>${t.concert}</h3><div class="card-meta">${t.seat}<br>รหัสตั๋ว ${t.id}</div></div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function pageTicketDetail(){
+  const t = myTickets.find(x=>x.id === state.params.id) || myTickets[0];
+  return `<div class="page">
+    <div class="ticket">
+      <div class="ticket-top" style="background:linear-gradient(135deg,${t.m1},${t.m2})">
+        <div class="eyebrow">${t.date}</div>
+        <h2>${t.concert}</h2>
+      </div>
+      <div class="ticket-dash"></div>
+      <div class="ticket-body">
+        <div class="qr-box">${qrSvg()}</div>
+        <div class="card-meta" style="margin-bottom:4px;">ที่นั่ง ${t.seat}</div>
+        <div class="card-meta">รหัสตั๋ว ${t.id}</div>
+        <div class="badge badge-success" style="margin-top:14px;">พร้อมใช้งาน</div>
+      </div>
+    </div>
+    <div style="text-align:center; margin-top:20px;">
+      <button class="btn btn-secondary" onclick="navigate('my-tickets')">← กลับไปหน้าตั๋วของฉัน</button>
+    </div>
+  </div>`;
+}
+function qrSvg(){
+  return `<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#fff"/>
+    ${Array.from({length:64}).map((_,i)=>{
+      const x=(i%8)*12, y=Math.floor(i/8)*12;
+      return Math.random()>0.5 ? `<rect x="${x}" y="${y}" width="10" height="10" fill="#111"/>` : '';
+    }).join('')}
+  </svg>`;
+}
+
+function pageProfile(){
+  return `<div class="page page-narrow">
+    ${pageHeader('Account','ข้อมูลส่วนตัว')}
+    <div class="auth-card" style="margin-top:0;">
+      <div class="field"><label>ชื่อ-นามสกุล</label><input value="จิราณุ วรรณารักษ์"></div>
+      <div class="field"><label>อีเมล</label><input value="chirano@example.com"></div>
+      <div class="field"><label>เบอร์โทรศัพท์</label><input value="081-234-5678"></div>
+      <button class="btn btn-primary btn-block" onclick="showToast('บันทึกข้อมูลแล้ว (Demo)')">บันทึกการเปลี่ยนแปลง</button>
+    </div>
+  </div>`;
+}
+
+function pageCheckout(){
+  const price = 1200;
+  const seats = state.selectedSeats.length ? state.selectedSeats : ['A3','A4'];
+  const total = seats.length * price;
+  return `<div class="page page-narrow">
+    ${steps(['สรุปคำสั่งซื้อ','ชำระเงิน','เสร็จสิ้น'],0)}
+    ${pageHeader('Checkout','สรุปคำสั่งซื้อ')}
+    <div class="table-wrap" style="margin-bottom:20px;">
+      <table>
+        <tr><th>รายการ</th><th style="text-align:right;">ราคา</th></tr>
+        ${seats.map(s=>`<tr><td>ที่นั่ง ${s}</td><td style="text-align:right;">฿${price.toLocaleString()}</td></tr>`).join('')}
+      </table>
+    </div>
+    <div class="seat-summary-total"><span>ยอดชำระทั้งหมด</span><span>฿${total.toLocaleString()}</span></div>
+    <button class="btn btn-primary btn-block" onclick="navigate('payment')">ดำเนินการชำระเงิน</button>
+  </div>`;
+}
+
+function pagePayment(){
+  return `<div class="page page-narrow">
+    ${steps(['สรุปคำสั่งซื้อ','ชำระเงิน','เสร็จสิ้น'],1)}
+    ${pageHeader('Checkout','เลือกวิธีชำระเงิน','ที่นั่งของคุณถูกล็อกไว้ 10 นาที')}
+    <div class="grid" style="grid-template-columns:1fr 1fr; margin-bottom:20px;">
+      <div class="card" style="padding:18px; text-align:center; cursor:pointer;" onclick="navigate('success')">
+        <div style="font-size:28px; margin-bottom:8px;">🇶🇷</div>
+        <div style="font-weight:600; font-size:14px;">PromptPay QR</div>
+      </div>
+      <div class="card" style="padding:18px; text-align:center; cursor:pointer;" onclick="navigate('success')">
+        <div style="font-size:28px; margin-bottom:8px;">💳</div>
+        <div style="font-weight:600; font-size:14px;">บัตรเครดิต (จำลอง)</div>
+      </div>
+    </div>
+    <div class="callout" style="font-size:13px;">เลือกวิธีการชำระเงินเพื่อจำลองการทำรายการ</div>
+  </div>`;
+}
+
+function pageSuccess(){
+  state.selectedSeats = [];
+  return `<div class="page page-narrow">
+    ${steps(['สรุปคำสั่งซื้อ','ชำระเงิน','เสร็จสิ้น'],2)}
+    <div style="text-align:center;">
+      <div style="width:70px;height:70px;border-radius:50%;background:rgba(55,226,196,0.14);color:var(--accent-3);
+        display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 18px;">✓</div>
+      <h1 style="font-size:22px; margin-bottom:8px;">ชำระเงินสำเร็จ</h1>
+      <p style="color:var(--text-muted); margin-bottom:26px;">ระบบได้ออก E-Ticket ให้คุณเรียบร้อยแล้ว</p>
+      <button class="btn btn-primary" onclick="navigate('my-tickets')">ดูตั๋วของฉัน</button>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   ORGANIZER PAGES
+============================================================ */
+function statusBadge(status){
+  const map = {
+    'on-sale': ['badge-success','เปิดขาย'],
+    'sold-out': ['badge-warning','ขายหมด'],
+    'draft': ['badge-muted','แบบร่าง'],
+    'ok': ['badge-success','ปกติ'],
+    'flagged': ['badge-danger','ผิดปกติ'],
+    'active': ['badge-success','ใช้งานอยู่'],
+    'banned': ['badge-danger','ถูกระงับ'],
+  };
+  const [cls,label] = map[status] || ['badge-muted', status];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function pageOrganizerDashboard(){
+  return `<div class="backoffice-topbar"><h2>Organizer Dashboard</h2><span class="breadcrumb">Organizer / Dashboard</span></div>
+  <div class="page">
+    <div class="grid grid-3" style="margin-bottom:28px;">
+      <div class="stat-card"><div class="label">ยอดขายเดือนนี้</div><div class="value">฿482,300</div><div class="delta">▲ 12.4% จากเดือนก่อน</div></div>
+      <div class="stat-card"><div class="label">ตั๋วที่ขายแล้ว</div><div class="value">2,042</div><div class="delta">▲ 8.1%</div></div>
+      <div class="stat-card"><div class="label">คอนเสิร์ตที่เปิดขาย</div><div class="value">2</div><div class="delta" style="color:var(--text-muted);">จากทั้งหมด 3 งาน</div></div>
+    </div>
+    <div class="page-header" style="margin-bottom:14px;"><h1 style="font-size:18px;">คอนเสิร์ตของฉัน</h1></div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>คอนเสิร์ต</th><th>วันที่จัด</th><th>ขายแล้ว</th><th>สถานะ</th><th></th></tr>
+        ${orgConcerts.map(c=>`
+          <tr>
+            <td>${c.name}</td><td>${c.date}</td><td>${c.sold}/${c.total}</td><td>${statusBadge(c.status)}</td>
+            <td><a class="btn btn-secondary btn-sm" onclick="navigate('organizer-concert-edit',{id:${c.id}})">จัดการ</a></td>
+          </tr>`).join('')}
+      </table>
+    </div>
+  </div>`;
+}
+
+function pageOrganizerConcerts(){
+  return `<div class="backoffice-topbar"><h2>จัดการคอนเสิร์ต</h2><span class="breadcrumb">Organizer / Concerts</span></div>
+  <div class="page">
+    <div style="display:flex; justify-content:flex-end; margin-bottom:18px;">
+      <button class="btn btn-primary" onclick="navigate('organizer-concert-create')">+ สร้างคอนเสิร์ตใหม่</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>คอนเสิร์ต</th><th>วันที่จัด</th><th>ขายแล้ว</th><th>สถานะ</th><th></th></tr>
+        ${orgConcerts.map(c=>`
+          <tr>
+            <td>${c.name}</td><td>${c.date}</td><td>${c.sold}/${c.total}</td><td>${statusBadge(c.status)}</td>
+            <td style="display:flex; gap:6px;">
+              <a class="btn btn-secondary btn-sm" onclick="navigate('organizer-concert-edit',{id:${c.id}})">แก้ไข</a>
+              <a class="btn btn-secondary btn-sm" onclick="navigate('organizer-seatmap',{id:${c.id}})">ผังที่นั่ง</a>
+            </td>
+          </tr>`).join('')}
+      </table>
+    </div>
+  </div>`;
+}
+
+function concertForm(existing){
+  const c = existing || {};
+  return `
+    <div class="field"><label>ชื่อคอนเสิร์ต</label><input value="${c.name||''}" placeholder="เช่น NEON NIGHTS TOUR"></div>
+    <div class="field"><label>ศิลปิน</label><input value="${c.artist||''}" placeholder="ชื่อศิลปิน"></div>
+    <div class="field-row">
+      <div class="field"><label>วันที่จัดงาน</label><input type="date"></div>
+      <div class="field"><label>เวลาเริ่มงาน</label><input type="time" value="19:00"></div>
+    </div>
+    <div class="field"><label>สถานที่จัดงาน</label><input value="${c.venue||''}" placeholder="ชื่อสถานที่"></div>
+    <div class="field"><label>รายละเอียดคอนเสิร์ต</label><textarea rows="4" placeholder="คำอธิบายเพิ่มเติม..."></textarea></div>
+  `;
+}
+
+function pageOrganizerConcertCreate(){
+  return `<div class="backoffice-topbar"><h2>สร้างคอนเสิร์ตใหม่</h2><span class="breadcrumb">Organizer / Concerts / Create</span></div>
+  <div class="page page-narrow">
+    ${concertForm()}
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-secondary btn-block" onclick="navigate('organizer-concerts')">ยกเลิก</button>
+      <button class="btn btn-primary btn-block" onclick="showToast('สร้างคอนเสิร์ตแล้ว (Demo)'); navigate('organizer-concerts')">บันทึก</button>
+    </div>
+  </div>`;
+}
+
+function pageOrganizerConcertEdit(){
+  const c = orgConcerts.find(x=>x.id == state.params.id) || orgConcerts[0];
+  return `<div class="backoffice-topbar"><h2>แก้ไขคอนเสิร์ต</h2><span class="breadcrumb">Organizer / Concerts / Edit</span></div>
+  <div class="page page-narrow">
+    ${concertForm(c)}
+    <div style="display:flex; gap:10px; margin-bottom:14px;">
+      <button class="btn btn-secondary btn-block" onclick="navigate('organizer-concerts')">ยกเลิก</button>
+      <button class="btn btn-primary btn-block" onclick="showToast('บันทึกการแก้ไขแล้ว (Demo)'); navigate('organizer-concerts')">บันทึกการเปลี่ยนแปลง</button>
+    </div>
+    <button class="btn btn-secondary btn-block" onclick="navigate('organizer-seatmap',{id:${c.id}})">ตั้งค่าผังที่นั่ง →</button>
+  </div>`;
+}
+
+function pageOrganizerSeatmap(){
+  return `<div class="backoffice-topbar"><h2>ตั้งค่าผังที่นั่ง</h2><span class="breadcrumb">Organizer / Concerts / Seat Map</span></div>
+  <div class="page">
+    <div style="display:flex; gap:28px; flex-wrap:wrap;">
+      <div class="card" style="padding:20px; flex:1; min-width:260px;">
+        <h3 style="margin-top:0;">โซนที่นั่ง</h3>
+        <div class="field"><label>ชื่อโซน</label><input value="VIP"></div>
+        <div class="field-row">
+          <div class="field"><label>ราคาต่อที่นั่ง</label><input value="2500"></div>
+          <div class="field"><label>จำนวนที่นั่ง</label><input value="120"></div>
+        </div>
+        <button class="btn btn-secondary btn-block" onclick="showToast('เพิ่มโซนแล้ว (Demo)')">+ เพิ่มโซน</button>
+      </div>
+      <div class="card" style="padding:20px; flex:1.4; min-width:280px;">
+        <h3 style="margin-top:0;">พรีวิวผังที่นั่ง</h3>
+        <div class="stage" style="margin-bottom:14px;">STAGE</div>
+        <div class="seat-grid">${seatRows.slice(0,3).map(row=>`
+          <div class="seat-row"><div class="row-label">${row.label}</div>
+          ${row.seats.map(s=>`<div class="seat ${s.booked?'booked':'available'} ${s.cls}">${s.id.replace(/[A-Z]/,'')}</div>`).join('')}
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:20px;" onclick="showToast('บันทึกผังที่นั่งแล้ว (Demo)')">บันทึกผังที่นั่ง</button>
+  </div>`;
+}
+
+function pageOrganizerReports(){
+  return `<div class="backoffice-topbar"><h2>รายงานยอดขาย</h2><span class="breadcrumb">Organizer / Reports</span></div>
+  <div class="page">
+    <div class="grid grid-3" style="margin-bottom:28px;">
+      <div class="stat-card"><div class="label">รายได้รวม</div><div class="value">฿1,204,500</div></div>
+      <div class="stat-card"><div class="label">ตั๋วที่ขายแล้ว</div><div class="value">2,042</div></div>
+      <div class="stat-card"><div class="label">ที่นั่งคงเหลือ</div><div class="value">958</div></div>
+    </div>
+    <div class="card" style="padding:24px;">
+      <h3 style="margin-top:0;">ยอดขายรายวัน (ตัวอย่าง)</h3>
+      <div style="display:flex; align-items:flex-end; gap:8px; height:140px; padding-top:10px;">
+        ${[40,65,50,80,55,90,70,100,60,75].map(h=>`<div style="flex:1; background:linear-gradient(180deg,var(--accent),var(--accent-2)); height:${h}%; border-radius:4px 4px 0 0;"></div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function pageOrganizerScan(){
+  return `<div class="backoffice-topbar"><h2>สแกน QR Ticket</h2><span class="breadcrumb">Organizer / Scan</span></div>
+  <div class="page page-narrow" style="text-align:center;">
+    <div class="callout" style="padding:50px 20px; margin-bottom:20px;">
+      <div style="font-size:40px; margin-bottom:10px;">📷</div>
+      กล้องสแกน QR Code (Placeholder)
+    </div>
+    <button class="btn btn-primary btn-block" onclick="showToast('✓ ตั๋วถูกต้อง — เข้างานได้ (Demo)')">จำลองการสแกน</button>
+  </div>`;
+}
+
+/* ============================================================
+   ADMIN PAGES
+============================================================ */
+function pageAdminDashboard(){
+  return `<div class="backoffice-topbar"><h2>Admin Dashboard</h2><span class="breadcrumb">Admin / Dashboard</span></div>
+  <div class="page">
+    <div class="grid grid-3" style="margin-bottom:28px;">
+      <div class="stat-card"><div class="label">ผู้ใช้งานทั้งหมด</div><div class="value">4,820</div></div>
+      <div class="stat-card"><div class="label">การจองผิดปกติ</div><div class="value" style="color:var(--danger)">3</div></div>
+      <div class="stat-card"><div class="label">Uptime ระบบ</div><div class="value">99.98%</div></div>
+    </div>
+    <div class="page-header" style="margin-bottom:14px;"><h1 style="font-size:18px;">รายการจองล่าสุดที่ถูกตรวจสอบ</h1></div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>รหัสจอง</th><th>ผู้ใช้</th><th>คอนเสิร์ต</th><th>จำนวนเงิน</th><th>สถานะ</th></tr>
+        ${adminBookings.map(b=>`<tr><td>${b.id}</td><td>${b.user}</td><td>${b.concert}</td><td>${b.amount}</td><td>${statusBadge(b.status)}</td></tr>`).join('')}
+      </table>
+    </div>
+  </div>`;
+}
+
+function pageAdminUsers(){
+  return `<div class="backoffice-topbar"><h2>จัดการผู้ใช้</h2><span class="breadcrumb">Admin / Users</span></div>
+  <div class="page">
+    <div class="table-wrap">
+      <table>
+        <tr><th>Username</th><th>อีเมล</th><th>บทบาท</th><th>สถานะ</th><th></th></tr>
+        ${adminUsers.map((u,i)=>`
+          <tr>
+            <td>${u.name}</td><td>${u.email}</td><td>${u.role}</td><td id="ustatus-${i}">${statusBadge(u.status)}</td>
+            <td><button class="btn btn-sm ${u.status==='banned'?'btn-secondary':'btn-danger'}" onclick="toggleBan(${i})">${u.status==='banned'?'ปลดแบน':'ระงับผู้ใช้'}</button></td>
+          </tr>`).join('')}
+      </table>
+    </div>
+  </div>`;
+}
+function toggleBan(i){
+  adminUsers[i].status = adminUsers[i].status === 'banned' ? 'active' : 'banned';
+  render();
+  showToast('อัปเดตสถานะผู้ใช้แล้ว (Demo)');
+}
+
+function pageAdminBookings(){
+  return `<div class="backoffice-topbar"><h2>ตรวจสอบการจอง</h2><span class="breadcrumb">Admin / Bookings</span></div>
+  <div class="page">
+    <div class="table-wrap">
+      <table>
+        <tr><th>รหัสจอง</th><th>ผู้ใช้</th><th>คอนเสิร์ต</th><th>ที่นั่ง</th><th>จำนวนเงิน</th><th>สถานะ</th><th></th></tr>
+        ${adminBookings.map(b=>`
+          <tr>
+            <td>${b.id}</td><td>${b.user}</td><td>${b.concert}</td><td>${b.seats}</td><td>${b.amount}</td><td>${statusBadge(b.status)}</td>
+            <td><button class="btn btn-secondary btn-sm" onclick="showToast('เปิดรายละเอียดการจอง (Demo)')">ตรวจสอบ</button></td>
+          </tr>`).join('')}
+      </table>
+    </div>
+  </div>`;
+}
+
+function pageAdminLogs(){
+  const logs = [
+    ['09:41:02','organizer.lalana','สร้างคอนเสิร์ตใหม่ "SUNSET FREQUENCY"'],
+    ['09:22:47','customer.natta','ชำระเงินสำเร็จ BK-10230'],
+    ['08:58:10','admin.chirano','ระงับผู้ใช้ pichai.k'],
+    ['08:40:03','system','ปลดล็อกที่นั่งอัตโนมัติ (หมดเวลา 10 นาที) — Zone A'],
+    ['08:12:55','customer.ploy','สมัครสมาชิกใหม่'],
+  ];
+  return `<div class="backoffice-topbar"><h2>System Logs</h2><span class="breadcrumb">Admin / Logs</span></div>
+  <div class="page">
+    <div class="table-wrap">
+      <table>
+        <tr><th>เวลา</th><th>ผู้ใช้/ระบบ</th><th>เหตุการณ์</th></tr>
+        ${logs.map(l=>`<tr><td>${l[0]}</td><td>${l[1]}</td><td>${l[2]}</td></tr>`).join('')}
+      </table>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   RENDER / ROUTE TABLE
+============================================================ */
+const STOREFRONT_ROUTES = {
+  'home': pageHome, 'concerts': pageConcerts, 'concert-detail': pageConcertDetail,
+  'seat-selection': pageSeatSelection, 'login': pageLogin, 'register': pageRegister,
+  'my-tickets': pageMyTickets, 'ticket-detail': pageTicketDetail, 'profile': pageProfile,
+  'checkout': pageCheckout, 'payment': pagePayment, 'success': pageSuccess,
+};
+const BACKOFFICE_ROUTES = {
+  'organizer-dashboard': pageOrganizerDashboard, 'organizer-concerts': pageOrganizerConcerts,
+  'organizer-concert-create': pageOrganizerConcertCreate, 'organizer-concert-edit': pageOrganizerConcertEdit,
+  'organizer-seatmap': pageOrganizerSeatmap, 'organizer-reports': pageOrganizerReports, 'organizer-scan': pageOrganizerScan,
+  'admin-dashboard': pageAdminDashboard, 'admin-users': pageAdminUsers,
+  'admin-bookings': pageAdminBookings, 'admin-logs': pageAdminLogs,
+};
+
+function render(){
+  const app = document.getElementById('app');
+  const isBackoffice = state.role === 'organizer' || state.role === 'admin';
+
+  if(isBackoffice){
+    const pageFn = BACKOFFICE_ROUTES[state.route] || pageOrganizerDashboard;
+    app.innerHTML = `
+      <div class="backoffice-shell">
+        ${sidebar()}
+        <div class="backoffice-main">${pageFn()}</div>
+      </div>`;
+  } else {
+    const pageFn = STOREFRONT_ROUTES[state.route] || pageHome;
+    app.innerHTML = `
+      <div class="storefront-shell">
+        ${storefrontTopbar()}
+        <div style="flex:1;">${pageFn()}</div>
+        <footer>TIXORA Prototype — Concert Ticketing System · Software Engineering, Burapha University · Team 3</footer>
+      </div>`;
+  }
+}
+
+render();
+</script>
+</body>
+</html>
