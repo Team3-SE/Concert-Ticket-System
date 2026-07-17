@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -398,7 +399,7 @@
   }
 
   /* ---------- Admin booking detail ---------- */
-  .detail-grid{ display:grid; grid-template-columns:1fr 320px; gap:20px; align-items:start; }
+  .detail-grid{ display:grid; grid-template-columns:1fr 340px; gap:20px; align-items:start; }
   .detail-card{
     background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:16px;
   }
@@ -415,6 +416,23 @@
   .timeline li{ display:flex; gap:12px; font-size:12.5px; color:var(--text-muted); padding:9px 0; border-bottom:1px dashed var(--border); }
   .timeline li:last-child{ border-bottom:none; }
   .timeline .tl-time{ flex-shrink:0; width:70px; color:var(--text); font-weight:500; }
+
+  /* ---------- Modal Overlay and Content (UC-17) ---------- */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(13, 13, 20, 0.85); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+  }
+  .modal-content {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 24px; border-radius: var(--radius); max-width: 540px;
+    width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    animation: modalFadeIn 0.2s ease-out;
+  }
+  @keyframes modalFadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
 
   /* ---------- Toast ---------- */
   #toast{
@@ -463,7 +481,8 @@ let state = {
   route: 'home',
   params: {},
   selectedSeats: [],     // table numbers selected within the current zone
-  paint: { active:false, target:null } // drag-paint state for the seat-map designer
+  paint: { active:false, target:null }, // drag-paint state for the seat-map designer
+  selectedLog: null      // For System Logs Modal View (UC-17 detail expansion)[cite: 1]
 };
 
 /* Each concert owns its own layout image + zones. Zones are what the
@@ -609,6 +628,70 @@ const adminBookings = [
   },
 ];
 
+/* systemLogs = Dynamic logs table with rich details for the admin backoffice[cite: 1] */
+const systemLogs = [
+  { 
+    id: 'LOG-88912',
+    time: '14:22:15', 
+    user: 'system', 
+    action: 'ตรวจพบรายการจองผิดปกติ BK-10231 (ใช้บัตรเครดิตหลายใบ)',
+    category: 'SECURITY',
+    ip: '103.22.87.4',
+    device: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+    details: 'ระบบตรวจสอบการจราจรพบบัตรเครดิตที่มี BIN ต่างกัน 3 ใบถูกใช้งานในระยะเวลาห่างกันเพียง 10 นาทีบนเครื่องของผู้ใช้งานรายนี้ โดย IP Address ระบุพิกัดภายนอกประเทศ (ผิดปกติจากพฤติกรรมดั้งเดิมของผู้ใช้งาน)'
+  },
+  { 
+    id: 'LOG-88911',
+    time: '09:41:02', 
+    user: 'organizer.lalana', 
+    action: 'สร้างคอนเสิร์ตใหม่ "SUNSET FREQUENCY"',
+    category: 'EVENT_MANAGEMENT',
+    ip: '171.4.120.9',
+    device: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15',
+    details: 'เพิ่มคอนเสิร์ต ID: 3 "SUNSET FREQUENCY" โดยศิลปิน Kora & The Waves ตั้งเป้าหมายจัดที่ Live Park พัทยาชลบุรี กำหนดค่าเบื้องต้นเป็นสถานะ Draft'
+  },
+  { 
+    id: 'LOG-88910',
+    time: '09:22:47', 
+    user: 'customer.natta', 
+    action: 'ชำระเงินสำเร็จ BK-10230',
+    category: 'PAYMENT',
+    ip: '171.4.55.2',
+    device: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15',
+    details: 'ชำระเงินสำเร็จผ่าน Gateway PromptPay QR โต๊ะ 9 โซน A ยอดเงิน ฿1,800.00 เลขที่อ้างอิงธุรกรรม TXN-PP-99812A'
+  },
+  { 
+    id: 'LOG-88909',
+    time: '08:58:10', 
+    user: 'admin.chirano', 
+    action: 'ระงับผู้ใช้ pichai.k',
+    category: 'USER_MANAGEMENT',
+    ip: '103.40.12.91',
+    device: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+    details: 'ทำเครื่องหมายบล็อกบัญชีผู้ใช้ "pichai.k" เนื่องจากมีพฤติกรรมการปั่นจองตั๋วแล้วปล่อยให้หมดอายุซ้ำซากเกิน 5 ครั้งในรอบสัปดาห์ ส่งผลเสียต่อยอดผู้ซื้อจริง'
+  },
+  { 
+    id: 'LOG-88908',
+    time: '08:40:03', 
+    user: 'system', 
+    action: 'ปลดล็อกที่นั่งอัตโนมัติ (หมดเวลา 10 นาที) — Zone A',
+    category: 'CRON_JOB',
+    ip: 'localhost',
+    device: 'Tixora-Cron-Service v1.0',
+    details: 'ระบบทำการยกเลิกการล็อกชั่วคราวของ โต๊ะ 12 ในโซน A เนื่องจากไม่มีธุรกรรมการเงินยืนยันเข้ามาภายในเวลา 10 นาทีที่ระบบกำหนดสิทธิ์'
+  },
+  { 
+    id: 'LOG-88907',
+    time: '08:12:55', 
+    user: 'customer.ploy', 
+    action: 'สมัครสมาชิกใหม่',
+    category: 'USER_MANAGEMENT',
+    ip: '49.0.12.90',
+    device: 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36',
+    details: 'ผู้ใช้ ploy@example.com สมัครสมาชิกสำเร็จด้วยอีเมลและผ่านกระบวนการยืนยันตัวตนระดับแรกผ่าน OTP โทรศัพท์เคลื่อนที่'
+  },
+];
+
 /* myTickets = every ticket ever issued to this customer. "used:true" means
    the event already happened / the QR was scanned at the gate — it still
    exists as a record, but it's no longer something to bring to a show, so
@@ -676,6 +759,7 @@ const DEFAULT_ROUTE = { guest:'home', customer:'home', organizer:'organizer-dash
 function navigate(route, params){
   state.route = route;
   state.params = params || {};
+  state.selectedLog = null; // Clear log details modal on route change
   window.scrollTo(0,0);
   render();
 }
@@ -1159,6 +1243,7 @@ function statusBadge(status){
     'draft': ['badge-muted','แบบร่าง'],
     'ok': ['badge-success','ปกติ'],
     'flagged': ['badge-danger','ผิดปกติ'],
+    'failed': ['badge-danger','ล้มเหลว'],
     'active': ['badge-success','ใช้งานอยู่'],
     'banned': ['badge-danger','ถูกระงับ'],
     'paid': ['badge-success','ชำระเงินแล้ว'],
@@ -1509,7 +1594,7 @@ function pageAdminDashboard(){
   <div class="page">
     <div class="grid grid-3" style="margin-bottom:28px;">
       <div class="stat-card"><div class="label">ผู้ใช้งานทั้งหมด</div><div class="value">4,820</div></div>
-      <div class="stat-card"><div class="label">การจองผิดปกติ</div><div class="value" style="color:var(--danger)">3</div></div>
+      <div class="stat-card"><div class="label">การจองผิดปกติ</div><div class="value" style="color:var(--danger)">${adminBookings.filter(b=>b.status==='flagged').length}</div></div>
       <div class="stat-card"><div class="label">Uptime ระบบ</div><div class="value">99.98%</div></div>
     </div>
     <div class="page-header" style="margin-bottom:14px;"><h1 style="font-size:18px;">รายการจองล่าสุดที่ถูกตรวจสอบ</h1></div>
@@ -1560,10 +1645,9 @@ function pageAdminBookings(){
   </div>`;
 }
 
-/* ---------- Admin: booking detail ----------
+/* ---------- Admin: booking detail (UC-17) ----------
    Deep-dive view reached from "ตรวจสอบ" — shows customer, order, and
-   payment info, plus a clear normal/abnormal risk verdict with the
-   reasons behind it and an activity timeline for the transaction. */
+   payment info, plus the UC-17 Error & booking status control panel[cite: 1] */
 function pageAdminBookingDetail(){
   const b = findBooking(state.params.id);
   const flagged = b.status === 'flagged';
@@ -1607,48 +1691,195 @@ function pageAdminBookingDetail(){
 
       <div>
         <div class="detail-card">
-          <h3>ผลการตรวจสอบ</h3>
+          <h3>ผลการตรวจสอบความเสี่ยง (Risk Status)</h3>
           ${flagged
             ? `<div class="risk-box flagged">
                  <strong style="display:block; margin-bottom:6px;">⚠ ตรวจพบความผิดปกติ</strong>
                  ${b.riskFlags.map(r=>`• ${r}<br>`).join('')}
                </div>`
             : `<div class="risk-box ok"><strong>✓ ไม่พบความผิดปกติ</strong><br>รูปแบบการจองและการชำระเงินเป็นไปตามปกติ</div>`}
-          <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
-            ${flagged
-              ? `<button class="btn btn-secondary btn-block" onclick="resolveBooking('${b.id}','ok')">ทำเครื่องหมายว่าปกติ</button>
-                 <button class="btn btn-danger btn-block" onclick="showToast('ระงับการจองนี้แล้ว (Demo)')">ระงับการจองนี้</button>`
-              : `<button class="btn btn-danger btn-block" onclick="resolveBooking('${b.id}','flagged')">ทำเครื่องหมายว่าผิดปกติ</button>`}
-            <button class="btn btn-secondary btn-block" onclick="showToast('เปิดคำขอคืนเงินแล้ว (Demo)')">ดำเนินการคืนเงิน</button>
+        </div>
+
+        <!-- UC-17: Control Panel for Error Handling & Status Override[cite: 1] -->
+        <div class="detail-card" style="border: 1px dashed var(--accent);">
+          <div class="eyebrow" style="margin-bottom:6px;">Control Panel (UC-17)</div>
+          <h3 style="margin:0 0 14px; color:var(--accent);">จัดการข้อผิดพลาดและสถานะการจอง</h3>
+          
+          <div class="field">
+            <label>เปลี่ยนสถานะการจอง/ชำระเงิน</label>
+            <select id="override-status" style="background:var(--surface-alt); border:1px solid var(--border); color:var(--text); padding:10px; border-radius:var(--radius-sm); width:100%; outline:none;">
+              <option value="ok" ${b.status==='ok'?'selected':''}>ปกติ / อนุมัติแล้ว (Approved)</option>
+              <option value="flagged" ${b.status==='flagged'?'selected':''}>ผิดปกติ / ระงับตรวจสอบ (Flagged)</option>
+              <option value="cancelled" ${b.status==='cancelled'?'selected':''}>ยกเลิกรายการจอง (Cancelled)</option>
+              <option value="refunded" ${b.status==='refunded'?'selected':''}>คืนเงินสำเร็จ (Refunded)</option>
+              <option value="failed" ${b.status==='failed'?'selected':''}>ชำระเงินล้มเหลว (Failed)</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>ระบุสาเหตุข้อผิดพลาด / บันทึกย่อ</label>
+            <textarea id="override-reason" rows="3" placeholder="เช่น สลิปการโอนมีข้อมูลไม่ตรง, ขัดข้องจาก API ธนาคาร, ลูกค้าทำรายการซ้ำซ้อน" style="background:var(--surface-alt); border:1px solid var(--border); color:var(--text); padding:10px; border-radius:var(--radius-sm); width:100%; font-family:inherit; resize:none; outline:none;"></textarea>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <button class="btn btn-primary btn-block" onclick="processAdminResolveBooking('${b.id}')">ยืนยันและปรับปรุงสถานะ</button>
+            <button class="btn btn-secondary btn-block" style="border-color:var(--accent-2); color:var(--accent-2);" onclick="showQuickRefund('${b.id}')">ดำเนินการคืนเงินทันที</button>
           </div>
         </div>
       </div>
     </div>
   </div>`;
 }
-function resolveBooking(id, newStatus){
+
+/* UC-17 functions to handle errors and save reason dynamicly[cite: 1] */
+function getFriendlyStatusLabel(status){
+  const labels = {
+    'ok': 'ปกติ / อนุมัติสำเร็จ',
+    'flagged': 'ผิดปกติ',
+    'cancelled': 'ยกเลิกรายการแล้ว',
+    'refunded': 'คืนเงินสำเร็จ',
+    'failed': 'ล้มเหลว',
+    'pending': 'รอชำระเงิน',
+    'paid': 'ชำระเงินสำเร็จ'
+  };
+  return labels[status] || status;
+}
+
+function processAdminResolveBooking(id){
+  const statusSelect = document.getElementById('override-status');
+  const reasonInput = document.getElementById('override-reason');
+  if(!statusSelect) return;
+
+  const newStatus = statusSelect.value;
+  const reason = reasonInput.value.trim() || 'แอดมินปรับเปลี่ยนสถานะด้วยระบบ Manual Override';
+
   const b = findBooking(id);
+  if(!b) return;
+
+  // Update State[cite: 1]
   b.status = newStatus;
+
+  // Append entry to booking's timeline[cite: 1]
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  b.timeline.unshift([timeStr, 'แอดมินจัดการความผิดพลาด', `เปลี่ยนสถานะเป็น "${getFriendlyStatusLabel(newStatus)}" (เหตุผล: ${reason})`]);
+
+  // Push to dynamic system logs for UC-17 with Deep-dive metadata[cite: 1]
+  systemLogs.unshift({
+    id: 'LOG-' + Math.floor(10000 + Math.random() * 90000),
+    time: `${timeStr}:${String(now.getSeconds()).padStart(2,'0')}`,
+    user: 'admin.chirano',
+    action: `แก้ไขรายการจอง ${id} เป็น "${getFriendlyStatusLabel(newStatus)}"`,
+    category: 'ERROR_HANDLING',
+    ip: '103.40.12.91',
+    device: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+    details: `แอดมินใช้คำสั่งควบคุม Override จัดการแก้ไขข้อผิดพลาดของการชำระเงิน\n\nรหัสรายการ: ${id}\nสถานะที่กำหนดใหม่: ${getFriendlyStatusLabel(newStatus)}\nรายละเอียดบันทึกความล้มเหลว: ${reason}`
+  });
+
+  showToast(`อัปเดตสถานะการจอง ${id} เรียบร้อยแล้ว`);
   render();
-  showToast(newStatus === 'ok' ? 'ทำเครื่องหมายว่าปกติแล้ว (Demo)' : 'ทำเครื่องหมายว่าผิดปกติแล้ว (Demo)');
+}
+
+function showQuickRefund(id){
+  const b = findBooking(id);
+  if(!b) return;
+  if(confirm(`คุณต้องการยืนยันและคืนเงินเต็มจำนวน (${b.amount}) ของรายการจอง ${id} ใช่หรือไม่?`)){
+    b.status = 'refunded';
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    
+    b.timeline.unshift([timeStr, 'ระบบคืนเงินอัตโนมัติ', `ดำเนินการคืนเงินจำนวน ${b.amount} ให้กับผู้ใช้เรียบร้อยแล้ว`]);
+    
+    systemLogs.unshift({
+      id: 'LOG-' + Math.floor(10000 + Math.random() * 90000),
+      time: `${timeStr}:${String(now.getSeconds()).padStart(2,'0')}`,
+      user: 'admin.chirano',
+      action: `ดำเนินการคืนเงินสำเร็จสำหรับรายการจอง ${id}`,
+      category: 'FINANCE',
+      ip: '103.40.12.91',
+      device: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+      details: `แอดมินได้อนุมัติระบบ API คืนเงินอัตโนมัติ (Mock API Refund) สำหรับรายการจอง ${id} เต็มจำนวนยอดการจอง ${b.amount} กลับเข้าบัญชี/สลิปของลูกค้าผู้จอง`
+    });
+
+    showToast(`คืนเงินรายการจอง ${id} เรียบร้อยแล้ว (Demo)`);
+    render();
+  }
+}
+
+/* ---------- Admin: Log details modal viewer functions (UC-17 depth) ---------- */
+function showLogDetail(idx){
+  state.selectedLog = idx;
+  render();
+}
+
+function closeLogModal(){
+  state.selectedLog = null;
+  render();
+}
+
+function renderLogModal(){
+  const log = systemLogs[state.selectedLog];
+  if(!log) return '';
+  return `
+    <div class="modal-overlay" onclick="closeLogModal()">
+      <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+          <h3 style="margin:0; color:var(--accent); font-size:15px; font-weight:600;">🔍 ข้อมูลรายละเอียด Log เชิงลึก (${log.id})</h3>
+          <button class="btn btn-ghost" onclick="closeLogModal()" style="padding:4px 8px; font-size:18px;">✕</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px; font-size:13px; line-height:1.6;">
+          <div>
+            <span style="color:var(--text-muted); display:block; font-size:11px;">วันเวลา / หมวดหมู่ระบบ</span>
+            <strong>${log.time} · <span style="color:var(--accent-2);">${log.category || 'SYSTEM'}</span></strong>
+          </div>
+          <div>
+            <span style="color:var(--text-muted); display:block; font-size:11px;">ผู้ดำเนินการ (Actor)</span>
+            <strong>${log.user}</strong>
+          </div>
+          <div>
+            <span style="color:var(--text-muted); display:block; font-size:11px;">เหตุการณ์หลัก (Action Summary)</span>
+            <strong style="color:var(--text);">${log.action}</strong>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <span style="color:var(--text-muted); display:block; font-size:11px;">IP Address</span>
+              <code>${log.ip || 'N/A'}</code>
+            </div>
+            <div>
+              <span style="color:var(--text-muted); display:block; font-size:11px;">อุปกรณ์ (Device Agent)</span>
+              <span style="font-size:11.5px; word-break:break-all;" title="${log.device || ''}">${log.device ? (log.device.length > 35 ? log.device.substring(0,35)+'...' : log.device) : 'N/A'}</span>
+            </div>
+          </div>
+          <div style="background:var(--surface-alt); border:1px solid var(--border); padding:12px; border-radius:var(--radius-sm); margin-top:6px;">
+            <span style="color:var(--text-muted); display:block; font-size:11px; margin-bottom:4px;">รายละเอียดเชิงลึก (Log Details Payload)</span>
+            <p style="margin:0; color:var(--text); font-family:monospace; white-space:pre-wrap; font-size:12px;">${log.details || 'ไม่มีข้อมูลรายละเอียดเพิ่มเติมบันทึกไว้ในสคริปต์นี้'}</p>
+          </div>
+        </div>
+        <div style="margin-top:20px; text-align:right;">
+          <button class="btn btn-secondary btn-sm" onclick="closeLogModal()">ปิดหน้าต่างนี้</button>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function pageAdminLogs(){
-  const logs = [
-    ['09:41:02','organizer.lalana','สร้างคอนเสิร์ตใหม่ "SUNSET FREQUENCY"'],
-    ['09:22:47','customer.natta','ชำระเงินสำเร็จ BK-10230'],
-    ['08:58:10','admin.chirano','ระงับผู้ใช้ pichai.k'],
-    ['08:40:03','system','ปลดล็อกที่นั่งอัตโนมัติ (หมดเวลา 10 นาที) — Zone A'],
-    ['08:12:55','customer.ploy','สมัครสมาชิกใหม่'],
-  ];
   return `<div class="backoffice-topbar"><h2>System Logs</h2><span class="breadcrumb">Admin / Logs</span></div>
   <div class="page">
+    <p style="color:var(--text-muted); font-size:13px; margin-bottom:18px;">ประวัติเหตุการณ์ทางระบบที่ทำงานแบบ Real-time (เมื่อแอดมินจัดการข้อผิดพลาดผ่าน UC-17 ข้อมูลจะปรากฏที่นี่)</p>
     <div class="table-wrap">
       <table>
-        <tr><th>เวลา</th><th>ผู้ใช้/ระบบ</th><th>เหตุการณ์</th></tr>
-        ${logs.map(l=>`<tr><td>${l[0]}</td><td>${l[1]}</td><td>${l[2]}</td></tr>`).join('')}
+        <tr><th>เวลา</th><th>หมวดหมู่</th><th>ผู้ใช้/ระบบ</th><th>เหตุการณ์</th><th></th></tr>
+        ${systemLogs.map((l, idx)=>`<tr>
+          <td>${l.time}</td>
+          <td><span class="badge badge-muted">${l.category || 'SYSTEM'}</span></td>
+          <td>${l.user}</td>
+          <td><strong style="color:var(--text);">${l.action}</strong></td>
+          <td><button class="btn btn-secondary btn-sm" onclick="showLogDetail(${idx})">ดูรายละเอียด</button></td>
+        </tr>`).join('')}
       </table>
     </div>
+    ${state.selectedLog !== null && state.selectedLog !== undefined ? renderLogModal() : ''}
   </div>`;
 }
 
@@ -1697,3 +1928,5 @@ render();
 </script>
 </body>
 </html>
+
+```
