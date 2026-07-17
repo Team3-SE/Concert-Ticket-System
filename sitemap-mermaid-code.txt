@@ -1,0 +1,52 @@
+flowchart TD
+    Root([Concert Ticketing System])
+
+    Root --- Public[Public & Guest]
+    Root --- Customer[Customer]
+    Root --- Organizer[Event Organizer]
+    Root --- Admin[Admin]
+
+    %% 1. Public (เน้น SEO + UX)
+    Public --> Home["Home (/)"]
+    Public --> Concerts["Concerts (/concerts)"]
+    Concerts --> ConcertDetail["Concert Detail (/concerts/[id])"]
+    
+    %% ยุบ Zone Selection เป็น Component/Modal ในหน้า Detail พอเลือกเสร็จจะลิงก์ไปหน้าผังที่นั่งทันที
+    ConcertDetail --> SeatSelection["Seat Selection (/concerts/[id]/zones/[zoneId]/seats)"]
+    
+    %% เปลี่ยน Auth เป็น Modal หรือใช้ Intercepting Routes ของ Next.js เพื่อไม่ให้หลุดหน้าเดิม
+    Public --> Auth["Auth (Modal / Pop-up)"]
+
+    %% 2. Customer & Checkout (เน้น State Management & ระบบล็อกตั๋ว 10 นาที)
+    Customer --> C_Profile["Customer Profile"]
+    C_Profile --> MyTickets["My Tickets (/my-tickets)"]
+    MyTickets --> ETicket["E-Ticket Detail (/my-tickets/[ticketId])"]
+    C_Profile --> BookingHistory["Booking History (/booking-history)"]
+    BookingHistory --> ETicket
+    C_Profile --> ManageProfile["Manage Profile (/profile)"]
+    
+    %% ยุบ Order Summary และ Payment รวมเป็นหน้าเดียว แล้วใช้การสลับ Component ข้างใน เพื่อคุม Timer ไม่ให้หลุด
+    Customer --> CheckoutPage["Checkout Page (/checkout) <br/>(Summary & Payment Component Switch)"]
+    CheckoutPage --> Success["Success & Ticket (/checkout/success)"]
+
+    %% 3. Organizer (ระบบหลังบ้านผู้จัดงาน)
+    Organizer --> OrgDash["Organizer Dashboard (/organizer)"]
+    Organizer --> ManageConcerts["Manage Concerts (/organizer/concerts)"]
+    ManageConcerts --> CreateConcert["Create Concert (.../create)"]
+    ManageConcerts --> EditConcert["Edit Concert (.../[id]/edit)"]
+    ManageConcerts --> ZoneSetup["Zone Setup (.../[id]/zones)"]
+    ZoneSetup --> SeatMapSetup["Seat Map Setup (.../[id]/zones/[zoneId]/seats)"]
+    Organizer --> Reports["Reports & Sales (/organizer/reports)"]
+    Organizer --> ScanQR["Scan QR Ticket (/organizer/scan)"]
+
+    %% 4. Admin (ระบบผู้ดูแลระบบ)
+    Admin --> AdminDash["Admin Dashboard (/admin)"]
+    Admin --> ManageUsers["Manage Users (/admin/users)"]
+    Admin --> ManageBookings["Manage Bookings (/admin/bookings)"]
+    Admin --> SysLogs["System Logs (/admin/logs)"]
+
+    style Root fill:#f9f,stroke:#333,stroke-width:2px
+    style Public fill:#e1f5fe,stroke:#0288d1
+    style Customer fill:#fce4ec,stroke:#c2185b
+    style Organizer fill:#e8f5e9,stroke:#388e3c
+    style Admin fill:#fff3e0,stroke:#f57c00
