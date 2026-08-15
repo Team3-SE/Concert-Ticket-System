@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>แดชบอร์ดตรวจสอบการจอง | TEAM 3 Ticket</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#2563EB;
+    --primary-dark:#1D4ED8;
+    --bg:#F1F5F9;
+    --border:#E5E7EB;
+    --text:#0F172A;
+    --muted:#64748B;
+    --muted-light:#94A3B8;
+    
+    /* Theme Colors */
+    --navy-bg: #1A2B4C;
+    --orange-brand: #F97316;
+
+    /* Action-Log design tokens (used by filter bar & table) */
+    --al-navy: #0B2F61;
+    --al-border: #CBD5E1;
+    --al-border-dark: #0F172A;
+    --al-header-bg: #F1F5F9;
+    --al-text-dark: #1E293B;
+    --al-text-muted: #64748B;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{
+    font-family:'Inter', 'Noto Sans Thai', sans-serif;
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  button,select,input,textarea{font-family:inherit;}
+  button{cursor:pointer;background:none;border:none;}
+  svg.ic{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block;flex-shrink:0;}
+
+  /* ---------------- Layout: Sidebar & Header ---------------- */
+  .app-layout { display: flex; height: 100vh; width: 100vw; }
+  .sidebar { width: 260px; background: var(--navy-bg); color: white; display: flex; flex-direction: column; flex-shrink: 0; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 10; }
+  .sidebar-brand { height: 60px; display: flex; align-items: center; padding: 0 24px; font-size: 18px; font-weight: 700; gap: 12px; letter-spacing: 0.5px; }
+  .sidebar-brand svg { flex-shrink: 0; }
+  .sidebar-menu { padding: 16px 0; display: flex; flex-direction: column; flex: 1; }
+  .menu-item { padding: 14px 24px; color: #94A3B8; text-decoration: none; font-size: 13.5px; font-weight: 500; display: flex; align-items: center; cursor: pointer; border-left: 4px solid transparent; transition: all 0.2s; }
+  .menu-item:hover { color: white; background: rgba(255,255,255,0.05); }
+  .menu-item.active { color: white; background: rgba(255,255,255,0.1); border-left-color: var(--orange-brand); }
+  .menu-item.logout { color: #EF4444; margin-top: auto; margin-bottom: 16px; border-left: none; }
+  .menu-item.logout:hover { background: rgba(239, 68, 68, 0.1); }
+
+  .main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .topbar { height: 60px; background: var(--navy-bg); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; color: white; flex-shrink: 0; border-left: 1px solid rgba(255,255,255,0.1); }
+  .topbar-path { font-size: 13px; color: #94A3B8; }
+  .topbar-path span { color: white; font-weight: 500; }
+  .topbar-user { display: flex; align-items: center; gap: 12px; font-size: 13.5px; font-weight: 500; }
+  .user-avatar { width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--navy-bg); }
+  .content-area { flex: 1; overflow-y: auto; background: var(--bg); }
+
+  /* ---------------- Original Content CSS ---------------- */
+  .wrap{max-width:1400px;margin:0 auto;padding:32px 32px 60px;}
+  .page-header-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+  .page-title{font-size:20px;font-weight:700;letter-spacing:-0.01em; color: var(--navy-bg);}
+  .page-subtitle{font-size:13px;color:var(--muted);margin-top:4px;}
+  .page-role-group{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+  .page-role{font-size:14px;color:var(--muted);font-weight: 500;}
+
+  /* filter card — matches Action Logs toolbar-card design */
+  .filter-card{background:#fff;border:1px solid var(--al-border);border-radius:8px;padding:16px 20px;margin-bottom:24px;box-shadow:0 1px 2px rgba(15,23,42,.04);font-family:'Prompt',sans-serif;}
+  .filter-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
+  .filter-field{display:flex;flex-direction:column;gap:6px;}
+  .filter-field label{font-size:11px;font-weight:600;color:var(--al-text-muted);text-transform:uppercase;letter-spacing:0.02em;}
+  .input-text{height:40px;padding:0 12px;border:1px solid var(--al-border);border-radius:6px;font-size:13.5px;background:#fff;color:var(--al-text-dark);outline:none;transition:border-color .15s;}
+  .input-text:focus{border-color:var(--al-navy);}
+  .input-text::placeholder{color:var(--muted-light);}
+  .search-box{position:relative;flex:1;min-width:220px;}
+  .search-box input{width:100%;}
+  .select-option{height:40px;padding:0 32px 0 12px;border:1px solid var(--al-border);border-radius:6px;font-size:13px;color:var(--al-text-dark);background:#fff;outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;font-family:'Prompt',sans-serif;min-width:170px;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");background-repeat:no-repeat;background-position:right 10px center;}
+  .select-option:focus{border-color:var(--al-navy);}
+  .select-field{position:relative;}
+  .select-field svg.pre{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--al-text-muted);pointer-events:none;}
+  .select-field svg.post{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--al-text-muted);pointer-events:none;}
+  .select-field select{height:40px;padding:0 30px 0 36px;border:1px solid var(--al-border);border-radius:6px;font-size:13px;color:var(--al-text-dark);background:#fff;outline:none;appearance:none;cursor:pointer;font-family:'Prompt',sans-serif;}
+  .select-field select:focus{border-color:var(--al-navy);}
+  
+  .custom-date-range{display:flex;align-items:flex-end;gap:8px;}
+  .date-input{height:40px;padding:0 10px;border:1px solid var(--al-border);border-radius:6px;font-size:13px;color:var(--al-text-dark);outline:none;background:#fff;font-family:'Prompt',sans-serif;}
+  .date-input:focus{border-color:var(--al-navy);}
+  .date-sep{font-size:13px;color:var(--al-text-muted);padding-bottom:10px;}
+  .btn-action{height:40px;padding:0 16px;background-color:#fff;border:1px solid var(--al-border-dark);border-radius:6px;font-size:13.5px;font-weight:500;color:var(--al-text-dark);cursor:pointer;white-space:nowrap;font-family:'Prompt',sans-serif;transition:all .15s;}
+  .btn-action:hover{background-color:var(--al-text-dark);color:#fff;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
+  .chip{height:32px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:500;border:1px solid var(--al-border);background:#fff;color:#475569;transition:all .15s;}
+  .chip.active{background:var(--al-navy);border-color:var(--al-navy);color:#fff;}
+
+  /* ---------------- Custom Dropdown UI ---------------- */
+  .custom-dropdown { position: relative; width: 240px; font-family: 'Prompt', sans-serif; }
+  .cd-trigger { height: 40px; border: 1px solid var(--al-border); border-radius: 6px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: #fff; font-size: 13px; color: var(--al-text-dark); transition: border-color 0.15s; }
+  .cd-trigger:hover { border-color: var(--muted-light); }
+  .cd-trigger.active { border-color: var(--al-navy); box-shadow: 0 0 0 2px rgba(11,47,97,0.1); }
+  .cd-trigger-inner { display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden; }
+  .cd-trigger-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500;}
+  .cd-trigger svg.caret { color: var(--muted-light); flex-shrink: 0; }
+  
+  .cd-menu { position: absolute; top: calc(100% + 6px); left: 0; width: 280px; background: #fff; border: 1px solid var(--al-border); border-radius: 8px; box-shadow: 0 10px 25px rgba(15,23,42,0.1); z-index: 100; display: none; flex-direction: column; overflow: hidden; }
+  .cd-menu.show { display: flex; animation: slideDown 0.15s ease-out forwards; transform-origin: top; }
+  @keyframes slideDown { from{opacity:0; transform:scaleY(0.95);} to{opacity:1; transform:scaleY(1);} }
+  
+  .cd-search { padding: 12px 12px 8px; border-bottom: 1px solid #f1f5f9; position: relative; }
+  .cd-search svg { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); color: var(--muted-light); }
+  .cd-search input { width: 100%; height: 38px; border: 1px solid var(--al-navy); border-radius: 6px; padding: 0 12px 0 36px; font-size: 13px; outline: none; font-family: 'Prompt', sans-serif; }
+  
+  .cd-list { max-height: 240px; overflow-y: auto; padding: 8px; }
+  .cd-list::-webkit-scrollbar { width: 6px; }
+  .cd-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  
+  .cd-item { display: flex; align-items: center; gap: 14px; padding: 10px; cursor: pointer; border-radius: 8px; transition: background 0.1s; }
+  .cd-item:hover, .cd-item.selected { background: #f8fafc; }
+  .cd-avatar { width: 36px; height: 36px; border-radius: 8px; background: #eff6ff; color: #1d4ed8; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; flex-shrink: 0; }
+  .cd-info { display: flex; flex-direction: column; gap: 2px; }
+  .cd-title { font-size: 13.5px; font-weight: 600; color: #1e293b; }
+  .cd-subtitle { font-size: 11.5px; color: var(--muted-light); }
+  .cd-empty { padding: 16px; text-align: center; font-size: 13px; color: var(--muted); }
+
+  /* table — matches Action Logs grid-line design */
+  .table-card{background:#fff;border:1px solid var(--al-border);border-radius:8px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04);}
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:separate;border-spacing:0;font-family:'Prompt',sans-serif;}
+  th{font-size:12px;font-weight:600;color:var(--al-text-dark);background-color:var(--al-header-bg);padding:12px 16px;text-align:left;box-shadow:inset 0 -2px 0 0 var(--al-border);white-space:nowrap;}
+  th.right,td.right{text-align:right;}
+  tbody tr{transition:background .12s;}
+  tbody tr td{box-shadow:inset 0 -1px 0 0 var(--al-border);}
+  tbody tr:last-child td{box-shadow:none;}
+  tbody tr:hover{background:#F8FAFC;}
+  td{padding:14px 16px;font-size:13.5px;vertical-align:top;}
+  .cust-name{font-weight:500;color:#1e293b;}
+  .cust-email{font-size:12px;color:var(--muted-light);margin-top:1px;}
+  .org-tag{font-size:11px;color:var(--primary);font-weight:600;display:inline-block;margin-bottom:2px;}
+  .bk-id{font-weight:700;color:#1e293b;}
+  .seat-info{font-size:13px;color:var(--text);}
+  .time-cell{font-size:13px;color:var(--muted);white-space:nowrap;}
+  .row-actions{display:flex;justify-content:flex-end;gap:6px;}
+  .icon-btn{height:32px;width:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);border:1px solid var(--border);transition:all .12s;}
+  .icon-btn:hover{color:var(--primary);background:#EFF6FF;border-color:#BFDBFE;}
+  .empty-row td{padding:60px 0;text-align:center;color:var(--muted-light);font-size:13.5px;}
+  .footnote{font-size:13px;color:var(--muted-light);margin-top:16px;}
+
+  /* badges/tags */
+  .badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;border:1px solid transparent;padding:4px 10px;font-size:12px;font-weight:500;}
+  .badge .dot{height:6px;width:6px;border-radius:50%;}
+  .badge.Confirmed, .badge.Paid {background:#ECFDF5;color:#047857;border-color:#A7F3D0;}
+  .badge.Confirmed .dot, .badge.Paid .dot {background:#10B981;}
+  .badge.Locked, .badge.Pending {background:#FFFBEB;color:#B45309;border-color:#FDE68A;}
+  .badge.Locked .dot, .badge.Pending .dot {background:#F59E0B;}
+  .badge.Cancelled, .badge.Failed {background:#FEF2F2;color:#B91C1C;border-color:#FECACA;}
+  .badge.Cancelled .dot, .badge.Failed .dot {background:#EF4444;}
+  .badge.Expired {background:#F1F5F9;color:#475569;border-color:#CBD5E1;}
+  .badge.Expired .dot {background:#94A3B8;}
+  .countdown-timer {font-size:12px; color:#D97706; margin-top:6px; font-weight:500; display:flex; align-items:center; gap:4px;}
+
+  /* drawer */
+  .overlay{position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:40;opacity:0;transition:opacity .2s;pointer-events:none;}
+  .overlay.show{opacity:1;pointer-events:auto;}
+  .drawer{position:fixed;top:0;right:0;height:100%;width:520px;max-width:100%;background:#fff;z-index:50;box-shadow:-8px 0 30px rgba(15,23,42,.15);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);}
+  .drawer.show{transform:translateX(0);}
+  .drawer-head{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);}
+  .drawer-title{display:flex;align-items:center;gap:8px;}
+  .drawer-title h3{font-size:16px;font-weight:700;}
+  .drawer-sub{font-size:13px;color:var(--muted);margin-top:4px;}
+  .drawer-close{height:32px;width:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted-light);transition:all .12s;}
+  .drawer-close:hover{background:#F1F5F9;color:#475569;}
+  .drawer-body{flex:1;overflow-y:auto;padding-bottom:40px;}
+  .btn-secondary{height:40px;padding:0 16px;border-radius:8px;font-size:13.5px;font-weight:500;color:#475569;border:1px solid var(--border);background:#fff;transition:background .12s;display:inline-flex;align-items:center;gap:6px;}
+  .btn-secondary:hover{background:#F8FAFC;}
+
+  /* toast */
+  .toast{position:fixed;bottom:24px;right:24px;z-index:70;display:flex;align-items:center;gap:10px;background:#0F172A;color:#fff;font-size:13.5px;font-weight:500;border-radius:12px;padding:12px 16px;box-shadow:0 10px 30px rgba(15,23,42,.35);transform:translateY(20px);opacity:0;pointer-events:none;transition:all .25s;}
+  .toast.show{transform:translateY(0);opacity:1;}
+  .toast svg{color:#34D399;}
+</style>
+</head>
+<body>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11 2L2 7L11 12L20 7L11 2Z" fill="#F97316"/>
+        <path d="M2 17L11 22L20 17V7L11 12L2 7V17Z" fill="#3B82F6"/>
+      </svg>
+      TEAM 3 Ticket
+    </div>
+    <div class="sidebar-menu">
+      <a class="menu-item active">แดชบอร์ดการจอง</a>
+      <a class="menu-item">จัดการผู้ใช้งาน</a>
+      <a class="menu-item">รายงานความผิดปกติ</a>
+      <a class="menu-item">แก้ไขข้อมูลระบบ</a>
+      <a class="menu-item">ประวัติการทำงาน</a>
+      <a class="menu-item logout">ออกจากระบบ</a>
+    </div>
+  </aside>
+
+  <div class="main-area">
+    <header class="topbar">
+      <div class="topbar-path">ระบบผู้ดูแล > <span>แดชบอร์ดตรวจสอบการจอง (Booking Oversight)</span></div>
+      <div class="topbar-user">
+        <div class="user-avatar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <span>Admin</span>
+      </div>
+    </header>
+
+    <div class="content-area">
+      <div class="wrap">
+        <div class="page-header-card">
+          <div>
+            <h1 class="page-title">แดชบอร์ดตรวจสอบการจอง (Booking Oversight Dashboard)</h1>
+            <p class="page-subtitle">ภาพรวมและสถิติการจองทั้งหมดในระบบ สำหรับผู้ดูแลระบบ</p>
+          </div>
+          <div class="page-role-group">
+            <div class="page-role">ผู้ดูแลระบบ (Admin)</div>
+          </div>
+        </div>
+
+        <div class="filter-card">
+          <div class="filter-row">
+            <div class="filter-field search-box" style="flex: 1; min-width: 220px;">
+              <label>ค้นหา</label>
+              <input class="input-text" id="searchInput" type="text" placeholder="ค้นหารหัสจอง, ชื่อ, อีเมล..." />
+            </div>
+            
+            <!-- 1. Custom Dropdown: องค์กร -->
+            <div class="filter-field">
+              <label>องค์กร / ผู้จัด</label>
+              <div class="custom-dropdown" id="orgDropdown">
+                <div class="cd-trigger" id="orgTrigger">
+                  <div class="cd-trigger-inner">
+                    <svg class="ic" width="15" height="15" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M3 7v14"/><path d="M21 7v14"/><path d="M6 21V3h12v18"/><path d="M10 7h4"/><path d="M10 11h4"/><path d="M10 15h4"/></svg>
+                    <span class="cd-trigger-text" id="orgSelectedText">ทุกองค์กร / ผู้จัด</span>
+                  </div>
+                  <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="cd-menu" id="orgMenu">
+                  <div class="cd-search">
+                    <svg class="ic" width="15" height="15" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="orgSearch" placeholder="Search company name...">
+                  </div>
+                  <div class="cd-list" id="orgList"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Custom Dropdown: งานคอนเสิร์ต -->
+            <div class="filter-field">
+              <label>งานคอนเสิร์ต</label>
+              <div class="custom-dropdown" id="evtDropdown">
+                <div class="cd-trigger" id="evtTrigger">
+                  <div class="cd-trigger-inner">
+                    <svg class="ic" width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span class="cd-trigger-text" id="evtSelectedText">งานคอนเสิร์ตทั้งหมด</span>
+                  </div>
+                  <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="cd-menu" id="evtMenu">
+                  <div class="cd-search">
+                    <svg class="ic" width="15" height="15" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="evtSearch" placeholder="Search event name...">
+                  </div>
+                  <div class="cd-list" id="evtList"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="filter-field">
+              <label>ช่องทางชำระเงิน</label>
+              <select class="select-option" id="paymentFilter">
+                <option value="All">ทุกช่องทาง</option>
+                <option value="PromptPay QR">PromptPay QR</option>
+                <option value="บัตรเครดิต">บัตรเครดิต</option>
+              </select>
+            </div>
+
+            <!-- ตัวกรองสถานะการจอง -->
+            <div class="filter-field">
+              <label>สถานะการจอง</label>
+              <select class="select-option" id="statusFilter">
+                <option value="All Statuses">สถานะการจองทั้งหมด</option>
+                <option value="Confirmed">ยืนยันแล้ว</option>
+                <option value="Locked">ล็อกที่นั่ง</option>
+                <option value="Cancelled">ยกเลิกแล้ว</option>
+                <option value="Expired">หมดอายุ</option>
+              </select>
+            </div>
+
+            <!-- ตัวกรองสถานะการเงิน -->
+            <div class="filter-field">
+              <label>สถานะการเงิน</label>
+              <select class="select-option" id="paymentStatusFilter">
+                <option value="All">สถานะการเงินทั้งหมด</option>
+                <option value="Paid">ชำระแล้ว</option>
+                <option value="Pending">รอชำระ</option>
+                <option value="Failed">ล้มเหลว</option>
+                <option value="Expired">หมดอายุ</option>
+              </select>
+            </div>
+            
+            <!-- ตัวกรองเวลา (อัปเดตมีตัวเลือกกำหนดเอง) -->
+            <div class="filter-field">
+              <label>ช่วงเวลา</label>
+              <div class="select-field">
+                <svg class="ic pre" width="15" height="15" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <select id="dateRangeFilter">
+                  <option value="all">ทุกช่วงเวลา</option>
+                  <option value="today">วันนี้</option>
+                  <option value="7d">7 วันล่าสุด</option>
+                  <option value="30d">30 วันล่าสุด</option>
+                  <option value="custom">กำหนดเอง</option>
+                </select>
+                <svg class="ic post" width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </div>
+
+            <!-- กล่องป้อนวันที่แบบกำหนดเอง -->
+            <div class="custom-date-range" id="customDateRange" style="display: none;">
+              <div class="filter-field">
+                <label>จากวันที่</label>
+                <input type="date" class="date-input" id="startDate" />
+              </div>
+              <span class="date-sep">ถึง</span>
+              <div class="filter-field">
+                <label>ถึงวันที่</label>
+                <input type="date" class="date-input" id="endDate" />
+              </div>
+            </div>
+            
+            <button class="btn-action" onclick="resetFilter()">รีเซ็ตตัวกรอง</button>
+          </div>
+        </div>
+
+        <div class="table-card" id="tableCard">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>รหัสการจอง</th>
+                  <th>ลูกค้า</th>
+                  <th>งาน</th>
+                  <th>สถานะการเงิน</th>
+                  <th>สถานะการจอง</th>
+                  <th class="right">รายละเอียด</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <p class="footnote" id="footnote"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div>
+      <div class="drawer-title"><h3 id="drawerBookingId"></h3><span id="drawerStatusBadge"></span></div>
+      <p class="drawer-sub" id="drawerEvent"></p>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()"><svg class="ic" width="17" height="17" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+<div class="toast" id="toast"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span id="toastMsg"></span></div>
+
+<script>
+/* ---------------- Data Sources ---------------- */
+const ORGANIZATIONS = [
+  { id: "ALL", name: "ทุกองค์กร / ผู้จัด", initials: "AL", sub: "ดูข้อมูลทั้งหมด" },
+  { id: "ORG-01", name: "Live Nation Tero", initials: "LT", sub: "Company · Thailand" },
+  { id: "ORG-02", name: "BEC Tero", initials: "BT", sub: "University · Thailand" },
+  { id: "ORG-03", name: "GMM Show", initials: "GS", sub: "Company · Thailand" },
+  { id: "ORG-04", name: "Siam Piwat Events", initials: "SP", sub: "University · Thailand" }
+];
+
+const EVENTS = [
+  { id: "EVT-01", orgId: "ORG-01", name: "Coldplay World Tour", initials: "CW", sub: "Concert · Rajamangala" },
+  { id: "EVT-02", orgId: "ORG-01", name: "Maroon 5 Tour", initials: "M5", sub: "Concert · Impact Arena" },
+  { id: "EVT-03", orgId: "ORG-02", name: "Ed Sheeran Live", initials: "ES", sub: "Concert · Impact Arena" },
+  { id: "EVT-04", orgId: "ORG-03", name: "Big Mountain Music Festival", initials: "BM", sub: "Festival · Khao Yai" },
+  { id: "EVT-05", orgId: "ORG-04", name: "Siam Music Fest", initials: "SM", sub: "Festival · Siam Square" },
+  { id: "EVT-06", orgId: "ORG-03", name: "Bodyslam Fest", initials: "BD", sub: "Concert · Rajamangala" }
+];
+
+function minutesAgo(m){ return new Date(Date.now() - m*60000); }
+
+let bookings = [
+  { id:"BK-10234", customer:"สมชาย ใจดี", email:"somchai@mail.com", phone:"081-234-5678", orgId:"ORG-01", eventId:"EVT-01", 
+    seats:"A12, A13 (GA Floor)", amount:"5,000 THB", paymentMethod:"บัตรเครดิต (Visa 4482)", payment:"Paid", status:"Confirmed", created:minutesAgo(15),
+    audit:[{who:"ระบบ",action:"สร้างรายการจอง",before:"—",after:"Confirmed",reason:"ชำระเงินสำเร็จ",time:minutesAgo(15)}] },
+  { id:"BK-10198", customer:"James Patel", email:"james.patel@mail.com", phone:"089-987-6543", orgId:"ORG-02", eventId:"EVT-03", 
+    seats:"B05 (VIP)", amount:"4,500 THB", paymentMethod:"PromptPay QR", payment:"Pending", status:"Locked", created:minutesAgo(3), 
+    audit:[{who:"ระบบ",action:"ล็อกที่นั่ง",before:"—",after:"Locked",reason:"รอการยืนยันยอดเงินจากระบบ QR (หมดอายุใน 10 นาที)",time:minutesAgo(3)}] },
+  { id:"BK-10177", customer:"มาริสา วงศ์สกุล", email:"marisa@mail.com", phone:"092-111-2222", orgId:"ORG-03", eventId:"EVT-04", 
+    seats:"C10, C11, C12 (Zone C)", amount:"7,500 THB", paymentMethod:"บัตรเครดิต", payment:"Failed", status:"Cancelled", created:minutesAgo(120),
+    audit:[{who:"ระบบ",action:"ยกเลิกการจอง",before:"Locked",after:"Cancelled",reason:"บัตรเครดิตถูกปฏิเสธ",time:minutesAgo(115)}] },
+  { id:"BK-10156", customer:"เอกรัฐ บุญมี", email:"ekarat@mail.com", phone:"081-333-4444", orgId:"ORG-01", eventId:"EVT-01", 
+    seats:"D01 (Zone D)", amount:"2,500 THB", paymentMethod:"PromptPay QR", payment:"Paid", status:"Confirmed", created:minutesAgo(300),
+    audit:[{who:"ระบบ",action:"สร้างรายการจอง",before:"—",after:"Confirmed",reason:"ได้รับยอดเงินโอนสำเร็จ",time:minutesAgo(300)}] },
+  { id:"BK-10121", customer:"พิมพ์ชนก แสงทอง", email:"pimchanok@mail.com", phone:"065-222-9988", orgId:"ORG-04", eventId:"EVT-05", 
+    seats:"E08 (Zone E)", amount:"3,200 THB", paymentMethod:"PromptPay QR", payment:"Expired", status:"Expired", created:minutesAgo(20),
+    audit:[
+      {who:"ระบบ",action:"ล็อกที่นั่ง",before:"—",after:"Locked",reason:"รอการยืนยันยอดเงินจากระบบ QR (หมดอายุใน 10 นาที)",time:minutesAgo(20)},
+      {who:"ระบบ",action:"หมดเวลาชำระเงิน",before:"Locked",after:"Expired",reason:"ลูกค้าไม่ชำระเงินภายในเวลาที่กำหนด ระบบยกเลิกการล็อกที่นั่งอัตโนมัติและปล่อยที่นั่งคืนสู่ระบบ",time:minutesAgo(10)}
+    ] },
+];
+
+/* ---------------- State ---------------- */
+let state = { 
+  search:"", 
+  orgId:"ALL", 
+  eventId:"ALL", 
+  statusFilter:"All Statuses", 
+  paymentFilter:"All", 
+  paymentStatusFilter:null, 
+  dateRange:"all", 
+  startDate:"", 
+  endDate:"", 
+  selectedBookingId:null 
+};
+const TEXT_MAP = { "Confirmed": "ยืนยันแล้ว", "Locked": "ล็อกที่นั่ง", "Cancelled": "ยกเลิกแล้ว", "Expired": "หมดอายุ", "Paid": "ชำระแล้ว", "Pending": "รอชำระ", "Failed": "ล้มเหลว", "All Statuses": "สถานะทั้งหมด" };
+
+/* ---------------- Custom Dropdown Logic ---------------- */
+function setupDropdown(dropdownId, triggerId, menuId, searchId, listId, dataRenderer) {
+  const trigger = document.getElementById(triggerId);
+  const menu = document.getElementById(menuId);
+  const search = document.getElementById(searchId);
+  
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = menu.classList.contains('show');
+    document.querySelectorAll('.cd-menu').forEach(m => m.classList.remove('show'));
+    document.querySelectorAll('.cd-trigger').forEach(t => t.classList.remove('active'));
+    if (!isOpen) {
+      menu.classList.add('show');
+      trigger.classList.add('active');
+      search.value = '';
+      dataRenderer('');
+      setTimeout(() => search.focus(), 100);
+    }
+  });
+
+  search.addEventListener('click', e => e.stopPropagation());
+  search.addEventListener('input', e => dataRenderer(e.target.value.toLowerCase()));
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.cd-menu').forEach(m => m.classList.remove('show'));
+  document.querySelectorAll('.cd-trigger').forEach(t => t.classList.remove('active'));
+});
+
+function renderOrgList(searchQuery = '') {
+  const listEl = document.getElementById('orgList');
+  const filteredOrgs = ORGANIZATIONS.filter(o => o.name.toLowerCase().includes(searchQuery));
+  
+  if (filteredOrgs.length === 0) {
+    listEl.innerHTML = `<div class="cd-empty">No results found</div>`;
+    return;
+  }
+  
+  listEl.innerHTML = filteredOrgs.map(o => `
+    <div class="cd-item ${state.orgId === o.id ? 'selected' : ''}" onclick="selectOrg('${o.id}', '${o.name}')">
+      <div class="cd-avatar">${o.initials}</div>
+      <div class="cd-info">
+        <span class="cd-title">${o.name}</span>
+        <span class="cd-subtitle">${o.sub}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderEventList(searchQuery = '') {
+  const listEl = document.getElementById('evtList');
+  let availableEvents = EVENTS;
+  if (state.orgId !== "ALL") {
+    availableEvents = EVENTS.filter(e => e.orgId === state.orgId);
+  }
+  
+  const allEventsOption = { id: "ALL", name: state.orgId === "ALL" ? "งานคอนเสิร์ตทั้งหมด" : "ทุกงานขององค์กรนี้", initials: "AL", sub: "ดูข้อมูลทั้งหมด" };
+  const filteredEvents = [allEventsOption, ...availableEvents].filter(e => e.name.toLowerCase().includes(searchQuery));
+
+  if (filteredEvents.length === 0) {
+    listEl.innerHTML = `<div class="cd-empty">No results found</div>`;
+    return;
+  }
+
+  listEl.innerHTML = filteredEvents.map(e => `
+    <div class="cd-item ${state.eventId === e.id ? 'selected' : ''}" onclick="selectEvent('${e.id}', '${e.name}')">
+      <div class="cd-avatar">${e.initials}</div>
+      <div class="cd-info">
+        <span class="cd-title">${e.name}</span>
+        <span class="cd-subtitle">${e.sub}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectOrg(id, name) {
+  state.orgId = id;
+  document.getElementById('orgSelectedText').textContent = name;
+  document.getElementById('orgMenu').classList.remove('show');
+  document.getElementById('orgTrigger').classList.remove('active');
+  
+  state.eventId = "ALL";
+  document.getElementById('evtSelectedText').textContent = id === "ALL" ? "งานคอนเสิร์ตทั้งหมด" : "ทุกงานขององค์กรนี้";
+  
+  renderTable();
+}
+
+function selectEvent(id, name) {
+  state.eventId = id;
+  document.getElementById('evtSelectedText').textContent = name;
+  document.getElementById('evtMenu').classList.remove('show');
+  document.getElementById('evtTrigger').classList.remove('active');
+  renderTable();
+}
+
+/* ---------------- Initialize UI & Logic ---------------- */
+setupDropdown('orgDropdown', 'orgTrigger', 'orgMenu', 'orgSearch', 'orgList', renderOrgList);
+setupDropdown('evtDropdown', 'evtTrigger', 'evtMenu', 'evtSearch', 'evtList', renderEventList);
+
+
+function getFiltered(){
+  return bookings.filter(b=>{
+    if(state.statusFilter!=="All Statuses" && b.status!==state.statusFilter) return false;
+    if(state.orgId!=="ALL" && b.orgId!==state.orgId) return false;
+    if(state.eventId!=="ALL" && b.eventId!==state.eventId) return false;
+    if(state.paymentFilter!=="All" && !b.paymentMethod.includes(state.paymentFilter)) return false;
+    if(state.paymentStatusFilter && b.payment!==state.paymentStatusFilter) return false;
+    
+    // กรองตามช่วงเวลา
+    if(state.dateRange !== "all"){
+      const bTime = new Date(b.created).getTime();
+      const now = new Date();
+      if(state.dateRange === "today"){
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        if(bTime < startOfDay) return false;
+      } else if(state.dateRange === "7d"){
+        const sevenDaysAgo = now.getTime() - (7 * 24 * 60 * 60 * 1000);
+        if(bTime < sevenDaysAgo) return false;
+      } else if(state.dateRange === "30d"){
+        const thirtyDaysAgo = now.getTime() - (30 * 24 * 60 * 60 * 1000);
+        if(bTime < thirtyDaysAgo) return false;
+      } else if(state.dateRange === "custom"){
+        if(state.startDate){
+          const start = new Date(state.startDate);
+          start.setHours(0,0,0,0);
+          if(bTime < start.getTime()) return false;
+        }
+        if(state.endDate){
+          const end = new Date(state.endDate);
+          end.setHours(23,59,59,999);
+          if(bTime > end.getTime()) return false;
+        }
+      }
+    }
+
+    if(state.search.trim()){
+      const q = state.search.toLowerCase();
+      const orgName = ORGANIZATIONS.find(o=>o.id===b.orgId)?.name || '';
+      const evtName = EVENTS.find(e=>e.id===b.eventId)?.name || '';
+      const hay = `${b.id} ${b.customer} ${b.email} ${orgName} ${evtName}`.toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function fmtDateTime(date){ return date.toLocaleString('th-TH',{year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
+
+function renderTable(){
+  const filtered = getFiltered();
+  const body = document.getElementById('tableBody');
+  if(filtered.length===0){
+    body.innerHTML = `<tr class="empty-row"><td colspan="6">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</td></tr>`;
+  } else {
+    body.innerHTML = filtered.map(b=>{
+      const orgName = ORGANIZATIONS.find(o=>o.id===b.orgId)?.name || 'Unknown';
+      const evtName = EVENTS.find(e=>e.id===b.eventId)?.name || 'Unknown';
+      
+      let statusHtml = `<span class="badge ${b.status}"><span class="dot"></span>${TEXT_MAP[b.status]}</span>`;
+      if(b.status === "Locked") statusHtml += `<div class="countdown-timer" data-created="${b.created.getTime()}">⏳ คำนวณเวลา...</div>`;
+
+      return `<tr>
+        <td><span class="bk-id">${b.id}</span></td>
+        <td><div class="cust-name">${b.customer}</div><div class="cust-email">${b.email}</div></td>
+        <td><span class="org-tag">🏢 ${orgName}</span><div class="cust-name">${evtName}</div></td>
+        <td><span class="badge ${b.payment}"><span class="dot"></span>${TEXT_MAP[b.payment]}</span></td>
+        <td>${statusHtml}</td>
+        <td class="right"><button class="icon-btn" onclick="openDrawer('${b.id}')"><svg class="ic" width="15" height="15" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></td>
+      </tr>`;
+    }).join('');
+  }
+  document.getElementById('footnote').textContent = `แสดง ${filtered.length} จาก ${bookings.length} รายการ`;
+}
+
+/* ---------------- ฟังก์ชันเปิดรายละเอียด Drawer (อัปเดตใหม่) ---------------- */
+function openDrawer(id) { 
+  state.selectedBookingId = id; 
+  
+  const b = bookings.find(item => item.id === id);
+  if (!b) return;
+
+  const orgName = ORGANIZATIONS.find(o => o.id === b.orgId)?.name || 'Unknown';
+  const evtName = EVENTS.find(e => e.id === b.eventId)?.name || 'Unknown';
+
+  document.getElementById('drawerBookingId').textContent = b.id;
+  document.getElementById('drawerStatusBadge').innerHTML = `<span class="badge ${b.status}"><span class="dot"></span>${TEXT_MAP[b.status]}</span>`;
+  document.getElementById('drawerEvent').textContent = `${orgName} · ${evtName}`;
+
+  const auditHtml = (b.audit || []).map(item => `
+    <div style="display:flex; gap:12px; margin-bottom:16px; position:relative;">
+      <div style="width:8px; height:8px; border-radius:50%; background:var(--primary); margin-top:6px; flex-shrink:0;"></div>
+      <div style="flex:1; font-size:13px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+          <strong style="color:#1e293b;">${item.action}</strong>
+          <span style="color:var(--muted-light); font-size:12px;">${fmtDateTime(item.time)}</span>
+        </div>
+        <div style="color:var(--muted); margin-bottom:2px;">โดย: ${item.who}</div>
+        <div style="color:#475569; background:#F8FAFC; padding:8px 12px; border-radius:6px; border:1px solid var(--border); margin-top:4px;">
+          ${item.reason}
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('drawerBody').innerHTML = `
+    <div style="padding: 24px;">
+      <!-- ข้อมูลผู้จอง -->
+      <div style="margin-bottom: 24px;">
+        <h4 style="font-size:14px; font-weight:600; color:#1e293b; margin-bottom:12px;">ข้อมูลผู้จอง</h4>
+        <div style="background:#F8FAFC; border:1px solid var(--border); border-radius:8px; padding:16px; font-size:13.5px; display:grid; gap:8px;">
+          <div><span style="color:var(--muted);">ชื่อลูกค้า:</span> <strong style="color:#1e293b;">${b.customer}</strong></div>
+          <div><span style="color:var(--muted);">อีเมล:</span> ${b.email}</div>
+          <div><span style="color:var(--muted);">เบอร์โทรศัพท์:</span> ${b.phone || '-'}</div>
+        </div>
+      </div>
+
+      <!-- รายละเอียดที่นั่งและการชำระเงิน -->
+      <div style="margin-bottom: 24px;">
+        <h4 style="font-size:14px; font-weight:600; color:#1e293b; margin-bottom:12px;">รายละเอียดการจอง</h4>
+        <div style="background:#F8FAFC; border:1px solid var(--border); border-radius:8px; padding:16px; font-size:13.5px; display:grid; gap:8px;">
+          <div><span style="color:var(--muted);">ที่นั่ง:</span> <strong style="color:#1e293b;">${b.seats}</strong></div>
+          <div><span style="color:var(--muted);">ยอดชำระ:</span> <strong style="color:#1e293b;">${b.amount}</strong></div>
+          <div><span style="color:var(--muted);">ช่องทางชำระเงิน:</span> ${b.paymentMethod}</div>
+          <div><span style="color:var(--muted);">สถานะการเงิน:</span> <span class="badge ${b.payment}"><span class="dot"></span>${TEXT_MAP[b.payment]}</span></div>
+          <div><span style="color:var(--muted);">วันที่ทำรายการ:</span> ${fmtDateTime(b.created)}</div>
+        </div>
+      </div>
+
+      <!-- ประวัติการทำรายการ (Audit Log) -->
+      <div>
+        <h4 style="font-size:14px; font-weight:600; color:#1e293b; margin-bottom:16px;">ประวัติการทำรายการ (Audit Log)</h4>
+        <div style="border-left: 2px solid var(--border); margin-left: 3px; padding-left: 14px;">
+          ${auditHtml || '<div style="color:var(--muted); font-size:13px;">ไม่มีประวัติการทำรายการ</div>'}
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('overlay').classList.add('show'); 
+  document.getElementById('drawer').classList.add('show'); 
+}
+
+function closeDrawer(){ document.getElementById('overlay').classList.remove('show'); document.getElementById('drawer').classList.remove('show'); }
+document.getElementById('overlay').addEventListener('click', closeDrawer);
+
+function resetFilter() {
+  state.search = "";
+  state.orgId = "ALL";
+  state.eventId = "ALL";
+  state.statusFilter = "All Statuses";
+  state.paymentFilter = "All";
+  state.paymentStatusFilter = null;
+  state.dateRange = "all";
+  state.startDate = "";
+  state.endDate = "";
+  
+  document.getElementById('searchInput').value = '';
+  document.getElementById('statusFilter').value = 'All Statuses';
+  document.getElementById('paymentFilter').value = 'All';
+  document.getElementById('paymentStatusFilter').value = 'All';
+  document.getElementById('dateRangeFilter').value = 'all';
+  document.getElementById('customDateRange').style.display = 'none';
+  document.getElementById('startDate').value = '';
+  document.getElementById('endDate').value = '';
+  
+  document.getElementById('orgSearch').value = '';
+  document.getElementById('evtSearch').value = '';
+  document.getElementById('orgSelectedText').textContent = 'ทุกองค์กร / ผู้จัด';
+  document.getElementById('evtSelectedText').textContent = 'งานคอนเสิร์ตทั้งหมด';
+  
+  renderTable();
+}
+
+// Event Listeners สำหรับการค้นหาและตัวกรองเวลา
+document.getElementById('searchInput').addEventListener('input', e=>{ state.search=e.target.value; renderTable(); });
+document.getElementById('statusFilter').addEventListener('change', e=>{ state.statusFilter = e.target.value; renderTable(); });
+document.getElementById('paymentFilter').addEventListener('change', e=>{ state.paymentFilter=e.target.value; renderTable(); });
+document.getElementById('paymentStatusFilter').addEventListener('change', e=>{ state.paymentStatusFilter = e.target.value==='All' ? null : e.target.value; renderTable(); });
+
+// Event Listener ตัวกรองเวลาแบบกำหนดเอง
+document.getElementById('dateRangeFilter').addEventListener('change', e=>{ 
+  state.dateRange = e.target.value; 
+  const customBox = document.getElementById('customDateRange');
+  if(state.dateRange === 'custom'){
+    customBox.style.display = 'flex';
+  } else {
+    customBox.style.display = 'none';
+  }
+  renderTable(); 
+});
+
+document.getElementById('startDate').addEventListener('change', e=>{ state.startDate = e.target.value; renderTable(); });
+document.getElementById('endDate').addEventListener('change', e=>{ state.endDate = e.target.value; renderTable(); });
+
+function refreshData() {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = "กำลังอัปเดตข้อมูล...";
+  t.classList.add('show');
+  setTimeout(() => { renderTable(); t.classList.remove('show'); }, 600);
+}
+
+// Countdown timer loop — เมื่อหมดเวลา จะเปลี่ยนสถานะการจองและสถานะการเงินเป็น "หมดอายุ" จริง
+setInterval(() => {
+  let statusChanged = false;
+
+  bookings.forEach(b => {
+    if (b.status === "Locked") {
+      const diff = b.created.getTime() + 600000 - Date.now();
+      if (diff <= 0) {
+        b.status = "Expired";
+        b.payment = "Expired";
+        b.audit = b.audit || [];
+        b.audit.push({
+          who: "ระบบ",
+          action: "หมดเวลาชำระเงิน",
+          before: "Locked",
+          after: "Expired",
+          reason: "ลูกค้าไม่ชำระเงินภายในเวลาที่กำหนด ระบบยกเลิกการล็อกที่นั่งอัตโนมัติและปล่อยที่นั่งคืนสู่ระบบ",
+          time: new Date()
+        });
+        statusChanged = true;
+      }
+    }
+  });
+
+  if (statusChanged) {
+    renderTable(); // rebuild ตารางทั้งหมดให้ badge/สถานะอัปเดตตรงกัน
+    return; // แถวที่ยังนับถอยหลังอยู่จะถูกจับในรอบ tick ถัดไป
+  }
+
+  document.querySelectorAll('.countdown-timer').forEach(el => {
+      const diff = parseInt(el.getAttribute('data-created')) + 600000 - Date.now();
+      if (diff > 0) {
+          const m = Math.floor(diff / 60000), s = Math.floor((diff % 60000) / 1000);
+          el.innerHTML = `⏳ รอชำระเงิน - เหลือเวลา ${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')} นาที`;
+      }
+  });
+}, 1000);
+
+// Init
+renderTable();
+</script>
+</body>
+</html>

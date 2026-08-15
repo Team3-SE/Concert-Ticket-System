@@ -1,0 +1,140 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam monochrome false
+skinparam roundcorner 10
+skinparam shadowing true
+
+title Admin Dashboard System - Class Diagram
+
+package "User & Actor Management" {
+    class User {
+        + userId: String
+        + username: String
+        + email: String
+        + role: ActorRole
+        + status: UserStatus
+        + createdAt: DateTime
+    }
+
+    class Admin {
+        + adminId: String
+        + department: String
+        + acknowledgeAlert(alertId: String): void
+        + resolveAlert(alertId: String, notes: String, attachment: File): void
+        + takeQuickAction(userId: String, action: String): void
+        + exportLogs(filters: LogFilter): File
+    }
+
+    enum UserStatus {
+        ACTIVE
+        SUSPENDED
+        BANNED
+    }
+
+    Admin -up-|> User
+}
+
+package "System Anomaly & Alert Module" {
+    class SystemAlert {
+        + alertId: String
+        + title: String
+        + description: String
+        + type: AlertType
+        + status: AlertStatus
+        + organizationId: String
+        + concertId: String
+        + detectedAt: DateTime
+        + getDetails(): AlertDetail
+        + updateStatus(newStatus: AlertStatus): void
+    }
+
+    class AlertResolution {
+        + resolutionId: String
+        + resolvedAt: DateTime
+        + adminId: String
+        + resolutionNotes: String
+        + attachmentUrl: String
+    }
+
+    class AlertFilter {
+        + organizationId: String
+        + concertId: String
+        + dateRange: DateRange
+        + alertType: AlertType
+    }
+
+    enum AlertType {
+        DUPLICATE_CHARGE
+        SEAT_LOCK_EXPIRED_FAILED
+        SEAT_HOARDING
+        SYSTEM_ERROR
+    }
+
+    enum AlertStatus {
+        TOTAL_ERRORS
+        PENDING
+        INVESTIGATING
+        RESOLVED
+    }
+
+    SystemAlert "1" *-- "0..1" AlertResolution : resolves with >
+    SystemAlert -> AlertType
+    SystemAlert -> AlertStatus
+}
+
+package "System Audit Logs Module" {
+    class AuditLog {
+        + logId: String
+        + timestamp: DateTime
+        + actorId: String
+        + actorRole: ActorRole
+        + action: String
+        + category: LogCategory
+        + status: LogStatus
+        + ipAddress: String
+        + userAgent: String
+        + rawMetadata: JSON
+        + fraudMonitorFlag: Boolean
+        + showDetails(): JSON
+    }
+
+    class LogFilter {
+        + role: ActorRole
+        + category: LogCategory
+        + status: LogStatus
+        + dateRange: DateRange
+    }
+
+    enum ActorRole {
+        ADMIN
+        EVENT_ORGANIZER
+        CUSTOMER
+        SYSTEM
+    }
+
+    enum LogCategory {
+        AUTH_LOGIN
+        PAYMENT_GATEWAY
+        CONCERT_MANAGEMENT
+        USER_MANAGEMENT
+        FRAUD_MONITOR
+    }
+
+    enum LogStatus {
+        SUCCESS
+        FAILED
+        BLOCKED
+    }
+
+    AuditLog -> ActorRole
+    AuditLog -> LogCategory
+    AuditLog -> LogStatus
+}
+
+' Relationships between packages
+Admin "1" -- "*" SystemAlert : investigates & resolves >
+Admin "1" -- "*" AuditLog : views & filters >
+User "1" -- "*" AuditLog : generates >
+AuditLog "0..1" -- "1" SystemAlert : triggers (Fraud/Error) >
+
+@enduml

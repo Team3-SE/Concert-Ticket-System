@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Complete Your Registration</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --bg-page: #F8FAFC;
+        --bg-white: #FFFFFF;
+        --primary-blue: #2563EB;
+        --primary-blue-hover: #1D4ED8;
+        --text-main: #0F172A;
+        --text-secondary: #475569;
+        --text-muted: #94A3B8;
+        --border-color: #E2E8F0;
+        --border-hover: #CBD5E1;
+
+        --badge-active-bg: #EFF6FF;
+        --badge-active-text: #1D4ED8;
+
+        --success-bg: #F0FDF4;
+        --success-text: #15803D;
+        --success-border: #BBF7D0;
+
+        --danger-text: #DC2626;
+
+        --radius-sm: 8px;
+        --radius-md: 10px;
+        --radius-lg: 16px;
+        --shadow-modal: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.04);
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+        background-color: var(--bg-page);
+        background-image: radial-gradient(circle at 15% 0%, #EFF6FF 0%, transparent 45%);
+        color: var(--text-main);
+        line-height: 1.5;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+    }
+
+    .page-wrap {
+        width: 100%;
+        max-width: 440px;
+    }
+
+    /* Brand mark above the card */
+    .brand-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 24px;
+    }
+
+    .brand-mark {
+        width: 32px;
+        height: 32px;
+        border-radius: 9px;
+        background: var(--primary-blue);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+
+    .brand-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-main);
+        letter-spacing: -0.01em;
+    }
+
+    /* Card */
+    .card {
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-modal);
+        padding: 36px 32px 32px;
+    }
+
+    .org-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--badge-active-bg);
+        color: var(--badge-active-text);
+        font-size: 12px;
+        font-weight: 600;
+        padding: 5px 12px;
+        border-radius: 50px;
+        margin-bottom: 18px;
+    }
+
+    .card-title {
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        color: var(--text-main);
+        margin-bottom: 6px;
+    }
+
+    .card-subtitle {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin-bottom: 28px;
+        line-height: 1.55;
+    }
+
+    .card-subtitle b {
+        color: var(--text-main);
+        font-weight: 600;
+    }
+
+    /* Form */
+    .form-group {
+        margin-bottom: 18px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 6px;
+    }
+
+    .form-label .hint {
+        font-weight: 400;
+        color: var(--text-muted);
+    }
+
+    .username-display {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 10px 14px;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-main);
+        background-color: #F8FAFC;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+    }
+
+    .username-display svg {
+        color: var(--text-muted);
+        flex-shrink: 0;
+    }
+
+    .password-field {
+        position: relative;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 10px 42px 10px 14px;
+        font-size: 14px;
+        color: var(--text-main);
+        background-color: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        outline: none;
+        transition: all 0.15s ease;
+    }
+
+    .form-input:hover {
+        border-color: var(--border-hover);
+    }
+
+    .form-input:focus {
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .form-input.input-error {
+        border-color: var(--danger-text);
+    }
+
+    .toggle-visibility {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text-muted);
+        padding: 4px;
+        display: flex;
+    }
+
+    .toggle-visibility:hover {
+        color: var(--text-secondary);
+    }
+
+    .error-text {
+        font-size: 12px;
+        color: var(--danger-text);
+        margin-top: 6px;
+        display: none;
+    }
+
+    .error-text.show {
+        display: block;
+    }
+
+    /* Password requirement checklist */
+    .requirements {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 12px;
+        background: #F8FAFC;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 14px 16px;
+        margin-bottom: 24px;
+    }
+
+    .req-item {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12.5px;
+        color: var(--text-muted);
+        transition: color 0.15s ease;
+    }
+
+    .req-item .req-dot {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        border: 1.5px solid var(--border-hover);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+    }
+
+    .req-item.met {
+        color: var(--text-main);
+    }
+
+    .req-item.met .req-dot {
+        background: #16A34A;
+        border-color: #16A34A;
+    }
+
+    .req-item .req-dot svg {
+        opacity: 0;
+        transition: opacity 0.1s ease;
+    }
+
+    .req-item.met .req-dot svg {
+        opacity: 1;
+    }
+
+    /* Submit */
+    .btn-submit {
+        width: 100%;
+        padding: 12px 18px;
+        font-size: 14.5px;
+        font-weight: 600;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        border: none;
+        background-color: var(--primary-blue);
+        color: #fff;
+        transition: all 0.15s ease;
+    }
+
+    .btn-submit:hover {
+        background-color: var(--primary-blue-hover);
+    }
+
+    .btn-submit:disabled {
+        background-color: #93C5FD;
+        cursor: not-allowed;
+    }
+
+    .card-footer-note {
+        text-align: center;
+        font-size: 12.5px;
+        color: var(--text-muted);
+        margin-top: 20px;
+        line-height: 1.6;
+    }
+
+    .card-footer-note a {
+        color: var(--primary-blue);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .card-footer-note a:hover {
+        text-decoration: underline;
+    }
+
+    /* Success state */
+    .success-view {
+        display: none;
+        text-align: center;
+        padding: 8px 0 4px;
+    }
+
+    .success-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--success-bg);
+        border: 1px solid var(--success-border);
+        color: var(--success-text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+    }
+
+    .success-view h2 {
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--text-main);
+        margin-bottom: 8px;
+        letter-spacing: -0.02em;
+    }
+
+    .success-view p {
+        font-size: 14px;
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 24px;
+    }
+
+    .success-view p b {
+        color: var(--text-main);
+    }
+
+    .btn-login {
+        display: inline-flex;
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 18px;
+        font-size: 14.5px;
+        font-weight: 600;
+        border-radius: var(--radius-sm);
+        background-color: var(--primary-blue);
+        color: #fff;
+        text-decoration: none;
+        cursor: pointer;
+        border: none;
+    }
+
+    .btn-login:hover {
+        background-color: var(--primary-blue-hover);
+    }
+
+    @media (max-width: 480px) {
+        .card { padding: 28px 22px; }
+        .requirements { grid-template-columns: 1fr; }
+    }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+    <div class="brand-row">
+        <div class="brand-mark">E</div>
+        <span class="brand-name">EventHub Organizer Portal</span>
+    </div>
+
+    <div class="card">
+
+        <!-- Registration Form View -->
+        <div id="formView">
+            <span class="org-chip" id="orgChip">Live Nation Tero</span>
+            <h1 class="card-title">Complete your registration</h1>
+            <p class="card-subtitle">
+                You've been added as an <b>Organizer Admin</b> staff member. Set a password below to activate your account.
+            </p>
+
+            <form id="registerForm" novalidate>
+
+                <div class="form-group">
+                    <label class="form-label">Username <span class="hint">(your email address)</span></label>
+                    <div class="username-display">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zm0 0c0 1.657 1.007 3 2.25 3S21 13.657 21 12a9 9 0 10-2.636 6.364M16.5 12V8.25"/>
+                        </svg>
+                        <span id="usernameDisplay">staff@organizer.com</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="newPassword">New Password <span class="req" style="color:var(--danger-text)">*</span></label>
+                    <div class="password-field">
+                        <input type="password" id="newPassword" class="form-input" placeholder="Enter a new password" autocomplete="new-password">
+                        <button type="button" class="toggle-visibility" onclick="toggleVisibility('newPassword', this)" aria-label="Show password">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="confirmPassword">Confirm Password <span class="req" style="color:var(--danger-text)">*</span></label>
+                    <div class="password-field">
+                        <input type="password" id="confirmPassword" class="form-input" placeholder="Re-enter your new password" autocomplete="new-password">
+                        <button type="button" class="toggle-visibility" onclick="toggleVisibility('confirmPassword', this)" aria-label="Show password">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        </button>
+                    </div>
+                    <p class="error-text" id="matchError">Passwords do not match.</p>
+                </div>
+
+                <div class="requirements" id="requirements">
+                    <div class="req-item" data-rule="length">
+                        <span class="req-dot"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg></span>
+                        At least 8 characters
+                    </div>
+                    <div class="req-item" data-rule="upper">
+                        <span class="req-dot"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg></span>
+                        One uppercase letter
+                    </div>
+                    <div class="req-item" data-rule="number">
+                        <span class="req-dot"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg></span>
+                        One number
+                    </div>
+                    <div class="req-item" data-rule="special">
+                        <span class="req-dot"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg></span>
+                        One special character
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="submitBtn" disabled>Activate Account</button>
+            </form>
+
+            <p class="card-footer-note">
+                This registration link expires in 48 hours.<br>
+                Trouble registering? <a href="mailto:support@eventhub.example.com">Contact support</a>
+            </p>
+        </div>
+
+        <!-- Success View -->
+        <div class="success-view" id="successView">
+            <div class="success-icon">
+                <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+            </div>
+            <h2>Account activated</h2>
+            <p>You can now sign in with <b><span id="successEmail">staff@organizer.com</span></b> and the password you just created.</p>
+            <a href="#" class="btn-login">Go to Login</a>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // Read email / org name from the invite link, e.g. register.html?email=staff@organizer.com&org=Live%20Nation%20Tero
+    // Demo fallback values are used when the page is opened without those params.
+    const params = new URLSearchParams(window.location.search);
+    const inviteEmail = params.get('email') || 'staff@organizer.com';
+    const inviteOrg = params.get('org') || 'Live Nation Tero';
+
+    document.getElementById('usernameDisplay').textContent = inviteEmail;
+    document.getElementById('successEmail').textContent = inviteEmail;
+    document.getElementById('orgChip').textContent = inviteOrg;
+    document.title = `Join ${inviteOrg} — Complete Registration`;
+
+    const newPasswordInput = document.getElementById('newPassword');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const submitBtn = document.getElementById('submitBtn');
+    const matchError = document.getElementById('matchError');
+
+    const rules = {
+        length: (v) => v.length >= 8,
+        upper: (v) => /[A-Z]/.test(v),
+        number: (v) => /[0-9]/.test(v),
+        special: (v) => /[^A-Za-z0-9]/.test(v)
+    };
+
+    function evaluatePassword() {
+        const value = newPasswordInput.value;
+        let allMet = true;
+
+        Object.keys(rules).forEach((rule) => {
+            const met = rules[rule](value);
+            const el = document.querySelector(`.req-item[data-rule="${rule}"]`);
+            el.classList.toggle('met', met);
+            if (!met) allMet = false;
+        });
+
+        checkFormValidity(allMet);
+        return allMet;
+    }
+
+    function checkFormValidity(passwordValid) {
+        const confirmValue = confirmPasswordInput.value;
+        const newValue = newPasswordInput.value;
+        const passwordsMatch = confirmValue.length > 0 && confirmValue === newValue;
+
+        if (confirmValue.length > 0 && !passwordsMatch) {
+            matchError.classList.add('show');
+            confirmPasswordInput.classList.add('input-error');
+        } else {
+            matchError.classList.remove('show');
+            confirmPasswordInput.classList.remove('input-error');
+        }
+
+        submitBtn.disabled = !(passwordValid && passwordsMatch);
+    }
+
+    newPasswordInput.addEventListener('input', evaluatePassword);
+    confirmPasswordInput.addEventListener('input', () => {
+        const passwordValid = Object.keys(rules).every((rule) => rules[rule](newPasswordInput.value));
+        checkFormValidity(passwordValid);
+    });
+
+    function toggleVisibility(fieldId, btn) {
+        const field = document.getElementById(fieldId);
+        const isPassword = field.type === 'password';
+        field.type = isPassword ? 'text' : 'password';
+        btn.style.color = isPassword ? 'var(--primary-blue)' : 'var(--text-muted)';
+    }
+
+    document.getElementById('registerForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (submitBtn.disabled) return;
+
+        // Here the app would POST { email: inviteEmail, password: newPasswordInput.value }
+        // to the activation endpoint using the token from the invite link.
+        document.getElementById('formView').style.display = 'none';
+        document.getElementById('successView').style.display = 'block';
+    });
+</script>
+
+</body>
+</html>

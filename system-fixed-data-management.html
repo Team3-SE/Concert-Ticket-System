@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ระบบจัดการข้อมูล | TEAM 3 Ticket</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#2563EB;
+    --primary-dark:#1D4ED8;
+    --bg:#F1F5F9;
+    --border:#E5E7EB;
+    --text:#0F172A;
+    --muted:#64748B;
+    --muted-light:#94A3B8;
+    
+    /* Theme Colors from Image */
+    --navy-bg: #1A2B4C;
+    --orange-brand: #F97316;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{
+    font-family:'Inter', 'Noto Sans Thai', sans-serif;
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  button,select,input,textarea{font-family:inherit;}
+  button{cursor:pointer;background:none;border:none;}
+  svg.ic{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block;flex-shrink:0;}
+
+  /* ---------------- Layout: Sidebar & Header ---------------- */
+  .app-layout {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+  }
+  .sidebar {
+    width: 260px;
+    background: var(--navy-bg);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    z-index: 10;
+  }
+  .sidebar-brand {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    font-size: 18px;
+    font-weight: 700;
+    gap: 12px;
+    letter-spacing: 0.5px;
+  }
+  .sidebar-brand svg {
+    flex-shrink: 0;
+  }
+  .sidebar-menu {
+    padding: 16px 0;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  .menu-item {
+    padding: 14px 24px;
+    color: #94A3B8;
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    border-left: 4px solid transparent;
+    transition: all 0.2s;
+  }
+  .menu-item:hover {
+    color: white;
+    background: rgba(255,255,255,0.05);
+  }
+  .menu-item.active {
+    color: white;
+    background: rgba(255,255,255,0.1);
+    border-left-color: var(--orange-brand);
+  }
+  .menu-item.logout {
+    color: #EF4444;
+    margin-top: auto;
+    margin-bottom: 16px;
+    border-left: none;
+  }
+  .menu-item.logout:hover {
+    background: rgba(239, 68, 68, 0.1);
+  }
+
+  .main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .topbar {
+    height: 60px;
+    background: var(--navy-bg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    color: white;
+    flex-shrink: 0;
+    border-left: 1px solid rgba(255,255,255,0.1);
+  }
+  .topbar-path {
+    font-size: 13px;
+    color: #94A3B8;
+  }
+  .topbar-path span {
+    color: white;
+    font-weight: 500;
+  }
+  .topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13.5px;
+    font-weight: 500;
+  }
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--navy-bg);
+  }
+
+  .content-area {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--bg);
+  }
+
+  /* ---------------- Original Content CSS ---------------- */
+  .wrap{max-width:1400px;margin:0 auto;padding:32px 32px 60px;}
+  
+  .page-header-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04);
+  }
+  .page-title{font-size:20px;font-weight:700;letter-spacing:-0.01em; color: var(--navy-bg);}
+  .page-role{font-size:14px;color:var(--muted);font-weight: 500;}
+
+  /* stat cards */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:0 0 24px;}
+  .stat-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 2px rgba(15,23,42,.04);}
+  .stat-label{font-size:13px;font-weight:500;color:var(--muted);}
+  .stat-value{font-size:24px;font-weight:700;margin-top:6px;}
+  .stat-icon{height:44px;width:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;}
+
+  /* filter card */
+  .filter-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px;box-shadow:0 1px 2px rgba(15,23,42,.04);}
+  .filter-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;}
+  .search-box{position:relative;flex:1;min-width:300px;}
+  .search-box svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted-light);}
+  .search-box input{width:100%;height:40px;padding:0 14px 0 38px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;color:var(--text);outline:none;transition:border-color .15s;}
+  .search-box input:focus{border-color:var(--primary);}
+  .search-box input::placeholder{color:var(--muted-light);}
+  .select-field{position:relative;}
+  .select-field svg.pre{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted-light);pointer-events:none;}
+  .select-field svg.post{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted-light);pointer-events:none;}
+  .select-field select{height:40px;padding:0 30px 0 36px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:#475569;background:#fff;outline:none;appearance:none;cursor:pointer;}
+  .select-field select:focus{border-color:var(--primary);}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
+  .chip{height:32px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:500;border:1px solid var(--border);background:#fff;color:#475569;transition:all .15s;}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+
+  /* table */
+  .table-card{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04);}
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;min-width:1100px;}
+  thead tr{background:rgba(248,250,252,.7);border-bottom:1px solid var(--border);}
+  th{font-size:12px;font-weight:600;color:var(--muted);padding:12px 16px;text-align:left;}
+  th.right,td.right{text-align:right;}
+  tbody tr{border-bottom:1px solid var(--border);transition:background .12s;}
+  tbody tr:last-child{border-bottom:none;}
+  tbody tr:hover{background:rgba(248,250,252,.6);}
+  td{padding:14px 16px;font-size:13.5px;vertical-align:top;}
+  .cust-name{font-weight:500;color:#1e293b;}
+  .cust-email{font-size:12px;color:var(--muted-light);margin-top:1px;}
+  .bk-id{font-weight:700;color:#1e293b;}
+  .seat-info{font-size:13px;color:var(--text);}
+  .time-cell{font-size:13px;color:var(--muted);white-space:nowrap;}
+  .row-actions{display:flex;justify-content:flex-end;gap:6px;}
+  .icon-btn{height:32px;width:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);border:1px solid var(--border);transition:all .12s;}
+  .icon-btn:hover{color:var(--primary);background:#EFF6FF;border-color:#BFDBFE;}
+  .empty-row td{padding:60px 0;text-align:center;color:var(--muted-light);font-size:13.5px;}
+  .footnote{font-size:13px;color:var(--muted-light);margin-top:16px;}
+
+  /* badges/tags */
+  .badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;border:1px solid transparent;padding:4px 10px;font-size:12px;font-weight:500;}
+  .badge .dot{height:6px;width:6px;border-radius:50%;}
+  
+  .badge.Confirmed, .badge.Paid {background:#ECFDF5;color:#047857;border-color:#A7F3D0;}
+  .badge.Confirmed .dot, .badge.Paid .dot {background:#10B981;}
+  
+  .badge.Locked, .badge.Pending {background:#FFFBEB;color:#B45309;border-color:#FDE68A;}
+  .badge.Locked .dot, .badge.Pending .dot {background:#F59E0B;}
+  
+  .badge.Cancelled, .badge.Failed {background:#FEF2F2;color:#B91C1C;border-color:#FECACA;}
+  .badge.Cancelled .dot, .badge.Failed .dot {background:#EF4444;}
+
+  .countdown-timer {font-size:12px; color:#D97706; margin-top:6px; font-weight:500; display:flex; align-items:center; gap:4px;}
+
+  /* drawer */
+  .overlay{position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:40;opacity:0;transition:opacity .2s;pointer-events:none;}
+  .overlay.show{opacity:1;pointer-events:auto;}
+  .drawer{position:fixed;top:0;right:0;height:100%;width:520px;max-width:100%;background:#fff;z-index:50;box-shadow:-8px 0 30px rgba(15,23,42,.15);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);}
+  .drawer.show{transform:translateX(0);}
+  .drawer-head{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);}
+  .drawer-title{display:flex;align-items:center;gap:8px;}
+  .drawer-title h3{font-size:16px;font-weight:700;}
+  .drawer-sub{font-size:13px;color:var(--muted);margin-top:4px;}
+  .drawer-close{height:32px;width:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted-light);transition:all .12s;}
+  .drawer-close:hover{background:#F1F5F9;color:#475569;}
+  .drawer-body{flex:1;overflow-y:auto;padding-bottom:40px;}
+  .d-section{border-top:1px solid var(--border);}
+  .d-section-title{padding:20px 24px 6px;font-size:13px;font-weight:700;color:#0F172A;}
+  .d-section-body{padding:0 24px 16px;}
+  .field-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:10px 0;border-top:1px solid #F1F5F9;}
+  .field-row:first-child{border-top:none;}
+  .field-label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .field-label svg{color:var(--muted-light);}
+  .field-value{font-size:13px;font-weight:500;color:#1e293b;text-align:right;}
+
+  .actions-grid{display:grid;grid-template-columns:1fr;gap:10px;padding:0 24px 24px;}
+  .action-btn{display:flex;align-items:center;gap:10px;height:46px;padding:0 16px;border-radius:12px;border:1px solid var(--border);font-size:13.5px;font-weight:500;color:#334155;text-align:left;transition:all .12s;}
+  .action-btn:hover{background:#EFF6FF;border-color:#BFDBFE;}
+  .action-btn svg{color:var(--primary);flex-shrink:0;}
+  .action-btn.danger{border-color:#FECACA;color:#DC2626;}
+  .action-btn.danger svg{color:#EF4444;}
+  .action-btn.danger:hover{background:#FEF2F2;}
+
+  .timeline{padding:0 24px 24px;}
+  .t-item{display:flex;gap:12px;}
+  .t-left{display:flex;flex-direction:column;align-items:center;}
+  .t-avatar{height:32px;width:32px;border-radius:50%;background:#EFF6FF;color:#1D4ED8;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+  .t-line{width:1px;flex:1;background:#E2E8F0;margin:4px 0;}
+  .t-body{flex:1;padding-bottom:20px;}
+  .t-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .t-action{font-size:13px;font-weight:600;color:#1e293b;}
+  .t-time{font-size:12px;color:var(--muted-light);white-space:nowrap;}
+  .t-by{font-size:12.5px;color:var(--muted);margin-top:2px;}
+  .t-by b{color:#475569;font-weight:600;}
+  .t-transition{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12.5px;}
+  .t-before{padding:2px 8px;border-radius:6px;background:#F1F5F9;color:var(--muted);}
+  .t-after{padding:2px 8px;border-radius:6px;background:#EFF6FF;color:#1D4ED8;font-weight:500;}
+  .t-arrow{color:var(--muted-light);}
+  .t-reason{font-size:12.5px;color:var(--muted);margin-top:6px;font-style:italic;}
+
+  /* modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:60;display:none;align-items:center;justify-content:center;padding:16px;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:#fff;border-radius:12px;width:100%;max-width:440px;padding:24px;box-shadow:0 20px 40px rgba(15,23,42,.2);}
+  .modal-head{display:flex;align-items:center;gap:12px;}
+  .modal-icon{height:40px;width:40px;border-radius:12px;background:#EFF6FF;color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .modal-icon.danger{background:#FEF2F2;color:#DC2626;}
+  .modal-head h3{font-size:16px;font-weight:700;}
+  .modal-desc{font-size:13.5px;color:var(--muted);margin-top:12px;line-height:1.5;}
+  .modal-desc b{color:#334155;font-weight:600;}
+  
+  .modal-label{font-size:13px;font-weight:600;color:#475569;margin-top:16px;margin-bottom:6px;display:block;}
+  .modal textarea{width:100%;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;color:#334155;resize:none;outline:none;}
+  .modal textarea:focus{border-color:var(--primary);}
+  
+  /* file upload */
+  .file-upload-wrapper { margin-top: 14px; }
+  .file-input { width: 100%; font-size: 13px; color: #64748B; padding: 6px; border: 1px dashed var(--border); border-radius: 8px; background: #F8FAFC; cursor: pointer; transition: border-color .15s;}
+  .file-input:hover { border-color: var(--primary); }
+  .file-input::file-selector-button { border: 1px solid var(--border); background: #fff; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; color: #1e293b; cursor: pointer; margin-right: 12px; transition: all .12s; }
+  .file-input::file-selector-button:hover { background: #EFF6FF; border-color: #BFDBFE; color: var(--primary-dark); }
+
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;}
+  .btn-secondary{height:40px;padding:0 16px;border-radius:8px;font-size:13.5px;font-weight:500;color:#475569;border:1px solid var(--border);background:#fff;transition:background .12s;display:inline-flex;align-items:center;gap:6px;}
+  .btn-secondary:hover{background:#F8FAFC;}
+  .btn-primary{height:40px;padding:0 16px;border-radius:8px;font-size:13.5px;font-weight:600;color:#fff;background:var(--primary);transition:background .12s;display:inline-flex;align-items:center;}
+  .btn-primary:hover{background:var(--primary-dark);}
+  .btn-primary.danger{background:#DC2626;}
+  .btn-primary.danger:hover{background:#B91C1C;}
+
+  /* toast */
+  .toast{position:fixed;bottom:24px;right:24px;z-index:70;display:flex;align-items:center;gap:10px;background:#0F172A;color:#fff;font-size:13.5px;font-weight:500;border-radius:12px;padding:12px 16px;box-shadow:0 10px 30px rgba(15,23,42,.35);transform:translateY(20px);opacity:0;pointer-events:none;transition:all .25s;}
+  .toast.show{transform:translateY(0);opacity:1;}
+  .toast svg{color:#34D399;}
+
+  @media (max-width:1100px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<div class="app-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11 2L2 7L11 12L20 7L11 2Z" fill="#F97316"/>
+        <path d="M2 17L11 22L20 17V7L11 12L2 7V17Z" fill="#3B82F6"/>
+      </svg>
+      TEAM 3 Ticket
+    </div>
+    <div class="sidebar-menu">
+      <a class="menu-item">จัดการผู้ใช้งาน</a>
+      <a class="menu-item">รายงานความผิดปกติ</a>
+      <a class="menu-item active">แก้ไขข้อมูลระบบ</a>
+      <a class="menu-item">ประวัติการทำงาน</a>
+      <a class="menu-item logout">ออกจากระบบ</a>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="main-area">
+    <!-- Header -->
+    <header class="topbar">
+      <div class="topbar-path">ระบบจัดการผู้ใช้งาน > <span>ระบบแก้ไขความผิดปกติ (Fraud & Anomaly Detector)</span></div>
+      <div class="topbar-user">
+        <div class="user-avatar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <span>Admin</span>
+      </div>
+    </header>
+
+    <!-- Content (Your original code starts here) -->
+    <div class="content-area">
+      <div class="wrap">
+        
+        <!-- Added a card wrapper to emulate the top section of your reference image -->
+        <div class="page-header-card">
+          <h1 class="page-title">แก้ไขข้อมูลที่ผิดพลาดในระบบ (System Data Correction)</h1>
+          <div class="page-role">ผู้ดูแลระบบ (Admin)</div>
+        </div>
+
+        <div class="stats" id="stats"></div>
+
+        <div class="filter-card">
+          <div class="filter-row">
+            <div class="search-box">
+              <svg class="ic" width="16" height="16" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input id="searchInput" type="text" placeholder="ค้นหาด้วยรหัสการจอง, ชื่อลูกค้า, อีเมล หรือชื่องาน..." />
+            </div>
+            
+            <div class="select-field">
+              <svg class="ic pre" width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <select id="eventFilter">
+                <option value="All">งานคอนเสิร์ตทั้งหมด</option>
+                <option value="Coldplay World Tour">Coldplay World Tour</option>
+                <option value="Ed Sheeran Live">Ed Sheeran Live</option>
+                <option value="Taylor Swift — The Eras Tour">Taylor Swift — The Eras Tour</option>
+              </select>
+              <svg class="ic post" width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+
+            <div class="select-field">
+              <svg class="ic pre" width="15" height="15" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              <select id="paymentFilter">
+                <option value="All">ทุกช่องทางชำระเงิน</option>
+                <option value="PromptPay QR">PromptPay QR</option>
+                <option value="บัตรเครดิต">บัตรเครดิต</option>
+              </select>
+              <svg class="ic post" width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            
+            <button class="btn-secondary" onclick="refreshData()" title="โหลดข้อมูลล่าสุด">
+              <svg class="ic" width="14" height="14" viewBox="0 0 24 24"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+              โหลดข้อมูลใหม่
+            </button>
+          </div>
+          <div class="chips" id="chips"></div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>รหัสการจอง</th>
+                  <th>ลูกค้า</th>
+                  <th>งาน & ที่นั่ง</th>
+                  <th>ยอดรวม</th>
+                  <th>สถานะการเงิน</th>
+                  <th>สถานะการจอง</th>
+                  <th>วันที่ทำรายการ</th>
+                  <th class="right">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <p class="footnote" id="footnote"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer / Sidebar (สำหรับดูข้อมูลเพิ่มเติม) -->
+<div class="overlay" id="overlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div>
+      <div class="drawer-title">
+        <h3 id="drawerBookingId"></h3>
+        <span id="drawerStatusBadge"></span>
+      </div>
+      <p class="drawer-sub" id="drawerEvent"></p>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">
+      <svg class="ic" width="17" height="17" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-icon" id="modalIcon"></div>
+      <h3 id="modalTitle"></h3>
+    </div>
+    <p class="modal-desc" id="modalDesc"></p>
+    
+    <label class="modal-label">เหตุผลประกอบการจัดการ (บันทึกในระบบ)</label>
+    <textarea id="modalReason" rows="3" placeholder="ระบุเหตุผล หรือโน้ตสั้นๆ..."></textarea>
+    
+    <!-- File Upload Section -->
+    <div class="file-upload-wrapper">
+      <label class="modal-label" style="margin-top:0;">แนบเอกสาร (ถ้ามี)</label>
+      <input type="file" id="modalAttachment" class="file-input" accept=".pdf, image/*" />
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn-primary" id="modalConfirmBtn" onclick="confirmAction()">ยืนยันการดำเนินการ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+/* ---------------- icon library (inline SVG) ---------------- */
+const ICON_PATHS = {
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  ticket: '<path d="M2 9a3 3 0 0 1 0 6"/><path d="M22 9a3 3 0 0 0 0 6"/><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="9" y1="5" x2="9" y2="19" stroke-dasharray="2 2"/>',
+  card: '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>',
+  seat: '<path d="M6 10V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4"/><path d="M4 14v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/><path d="M6 10h12a2 2 0 0 1 2 2v2H4v-2a2 2 0 0 1 2-2z"/>',
+  user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  check: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+  wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/>',
+  history: '<path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><polyline points="12 7 12 12 15 15"/>',
+  alertCircle: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+  mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2 6 12 13 22 6"/>',
+  phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  hash: '<line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>',
+  xCircle: '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+  unlock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>',
+  file: '<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>'
+};
+function icon(name, size=16, cls=''){
+  return `<svg class="ic ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24">${ICON_PATHS[name]||''}</svg>`;
+}
+
+/* ---------------------------- helpers & translation ---------------------------- */
+function minutesAgo(m){ return new Date(Date.now() - m*60000); }
+function fmtDateTime(date){
+  return date.toLocaleString('th-TH',{year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+}
+function initials(name){
+  if(name==="ระบบ") return "SYS";
+  return name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+}
+
+// Map English backend status to Thai display
+const TEXT_MAP = {
+  "Confirmed": "ยืนยันแล้ว",
+  "Locked": "ล็อกที่นั่ง",
+  "Cancelled": "ยกเลิกแล้ว",
+  "Paid": "ชำระแล้ว",
+  "Pending": "รอชำระ",
+  "Failed": "ล้มเหลว",
+  "All Statuses": "สถานะทั้งหมด"
+};
+
+const CATEGORIES = ["All Statuses", "Confirmed", "Locked", "Cancelled"];
+
+/* ---------------------------- mock data ---------------------------- */
+let bookings = [
+  { id:"BK-10234", customer:"สมชาย ใจดี", email:"somchai@mail.com", phone:"081-234-5678", event:"Coldplay World Tour", 
+    seats:"A12, A13 (GA Floor)", amount:"5,000 THB", paymentMethod:"บัตรเครดิต (Visa 4482)", payment:"Paid", status:"Confirmed", created:minutesAgo(15),
+    audit:[{who:"ระบบ",action:"สร้างรายการจอง",before:"—",after:"Confirmed",reason:"ชำระเงินสำเร็จ",time:minutesAgo(15)}] },
+    
+  { id:"BK-10198", customer:"James Patel", email:"james.patel@mail.com", phone:"089-987-6543", event:"Ed Sheeran Live", 
+    seats:"B05 (VIP)", amount:"4,500 THB", paymentMethod:"PromptPay QR", payment:"Pending", status:"Locked", created:minutesAgo(3), 
+    audit:[{who:"ระบบ",action:"ล็อกที่นั่ง",before:"—",after:"Locked",reason:"รอการยืนยันยอดเงินจากระบบ QR (หมดอายุใน 10 นาที)",time:minutesAgo(3)}] },
+    
+  { id:"BK-10177", customer:"มาริสา วงศ์สกุล", email:"marisa@mail.com", phone:"092-111-2222", event:"Taylor Swift — The Eras Tour", 
+    seats:"C10, C11, C12 (Zone C)", amount:"7,500 THB", paymentMethod:"บัตรเครดิต", payment:"Failed", status:"Cancelled", created:minutesAgo(120),
+    audit:[
+      {who:"ระบบ",action:"ยกเลิกการจอง",before:"Locked",after:"Cancelled",reason:"บัตรเครดิตถูกปฏิเสธ ปลดล็อกที่นั่งแล้ว",time:minutesAgo(115)},
+      {who:"ระบบ",action:"ล็อกที่นั่ง",before:"—",after:"Locked",reason:"ลูกค้าเข้าสู่หน้าชำระเงิน",time:minutesAgo(120)}
+    ]},
+    
+  { id:"BK-10156", customer:"เอกรัฐ บุญมี", email:"ekarat@mail.com", phone:"081-333-4444", event:"Coldplay World Tour", 
+    seats:"D01 (Zone D)", amount:"2,500 THB", paymentMethod:"PromptPay QR", payment:"Paid", status:"Confirmed", created:minutesAgo(300),
+    audit:[{who:"ระบบ",action:"สร้างรายการจอง",before:"—",after:"Confirmed",reason:"ได้รับยอดเงินโอนสำเร็จ",time:minutesAgo(300)}] },
+];
+
+const ADMIN_ACTIONS = [
+  {key:"markPaid", label:"ยืนยันการชำระเงิน (แมนนวล)", icon:"check"},
+  {key:"forceReleaseSeat", label:"บังคับปลดล็อกที่นั่ง", icon:"unlock"},
+  {key:"reissueTicket", label:"ออกตั๋วอิเล็กทรอนิกส์ใหม่", icon:"ticket"},
+  {key:"cancelBooking", label:"ยกเลิกการจอง", icon:"xCircle", danger:true},
+  {key:"banUser", label:"แบนผู้ใช้ (ระงับบัญชี)", icon:"shield", danger:true}
+];
+
+/* ---------------------------- state ---------------------------- */
+let state = { search:"", statusFilter:"All Statuses", eventFilter:"All", paymentFilter:"All", dateRange:"All time", selectedId:null };
+let pendingAction = null;
+
+/* ---------------------------- render: stats ---------------------------- */
+function renderStats(){
+  const total = bookings.length;
+  const confirmed = bookings.filter(b=>b.status==="Confirmed").length;
+  const locked = bookings.filter(b=>b.status==="Locked").length;
+  const cancelled = bookings.filter(b=>b.status==="Cancelled").length;
+  
+  const cards = [
+    {label:"การจองทั้งหมด", value:total, bg:"#EFF6FF", color:"#1D4ED8", ic:"ticket"},
+    {label:"ยืนยันแล้ว", value:confirmed, bg:"#ECFDF5", color:"#059669", ic:"check"},
+    {label:"รอยืนยัน (ล็อกที่นั่ง)", value:locked, bg:"#FFFBEB", color:"#D97706", ic:"clock"},
+    {label:"ยกเลิกแล้ว", value:cancelled, bg:"#FEF2F2", color:"#DC2626", ic:"xCircle"}
+  ];
+  document.getElementById('stats').innerHTML = cards.map(c=>`
+    <div class="stat-card">
+      <div>
+        <p class="stat-label">${c.label}</p>
+        <p class="stat-value">${c.value}</p>
+      </div>
+      <div class="stat-icon" style="background:${c.bg};color:${c.color}">${icon(c.ic,20)}</div>
+    </div>
+  `).join('');
+}
+
+/* ---------------------------- render: chips ---------------------------- */
+function renderChips(){
+  document.getElementById('chips').innerHTML = CATEGORIES.map(c=>`
+    <button class="chip ${state.statusFilter===c?'active':''}" onclick="setStatus('${c}')">${TEXT_MAP[c]}</button>
+  `).join('');
+}
+function setStatus(c){ state.statusFilter=c; renderChips(); renderTable(); }
+
+/* ---------------------------- filtering ---------------------------- */
+function getFiltered(){
+  return bookings.filter(b=>{
+    if(state.statusFilter!=="All Statuses" && b.status!==state.statusFilter) return false;
+    if(state.eventFilter!=="All" && b.event!==state.eventFilter) return false;
+    if(state.paymentFilter!=="All" && !b.paymentMethod.includes(state.paymentFilter)) return false;
+    
+    if(state.search.trim()){
+      const q = state.search.toLowerCase();
+      const hay = `${b.id} ${b.customer} ${b.email} ${b.event}`.toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+/* ---------------------------- render: table ---------------------------- */
+function renderTable(){
+  const filtered = getFiltered();
+  const body = document.getElementById('tableBody');
+  if(filtered.length===0){
+    body.innerHTML = `<tr class="empty-row"><td colspan="8">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</td></tr>`;
+  } else {
+    body.innerHTML = filtered.map(b=>{
+      let statusHtml = `<span class="badge ${b.status}"><span class="dot"></span>${TEXT_MAP[b.status]}</span>`;
+      if(b.status === "Locked") {
+          statusHtml += `<div class="countdown-timer" data-created="${b.created.getTime()}">⏳ คำนวณเวลา...</div>`;
+      }
+
+      return `
+      <tr>
+        <td><span class="bk-id">${b.id}</span></td>
+        <td>
+          <div class="cust-name">${b.customer}</div>
+          <div class="cust-email">${b.email}</div>
+        </td>
+        <td>
+          <div class="cust-name">${b.event}</div>
+          <div class="seat-info">${b.seats}</div>
+        </td>
+        <td><span style="font-weight:600;">${b.amount}</span></td>
+        <td><span class="badge ${b.payment}"><span class="dot"></span>${TEXT_MAP[b.payment]}</span></td>
+        <td>${statusHtml}</td>
+        <td><span class="time-cell">${fmtDateTime(b.created)}</span></td>
+        <td class="right">
+          <div class="row-actions">
+            <button class="icon-btn" title="จัดการรายการ" onclick="openDrawer('${b.id}','actions')">${icon('wrench',15)}</button>
+            <button class="icon-btn" title="ประวัติการดำเนินการ" onclick="openDrawer('${b.id}','timeline')">${icon('history',15)}</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+  document.getElementById('footnote').textContent = `แสดง ${filtered.length} จาก ${bookings.length} รายการ`;
+  
+  updateCountdowns();
+}
+
+/* ---------------------------- drawer ---------------------------- */
+function openDrawer(id, focus){
+  state.selectedId = id;
+  renderDrawer();
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('drawer').classList.add('show');
+  setTimeout(()=>{
+    const body = document.getElementById('drawerBody');
+    if(focus==='actions'){
+      document.getElementById('anchor-actions').scrollIntoView({behavior:'smooth',block:'start'});
+    } else if(focus==='timeline'){
+      document.getElementById('anchor-timeline').scrollIntoView({behavior:'smooth',block:'start'});
+    } else {
+      body.scrollTo({top:0});
+    }
+  }, 150);
+}
+function closeDrawer(){
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('drawer').classList.remove('show');
+  setTimeout(()=>{ state.selectedId=null; }, 250);
+}
+document.getElementById('overlay').addEventListener('click', closeDrawer);
+
+function renderDrawer(){
+  const b = bookings.find(x=>x.id===state.selectedId);
+  if(!b) return;
+  
+  document.getElementById('drawerBookingId').textContent = b.id;
+  
+  let statusHtml = `<span class="badge ${b.status}"><span class="dot"></span>${TEXT_MAP[b.status]}</span>`;
+  if(b.status === "Locked") {
+      statusHtml += `<div class="countdown-timer" data-created="${b.created.getTime()}" style="display:inline-flex; margin-left:12px; margin-top:0;">⏳ คำนวณเวลา...</div>`;
+  }
+  document.getElementById('drawerStatusBadge').innerHTML = statusHtml;
+  document.getElementById('drawerEvent').textContent = b.event;
+
+  const field = (label, value, ic) => `
+    <div class="field-row">
+      <span class="field-label">${ic?icon(ic,14):''}${label}</span>
+      <span class="field-value">${value}</span>
+    </div>`;
+
+  const actionsHtml = ADMIN_ACTIONS.map(a=>`
+    <button class="action-btn ${a.danger?'danger':''}" onclick='requestAction(${JSON.stringify(a)})'>
+      ${icon(a.icon,18)}<span>${a.label}</span>
+    </button>
+  `).join('');
+
+  const timelineHtml = b.audit.map((t,idx)=>`
+    <div class="t-item">
+      <div class="t-left">
+        <div class="t-avatar">${initials(t.who)}</div>
+        ${idx<b.audit.length-1 ? '<div class="t-line"></div>' : ''}
+      </div>
+      <div class="t-body">
+        <div class="t-top">
+          <span class="t-action">${t.action}</span>
+          <span class="t-time">${fmtDateTime(t.time)}</span>
+        </div>
+        <p class="t-by">โดย <b>${t.who}</b></p>
+        <div class="t-transition">
+          <span class="t-before">${TEXT_MAP[t.before]||t.before}</span>
+          <span class="t-arrow">→</span>
+          <span class="t-after">${TEXT_MAP[t.after]||t.after}</span>
+        </div>
+        <p class="t-reason">"${t.reason}"</p>
+        ${t.attachment ? `<div class="t-transition" style="margin-top:8px;color:#2563EB;">${icon('file',12)} ${t.attachment}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('drawerBody').innerHTML = `
+    <div class="d-section">
+      <div class="d-section-title">ข้อมูลลูกค้า</div>
+      <div class="d-section-body">
+        ${field('ชื่อ-นามสกุล', b.customer, 'user')}
+        ${field('อีเมล', b.email, 'mail')}
+        ${field('เบอร์โทรศัพท์', b.phone, 'phone')}
+      </div>
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-title">ข้อมูลการจอง</div>
+      <div class="d-section-body">
+        ${field('รหัสการจอง', b.id, 'hash')}
+        ${field('ชื่องาน', b.event, 'ticket')}
+        ${field('ที่นั่ง', b.seats, 'seat')}
+        ${field('วันที่ทำรายการ', fmtDateTime(b.created), 'clock')}
+      </div>
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-title">ข้อมูลการชำระเงิน</div>
+      <div class="d-section-body">
+        ${field('ยอดชำระ', b.amount, 'ticket')}
+        ${field('ช่องทาง', b.paymentMethod, 'card')}
+        ${field('สถานะการเงิน', `<span class="badge ${b.payment}"><span class="dot"></span>${TEXT_MAP[b.payment]}</span>`, 'alertCircle')}
+      </div>
+    </div>
+
+    <div class="d-section" id="anchor-actions">
+      <div class="d-section-title">การจัดการ (สำหรับแอดมิน)</div>
+      <div class="actions-grid">${actionsHtml}</div>
+    </div>
+
+    <div class="d-section" id="anchor-timeline">
+      <div class="d-section-title">ประวัติการดำเนินการ</div>
+      <div class="timeline">${timelineHtml}</div>
+    </div>
+  `;
+  
+  updateCountdowns();
+}
+
+/* ---------------------------- Real-time Countdown Updater ---------------------------- */
+function updateCountdowns() {
+  document.querySelectorAll('.countdown-timer').forEach(el => {
+      const createdMs = parseInt(el.getAttribute('data-created'));
+      const expireTime = createdMs + 10 * 60000; 
+      const diff = expireTime - Date.now();
+      
+      if (diff <= 0) {
+          el.innerHTML = "หมดเวลาชำระเงิน";
+          el.style.color = "#DC2626";
+      } else {
+          const m = Math.floor(diff / 60000);
+          const s = Math.floor((diff % 60000) / 1000);
+          el.innerHTML = `⏳ รอชำระเงิน - เหลือเวลา ${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')} นาที`;
+          el.style.color = "#D97706";
+      }
+  });
+}
+setInterval(updateCountdowns, 1000);
+
+/* ---------------------------- refresh data ---------------------------- */
+function refreshData() {
+  showToast("กำลังอัปเดตข้อมูล...");
+  setTimeout(() => {
+    renderStats();
+    renderTable();
+    if(state.selectedId) renderDrawer();
+  }, 600);
+}
+
+/* ---------------------------- confirmation modal ---------------------------- */
+function requestAction(action){
+  pendingAction = action;
+  
+  document.getElementById('modalReason').value = "";
+  document.getElementById('modalAttachment').value = ""; 
+  
+  document.getElementById('modalIcon').className = 'modal-icon' + (action.danger?' danger':'');
+  document.getElementById('modalIcon').innerHTML = icon(action.icon, 20);
+  document.getElementById('modalTitle').textContent = action.label;
+  
+  const b = bookings.find(x=>x.id===state.selectedId);
+  document.getElementById('modalDesc').innerHTML = `คุณกำลังจะดำเนินการ <b>${action.label}</b> สำหรับรหัสการจอง <b>${b.id}</b> การกระทำนี้จะถูกบันทึกในประวัติระบบ`;
+  
+  const btn = document.getElementById('modalConfirmBtn');
+  btn.className = 'btn-primary' + (action.danger?' danger':'');
+  btn.textContent = 'ยืนยันการดำเนินการ';
+  
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('show');
+  pendingAction = null;
+}
+document.getElementById('modalOverlay').addEventListener('click', function(ev){
+  if(ev.target===this) closeModal();
+});
+
+function confirmAction(){
+  if(!pendingAction) return;
+  const b = bookings.find(x=>x.id===state.selectedId);
+  const reason = document.getElementById('modalReason').value.trim() || 'จัดการโดยแอดมิน (ไม่มีการระบุเหตุผล)';
+  
+  const fileInput = document.getElementById('modalAttachment');
+  const fileName = fileInput.files.length > 0 ? fileInput.files[0].name : null;
+
+  let afterStatus = b.status;
+  
+  if(pendingAction.key === 'cancelBooking') {
+    afterStatus = 'Cancelled';
+    b.payment = 'Failed';
+  } else if (pendingAction.key === 'forceReleaseSeat') {
+    afterStatus = 'Cancelled';
+  } else if (pendingAction.key === 'markPaid') {
+    afterStatus = 'Confirmed';
+    b.payment = 'Paid';
+  } else if (pendingAction.key === 'banUser') {
+    afterStatus = 'Cancelled';
+    b.payment = 'Failed';
+  }
+
+  const entry = { 
+    who:'แอดมิน', 
+    action:pendingAction.label, 
+    before:b.status, 
+    after:afterStatus, 
+    reason:reason,
+    attachment: fileName,
+    time:new Date() 
+  };
+  
+  b.audit.unshift(entry);
+  b.status = afterStatus;
+  
+  if(pendingAction.key === 'banUser'){
+    showToast(`ระงับบัญชีผู้ใช้ ${b.customer} และยกเลิกรายการจองสำเร็จ`);
+  } else {
+    showToast(`ดำเนินการ ${pendingAction.label} สำเร็จ`);
+  }
+  
+  closeModal();
+  renderStats();
+  renderTable();
+  renderDrawer();
+  
+  setTimeout(()=>{ document.getElementById('anchor-timeline').scrollIntoView({behavior:'smooth',block:'start'}); }, 100);
+}
+
+/* ---------------------------- toast ---------------------------- */
+let toastTimer = null;
+function showToast(msg){
+  document.getElementById('toastMsg').textContent = msg;
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 3000);
+}
+
+/* ---------------------------- filter listeners ---------------------------- */
+document.getElementById('searchInput').addEventListener('input', e=>{ state.search=e.target.value; renderTable(); });
+document.getElementById('eventFilter').addEventListener('change', e=>{ state.eventFilter=e.target.value; renderTable(); });
+document.getElementById('paymentFilter').addEventListener('change', e=>{ state.paymentFilter=e.target.value; renderTable(); });
+
+/* ---------------------------- init ---------------------------- */
+renderStats();
+renderChips();
+renderTable();
+</script>
+</body>
+</html>

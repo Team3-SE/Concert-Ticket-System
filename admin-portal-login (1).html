@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>พอร์ทัลผู้ดูแลระบบ — เข้าสู่ระบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0B2F61;
+    --navy-dark:#082347;
+    --navy-950:#081F42;
+    --bg:#F8FAFC;
+    --card:#FFFFFF;
+    --border:#CBD5E1;
+    --text:#1E293B;
+    --text-secondary:#64748B;
+    --line:#AFC2DC;
+    --line-soft:#5B7FB0;
+    --line-body:#DCE6F4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'Inter','Noto Sans Thai',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .page{ display:flex; width:100%; min-height:100vh; }
+
+  /* ---------- LEFT PANEL ---------- */
+  .left-panel{
+    display:none;
+    width:45%;
+    background:var(--navy);
+    position:relative;
+    overflow:hidden;
+    flex-direction:column;
+    justify-content:space-between;
+    padding:56px 64px;
+  }
+  .grid-lines{
+    position:absolute; inset:0; pointer-events:none;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.045) 1px, transparent 1px);
+    background-size:44px 44px;
+  }
+  .glow{
+    position:absolute; bottom:-96px; right:-96px;
+    width:384px; height:384px; border-radius:50%;
+    background:var(--navy-950); opacity:.4; filter:blur(64px);
+  }
+  .brand{ position:relative; z-index:1; display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:40px; height:40px; border-radius:8px; background:#FFFFFF;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .brand-name{ color:#FFFFFF; font-size:15px; font-weight:600; letter-spacing:.06em; }
+
+  .left-mid{ position:relative; z-index:1; margin-top:40px; }
+  .headline{ color:#FFFFFF; font-size:40px; line-height:1.15; font-weight:700; letter-spacing:-0.01em; }
+  .subhead{ color:var(--line-body); font-size:15px; line-height:1.6; margin-top:16px; max-width:380px; }
+  .illustration{ margin-top:40px; width:100%; max-width:440px; height:auto; display:block; }
+
+  .features{ position:relative; z-index:1; margin-top:40px; display:flex; flex-direction:column; gap:14px; }
+  .feature-row{ display:flex; align-items:center; gap:12px; transition:transform .15s ease; }
+  .feature-row:hover{ transform:translateX(3px); }
+  .feature-row span{ color:var(--line-body); font-size:14px; }
+
+  /* ---------- RIGHT PANEL ---------- */
+  .right-panel{
+    width:100%; display:flex; align-items:center; justify-content:center;
+    padding:56px 24px; background:var(--bg); position:relative;
+  }
+  .mobile-brand{ display:flex; position:absolute; top:32px; left:32px; align-items:center; gap:8px; }
+  .mobile-brand-mark{
+    width:32px; height:32px; border-radius:6px; background:var(--navy);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .mobile-brand-name{ color:var(--navy); font-size:13px; font-weight:600; letter-spacing:.06em; }
+
+  .login-wrap{ width:100%; max-width:420px; }
+  .login-card{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    box-shadow:0 1px 2px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.06);
+    padding:40px 36px;
+  }
+  .card-title{ font-size:22px; font-weight:700; color:var(--text); letter-spacing:-0.01em; }
+  .card-subtitle{ color:var(--text-secondary); font-size:13.5px; margin-top:6px; margin-bottom:32px; }
+
+  form{ display:flex; flex-direction:column; gap:20px; }
+
+  .field label{ display:block; font-size:13px; font-weight:500; color:var(--text); margin-bottom:6px; }
+  .field-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .field-row label{ margin-bottom:0; }
+  .forgot-link{ font-size:12.5px; font-weight:500; color:var(--navy); text-decoration:none; }
+  .forgot-link:hover{ text-decoration:underline; }
+
+  .input-wrap{ position:relative; }
+  .input-icon{
+    position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    color:#94A3B8; display:flex; pointer-events:none;
+  }
+  .input-wrap input{
+    width:100%; padding:11px 14px 11px 40px; border-radius:8px;
+    border:1px solid var(--border); font-size:14px; font-family:inherit;
+    color:var(--text); background:#FFFFFF;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .input-wrap input::placeholder{ color:#94A3B8; }
+  .input-wrap input:focus{
+    outline:none; border-color:var(--navy); box-shadow:0 0 0 3px rgba(11,47,97,0.10);
+  }
+  .input-wrap.has-toggle input{ padding-right:40px; }
+
+  .toggle-pwd{
+    position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    background:none; border:none; padding:4px; display:flex;
+    color:#94A3B8; cursor:pointer; border-radius:4px;
+  }
+  .toggle-pwd:hover{ color:var(--text-secondary); }
+  .toggle-pwd:focus-visible{ outline:2px solid var(--navy); outline-offset:2px; }
+
+  .remember-row{ display:flex; align-items:center; gap:8px; }
+  .remember-row input[type="checkbox"]{ width:16px; height:16px; accent-color:var(--navy); cursor:pointer; }
+  .remember-row label{ font-size:13.5px; color:#475569; cursor:pointer; user-select:none; }
+
+  .btn-signin{
+    width:100%; background:var(--navy); color:#FFFFFF; font-size:14.5px; font-weight:600;
+    font-family:inherit; border:none; border-radius:8px; padding:13px 0; margin-top:4px;
+    cursor:pointer; transition:background-color .18s ease, transform .12s ease;
+  }
+  .btn-signin:hover{ background:var(--navy-dark); }
+  .btn-signin:active{ transform:translateY(1px); }
+  .btn-signin:focus-visible{ outline:none; box-shadow:0 0 0 2px #FFFFFF, 0 0 0 4px var(--navy); }
+
+  .help-text{ text-align:center; font-size:12.5px; color:var(--text-secondary); margin-top:24px; line-height:1.6; }
+  .help-text a{ color:var(--navy); font-weight:500; text-decoration:none; }
+  .help-text a:hover{ text-decoration:underline; }
+
+  .footer-text{ text-align:center; font-size:12px; color:#94A3B8; margin-top:28px; }
+
+  .fade-up{ animation:fadeUp .6s ease both; }
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:translateY(0);} }
+
+  input:-webkit-autofill{ -webkit-box-shadow:0 0 0 1000px #FFFFFF inset; -webkit-text-fill-color:#1E293B; }
+
+  @media (min-width: 1024px){
+    .left-panel{ display:flex; }
+    .mobile-brand{ display:none; }
+    .right-panel{ width:55%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="left-panel">
+    <div class="grid-lines"></div>
+    <div class="glow"></div>
+
+    <div class="brand">
+      <div class="brand-mark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M4 15V9a2 2 0 012-2h1l1-3h8l1 3h1a2 2 0 012 2v6" stroke="#0B2F61" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 15c0 1.3 1 2.4 2.2 2.4M20 15c0 1.3-1 2.4-2.2 2.4" stroke="#0B2F61" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="12" cy="10.5" r="1.4" fill="#0B2F61"/>
+        </svg>
+      </div>
+      <span class="brand-name">พอร์ทัลผู้ดูแลระบบ</span>
+    </div>
+
+    <div class="left-mid">
+      <h1 class="headline fade-up">พอร์ทัลผู้ดูแลระบบ</h1>
+      <p class="subhead fade-up" style="animation-delay:.05s">
+        ดูแลผู้ใช้งาน การจอง และความถูกต้องของระบบทั้งหมดในแพลตฟอร์มจำหน่ายตั๋ว
+      </p>
+
+      <svg class="illustration fade-up" style="animation-delay:.1s" viewBox="0 0 480 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="18" y="150" width="130" height="8" rx="1" stroke="#AFC2DC" stroke-width="1.4"/>
+        <path d="M30 150 L45 108 H121 L136 150" stroke="#AFC2DC" stroke-width="1.4" stroke-linejoin="round"/>
+        <line x1="45" y1="108" x2="45" y2="150" stroke="#AFC2DC" stroke-width="1"/>
+        <line x1="121" y1="108" x2="121" y2="150" stroke="#AFC2DC" stroke-width="1"/>
+        <path d="M83 60 L60 108 H106 Z" stroke="#5B7FB0" stroke-width="1.2" stroke-dasharray="2 3"/>
+        <circle cx="83" cy="128" r="6" stroke="#F8FAFC" stroke-width="1.4"/>
+        <line x1="83" y1="134" x2="83" y2="148" stroke="#F8FAFC" stroke-width="1.4"/>
+        <line x1="83" y1="138" x2="74" y2="132" stroke="#F8FAFC" stroke-width="1.4"/>
+        <line x1="83" y1="138" x2="93" y2="130" stroke="#F8FAFC" stroke-width="1.4"/>
+
+        <g stroke="#7C97C0" stroke-width="1.3">
+          <circle cx="15" cy="190" r="4.5"/><line x1="15" y1="194.5" x2="15" y2="205"/>
+          <circle cx="30" cy="192" r="4.5"/><line x1="30" y1="196.5" x2="30" y2="207"/>
+          <circle cx="45" cy="189" r="4.5"/><line x1="45" y1="193.5" x2="45" y2="204"/>
+          <circle cx="60" cy="192" r="4.5"/><line x1="60" y1="196.5" x2="60" y2="207"/>
+          <circle cx="75" cy="188" r="4.5"/><line x1="75" y1="192.5" x2="75" y2="203"/>
+          <circle cx="90" cy="192" r="4.5"/><line x1="90" y1="196.5" x2="90" y2="207"/>
+          <circle cx="105" cy="189" r="4.5"/><line x1="105" y1="193.5" x2="105" y2="204"/>
+          <circle cx="120" cy="192" r="4.5"/><line x1="120" y1="196.5" x2="120" y2="207"/>
+          <circle cx="135" cy="188" r="4.5"/><line x1="135" y1="192.5" x2="135" y2="203"/>
+        </g>
+
+        <g transform="translate(190,40)">
+          <rect x="0" y="0" width="90" height="46" rx="6" stroke="#AFC2DC" stroke-width="1.4"/>
+          <circle cx="0" cy="23" r="4" fill="#0B2F61" stroke="#AFC2DC" stroke-width="1.2"/>
+          <circle cx="90" cy="23" r="4" fill="#0B2F61" stroke="#AFC2DC" stroke-width="1.2"/>
+          <line x1="62" y1="6" x2="62" y2="40" stroke="#AFC2DC" stroke-width="1" stroke-dasharray="2.5 3"/>
+          <line x1="12" y1="14" x2="46" y2="14" stroke="#AFC2DC" stroke-width="1.3"/>
+          <line x1="12" y1="22" x2="40" y2="22" stroke="#5B7FB0" stroke-width="1.3"/>
+          <line x1="12" y1="30" x2="34" y2="30" stroke="#5B7FB0" stroke-width="1.3"/>
+          <rect x="70" y="14" width="14" height="14" rx="1.5" stroke="#AFC2DC" stroke-width="1.1"/>
+        </g>
+
+        <g transform="translate(310,20)">
+          <rect x="0" y="0" width="60" height="60" rx="4" stroke="#AFC2DC" stroke-width="1.3"/>
+          <rect x="7" y="7" width="14" height="14" stroke="#AFC2DC" stroke-width="1.2"/>
+          <rect x="39" y="7" width="14" height="14" stroke="#AFC2DC" stroke-width="1.2"/>
+          <rect x="7" y="39" width="14" height="14" stroke="#AFC2DC" stroke-width="1.2"/>
+          <rect x="11" y="11" width="6" height="6" fill="#5B7FB0"/>
+          <rect x="43" y="11" width="6" height="6" fill="#5B7FB0"/>
+          <rect x="11" y="43" width="6" height="6" fill="#5B7FB0"/>
+          <rect x="28" y="7" width="4" height="4" fill="#AFC2DC"/>
+          <rect x="28" y="16" width="4" height="4" fill="#AFC2DC"/>
+          <rect x="34" y="28" width="4" height="4" fill="#AFC2DC"/>
+          <rect x="39" y="34" width="4" height="4" fill="#AFC2DC"/>
+          <rect x="46" y="28" width="4" height="4" fill="#AFC2DC"/>
+          <rect x="28" y="46" width="4" height="4" fill="#AFC2DC"/>
+          <rect x="34" y="39" width="4" height="4" fill="#AFC2DC"/>
+        </g>
+
+        <g transform="translate(200,110)">
+          <rect x="0" y="0" width="170" height="80" rx="6" stroke="#AFC2DC" stroke-width="1.3"/>
+          <line x1="14" y1="62" x2="14" y2="18" stroke="#7C97C0" stroke-width="1"/>
+          <line x1="14" y1="62" x2="156" y2="62" stroke="#7C97C0" stroke-width="1"/>
+          <polyline points="14,50 38,40 62,46 86,28 110,34 134,18 156,24" stroke="#F8FAFC" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="134" cy="18" r="2.6" fill="#F8FAFC"/>
+          <rect x="20" y="55" width="8" height="7" fill="#5B7FB0"/>
+          <rect x="34" y="50" width="8" height="12" fill="#5B7FB0"/>
+          <rect x="48" y="44" width="8" height="18" fill="#5B7FB0"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="features fade-up" style="animation-delay:.15s">
+      <div class="feature-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l4.5 4.5L19 7" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>จัดการผู้ใช้ (ระงับ/ยกเลิกระงับ)</span>
+      </div>
+      <div class="feature-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l4.5 4.5L19 7" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>ตรวจสอบรายการจองผิดปกติ</span>
+      </div>
+      <div class="feature-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l4.5 4.5L19 7" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>เครื่องมือแก้ไขข้อมูล</span>
+      </div>
+      <div class="feature-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l4.5 4.5L19 7" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>บันทึกการใช้งานระบบ</span>
+      </div>
+      <div class="feature-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l4.5 4.5L19 7" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>ควบคุมดูแลระบบทั้งหมด</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-panel">
+
+    <div class="mobile-brand">
+      <div class="mobile-brand-mark">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M4 15V9a2 2 0 012-2h1l1-3h8l1 3h1a2 2 0 012 2v6" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="mobile-brand-name">พอร์ทัลผู้ดูแลระบบ</span>
+    </div>
+
+    <div class="login-wrap fade-up">
+      <div class="login-card">
+
+        <h2 class="card-title">เข้าสู่ระบบผู้ดูแลระบบ</h2>
+        <p class="card-subtitle">เข้าสู่ระบบด้วยบัญชีผู้ดูแลระบบของคุณ</p>
+
+        <form>
+          <div class="field">
+            <label for="username">ชื่อผู้ใช้</label>
+            <div class="input-wrap">
+              <span class="input-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.6"/><path d="M5 19.5c1.2-3.4 4-5 7-5s5.8 1.6 7 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              </span>
+              <input id="username" type="text" placeholder="กรอกชื่อผู้ใช้" autocomplete="username" />
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-row">
+              <label for="password">รหัสผ่าน</label>
+              <a href="#" class="forgot-link">ลืมรหัสผ่าน?</a>
+            </div>
+            <div class="input-wrap has-toggle">
+              <span class="input-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="5" y="10.5" width="14" height="9.5" rx="1.6" stroke="currentColor" stroke-width="1.6"/><path d="M8 10.5V7.8a4 4 0 018 0v2.7" stroke="currentColor" stroke-width="1.6"/></svg>
+              </span>
+              <input id="password" type="password" placeholder="กรอกรหัสผ่าน" autocomplete="current-password" />
+              <button type="button" id="togglePwd" class="toggle-pwd" aria-label="แสดงรหัสผ่าน">
+                <svg id="eyeIcon" width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="remember-row">
+            <input id="remember" type="checkbox" />
+            <label for="remember">จดจำฉันไว้</label>
+          </div>
+
+          <button type="submit" class="btn-signin">เข้าสู่ระบบ</button>
+        </form>
+
+        <p class="help-text">
+          ต้องการความช่วยเหลือในการเข้าถึงบัญชีของคุณ?<br />
+          <a href="#">ติดต่อฝ่ายสนับสนุนทางเทคนิค</a>
+        </p>
+      </div>
+
+      <p class="footer-text">สงวนลิขสิทธิ์ © 2026 ระบบจัดการการจองตั๋วคอนเสิร์ต</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const toggleBtn = document.getElementById('togglePwd');
+  const pwdInput = document.getElementById('password');
+  const eyeIcon = document.getElementById('eyeIcon');
+  toggleBtn.addEventListener('click', () => {
+    const isPassword = pwdInput.type === 'password';
+    pwdInput.type = isPassword ? 'text' : 'password';
+    eyeIcon.innerHTML = isPassword
+      ? '<path d="M3 3l18 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M10.6 10.6a3 3 0 004.2 4.2" stroke="currentColor" stroke-width="1.6"/><path d="M6.6 6.7C4.4 8.1 2.9 10 2 12c0 0 3.6 7 10 7 1.8 0 3.4-.4 4.8-1.1M9.9 5.3C10.6 5.1 11.3 5 12 5c6.4 0 10 7 10 7-.4.8-1.1 1.9-2.1 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
+      : '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/>';
+    toggleBtn.setAttribute('aria-label', isPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน');
+  });
+</script>
+
+</body>
+</html>

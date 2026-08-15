@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - การจัดการผู้ใช้ (User Management)</title>
+    <!-- Google Fonts: Prompt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-navy: #0B2F61;
+            --secondary-blue: #2563EB;
+            --accent-orange: #F27A18;
+            --bg-light: #F8FAFC;
+            --card-white: #FFFFFF;
+            --text-dark: #1E293B;
+            --text-muted: #64748B;
+            --border-color: #E2E8F0;
+            --success-green: #10B981;
+            --error-red: #EF4444;
+            --warning-yellow: #F59E0B;
+            --radius-md: 8px;
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Prompt', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Navigation Layout */
+        .sidebar {
+            width: 260px;
+            background-color: var(--primary-navy);
+            color: white;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 10px 25px 25px 25px;
+            font-size: 20px;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-brand span { color: var(--accent-orange); }
+        .sidebar-menu { list-style: none; padding: 20px 0; }
+        .sidebar-menu li a {
+            display: block;
+            padding: 14px 25px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .sidebar-menu li a:hover {
+            color: white;
+            background-color: rgba(255,255,255,0.05);
+        }
+        .sidebar-menu li.active a {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            font-weight: 500;
+            border-left: 4px solid var(--accent-orange);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-navbar {
+            background-color: var(--card-white);
+            height: 70px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .page-title-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary-navy);
+        }
+
+        .admin-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            background-color: var(--primary-navy);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .container {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Toolbar & Controls Row */
+        .toolbar-card {
+            background-color: var(--card-white);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-filter-group {
+            display: flex;
+            gap: 12px;
+            flex: 1;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .input-search {
+            min-width: 260px;
+            flex: 1;
+            padding: 10px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            height: 42px;
+        }
+
+        .input-search:focus {
+            border-color: var(--secondary-blue);
+        }
+
+        .select-filter {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: white;
+            outline: none;
+            cursor: pointer;
+            height: 42px;
+        }
+
+        /* --- Combobox Styles (ยกมาจาก AddOrganizer) --- */
+        .combobox-container {
+            position: relative;
+            width: 260px;
+        }
+
+        .combobox-input-wrap {
+            position: relative;
+        }
+
+        .combobox-dropdown {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            width: 100%;
+            background: var(--card-white);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            max-height: 240px;
+            overflow-y: auto;
+            z-index: 50;
+            display: none;
+            flex-direction: column;
+        }
+
+        .combobox-dropdown.open {
+            display: flex;
+        }
+
+        .combobox-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 13.5px;
+            color: var(--text-dark);
+            border-bottom: 1px solid #F1F5F9;
+        }
+
+        .combobox-option:last-child {
+            border-bottom: none;
+        }
+
+        .combobox-option:hover {
+            background-color: #F8FAFC;
+            color: var(--secondary-blue);
+        }
+
+        .combobox-empty, .combobox-loading {
+            padding: 14px;
+            font-size: 13px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        /* Selected Organization Card */
+        .selected-org-card {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 0 14px;
+            height: 42px;
+            border: 1px solid var(--secondary-blue);
+            border-radius: 8px;
+            background: #EFF6FF;
+            width: 260px;
+        }
+
+        .selected-org-card.show {
+            display: flex;
+        }
+
+        .selected-org-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--secondary-blue);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .change-org-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--secondary-blue);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .change-org-btn:hover {
+            background: #DBEAFE;
+        }
+
+        /* --- Action Buttons --- */
+        .action-buttons-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-add-org-company {
+            background-color: #0F172A;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.2s;
+            height: 42px;
+        }
+
+        .btn-add-org-company:hover { background-color: #334155; }
+
+        .btn-add-organizer {
+            background-color: var(--secondary-blue);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.2s;
+            height: 42px;
+        }
+
+        .btn-add-organizer:hover { background-color: #1D4ED8; }
+
+        /* User List Table */
+        .table-card {
+            background-color: var(--card-white);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .user-table th {
+            background-color: #F8FAFC;
+            padding: 14px 20px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .user-table td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        /* Badges & Status */
+        .role-badge {
+            padding: 4px 10px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+        .role-customer { background-color: #E0F2FE; color: #0369A1; }
+        .role-organizer { background-color: #FEF3C7; color: #B45309; }
+        .role-admin { background-color: #F3E8FF; color: #6B21A8; }
+
+        .status-dot {
+            height: 8px;
+            width: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .status-active { background-color: var(--success-green); }
+        .status-banned { background-color: var(--error-red); }
+
+        /* Action Buttons */
+        .btn-action {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+        .btn-ban { background-color: #FEE2E2; color: var(--error-red); border-color: #FCA5A5; }
+        .btn-ban:hover { background-color: var(--error-red); color: white; }
+        .btn-unban { background-color: #D1FAE5; color: #065F46; border-color: #A7F3D0; }
+        .btn-unban:hover { background-color: var(--success-green); color: white; }
+        .btn-reset { background-color: #F1F5F9; color: #475569; border-color: #E2E8F0; }
+        .btn-reset:hover { background-color: #E2E8F0; color: #334155; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Menu -->
+    <div class="sidebar">
+        <div class="sidebar-brand">SYSTEM <span>ADMIN</span></div>
+        <ul class="sidebar-menu">
+            <li class="active"><a href="#">1. จัดการผู้ใช้ (User Management)</a></li>
+            <li><a href="#">2. รายการจองผิดปกติ (Fraud Monitor)</a></li>
+            <li><a href="#">3. แก้ไขข้อมูลในระบบ (Data Correction)</a></li>
+            <li><a href="#">4. ประวัติการใช้งาน (System Audit Logs)</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="main-content">
+        <div class="top-navbar">
+            <div class="page-title-text">จัดการผู้ใช้งานระบบ (User Management)</div>
+            <div class="admin-profile">
+                <span>ผู้ดูแลระบบ (Super Admin)</span>
+                <div class="avatar">A</div>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- Toolbar -->
+            <div class="toolbar-card">
+                <div class="search-filter-group">
+                    <input type="text" class="input-search" id="searchInput" onkeyup="filterTable()" placeholder="ค้นหาด้วย ชื่อ, อีเมล หรือ เบอร์โทรศัพท์...">
+                    
+                    <!-- กรองตามบทบาท -->
+                    <select class="select-filter" id="roleFilter" onchange="handleRoleChange()">
+                        <option value="ALL">บทบาททั้งหมด</option>
+                        <option value="Customer">Customer</option>
+                        <option value="Event Organizer">Event Organizer</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+
+                    <!-- กรองตาม Organization แบบใหม่ (Infinite Scroll Combobox) -->
+                    <div class="combobox-container hidden" id="orgFilterGroup">
+                        <!-- Input ค้นหา -->
+                        <div class="combobox-input-wrap" id="orgInputWrap">
+                            <input type="text" id="orgSearchInput" class="input-search" placeholder="ค้นหาองค์กร..." autocomplete="off">
+                            <div class="combobox-dropdown" id="orgDropdown">
+                                <div id="orgListContainer"></div>
+                                <div id="loadingIndicator" class="combobox-loading" style="display: none;">กำลังโหลดข้อมูล...</div>
+                                <div id="emptyState" class="combobox-empty" style="display: none;">ไม่พบองค์กรที่ค้นหา</div>
+                            </div>
+                        </div>
+
+                        <!-- Card แสดงองค์กรที่ถูกเลือก -->
+                        <div class="selected-org-card" id="selectedOrgCard">
+                            <div class="selected-org-name" id="selectedOrgName">—</div>
+                            <button type="button" class="change-org-btn" onclick="clearOrg()">✕ ยกเลิก</button>
+                        </div>
+                    </div>
+                    
+                    <!-- ปุ่มรีเซ็ตตัวกรอง -->
+                    <button class="btn-action btn-reset" onclick="resetFilter()" style="margin-left: 8px;">รีเซ็ตตัวกรอง</button>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons-group">
+                    <button type="button" class="btn-add-organizer" onclick="alert('เปิดฟอร์มเพิ่มผู้จัดงาน (Add Organizer Staff)')">
+                        ➕ เพิ่มผู้จัดงาน
+                    </button>
+                </div>
+            </div>
+
+            <!-- User Data Table -->
+            <div class="table-card">
+                <table class="user-table" id="userTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>ชื่อ-นามสกุล</th>
+                            <th>อีเมล / เบอร์โทรศัพท์</th>
+                            <th>บทบาท (User Role)</th>
+                            <th>องค์กร (Organization)</th>
+                            <th>สถานะบัญชี</th>
+                            <th style="text-align: center;">การจัดการ (Ban/Unban)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Users... -->
+                        <tr>
+                            <td>#USR-001</td>
+                            <td><strong>สมชาย เข็มกลัด</strong></td>
+                            <td>somchai@email.com<br><small style="color: var(--text-muted);">081-234-5678</small></td>
+                            <td><span class="role-badge role-customer">Customer</span></td>
+                            <td style="color: var(--text-muted);">-</td>
+                            <td><span class="status-dot status-active"></span>ปกติ</td>
+                            <td style="text-align: center;"><button class="btn-action btn-ban" onclick="toggleBan(this)">Ban ผู้ใช้</button></td>
+                        </tr>
+                        <tr>
+                            <td>#USR-002</td>
+                            <td><strong>นอร์ธ ปัญญา</strong></td>
+                            <td>north@gmmshow.com<br><small style="color: var(--text-muted);">02-123-4567</small></td>
+                            <td><span class="role-badge role-organizer">Event Organizer</span></td>
+                            <td><strong>GMM Show Co., Ltd.</strong></td>
+                            <td><span class="status-dot status-active"></span>ปกติ</td>
+                            <td style="text-align: center;"><button class="btn-action btn-ban" onclick="toggleBan(this)">Ban ผู้ใช้</button></td>
+                        </tr>
+                        <tr>
+                            <td>#USR-003</td>
+                            <td><strong>เจสสิก้า สุขสวัสดิ์</strong></td>
+                            <td>jessica@livenation.co.th<br><small style="color: var(--text-muted);">089-111-2233</small></td>
+                            <td><span class="role-badge role-organizer">Event Organizer</span></td>
+                            <td><strong>Live Nation Tero</strong></td>
+                            <td><span class="status-dot status-active"></span>ปกติ</td>
+                            <td style="text-align: center;"><button class="btn-action btn-ban" onclick="toggleBan(this)">Ban ผู้ใช้</button></td>
+                        </tr>
+                        <tr>
+                            <td>#USR-004</td>
+                            <td><strong>ประภาส จัดคอนเสิร์ต</strong></td>
+                            <td>prapas@bectero.com<br><small style="color: var(--text-muted);">083-444-5566</small></td>
+                            <td><span class="role-badge role-organizer">Event Organizer</span></td>
+                            <td><strong>BEC-Tero Entertainment</strong></td>
+                            <td><span class="status-dot status-active"></span>ปกติ</td>
+                            <td style="text-align: center;"><button class="btn-action btn-ban" onclick="toggleBan(this)">Ban ผู้ใช้</button></td>
+                        </tr>
+                        <tr>
+                            <td>#USR-005</td>
+                            <td><strong>พิมพ์ชนก ไอดอลโชว์</strong></td>
+                            <td>pim@4nologue.com<br><small style="color: var(--text-muted);">086-777-8899</small></td>
+                            <td><span class="role-badge role-organizer">Event Organizer</span></td>
+                            <td><strong>4NOLOGUE Co., Ltd.</strong></td>
+                            <td><span class="status-dot status-active"></span>ปกติ</td>
+                            <td style="text-align: center;"><button class="btn-action btn-ban" onclick="toggleBan(this)">Ban ผู้ใช้</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript สำหรับระบบค้นหาและกรองตาราง -->
+    <script>
+        /* ---------- 1. Mock Database องค์กร (ผสมของจริงในตาราง และตัวดัมมี่ 100 ตัว) ---------- */
+        const baseOrgs = [
+            { id: 1, name: 'GMM Show Co., Ltd.' },
+            { id: 2, name: 'Live Nation Tero' },
+            { id: 3, name: 'BEC-Tero Entertainment' },
+            { id: 4, name: '4NOLOGUE Co., Ltd.' },
+            { id: 5, name: 'SM True Co., Ltd.' }
+        ];
+        // สร้างข้อมูลปลอมเพิ่มเติมเพื่อให้ทดสอบ Infinite Scroll ได้
+        const mockDatabase = [...baseOrgs, ...Array.from({ length: 95 }, (_, i) => ({
+            id: i + 6,
+            name: `Other Organizer Company ${i + 1}`
+        }))];
+
+        /* ---------- 2. State Variables ---------- */
+        let selectedOrg = null;
+        let currentQuery = '';
+        let currentPage = 1;
+        let isFetching = false;
+        let hasMoreData = true;
+        const PAGE_SIZE = 10;
+
+        const orgFilterGroup = document.getElementById('orgFilterGroup');
+        const orgInputWrap = document.getElementById('orgInputWrap');
+        const orgSearchInput = document.getElementById('orgSearchInput');
+        const orgDropdown = document.getElementById('orgDropdown');
+        const orgListContainer = document.getElementById('orgListContainer');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const emptyState = document.getElementById('emptyState');
+        const selectedOrgCard = document.getElementById('selectedOrgCard');
+        const selectedOrgName = document.getElementById('selectedOrgName');
+
+        /* ---------- 3. Mock API & Debounce ---------- */
+        const fetchOrganizationsAPI = async (query, page, size) => {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    const filtered = mockDatabase.filter(o => o.name.toLowerCase().includes(query.toLowerCase()));
+                    const start = (page - 1) * size;
+                    resolve({ items: filtered.slice(start, start + size) });
+                }, 300); // จำลองการโหลด 300ms
+            });
+        };
+
+        const debounce = (func, delay) => {
+            let timeoutId;
+            return (...args) => {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => func(...args), delay);
+            };
+        };
+
+        /* ---------- 4. Combobox Logic & Infinite Scroll ---------- */
+        function closeOrgDropdown() {
+            orgDropdown.classList.remove('open');
+        }
+
+        async function loadData(isReset = false) {
+            if (isFetching || (!hasMoreData && !isReset)) return;
+            isFetching = true;
+            
+            if (isReset) {
+                currentPage = 1;
+                hasMoreData = true;
+                orgListContainer.innerHTML = '';
+                emptyState.style.display = 'none';
+            }
+
+            loadingIndicator.style.display = 'block';
+            orgDropdown.classList.add('open');
+
+            const response = await fetchOrganizationsAPI(currentQuery, currentPage, PAGE_SIZE);
+            loadingIndicator.style.display = 'none';
+            isFetching = false;
+
+            if (isReset && response.items.length === 0) {
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            if (response.items.length < PAGE_SIZE) {
+                hasMoreData = false;
+            } else {
+                currentPage++;
+            }
+
+            const htmlString = response.items.map(o => `
+                <div class="combobox-option" onclick="selectOrg(${o.id}, '${o.name}')">
+                    ${o.name}
+                </div>
+            `).join('');
+
+            orgListContainer.insertAdjacentHTML('beforeend', htmlString);
+        }
+
+        const debouncedSearch = debounce((query) => {
+            currentQuery = query.trim();
+            loadData(true);
+        }, 300);
+
+        orgSearchInput.addEventListener('input', (e) => debouncedSearch(e.target.value));
+        orgSearchInput.addEventListener('focus', () => {
+            if (orgListContainer.innerHTML === '') {
+                loadData(true);
+            } else {
+                orgDropdown.classList.add('open');
+            }
+        });
+        
+        function resetFilter() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('roleFilter').value = 'ALL';
+            clearOrg();
+            handleRoleChange(); // This calls filterTable
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#orgFilterGroup')) closeOrgDropdown();
+        });
+
+        // Intersection Observer (โหลดเพิ่มเมื่อเลื่อนสุด)
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !isFetching && hasMoreData) {
+                loadData();
+            }
+        }, { root: orgDropdown, rootMargin: '0px', threshold: 0.1 });
+        observer.observe(loadingIndicator);
+
+        /* ---------- 5. Selection Handlers ---------- */
+        function selectOrg(id, name) {
+            selectedOrg = { id, name };
+            orgSearchInput.value = '';
+            closeOrgDropdown();
+            
+            // สลับ UI แสดง Card
+            orgInputWrap.classList.add('hidden');
+            selectedOrgCard.classList.add('show');
+            selectedOrgName.textContent = name;
+            
+            filterTable(); // กรองตาราง
+        }
+
+        function clearOrg() {
+            selectedOrg = null;
+            
+            // สลับ UI กลับไปเป็น Input
+            selectedOrgCard.classList.remove('show');
+            orgInputWrap.classList.remove('hidden');
+            
+            currentQuery = '';
+            loadData(true);
+            filterTable(); // กรองตาราง
+        }
+
+        /* ---------- 6. Table Filtering ---------- */
+        function handleRoleChange() {
+            const roleFilter = document.getElementById('roleFilter').value;
+            if (roleFilter === 'Event Organizer') {
+                orgFilterGroup.classList.remove('hidden');
+            } else {
+                orgFilterGroup.classList.add('hidden');
+                clearOrg(); // เคลียร์ค่าองค์กรที่เลือกไว้
+            }
+            filterTable();
+        }
+
+        function filterTable() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const roleFilter = document.getElementById('roleFilter').value;
+            const table = document.getElementById('userTable');
+            const tr = table.getElementsByTagName('tr');
+
+            for (let i = 1; i < tr.length; i++) {
+                const nameCell = tr[i].cells[1].innerText.toLowerCase();
+                const emailCell = tr[i].cells[2].innerText.toLowerCase();
+                const roleCell = tr[i].cells[3].innerText;
+                const orgCell = tr[i].cells[4].innerText;
+
+                const matchesSearch = nameCell.includes(searchInput) || emailCell.includes(searchInput);
+                const matchesRole = (roleFilter === 'ALL') || roleCell.includes(roleFilter);
+                
+                // ถ้าระบุ Event Organizer และเลือกบริษัทไว้ จะทำการกรอง
+                let matchesOrg = true;
+                if (roleFilter === 'Event Organizer' && selectedOrg) {
+                    matchesOrg = orgCell.includes(selectedOrg.name);
+                }
+
+                if (matchesSearch && matchesRole && matchesOrg) {
+                    tr[i].style.display = '';
+                } else {
+                    tr[i].style.display = 'none';
+                }
+            }
+        }
+
+        /* ---------- 7. Ban / Unban ---------- */
+        function toggleBan(btn) {
+            const row = btn.closest('tr');
+            const statusCell = row.cells[5];
+            const userName = row.cells[1].innerText;
+
+            if (btn.classList.contains('btn-ban')) {
+                if (confirm(`ระงับการใช้งานบัญชี "${userName}"?`)) {
+                    statusCell.innerHTML = '<span class="status-dot status-banned"></span>ถูกระงับ';
+                    btn.className = 'btn-action btn-unban';
+                    btn.innerText = 'Unban ปลดล็อก';
+                }
+            } else {
+                if (confirm(`ปลดล็อกบัญชี "${userName}"?`)) {
+                    statusCell.innerHTML = '<span class="status-dot status-active"></span>ปกติ';
+                    btn.className = 'btn-action btn-ban';
+                    btn.innerText = 'Ban ผู้ใช้';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

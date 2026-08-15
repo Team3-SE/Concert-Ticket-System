@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - ระบบแจ้งเตือนความผิดปกติของระบบ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-navy: #0B2F61;
+            --bg-light: #F8FAFC;
+            --card-white: #FFFFFF;
+            --text-dark: #1E293B;
+            --text-muted: #64748B;
+            --border-color: #CBD5E1;
+            --border-dark: #0F172A;
+
+            --critical-bg: #FEF2F2;
+            --critical-border: #FCA5A5;
+            --critical-text: #B91C1C;
+
+            --warning-bg: #FFFBEB;
+            --warning-border: #FCD34D;
+            --warning-text: #B45309;
+
+            --info-bg: #EFF6FF;
+            --info-border: #93C5FD;
+            --info-text: #1D4ED8;
+
+            --success-bg: #F0FDF4;
+            --success-border: #86EFAC;
+            --success-text: #15803D;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Prompt', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 260px;
+            background-color: var(--primary-navy);
+            color: white;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+        }
+
+        .sidebar-brand {
+            padding: 10px 25px 25px 25px;
+            font-size: 20px;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-menu { list-style: none; padding: 20px 0; }
+        .sidebar-menu li a {
+            display: block;
+            padding: 14px 25px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .sidebar-menu li.active a {
+            background-color: rgba(255,255,255,0.15);
+            color: white;
+            font-weight: 600;
+            border-left: 4px solid white;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-navbar {
+            background-color: var(--card-white);
+            height: 70px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .page-title-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary-navy);
+        }
+
+        .container {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .stat-card {
+            background-color: var(--card-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .stat-card.stat-critical { }
+        .stat-card.stat-warning { }
+        .stat-card.stat-info { }
+        .stat-card.stat-success { }
+
+        .stat-label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+        .stat-value { font-size: 28px; font-weight: 700; color: var(--text-dark); }
+
+        /* Toolbar & Filter */
+        .toolbar-card {
+            background-color: var(--card-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .input-text, .select-option {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: white;
+            color: var(--text-dark);
+            outline: none;
+        }
+        
+        .input-text:focus, .select-option:focus {
+            border-color: var(--primary-navy);
+        }
+
+        .input-text { flex: 1; min-width: 180px; }
+        
+        /* สไตล์กรองเวลาแบบ Custom Date Range */
+        .custom-date-range { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            border-left: 1px solid var(--border-color); 
+            padding-left: 15px; 
+        }
+
+        /* Data Table */
+        .table-card {
+            background-color: var(--card-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table-scroll { overflow-x: auto; }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .data-table th {
+            background-color: #F1F5F9;
+            padding: 12px 16px;
+            font-weight: 600;
+            color: var(--text-dark);
+            border-bottom: 2px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        .data-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        .data-table tbody tr:last-child td { border-bottom: none; }
+        .data-table tbody tr:hover { background-color: #F8FAFC; }
+
+        .text-tag { font-weight: 600; display: inline-block; }
+
+        .status-pill {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-unresolved { background-color: var(--critical-bg); color: var(--critical-text); }
+        .status-investigating { background-color: var(--warning-bg); color: var(--warning-text); }
+        .status-resolved { background-color: var(--success-bg); color: var(--success-text); }
+
+        .action-cell { display: flex; gap: 8px; flex-wrap: nowrap; justify-content: center; }
+
+        .btn-action {
+            padding: 6px 12px;
+            background-color: white;
+            border: 1px solid var(--border-dark);
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .btn-action:hover {
+            background-color: var(--text-dark);
+            color: white;
+        }
+
+        .btn-action:disabled {
+            border-color: var(--border-color);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            background-color: #F1F5F9;
+        }
+
+        .btn-action { position: relative; }
+        .btn-action .action-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background-color: var(--warning-text);
+            border: 1.5px solid white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* Drawer */
+        .drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            display: none;
+            z-index: 100;
+        }
+        .drawer-overlay.open { display: block; }
+
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: -480px;
+            width: 480px;
+            max-width: 92vw;
+            height: 100vh;
+            background: var(--card-white);
+            z-index: 101;
+            box-shadow: -4px 0 16px rgba(15, 23, 42, 0.15);
+            transition: right 0.25s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .drawer.open { right: 0; }
+
+        .drawer-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .drawer-title { font-size: 16px; font-weight: 700; color: var(--primary-navy); }
+        .drawer-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+        .drawer-close {
+            border: none;
+            background: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-muted);
+            line-height: 1;
+        }
+
+        .drawer-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .drawer-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .drawer-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 16px;
+            font-size: 13px;
+        }
+        .drawer-info-grid .label { color: var(--text-muted); }
+        .drawer-info-grid .value { font-weight: 500; }
+
+        .drawer-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* Modal / Buttons */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        .modal-overlay.open { display: flex; }
+
+        .modal-box {
+            background: var(--card-white);
+            border-radius: 8px;
+            width: 420px;
+            max-width: 90vw;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
+        }
+
+        .modal-title { font-size: 16px; font-weight: 700; color: var(--primary-navy); margin-bottom: 10px; }
+        .modal-text { font-size: 14px; color: var(--text-dark); line-height: 1.6; margin-bottom: 20px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+        .btn-secondary {
+            padding: 8px 16px;
+            background-color: white;
+            border: 1px solid var(--border-color);
+            color: var(--text-dark);
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .btn-secondary:hover { background-color: #F1F5F9; }
+        .btn-secondary.sm { padding: 4px 10px; font-size: 13px; }
+
+        .btn-primary {
+            padding: 8px 16px;
+            background-color: var(--primary-navy);
+            border: 1px solid var(--primary-navy);
+            color: white;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .btn-primary:hover { opacity: 0.88; }
+        .btn-primary.danger { background-color: var(--critical-text); border-color: var(--critical-text); }
+
+        /* Quick Actions */
+        svg.ic { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; flex-shrink: 0; }
+        .actions-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            height: 46px;
+            padding: 0 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: white;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: var(--text-dark);
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.12s;
+        }
+        .action-btn.danger { border-color: var(--critical-border); color: var(--critical-text); }
+        .action-btn.danger svg { color: var(--critical-text); }
+        .action-btn.danger:hover { background-color: var(--critical-bg); }
+
+        /* Quick Action Modal */
+        .modal-head { display: flex; align-items: center; gap: 12px; }
+        .modal-head .modal-title { margin-bottom: 0; }
+        .modal-icon {
+            height: 40px;
+            width: 40px;
+            border-radius: 10px;
+            background-color: var(--info-bg);
+            color: var(--info-text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .modal-icon.danger { background-color: var(--critical-bg); color: var(--critical-text); }
+        .modal-desc { font-size: 13.5px; color: var(--text-muted); margin: 12px 0 0; line-height: 1.6; }
+        .modal-desc b { color: var(--text-dark); font-weight: 600; }
+        .modal-label { font-size: 13px; font-weight: 600; color: var(--text-dark); margin-top: 16px; margin-bottom: 6px; display: block; }
+        
+        .modal-box textarea {
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 13px;
+            font-family: 'Prompt', sans-serif;
+            color: var(--text-dark);
+            resize: none;
+            outline: none;
+        }
+
+        /* File Upload (evidence attachment) */
+        .file-upload-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            background-color: white;
+            border: 1px dashed var(--border-color);
+            color: var(--text-muted);
+            border-radius: 6px;
+            font-size: 12.5px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'Prompt', sans-serif;
+        }
+        .file-upload-btn:hover { border-color: var(--primary-navy); color: var(--primary-navy); background-color: var(--info-bg); }
+        .file-hint { font-size: 11.5px; color: var(--text-muted); margin-left: 8px; }
+        .file-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+        .file-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            background-color: #F1F5F9;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 12.5px;
+            color: var(--text-dark);
+        }
+        .file-chip .file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+        .file-chip .file-size { color: var(--text-muted); font-size: 11px; flex-shrink: 0; }
+        .file-chip .file-remove {
+            cursor: pointer;
+            color: var(--text-muted);
+            font-weight: 700;
+            flex-shrink: 0;
+            width: 16px;
+            text-align: center;
+        }
+        .file-chip .file-remove:hover { color: var(--critical-text); }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 300;
+        }
+        .toast {
+            background-color: var(--border-dark);
+            color: white;
+            padding: 12px 18px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25);
+            min-width: 240px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: toast-in 0.2s ease-out;
+        }
+        .toast.toast-success { background-color: var(--success-text); }
+        @keyframes toast-in {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ---------------- Custom Dropdown UI ---------------- */
+        .custom-dropdown { position: relative; width: 220px; }
+        .cd-trigger { height: 40px; border: 1px solid var(--border-color); border-radius: 8px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: #fff; font-size: 13px; color: var(--text-dark); transition: border-color 0.15s; }
+        .cd-trigger:hover { border-color: var(--text-muted); }
+        .cd-trigger.active { border-color: var(--primary-navy); box-shadow: 0 0 0 2px rgba(11,47,97,0.1); }
+        .cd-trigger-inner { display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden; }
+        .cd-trigger-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500;}
+        .cd-trigger svg.caret { color: var(--text-muted); flex-shrink: 0; }
+        
+        .cd-menu { position: absolute; top: calc(100% + 6px); left: 0; width: 280px; background: #fff; border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 10px 25px rgba(15,23,42,0.1); z-index: 100; display: none; flex-direction: column; overflow: hidden; }
+        .cd-menu.show { display: flex; animation: slideDown 0.15s ease-out forwards; transform-origin: top; }
+        @keyframes slideDown { from{opacity:0; transform:scaleY(0.95);} to{opacity:1; transform:scaleY(1);} }
+        
+        .cd-search { padding: 12px 12px 8px; border-bottom: 1px solid #f1f5f9; position: relative; }
+        .cd-search svg { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .cd-search input { width: 100%; height: 38px; border: 1px solid var(--primary-navy); border-radius: 8px; padding: 0 12px 0 36px; font-size: 13px; outline: none; }
+        
+        .cd-list { max-height: 240px; overflow-y: auto; padding: 8px; }
+        .cd-list::-webkit-scrollbar { width: 6px; }
+        .cd-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        .cd-item { display: flex; align-items: center; gap: 14px; padding: 10px; cursor: pointer; border-radius: 8px; transition: background 0.1s; }
+        .cd-item:hover, .cd-item.selected { background: #f8fafc; }
+        .cd-avatar { width: 36px; height: 36px; border-radius: 8px; background: #eff6ff; color: var(--primary-navy); display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; flex-shrink: 0; }
+        .cd-info { display: flex; flex-direction: column; gap: 2px; }
+        .cd-title { font-size: 13.5px; font-weight: 600; color: var(--text-dark); }
+        .cd-subtitle { font-size: 12px; color: var(--text-muted); }
+        .cd-empty { padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px; }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Menu -->
+    <div class="sidebar">
+        <div class="sidebar-brand">SYSTEM ADMIN</div>
+        <ul class="sidebar-menu">
+            <li><a href="#">1. จัดการผู้ใช้ (User Management)</a></li>
+            <li><a href="#">2. รายการจองผิดปกติ (Fraud Monitor)</a></li>
+            <li class="active"><a href="#">3. แจ้งเตือนความผิดปกติของระบบ (Anomaly Alerts)</a></li>
+            <li><a href="#">4. ประวัติการใช้งาน (System Audit Logs)</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="top-navbar">
+            <div class="page-title-text">ระบบแจ้งเตือนความผิดปกติของระบบ (System Anomaly &amp; Error Alert Dashboard)</div>
+            <div>ผู้ดูแลระบบ (Admin)</div>
+        </div>
+
+        <div class="container">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card stat-critical">
+                    <div class="stat-label">ข้อผิดพลาดทั้งหมด (Total)</div>
+                    <div class="stat-value" id="statTotal">0</div>
+                </div>
+                <div class="stat-card stat-warning">
+                    <div class="stat-label">รอดำเนินการ (Unresolved)</div>
+                    <div class="stat-value" id="statCritical">0</div>
+                </div>
+                <div class="stat-card stat-info">
+                    <div class="stat-label">กำลังตรวจสอบ (Investigating)</div>
+                    <div class="stat-value" id="statInvestigating">0</div>
+                </div>
+                <div class="stat-card stat-success">
+                    <div class="stat-label">แก้ไขแล้ว (Resolved)</div>
+                    <div class="stat-value" id="statResolved">0</div>
+                </div>
+            </div>
+
+            <!-- Filter Toolbar (อัปเดตให้เหมือน Reservation Dashboard) -->
+            <div class="toolbar-card">
+                <span>ค้นหาข้อมูล:</span>
+                <input type="text" class="input-text" id="searchInput" onkeyup="renderTable()" placeholder="ค้นหา Error ID, Booking ID...">
+                
+                <!-- Custom Dropdown: องค์กร -->
+                <div class="custom-dropdown" id="orgDropdown">
+                    <div class="cd-trigger" id="orgTrigger">
+                        <div class="cd-trigger-inner">
+                            <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M3 7v14"/><path d="M21 7v14"/><path d="M6 21V3h12v18"/><path d="M10 7h4"/><path d="M10 11h4"/><path d="M10 15h4"/></svg>
+                            <span class="cd-trigger-text" id="orgSelectedText">ทุกองค์กร / ผู้จัด</span>
+                        </div>
+                        <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="cd-menu" id="orgMenu">
+                        <div class="cd-search">
+                            <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="orgSearch" placeholder="Search company name...">
+                        </div>
+                        <div class="cd-list" id="orgList"></div>
+                    </div>
+                </div>
+
+                <!-- Custom Dropdown: งานคอนเสิร์ต -->
+                <div class="custom-dropdown" id="evtDropdown">
+                    <div class="cd-trigger" id="evtTrigger">
+                        <div class="cd-trigger-inner">
+                            <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            <span class="cd-trigger-text" id="evtSelectedText">งานคอนเสิร์ตทั้งหมด</span>
+                        </div>
+                        <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="cd-menu" id="evtMenu">
+                        <div class="cd-search">
+                            <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="evtSearch" placeholder="Search event name...">
+                        </div>
+                        <div class="cd-list" id="evtList"></div>
+                    </div>
+                </div>
+                
+                <select class="select-option" id="typeFilter" onchange="renderTable()">
+                    <option value="ALL">ประเภทปัญหาทั้งหมด (Business Actions)</option>
+                    <option value="Duplicate Charge">Duplicate Charge</option>
+                    <option value="Seat Lock Expired Failed">Seat Lock Expired Failed</option>
+                    <option value="Uncaptured Authorizations">Uncaptured Authorizations</option>
+                    <option value="Orphaned PromptPay">Orphaned PromptPay</option>
+                    <option value="Seat Hoarding / Quota Abuse">Seat Hoarding / Quota Abuse</option>
+                </select>
+
+                <!-- ตัวกรองเวลาแบบเดียวกับ Reservation Dashboard -->
+                <select class="select-option" id="dateRangeFilter" onchange="onDateRangeChange()">
+                    <option value="all">ทุกช่วงเวลา</option>
+                    <option value="today">วันนี้</option>
+                    <option value="7d">7 วันล่าสุด</option>
+                    <option value="30d">30 วันล่าสุด</option>
+                    <option value="custom">กำหนดเอง...</option>
+                </select>
+
+                <!-- ส่วนเลือกวันแบบ Custom (ซ่อนไว้เป็นค่าเริ่มต้น) -->
+                <div class="custom-date-range" id="customDateRange" style="display:none;">
+                    <input type="date" id="dateFrom" class="input-text" onchange="onCustomDateChange()" style="min-width:unset; padding:6px 10px;">
+                    <span style="font-size: 13px;">ถึง</span>
+                    <input type="date" id="dateTo" class="input-text" onchange="onCustomDateChange()" style="min-width:unset; padding:6px 10px;">
+                </div>
+                
+                <button class="btn-action" onclick="resetFilter()" style="align-self:flex-end;">รีเซ็ตตัวกรอง</button>
+            </div>
+
+            <!-- Table Card -->
+            <div class="table-card">
+                <div class="table-scroll">
+                    <table class="data-table" id="alertTable">
+                        <thead>
+                            <tr>
+                                <th>Error ID / Booking ID</th>
+                                <th>ประเภทปัญหา</th>
+                                <th>เวลาที่เกิด</th>
+                                <th>สถานะ</th>
+                                <th style="text-align: center;">การจัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alertTableBody">
+                            <!-- rendered by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="empty-state" id="emptyState" style="display:none;">ไม่พบรายการที่ตรงกับเงื่อนไขการค้นหา</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drawer: Error Detail -->
+    <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+    <div class="drawer" id="drawer">
+        <div class="drawer-header">
+            <div>
+                <div class="drawer-title" id="drawerTitle">รายละเอียด Error</div>
+                <div class="drawer-subtitle" id="drawerSubtitle"></div>
+            </div>
+            <button class="drawer-close" onclick="closeDrawer()">&times;</button>
+        </div>
+        <div class="drawer-body">
+            <div>
+                <div class="drawer-section-title">ข้อมูลทั่วไป</div>
+                <div class="drawer-info-grid" id="drawerInfoGrid"></div>
+            </div>
+            <div id="drawerActionSection" style="display: none;">
+                <div class="drawer-section-title">การจัดการ (Business Action)</div>
+                <div class="actions-grid" id="drawerActionsGrid"></div>
+            </div>
+        </div>
+        <div class="drawer-footer">
+            <button class="btn-secondary" onclick="closeDrawer()">ปิด</button>
+            <button class="btn-primary" id="drawerResolveBtn" style="display:none;" onclick="openResolveModal(currentDrawerAlertId)">แก้ไขแล้ว</button>
+        </div>
+    </div>
+
+    <!-- Modal: Acknowledge Confirmation -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-box">
+            <div class="modal-title">ยืนยันการรับทราบปัญหา</div>
+            <div class="modal-text" id="modalText">คุณต้องการรับทราบปัญหานี้ใช่หรือไม่? รายการจะถูกเปลี่ยนสถานะเป็น "กำลังตรวจสอบ"</div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeModal()">ยกเลิก</button>
+                <button class="btn-primary" id="modalConfirmBtn">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Quick Action Confirmation -->
+    <div class="modal-overlay" id="actionModalOverlay">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-head">
+                <div class="modal-icon" id="actionModalIcon"></div>
+                <div class="modal-title" id="actionModalTitle"></div>
+            </div>
+            <p class="modal-desc" id="actionModalDesc"></p>
+
+            <label class="modal-label">เหตุผลประกอบการจัดการ (บันทึกในระบบ)</label>
+            <textarea id="actionReason" rows="3" placeholder="ระบุเหตุผล หรือโน้ตสั้นๆ..."></textarea>
+
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeActionModal()">ยกเลิก</button>
+                <button class="btn-primary" id="actionConfirmBtn" onclick="confirmQuickAction()">ยืนยันการดำเนินการ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Mark as Resolved -->
+    <div class="modal-overlay" id="resolveModalOverlay">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-head">
+                <div class="modal-icon" id="resolveModalIcon"></div>
+                <div class="modal-title">ยืนยันว่าแก้ไขปัญหาแล้ว</div>
+            </div>
+            <p class="modal-desc" id="resolveModalDesc"></p>
+
+            <label class="modal-label">เหตุผล / สรุปการแก้ไข (บันทึกในระบบ)</label>
+            <textarea id="resolveReason" rows="3" placeholder="ระบุวิธีการแก้ไข หรือสรุปสาเหตุ..."></textarea>
+
+            <label class="modal-label">แนบไฟล์หลักฐาน (ถ้ามี)</label>
+            <input type="file" id="resolveFileInput" multiple style="display:none;" onchange="handleResolveFileSelect(event)">
+            <button type="button" class="file-upload-btn" onclick="document.getElementById('resolveFileInput').click()">📎 เลือกไฟล์แนบ</button>
+            <span class="file-hint">รองรับรูปภาพ / PDF</span>
+            <div class="file-list" id="resolveFileList"></div>
+
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeResolveModal()">ยกเลิก</button>
+                <button class="btn-primary" onclick="confirmResolve()">ยืนยันว่าแก้ไขแล้ว</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        /* ---------------- State & Data Sources ---------------- */
+        let filterState = { dateRange: "all", customFrom: null, customTo: null, orgId: "ALL", eventId: "ALL" };
+        const ORGANIZATIONS = [
+          { id: "ALL", name: "ทุกองค์กร / ผู้จัด", initials: "AL", sub: "ดูข้อมูลทั้งหมด" },
+          { id: "ORG-01", name: "Live Nation Tero", initials: "LT", sub: "Company · Thailand" },
+          { id: "ORG-02", name: "BEC Tero", initials: "BT", sub: "University · Thailand" },
+          { id: "ORG-03", name: "GMM Show", initials: "GS", sub: "Company · Thailand" },
+          { id: "ORG-04", name: "Siam Piwat Events", initials: "SP", sub: "University · Thailand" }
+        ];
+
+        const EVENTS = [
+          { id: "EVT-01", orgId: "ORG-01", name: "Coldplay World Tour", initials: "CW", sub: "Concert · Rajamangala" },
+          { id: "EVT-02", orgId: "ORG-01", name: "Maroon 5 Tour", initials: "M5", sub: "Concert · Impact Arena" },
+          { id: "EVT-03", orgId: "ORG-02", name: "Ed Sheeran Live", initials: "ES", sub: "Concert · Impact Arena" },
+          { id: "EVT-04", orgId: "ORG-03", name: "Big Mountain Music Festival", initials: "BM", sub: "Festival · Khao Yai" },
+          { id: "EVT-05", orgId: "ORG-04", name: "Siam Music Fest", initials: "SM", sub: "Festival · Siam Square" },
+          { id: "EVT-06", orgId: "ORG-03", name: "Bodyslam Fest", initials: "BD", sub: "Concert · Rajamangala" }
+        ];
+
+        /* ---------------- Custom Dropdown Logic ---------------- */
+        function setupDropdown(dropdownId, triggerId, menuId, searchId, listId, dataRenderer) {
+          const trigger = document.getElementById(triggerId);
+          const menu = document.getElementById(menuId);
+          const search = document.getElementById(searchId);
+          
+          trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = menu.classList.contains('show');
+            document.querySelectorAll('.cd-menu').forEach(m => m.classList.remove('show'));
+            document.querySelectorAll('.cd-trigger').forEach(t => t.classList.remove('active'));
+            if (!isOpen) {
+              menu.classList.add('show');
+              trigger.classList.add('active');
+              search.value = '';
+              dataRenderer('');
+              setTimeout(() => search.focus(), 100);
+            }
+          });
+
+          search.addEventListener('click', e => e.stopPropagation());
+          search.addEventListener('input', e => dataRenderer(e.target.value.toLowerCase()));
+        }
+
+        document.addEventListener('click', () => {
+          document.querySelectorAll('.cd-menu').forEach(m => m.classList.remove('show'));
+          document.querySelectorAll('.cd-trigger').forEach(t => t.classList.remove('active'));
+        });
+
+        function renderOrgList(searchQuery = '') {
+          const listEl = document.getElementById('orgList');
+          const filteredOrgs = ORGANIZATIONS.filter(o => o.name.toLowerCase().includes(searchQuery));
+          
+          if (filteredOrgs.length === 0) {
+            listEl.innerHTML = `<div class="cd-empty">No results found</div>`;
+            return;
+          }
+          
+          listEl.innerHTML = filteredOrgs.map(o => `
+            <div class="cd-item ${filterState.orgId === o.id ? 'selected' : ''}" onclick="selectOrg('${o.id}', '${o.name}')">
+              <div class="cd-avatar">${o.initials}</div>
+              <div class="cd-info">
+                <span class="cd-title">${o.name}</span>
+                <span class="cd-subtitle">${o.sub}</span>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        function renderEventList(searchQuery = '') {
+          const listEl = document.getElementById('evtList');
+          let availableEvents = EVENTS;
+          if (filterState.orgId !== "ALL") {
+            availableEvents = EVENTS.filter(e => e.orgId === filterState.orgId);
+          }
+          
+          const allEventsOption = { id: "ALL", name: filterState.orgId === "ALL" ? "งานคอนเสิร์ตทั้งหมด" : "ทุกงานขององค์กรนี้", initials: "AL", sub: "ดูข้อมูลทั้งหมด" };
+          const filteredEvents = [allEventsOption, ...availableEvents].filter(e => e.name.toLowerCase().includes(searchQuery));
+
+          if (filteredEvents.length === 0) {
+            listEl.innerHTML = `<div class="cd-empty">No results found</div>`;
+            return;
+          }
+
+          listEl.innerHTML = filteredEvents.map(e => `
+            <div class="cd-item ${filterState.eventId === e.id ? 'selected' : ''}" onclick="selectEvent('${e.id}', '${e.name}')">
+              <div class="cd-avatar">${e.initials}</div>
+              <div class="cd-info">
+                <span class="cd-title">${e.name}</span>
+                <span class="cd-subtitle">${e.sub}</span>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        function selectOrg(id, name) {
+          filterState.orgId = id;
+          document.getElementById('orgSelectedText').textContent = name;
+          document.getElementById('orgMenu').classList.remove('show');
+          document.getElementById('orgTrigger').classList.remove('active');
+          
+          filterState.eventId = "ALL";
+          document.getElementById('evtSelectedText').textContent = id === "ALL" ? "งานคอนเสิร์ตทั้งหมด" : "ทุกงานขององค์กรนี้";
+          
+          renderTable();
+        }
+
+        function selectEvent(id, name) {
+          filterState.eventId = id;
+          document.getElementById('evtSelectedText').textContent = name;
+          document.getElementById('evtMenu').classList.remove('show');
+          document.getElementById('evtTrigger').classList.remove('active');
+          renderTable();
+        }
+
+        // ---------- Mock Data ----------
+        let alerts = [
+            {
+                id: 'ERR-58235',
+                bookingId: 'BK-10250',
+                severity: 'WARNING',
+                type: 'Seat Hoarding / Quota Abuse',
+                message: 'ตรวจพบพฤติกรรมกั๊กที่นั่งหรือปั๊มโค้ดส่วนลดผิดปกติจากผู้ใช้รายนี้',
+                time: '30/07/2026 10:05:12',
+                status: 'UNRESOLVED'
+            },
+            {
+                id: 'ERR-58234',
+                bookingId: 'BK-10245',
+                severity: 'WARNING',
+                type: 'Uncaptured Authorizations',
+                message: 'รายการรอการกด Capture วงเงินผ่าน Stripe แบบแมนนวลก่อนที่วงเงินจะหมดอายุ',
+                time: '30/07/2026 09:45:00',
+                status: 'UNRESOLVED'
+            },
+            {
+                id: 'ERR-58233',
+                bookingId: 'BK-10240',
+                severity: 'CRITICAL',
+                type: 'Orphaned PromptPay',
+                message: 'ระบบไม่ได้รับสถานะการชำระเงินจาก PromptPay ต้องขอสลิปตรวจสอบและกดยืนยัน',
+                time: '30/07/2026 09:30:15',
+                status: 'INVESTIGATING'
+            },
+            {
+                id: 'ERR-58229',
+                bookingId: 'BK-10198',
+                severity: 'CRITICAL',
+                type: 'Seat Lock Expired Failed',
+                message: 'ระบบไม่สามารถปลดล็อกที่นั่งคืนได้หลังหมดเวลาชำระเงิน ที่นั่งค้างสถานะ Locked',
+                time: '30/07/2026 08:47:02',
+                status: 'UNRESOLVED'
+            },
+            {
+                id: 'ERR-58209',
+                bookingId: 'BK-10099',
+                severity: 'WARNING',
+                type: 'Duplicate Charge',
+                message: 'ตรวจพบความเป็นไปได้ที่ผู้ใช้ถูกตัดเงินซ้ำซ้อนจากการกดยืนยันการชำระเงินหลายครั้ง',
+                time: '29/07/2026 22:05:55',
+                status: 'RESOLVED'
+            }
+        ];
+
+        // ---------- Icon library ----------
+        const ICON_PATHS = {
+            check: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+            alertTriangle: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
+        };
+        function icon(name, size = 16) {
+            return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24">${ICON_PATHS[name] || ''}</svg>`;
+        }
+
+        const QUICK_ACTIONS_BY_TYPE = {
+            'Duplicate Charge': [],
+            'Seat Lock Expired Failed': [],
+            'Uncaptured Authorizations': [],
+            'Orphaned PromptPay': [],
+            'Seat Hoarding / Quota Abuse': [
+                { key: 'banAccount', label: 'แบนบัญชีผู้ใช้ถาวร (Ban Account)', icon: 'alertTriangle', danger: true }
+            ]
+        };
+
+        const statusLabel = { UNRESOLVED: 'ยังไม่ได้แก้ไข', INVESTIGATING: 'กำลังตรวจสอบ', RESOLVED: 'แก้ไขแล้ว' };
+        const statusPillClass = { UNRESOLVED: 'status-unresolved', INVESTIGATING: 'status-investigating', RESOLVED: 'status-resolved' };
+
+        // State สำหรับจัดเก็บสถานะตัวกรองเวลา (แบบเดียวกับ Reservation Dashboard)
+        
+        // แปลงรูปแบบ DD/MM/YYYY HH:mm:ss ให้เป็น Date object
+        function parseThDateStr(str) {
+            if (!str) return null;
+            const parts = str.split(' ');
+            const dateParts = parts[0].split('/');
+            const timeParts = parts[1].split(':');
+            return new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1], timeParts[2]);
+        }
+
+        // ลอจิกการตรวจสอบว่าอยู่ในช่วงเวลาที่กรองหรือไม่ (ตรงตาม Reservation Dashboard)
+        function inDateRange(alertDate) {
+            if (!alertDate) return true;
+            const now = new Date();
+            if (filterState.dateRange === "all") return true;
+            if (filterState.dateRange === "today") {
+                return alertDate.toDateString() === now.toDateString();
+            }
+            if (filterState.dateRange === "7d") {
+                return (now - alertDate) <= 7 * 24 * 60 * 60000;
+            }
+            if (filterState.dateRange === "30d") {
+                return (now - alertDate) <= 30 * 24 * 60 * 60000;
+            }
+            if (filterState.dateRange === "custom") {
+                if (filterState.customFrom && alertDate < filterState.customFrom) return false;
+                if (filterState.customTo && alertDate > filterState.customTo) return false;
+                return true;
+            }
+            return true;
+        }
+
+        function onDateRangeChange() {
+            filterState.dateRange = document.getElementById('dateRangeFilter').value;
+            const customBox = document.getElementById('customDateRange');
+            customBox.style.display = (filterState.dateRange === 'custom') ? 'flex' : 'none';
+            if (filterState.dateRange !== 'custom') {
+                filterState.customFrom = null;
+                filterState.customTo = null;
+                document.getElementById('dateFrom').value = '';
+                document.getElementById('dateTo').value = '';
+            }
+            renderTable();
+        }
+
+        function onCustomDateChange() {
+            const fromVal = document.getElementById('dateFrom').value;
+            const toVal = document.getElementById('dateTo').value;
+            filterState.customFrom = fromVal ? new Date(fromVal + 'T00:00:00') : null;
+            filterState.customTo = toVal ? new Date(toVal + 'T23:59:59') : null;
+            renderTable();
+        }
+
+        function resetFilter() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('typeFilter').value = 'ALL';
+            document.getElementById('dateRangeFilter').value = 'all';
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            
+            filterState.orgId = "ALL";
+            filterState.eventId = "ALL";
+            document.getElementById('orgSearch').value = '';
+            document.getElementById('evtSearch').value = '';
+            document.getElementById('orgSelectedText').textContent = 'ทุกองค์กร / ผู้จัด';
+            document.getElementById('evtSelectedText').textContent = 'งานคอนเสิร์ตทั้งหมด';
+            
+            onDateRangeChange();
+            renderTable();
+        }
+
+        function updateStats() {
+            document.getElementById('statTotal').innerText = alerts.length;
+            document.getElementById('statCritical').innerText = alerts.filter(a => a.status === 'UNRESOLVED').length;
+            document.getElementById('statInvestigating').innerText = alerts.filter(a => a.status === 'INVESTIGATING').length;
+            document.getElementById('statResolved').innerText = alerts.filter(a => a.status === 'RESOLVED').length;
+        }
+
+        function renderTable() {
+            const search = document.getElementById('searchInput').value.toLowerCase().trim();
+            const type = document.getElementById('typeFilter').value;
+
+            const filtered = alerts.filter(a => {
+                const matchesSearch = !search || a.id.toLowerCase().includes(search) || a.bookingId.toLowerCase().includes(search);
+                const matchesType = type === 'ALL' || a.type === type;
+                
+                // กรองด้วยเงื่อนไขเวลาแบบใหม่
+                const alertDate = parseThDateStr(a.time);
+                const matchesDate = inDateRange(alertDate);
+
+                return matchesSearch && matchesType && matchesDate;
+            });
+
+            const tbody = document.getElementById('alertTableBody');
+            const emptyState = document.getElementById('emptyState');
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                emptyState.style.display = 'none';
+                filtered.forEach(a => {
+                    const tr = document.createElement('tr');
+                    const ackDisabled = a.status !== 'UNRESOLVED';
+                    
+                    tr.innerHTML = `
+                        <td>
+                            <strong>#${a.id}</strong><br>
+                            <small>Booking: #${a.bookingId}</small>
+                        </td>
+                        <td><span class="text-tag">${a.type}</span></td>
+                        <td><small>${a.time}</small></td>
+                        <td><span class="status-pill ${statusPillClass[a.status]}">${statusLabel[a.status]}</span></td>
+                        <td>
+                            <div class="action-cell">
+                                <button class="btn-action" onclick="openDrawer('${a.id}')">รายละเอียด${a.status === 'INVESTIGATING' ? '<span class="action-badge" title="มีการดำเนินการรอดำเนินการในหน้ารายละเอียด"></span>' : ''}</button>
+                                <button class="btn-action" ${ackDisabled ? 'disabled' : ''} onclick="openAckModal('${a.id}')">รับทราบปัญหา</button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            updateStats();
+        }
+
+        // ---------- Drawer Functionality ----------
+        let currentDrawerAlertId = null;
+
+        function openDrawer(errorId) {
+            const a = alerts.find(x => x.id === errorId);
+            if (!a) return;
+
+            currentDrawerAlertId = errorId;
+
+            document.getElementById('drawerTitle').innerText = `รายละเอียด Error #${a.id}`;
+            document.getElementById('drawerSubtitle').innerText = `Booking ที่เกี่ยวข้อง: #${a.bookingId}`;
+
+            document.getElementById('drawerInfoGrid').innerHTML = `
+                <div class="label">ประเภทปัญหา</div>
+                <div class="value">${a.type}</div>
+                <div class="label">สถานะปัจจุบัน</div>
+                <div class="value"><span class="status-pill ${statusPillClass[a.status]}">${statusLabel[a.status]}</span></div>
+                <div class="label">เวลาที่เกิด</div>
+                <div class="value">${a.time}</div>
+                <div class="label" style="grid-column: span 2;">ข้อความแจ้งเตือน:</div>
+                <div class="value" style="grid-column: span 2; font-size:12.5px; background:#F1F5F9; padding:8px; border-radius:4px;">${a.message}</div>
+                ${a.status === 'RESOLVED' && (a.resolveReason || (a.attachments && a.attachments.length)) ? `
+                <div class="label" style="grid-column: span 2;">สรุปการแก้ไข:</div>
+                <div class="value" style="grid-column: span 2; font-size:12.5px; background:var(--success-bg); border:1px solid var(--success-border); padding:8px; border-radius:4px;">
+                    ${a.resolveReason ? a.resolveReason : '<span style="color:var(--text-muted);">— ไม่ได้ระบุเหตุผล —</span>'}
+                    ${a.attachments && a.attachments.length ? `<div style="margin-top:6px; display:flex; flex-direction:column; gap:4px;">${a.attachments.map(name => `<div>📎 ${name}</div>`).join('')}</div>` : ''}
+                </div>` : ''}
+            `;
+
+            const quickActions = QUICK_ACTIONS_BY_TYPE[a.type] || [];
+            const actionSection = document.getElementById('drawerActionSection');
+            const actionsGrid = document.getElementById('drawerActionsGrid');
+
+            if (quickActions.length > 0) {
+                actionSection.style.display = 'block';
+                actionsGrid.innerHTML = quickActions.map(act => `
+                    <button class="action-btn ${act.danger ? 'danger' : ''}" onclick='openActionModal(${JSON.stringify(act)})'>
+                        ${icon(act.icon, 18)}<span>${act.label}</span>
+                    </button>
+                `).join('');
+            } else {
+                actionSection.style.display = 'none';
+                actionsGrid.innerHTML = '';
+            }
+
+            const resolveBtn = document.getElementById('drawerResolveBtn');
+            resolveBtn.style.display = (a.status === 'INVESTIGATING') ? 'inline-block' : 'none';
+
+            document.getElementById('drawerOverlay').classList.add('open');
+            document.getElementById('drawer').classList.add('open');
+        }
+
+        function closeDrawer() {
+            document.getElementById('drawerOverlay').classList.remove('open');
+            document.getElementById('drawer').classList.remove('open');
+        }
+
+        // ---------- Modals Handling ----------
+        let pendingAckId = null;
+        let pendingResolveId = null;
+        let pendingQuickAction = null;
+        let resolveFiles = [];
+
+        function openAckModal(errorId) {
+            const a = alerts.find(x => x.id === errorId);
+            if (!a) return;
+            pendingAckId = errorId;
+            document.getElementById('modalText').innerText =
+                `คุณต้องการรับทราบปัญหา #${a.id} (Booking #${a.bookingId}) ใช่หรือไม่? รายการจะถูกเปลี่ยนสถานะเป็น "กำลังตรวจสอบ"`;
+            document.getElementById('modalOverlay').classList.add('open');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('open');
+            pendingAckId = null;
+        }
+
+        document.getElementById('modalConfirmBtn').addEventListener('click', () => {
+            if (!pendingAckId) return;
+            const a = alerts.find(x => x.id === pendingAckId);
+            if (a && a.status === 'UNRESOLVED') {
+                a.status = 'INVESTIGATING';
+                showToast(`รับทราบปัญหา #${a.id} เรียบร้อยแล้ว`, 'success');
+            }
+            closeModal();
+            renderTable();
+            if (a && currentDrawerAlertId === a.id) {
+                openDrawer(a.id);
+            }
+        });
+
+        function openResolveModal(errorId) {
+            const a = alerts.find(x => x.id === errorId);
+            if (!a || a.status !== 'INVESTIGATING') return;
+            pendingResolveId = errorId;
+
+            document.getElementById('resolveReason').value = '';
+            resolveFiles = [];
+            renderResolveFileList();
+            document.getElementById('resolveModalIcon').innerHTML = icon('check', 20);
+            document.getElementById('resolveModalDesc').innerHTML =
+                `คุณกำลังจะทำเครื่องหมายว่า Error <b>#${a.id}</b> (Booking <b>#${a.bookingId}</b>) แก้ไขแล้ว กรุณาระบุเหตุผลหรือสรุปวิธีแก้ไข`;
+
+            document.getElementById('resolveModalOverlay').classList.add('open');
+        }
+
+        function closeResolveModal() {
+            document.getElementById('resolveModalOverlay').classList.remove('open');
+            pendingResolveId = null;
+            resolveFiles = [];
+            renderResolveFileList();
+        }
+
+        function handleResolveFileSelect(event) {
+            const newFiles = Array.from(event.target.files);
+            resolveFiles = resolveFiles.concat(newFiles);
+            event.target.value = ''; // allow re-selecting the same file
+            renderResolveFileList();
+        }
+
+        function removeResolveFile(index) {
+            resolveFiles.splice(index, 1);
+            renderResolveFileList();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function renderResolveFileList() {
+            const listEl = document.getElementById('resolveFileList');
+            listEl.innerHTML = resolveFiles.map((f, i) => `
+                <div class="file-chip">
+                    <span class="file-name">📎 ${f.name}</span>
+                    <span class="file-size">${formatFileSize(f.size)}</span>
+                    <span class="file-remove" onclick="removeResolveFile(${i})">&times;</span>
+                </div>
+            `).join('');
+        }
+
+        function confirmResolve() {
+            if (!pendingResolveId) return;
+            const a = alerts.find(x => x.id === pendingResolveId);
+            if (!a) return;
+
+            a.status = 'RESOLVED';
+            a.resolveReason = document.getElementById('resolveReason').value.trim();
+            a.attachments = resolveFiles.map(f => f.name);
+
+            const fileNote = a.attachments.length ? ` (แนบไฟล์ ${a.attachments.length} รายการ)` : '';
+            showToast(`ทำเครื่องหมาย #${a.id} ว่าแก้ไขแล้วเรียบร้อย${fileNote}`, 'success');
+            
+            closeResolveModal();
+            renderTable();
+            if (currentDrawerAlertId === a.id) {
+                openDrawer(a.id);
+            }
+        }
+
+        function openActionModal(action) {
+            const a = alerts.find(x => x.id === currentDrawerAlertId);
+            if (!a) return;
+            pendingQuickAction = action;
+
+            document.getElementById('actionReason').value = '';
+            document.getElementById('actionModalIcon').className = 'modal-icon' + (action.danger ? ' danger' : '');
+            document.getElementById('actionModalIcon').innerHTML = icon(action.icon, 20);
+            document.getElementById('actionModalTitle').innerText = action.label;
+            document.getElementById('actionModalDesc').innerHTML =
+                `คุณกำลังจะดำเนินการ <b>${action.label}</b> สำหรับ Booking <b>#${a.bookingId}</b> (Error #${a.id}) การกระทำนี้จะเปลี่ยนสถานะเป็นแก้ไขแล้ว`;
+
+            const btn = document.getElementById('actionConfirmBtn');
+            btn.className = 'btn-primary' + (action.danger ? ' danger' : '');
+
+            document.getElementById('actionModalOverlay').classList.add('open');
+        }
+
+        function closeActionModal() {
+            document.getElementById('actionModalOverlay').classList.remove('open');
+            pendingQuickAction = null;
+        }
+
+        function confirmQuickAction() {
+            if (!pendingQuickAction) return;
+            const a = alerts.find(x => x.id === currentDrawerAlertId);
+            if (!a) return;
+
+            a.status = 'RESOLVED';
+            showToast(`ดำเนินการ "${pendingQuickAction.label}" สำเร็จ`, 'success');
+
+            closeActionModal();
+            renderTable();
+            openDrawer(a.id);
+        }
+
+        document.getElementById('resolveModalOverlay').addEventListener('click', function(e) { if(e.target===this) closeResolveModal(); });
+        document.getElementById('actionModalOverlay').addEventListener('click', function(e) { if(e.target===this) closeActionModal(); });
+
+        // ---------- Toast UI ----------
+        function showToast(message, variant) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${variant === 'success' ? 'toast-success' : 'toast-info'}`;
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Init
+        setupDropdown('orgDropdown', 'orgTrigger', 'orgMenu', 'orgSearch', 'orgList', renderOrgList);
+        setupDropdown('evtDropdown', 'evtTrigger', 'evtMenu', 'evtSearch', 'evtList', renderEventList);
+        renderTable();
+    </script>
+</body>
+</html>

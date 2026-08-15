@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Organizer Organization - Admin Dashboard</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Colors: White and Blue B2B SaaS Scheme */
+            --bg-page: #F8FAFC;
+            --bg-white: #FFFFFF;
+            --primary-blue: #2563EB;
+            --primary-blue-hover: #1D4ED8;
+            --text-main: #0F172A;
+            --text-secondary: #475569;
+            --text-muted: #94A3B8;
+            --border-color: #E2E8F0;
+            --border-hover: #CBD5E1;
+            
+            /* Status Colors */
+            --badge-active-bg: #EFF6FF;
+            --badge-active-text: #1D4ED8;
+            --badge-suspended-bg: #FEF2F2;
+            --badge-suspended-text: #B91C1C;
+            --badge-inactive-bg: #F1F5F9;
+            --badge-inactive-text: #475569;
+
+            /* Visuals */
+            --radius-sm: 8px;
+            --radius-md: 10px;
+            --radius-lg: 12px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow-modal: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        /* Top Header */
+        .page-header {
+            background: var(--bg-white);
+            border-bottom: 1px solid var(--border-color);
+            padding: 24px 40px;
+            margin-bottom: 32px;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -0.025em;
+        }
+
+        .page-description {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+            max-width: 720px;
+        }
+
+        /* Main Container: Two-Column Form Layout */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 40px 80px 40px;
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 32px;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Section Cards */
+        .section-card {
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* Form Layouts & Inputs */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .full-width {
+            grid-column: span 2;
+        }
+
+        @media (max-width: 640px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .full-width {
+                grid-column: span 1;
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .form-label span.req {
+            color: #DC2626;
+            margin-left: 2px;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 10px 14px;
+            font-size: 14px;
+            color: var(--text-main);
+            background-color: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            outline: none;
+            transition: all 0.15s ease;
+        }
+
+        .form-input:hover,
+        .form-select:hover,
+        .form-textarea:hover {
+            border-color: var(--border-hover);
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-input[readonly] {
+            background-color: #F8FAFC;
+            color: var(--text-secondary);
+            cursor: not-allowed;
+        }
+
+        /* Input with Button (Password Generator) */
+        .input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Drag & Drop Logo Upload */
+        .dropzone {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 32px 20px;
+            text-align: center;
+            background-color: #FAFAFA;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .dropzone:hover {
+            border-color: var(--primary-blue);
+            background-color: #F8FAFC;
+        }
+
+        .drop-icon {
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .drop-text-primary {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--primary-blue);
+        }
+
+        .drop-text-secondary {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Info Alert Box */
+        .info-box {
+            background-color: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            border-radius: var(--radius-md);
+            padding: 14px 18px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin-top: 20px;
+        }
+
+        .info-box svg {
+            flex-shrink: 0;
+            color: var(--primary-blue);
+            margin-top: 2px;
+        }
+
+        .info-box p {
+            font-size: 13px;
+            color: #1E3A8A;
+            line-height: 1.5;
+        }
+
+        /* Right Sidebar Summary Card */
+        .sidebar-sticky {
+            position: sticky;
+            top: 24px;
+        }
+
+        .summary-card {
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .summary-header {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            font-size: 13px;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .summary-label {
+            color: var(--text-secondary);
+        }
+
+        .summary-value {
+            font-weight: 600;
+            color: var(--text-main);
+            text-align: right;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .empty-state-text {
+            color: var(--text-muted);
+            font-style: italic;
+            font-weight: 400;
+        }
+
+        /* Status Pill */
+        .status-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 50px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-active {
+            background-color: var(--badge-active-bg);
+            color: var(--badge-active-text);
+        }
+
+        .status-suspended {
+            background-color: var(--badge-suspended-bg);
+            color: var(--badge-suspended-text);
+        }
+
+        .status-inactive {
+            background-color: var(--badge-inactive-bg);
+            color: var(--badge-inactive-text);
+        }
+
+        /* Footer Sticky Action Bar */
+        .form-footer {
+            position: sticky;
+            bottom: 0;
+            background: var(--bg-white);
+            border-top: 1px solid var(--border-color);
+            padding: 16px 40px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.03);
+            z-index: 10;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid transparent;
+        }
+
+        .btn-secondary {
+            background-color: #F1F5F9;
+            color: var(--text-secondary);
+            border-color: var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: #E2E8F0;
+            color: var(--text-main);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            color: var(--text-secondary);
+            border-color: var(--border-color);
+        }
+
+        .btn-outline:hover {
+            background-color: #F8FAFC;
+            color: var(--text-main);
+            border-color: var(--border-hover);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-blue);
+            color: #FFFFFF;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-blue-hover);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-sm {
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+
+        /* Modal Backdrop & Box */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(2px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal-box {
+            background: var(--bg-white);
+            border-radius: var(--radius-lg);
+            width: 440px;
+            max-width: 90vw;
+            padding: 24px;
+            box-shadow: var(--shadow-modal);
+            animation: modalIn 0.15s ease-out;
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .modal-description {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        /* Utility classes */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Page Header -->
+    <header class="page-header">
+        <div class="header-content">
+            <h1 class="page-title">Create Organizer Organization</h1>
+            <p class="page-description">
+                The system administrator has already verified the organizer's documents outside the system. 
+                This page is only for creating an approved organization record.
+            </p>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <div class="main-container">
+        
+        <!-- Left Column: Form Cards -->
+        <main class="form-content">
+            
+            <!-- Section 1: Basic Information -->
+            <section class="section-card">
+                <h2 class="section-title">1. Basic Information</h2>
+                <div class="form-grid">
+                    
+                    <div class="form-group full-width">
+                        <label class="form-label" for="orgType">Organization Type</label>
+                        <select id="orgType" class="form-select">
+                            <option value="Company">Company</option>
+                            <option value="Individual">Individual</option>
+                            <option value="University">University</option>
+                            <option value="Government">Government</option>
+                            <option value="Foundation">Foundation</option>
+                            <option value="Association">Association</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="orgName">Organization Name <span class="req">*</span></label>
+                        <input type="text" id="orgName" class="form-input" placeholder="e.g. Live Nation Tero" autocomplete="off">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="displayName">Display Name</label>
+                        <input type="text" id="displayName" class="form-input" placeholder="Name shown to customers">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label">Logo Upload</label>
+                        <div class="dropzone">
+                            <svg class="drop-icon" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin: 0 auto;">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"/>
+                            </svg>
+                            <p class="drop-text-primary">Click to upload or drag and drop</p>
+                            <p class="drop-text-secondary">PNG, JPG or WEBP (Max 2MB)</p>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label" for="description">Description</label>
+                        <textarea id="description" rows="3" class="form-textarea" placeholder="Brief overview of the organizer..."></textarea>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Section 2: Contact Information -->
+            <section class="section-card">
+                <h2 class="section-title">2. Contact Information</h2>
+                <div class="form-grid">
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="contactEmail">Email <span class="req">*</span></label>
+                        <input type="email" id="contactEmail" class="form-input" placeholder="contact@organizer.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="contactPhone">Phone Number <span class="req">*</span></label>
+                        <input type="tel" id="contactPhone" class="form-input" placeholder="+66 2 000 0000">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label" for="website">Website</label>
+                        <input type="url" id="website" class="form-input" placeholder="https://">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="facebook">Facebook</label>
+                        <input type="text" id="facebook" class="form-input" placeholder="facebook.com/organizer">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="lineOfficial">Line Official</label>
+                        <input type="text" id="lineOfficial" class="form-input" placeholder="e.g. @organizer">
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Section 3: Business Information -->
+            <section class="section-card">
+                <h2 class="section-title">3. Business Information</h2>
+                <div class="form-grid">
+                    
+                    <!-- Dynamic Business Fields for Company Type -->
+                    <div id="taxIdGroup" class="form-group">
+                        <label class="form-label" for="taxId">Tax ID</label>
+                        <input type="text" id="taxId" class="form-input" placeholder="13-digit Tax ID">
+                    </div>
+
+                    <div id="bizRegGroup" class="form-group">
+                        <label class="form-label" for="bizRegNumber">Business Registration Number</label>
+                        <input type="text" id="bizRegNumber" class="form-input" placeholder="Registration ID">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label" for="address">Address</label>
+                        <textarea id="address" rows="3" class="form-textarea" placeholder="Full registered street address..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="country">Country</label>
+                        <select id="country" class="form-select">
+                            <option value="Thailand">Thailand</option>
+                            <option value="Singapore">Singapore</option>
+                            <option value="Malaysia">Malaysia</option>
+                            <option value="Japan">Japan</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="province">Province / State</label>
+                        <input type="text" id="province" class="form-input" placeholder="e.g. Bangkok">
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Section 4: System Settings -->
+            <section class="section-card">
+                <h2 class="section-title">4. System Settings</h2>
+                <div class="form-grid">
+                    
+                    <div class="form-group full-width">
+                        <label class="form-label" for="status">Status</label>
+                        <select id="status" class="form-select">
+                            <option value="Active">Active</option>
+                            <option value="Suspended">Suspended</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="defaultLang">Default Language</label>
+                        <select id="defaultLang" class="form-select">
+                            <option value="TH">Thai (TH)</option>
+                            <option value="EN">English (EN)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="timeZone">Time Zone</label>
+                        <select id="timeZone" class="form-select">
+                            <option value="UTC+07:00">(UTC+07:00) Bangkok, Hanoi, Jakarta</option>
+                            <option value="UTC+08:00">(UTC+08:00) Singapore, Kuala Lumpur</option>
+                            <option value="UTC+00:00">(UTC+00:00) Universal Coordinated Time</option>
+                        </select>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Section 5: Initial Staff Account -->
+            <section class="section-card">
+                <h2 class="section-title">5. Initial Staff Account</h2>
+                <div class="form-grid">
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="firstName">First Name <span class="req">*</span></label>
+                        <input type="text" id="firstName" class="form-input" placeholder="Somchai">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="lastName">Last Name <span class="req">*</span></label>
+                        <input type="text" id="lastName" class="form-input" placeholder="Sukjai">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="adminEmail">Email <span class="req">*</span></label>
+                        <input type="email" id="adminEmail" class="form-input" placeholder="admin@organizer.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="adminPhone">Phone</label>
+                        <input type="tel" id="adminPhone" class="form-input" placeholder="+66 81 234 5678">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Temporary Password</label>
+                        <div class="input-group">
+                            <input type="text" id="tempPassword" class="form-input" readonly placeholder="Click generate button">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="generatePassword()">Generate</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Role</label>
+                        <input type="text" class="form-input" value="Organizer Admin" readonly>
+                    </div>
+
+                    <!-- Information Box -->
+                    <div class="full-width">
+                        <div class="info-box">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <p>This account will become the primary administrator of this organization and can invite additional staff members later.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Right Sidebar: Live Summary Card -->
+        <aside class="sidebar-sticky">
+            <div class="summary-card">
+                <h3 class="summary-header">Organization Summary</h3>
+
+                <div class="summary-item">
+                    <span class="summary-label">Organization Type</span>
+                    <span class="summary-value" id="sumType">Company</span>
+                </div>
+
+                <div class="summary-item">
+                    <span class="summary-label">Organization Name</span>
+                    <span class="summary-value" id="sumName">
+                        <span class="empty-state-text">Not provided</span>
+                    </span>
+                </div>
+
+                <div class="summary-item">
+                    <span class="summary-label">Status</span>
+                    <span class="summary-value" id="sumStatus">
+                        <span class="status-pill status-active">Active</span>
+                    </span>
+                </div>
+
+                <div class="summary-item">
+                    <span class="summary-label">Primary Admin Email</span>
+                    <span class="summary-value" id="sumEmail">
+                        <span class="empty-state-text">Not provided</span>
+                    </span>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- Footer sticky action bar -->
+    <footer class="form-footer">
+        <button type="button" class="btn btn-secondary">Cancel</button>
+        <button type="button" class="btn btn-outline">Save Draft</button>
+        <button type="button" class="btn btn-primary" onclick="openConfirmModal()">Create Organization</button>
+    </footer>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-box">
+            <h3 class="modal-title">Confirm Organization Creation</h3>
+            <p class="modal-description">
+                Are you sure you want to create this organization? 
+                The primary administrator will receive an invitation email.
+            </p>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitForm()">Yes, Create Organization</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // 1. Logic สำหรับซ่อน / แสดง Tax ID และ Business Registration Number
+        const orgTypeSelect = document.getElementById('orgType');
+        const taxIdGroup = document.getElementById('taxIdGroup');
+        const bizRegGroup = document.getElementById('bizRegGroup');
+
+        function handleOrgTypeChange() {
+            const isCompany = orgTypeSelect.value === 'Company';
+            if (isCompany) {
+                taxIdGroup.classList.remove('hidden');
+                bizRegGroup.classList.remove('hidden');
+            } else {
+                taxIdGroup.classList.add('hidden');
+                bizRegGroup.classList.add('hidden');
+            }
+            updateSummary();
+        }
+
+        orgTypeSelect.addEventListener('change', handleOrgTypeChange);
+
+        // 2. Logic สำหรับ Right Sidebar Summary (Real-time update)
+        const orgNameInput = document.getElementById('orgName');
+        const statusSelect = document.getElementById('status');
+        const adminEmailInput = document.getElementById('adminEmail');
+
+        const sumType = document.getElementById('sumType');
+        const sumName = document.getElementById('sumName');
+        const sumStatus = document.getElementById('sumStatus');
+        const sumEmail = document.getElementById('sumEmail');
+
+        function updateSummary() {
+            // Update Organization Type
+            sumType.textContent = orgTypeSelect.value;
+
+            // Update Organization Name
+            const nameValue = orgNameInput.value.trim();
+            if (nameValue) {
+                sumName.textContent = nameValue;
+            } else {
+                sumName.innerHTML = '<span class="empty-state-text">Not provided</span>';
+            }
+
+            // Update Status Pill
+            const statusValue = statusSelect.value;
+            const statusClass = `status-${statusValue.toLowerCase()}`;
+            sumStatus.innerHTML = `<span class="status-pill ${statusClass}">${statusValue}</span>`;
+
+            // Update Primary Admin Email
+            const emailValue = adminEmailInput.value.trim();
+            if (emailValue) {
+                sumEmail.textContent = emailValue;
+            } else {
+                sumEmail.innerHTML = '<span class="empty-state-text">Not provided</span>';
+            }
+        }
+
+        orgNameInput.addEventListener('input', updateSummary);
+        statusSelect.addEventListener('change', updateSummary);
+        adminEmailInput.addEventListener('input', updateSummary);
+
+        // 3. Password Generator สำหรับ Temp Password
+        function generatePassword() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+            let pwd = '';
+            for (let i = 0; i < 12; i++) {
+                pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            document.getElementById('tempPassword').value = pwd;
+        }
+
+        // 4. Handle Modal UI
+        const confirmModal = document.getElementById('confirmModal');
+
+        function openConfirmModal() {
+            // ตรวจสอบค่าเบื้องต้นก่อนเปิด Modal
+            if (!orgNameInput.value.trim()) {
+                alert('Please enter an Organization Name.');
+                orgNameInput.focus();
+                return;
+            }
+            if (!adminEmailInput.value.trim()) {
+                alert('Please enter an Admin Email.');
+                adminEmailInput.focus();
+                return;
+            }
+            confirmModal.classList.add('open');
+        }
+
+        function closeConfirmModal() {
+            confirmModal.classList.remove('open');
+        }
+
+        function submitForm() {
+            closeConfirmModal();
+            alert('Organization created successfully! An invitation email has been sent.');
+            // สามารถเพิ่มโค้ด redirect ไปยังหน้าหน้ารายการผู้จัดงานได้ที่นี่
+        }
+
+        // 5. ปิด Modal เมื่อคลิกพื้นหลัง
+        confirmModal.addEventListener('click', (e) => {
+            if (e.target === confirmModal) {
+                closeConfirmModal();
+            }
+        });
+    </script>
+</body>
+</html>

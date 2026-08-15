@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - ตรวจสอบรายการจองผิดปกติ</title>
+    <!-- Google Fonts: Prompt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-navy: #0B2F61;
+            --bg-light: #F8FAFC;
+            --card-white: #FFFFFF;
+            --text-dark: #1E293B;
+            --text-muted: #64748B;
+            --border-color: #CBD5E1;
+            --border-dark: #0F172A;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Prompt', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Navigation Layout */
+        .sidebar {
+            width: 260px;
+            background-color: var(--primary-navy);
+            color: white;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+        }
+
+        .sidebar-brand {
+            padding: 10px 25px 25px 25px;
+            font-size: 20px;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-menu { list-style: none; padding: 20px 0; }
+        .sidebar-menu li a {
+            display: block;
+            padding: 14px 25px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .sidebar-menu li.active a {
+            background-color: rgba(255,255,255,0.15);
+            color: white;
+            font-weight: 600;
+            border-left: 4px solid white;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-navbar {
+            background-color: var(--card-white);
+            height: 70px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .page-title-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary-navy);
+        }
+
+        .container {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Toolbar & Filter Form */
+        .toolbar-card {
+            background-color: var(--card-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .input-text, .select-option {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: white;
+        }
+
+        .input-text { flex: 1; }
+
+        /* Data Table - Text Focus (No Color Coding) */
+        .table-card {
+            background-color: var(--card-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .data-table th {
+            background-color: #F1F5F9;
+            padding: 12px 16px;
+            font-weight: 600;
+            color: var(--text-dark);
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .data-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        /* Text Label Format (แทนการใช้สี) */
+        .text-tag {
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .btn-action {
+            padding: 6px 12px;
+            background-color: white;
+            border: 1px solid var(--border-dark);
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .btn-action:hover {
+            background-color: var(--text-dark);
+            color: white;
+        }
+
+        .btn-action:disabled {
+            border-color: var(--border-color);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            background-color: #F1F5F9;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Menu (Scope Requirement 3.8) -->
+    <div class="sidebar">
+        <div class="sidebar-brand">SYSTEM ADMIN</div>
+        <ul class="sidebar-menu">
+            <li><a href="#">1. จัดการผู้ใช้ (User Management)</a></li>
+            <li class="active"><a href="#">2. รายการจองผิดปกติ (Fraud Monitor)</a></li>
+            <li><a href="#">3. แก้ไขข้อมูลในระบบ (Data Correction)</a></li>
+            <li><a href="#">4. ประวัติการใช้งาน (System Audit Logs)</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="top-navbar">
+            <div class="page-title-text">ตรวจสอบรายการจองผิดปกติ (Abnormal Booking Monitor)</div>
+            <div>ผู้ดูแลระบบ (Admin)</div>
+        </div>
+
+        <div class="container">
+            <!-- Filter Toolbar -->
+            <div class="toolbar-card">
+                <span>ค้นหาข้อมูล:</span>
+                <input type="text" class="input-text" id="searchInput" onkeyup="filterTable()" placeholder="พิมพ์ Booking ID, ชื่อผู้จอง หรือชื่อคอนเสิร์ต...">
+                <select class="select-option" id="typeFilter" onchange="filterTable()">
+                    <option value="ALL">ประเภทความผิดปกติทั้งหมด</option>
+                    <option value="จองถี่เกินกำหนด">จองถี่เกินกำหนด (Rate Limit Exceeded)</option>
+                    <option value="ยอดชำระเงินไม่ตรง">ยอดชำระเงินไม่ตรง (Amount Mismatch)</option>
+                    <option value="ล็อกที่นั่งค้าง">ล็อกที่นั่งค้างเกินเวลา (Session Timeout)</option>
+                </select>
+            </div>
+
+            <!-- Table Card -->
+            <div class="table-card">
+                <table class="data-table" id="fraudTable">
+                    <thead>
+                        <tr>
+                            <th>Booking ID / เวลา</th>
+                            <th>ข้อมูลผู้จอง</th>
+                            <th>รายการที่สั่งจอง</th>
+                            <th>ข้อความแจ้งสาเหตุความผิดปกติ</th>
+                            <th>สถานะรายการ</th>
+                            <th style="text-align: center;">การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Row 1 -->
+                        <tr>
+                            <td>
+                                <strong>#BK-90821</strong><br>
+                                <small>22/07/2026 14:02:11</small>
+                            </td>
+                            <td>
+                                <strong>วิชัย สปอยล์ตั๋ว</strong><br>
+                                ID: #USR-003<br>
+                                <small>IP: 182.52.100.12</small>
+                            </td>
+                            <td>
+                                คอนเสิร์ต: Rock Zone 2026<br>
+                                โซน: VIP (A1, A2, A3, A4)<br>
+                                จำนวน: 4 ที่นั่ง
+                            </td>
+                            <td>
+                                <span class="text-tag">[ตรวจพบ: จองถี่เกินกำหนด]</span><br>
+                                <small>ผู้ใช้งานทำรายการจองซ้ำ 5 ครั้งภายในเวลา 30 วินาที</small>
+                            </td>
+                            <td>
+                                <strong>[สถานะ: รอดำเนินการ]</strong>
+                            </td>
+                            <td style="text-align: center;">
+                                <button class="btn-action" onclick="cancelOrder(this, 'BK-90821')">ยกเลิกรายการสั่งซื้อ</button>
+                            </td>
+                        </tr>
+
+                        <!-- Row 2 -->
+                        <tr>
+                            <td>
+                                <strong>#BK-90775</strong><br>
+                                <small>22/07/2026 13:45:00</small>
+                            </td>
+                            <td>
+                                <strong>สมชาย เข็มกลัด</strong><br>
+                                ID: #USR-001<br>
+                                <small>IP: 49.229.12.88</small>
+                            </td>
+                            <td>
+                                คอนเสิร์ต: Summer Music Fest<br>
+                                โซน: Regular (B12)<br>
+                                จำนวน: 1 ที่นั่ง
+                            </td>
+                            <td>
+                                <span class="text-tag">[ตรวจพบ: ยอดชำระเงินไม่ตรง]</span><br>
+                                <small>ยอดคำสั่งซื้อ 1,500 บาท แต่สลิปแจ้งชำระเข้ามา 150 บาท</small>
+                            </td>
+                            <td>
+                                <strong>[สถานะ: รอดำเนินการ]</strong>
+                            </td>
+                            <td style="text-align: center;">
+                                <button class="btn-action" onclick="cancelOrder(this, 'BK-90775')">ยกเลิกรายการสั่งซื้อ</button>
+                            </td>
+                        </tr>
+
+                        <!-- Row 3 (Cancelled Case) -->
+                        <tr>
+                            <td>
+                                <strong>#BK-90510</strong><br>
+                                <small>22/07/2026 11:20:05</small>
+                            </td>
+                            <td>
+                                <strong>อนันต์ สายกด</strong><br>
+                                ID: #USR-088<br>
+                                <small>IP: 125.25.77.10</small>
+                            </td>
+                            <td>
+                                คอนเสิร์ต: Pop World Tour<br>
+                                โซน: Standing (ST-01, ST-02)<br>
+                                จำนวน: 2 ที่นั่ง
+                            </td>
+                            <td>
+                                <span class="text-tag">[ตรวจพบ: ล็อกที่นั่งค้าง]</span><br>
+                                <small>ทำรายการไม่สำเร็จแต่ระบบไม่ปลดล็อกที่นั่งตามเวลา</small>
+                            </td>
+                            <td>
+                                <strong>[สถานะ: ยกเลิกและคืนที่นั่งแล้ว]</strong><br>
+                                <small>โดย Admin เมื่อ 11:30:00</small>
+                            </td>
+                            <td style="text-align: center;">
+                                <button class="btn-action" disabled>ยกเลิกแล้ว</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JavaScript สำหรับระบบกรองข้อความและปุ่มจัดการ -->
+    <script>
+        function cancelOrder(btn, bookingId) {
+            if (confirm(`คุณต้องการยกเลิกคำสั่งซื้อรหัส ${bookingId} และดึงที่นั่งกลับคืนสู่ระบบใช่หรือไม่?`)) {
+                const row = btn.closest('tr');
+                const statusCell = row.cells[4];
+                
+                // อัปเดตข้อความสถานะโดยไม่ใช้สี
+                statusCell.innerHTML = '<strong>[สถานะ: ยกเลิกและคืนที่นั่งแล้ว]</strong><br><small>ดำเนินการโดย Admin</small>';
+                btn.disabled = true;
+                btn.innerText = 'ยกเลิกแล้ว';
+            }
+        }
+
+        function filterTable() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const typeFilter = document.getElementById('typeFilter').value;
+            const table = document.getElementById('fraudTable');
+            const tr = table.getElementsByTagName('tr');
+
+            for (let i = 1; i < tr.length; i++) {
+                const rowText = tr[i].innerText.toLowerCase();
+                const reasonCell = tr[i].cells[3].innerText;
+
+                const matchesSearch = rowText.includes(searchInput);
+                const matchesType = (typeFilter === 'ALL') || reasonCell.includes(typeFilter);
+
+                if (matchesSearch && matchesType) {
+                    tr[i].style.display = '';
+                } else {
+                    tr[i].style.display = 'none';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

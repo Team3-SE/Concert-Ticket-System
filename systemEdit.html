@@ -1,0 +1,934 @@
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import {
+  Search,
+  Ticket,
+  CreditCard,
+  Armchair,
+  ShoppingBag,
+  User,
+  Eye,
+  Wrench,
+  History,
+  X,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  Calendar,
+  ChevronDown,
+  RefreshCw,
+  ArrowRightLeft,
+  Unlock,
+  ShieldCheck,
+  XCircle,
+  RotateCcw,
+  Repeat,
+  DollarSign,
+  Mail,
+  Phone,
+  Hash,
+  MapPin,
+  FileText,
+  AlertCircle,
+  Info,
+} from "lucide-react";
+
+/* ---------------------------------- fonts --------------------------------- */
+function useInterFont() {
+  useEffect(() => {
+    if (document.getElementById("inter-font-link")) return;
+    const link = document.createElement("link");
+    link.id = "inter-font-link";
+    link.rel = "stylesheet";
+    link.href =
+      "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap";
+    document.head.appendChild(link);
+  }, []);
+}
+
+/* --------------------------------- helpers -------------------------------- */
+function timeAgo(date) {
+  const diff = Math.max(0, Date.now() - date.getTime());
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins} min${mins === 1 ? "" : "s"} ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hr${hrs === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+function fmtDateTime(date) {
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+const minutesAgo = (m) => new Date(Date.now() - m * 60000);
+
+/* --------------------------------- tokens --------------------------------- */
+const COLORS = {
+  primary: "#2563EB",
+  bg: "#F8FAFC",
+  border: "#E5E7EB",
+};
+
+const TYPE_META = {
+  Booking: { icon: Ticket, tint: "text-indigo-600 bg-indigo-50" },
+  Payment: { icon: CreditCard, tint: "text-blue-600 bg-blue-50" },
+  Seat: { icon: Armchair, tint: "text-purple-600 bg-purple-50" },
+  Order: { icon: ShoppingBag, tint: "text-teal-600 bg-teal-50" },
+  Customer: { icon: User, tint: "text-slate-600 bg-slate-100" },
+};
+
+const STATUS_META = {
+  Pending: {
+    icon: Clock,
+    text: "text-amber-700",
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    dot: "bg-amber-500",
+  },
+  Investigating: {
+    icon: Loader2,
+    text: "text-blue-700",
+    bg: "bg-blue-50",
+    border: "border-blue-200",
+    dot: "bg-blue-500",
+  },
+  Fixed: {
+    icon: CheckCircle2,
+    text: "text-emerald-700",
+    bg: "bg-emerald-50",
+    border: "border-emerald-200",
+    dot: "bg-emerald-500",
+  },
+  Critical: {
+    icon: AlertTriangle,
+    text: "text-red-700",
+    bg: "bg-red-50",
+    border: "border-red-200",
+    dot: "bg-red-500",
+  },
+};
+
+const CATEGORIES = ["All", "Booking", "Payment", "Seat", "Order", "Customer"];
+
+/* ---------------------------------- data ----------------------------------- */
+const initialErrors = [
+  {
+    id: "ERR-9821",
+    bookingId: "BK-10234",
+    customer: "Sarah Chen",
+    email: "sarah.chen@mailbox.com",
+    event: "Coldplay World Tour",
+    errorType: "Payment",
+    description:
+      "Duplicate charge detected — customer billed twice on card ending 4482.",
+    status: "Critical",
+    created: minutesAgo(2),
+    audit: [
+      {
+        who: "System",
+        action: "Error detected",
+        before: "—",
+        after: "Critical",
+        reason: "Duplicate transaction flagged by fraud monitor.",
+        time: minutesAgo(2),
+      },
+    ],
+  },
+  {
+    id: "ERR-9812",
+    bookingId: "BK-10198",
+    customer: "James Patel",
+    email: "james.patel@mailbox.com",
+    event: "Ed Sheeran Live",
+    errorType: "Seat",
+    description: "Seat A12 assigned to two separate bookings simultaneously.",
+    status: "Investigating",
+    created: minutesAgo(18),
+    audit: [
+      {
+        who: "Priya N.",
+        action: "Started investigation",
+        before: "Pending",
+        after: "Investigating",
+        reason: "Cross-checking seat map allocation logs.",
+        time: minutesAgo(9),
+      },
+      {
+        who: "System",
+        action: "Error detected",
+        before: "—",
+        after: "Pending",
+        reason: "Seat lock collision on checkout.",
+        time: minutesAgo(18),
+      },
+    ],
+  },
+  {
+    id: "ERR-9798",
+    bookingId: "BK-10177",
+    customer: "Maria Gomez",
+    email: "maria.gomez@mailbox.com",
+    event: "Taylor Swift — The Eras Tour",
+    errorType: "Booking",
+    description: "Booking confirmed but the ticket PDF failed to generate.",
+    status: "Pending",
+    created: minutesAgo(34),
+    audit: [
+      {
+        who: "System",
+        action: "Error detected",
+        before: "—",
+        after: "Pending",
+        reason: "PDF render service timeout.",
+        time: minutesAgo(34),
+      },
+    ],
+  },
+  {
+    id: "ERR-9781",
+    bookingId: "BK-10156",
+    customer: "David Kim",
+    email: "david.kim@mailbox.com",
+    event: "Arctic Monkeys",
+    errorType: "Order",
+    description: "Order total mismatch between cart and checkout summary.",
+    status: "Pending",
+    created: minutesAgo(61),
+    audit: [
+      {
+        who: "System",
+        action: "Error detected",
+        before: "—",
+        after: "Pending",
+        reason: "Tax calculation applied twice at checkout.",
+        time: minutesAgo(61),
+      },
+    ],
+  },
+  {
+    id: "ERR-9764",
+    bookingId: "BK-10122",
+    customer: "Emily Wong",
+    email: "emily.wong@mailbox.com",
+    event: "BTS World Tour",
+    errorType: "Payment",
+    description: "Payment gateway timeout — status stuck in processing.",
+    status: "Investigating",
+    created: minutesAgo(122),
+    audit: [
+      {
+        who: "Alex T.",
+        action: "Started investigation",
+        before: "Pending",
+        after: "Investigating",
+        reason: "Contacted gateway provider for transaction trace.",
+        time: minutesAgo(70),
+      },
+      {
+        who: "System",
+        action: "Error detected",
+        before: "—",
+        after: "Pending",
+        reason: "Gateway callback not received within timeout window.",
+        time: minutesAgo(122),
+      },
+    ],
+  },
+  {
+    id: "ERR-9740",
+    bookingId: "BK-10099",
+    customer: "Michael Brown",
+    email: "michael.brown@mailbox.com",
+    event: "Coldplay World Tour",
+    errorType: "Seat",
+    description: "Seat released but still shown as booked in inventory.",
+    status: "Fixed",
+    created: minutesAgo(300),
+    audit: [
+      {
+        who: "Priya N.",
+        action: "Force released seat",
+        before: "Booked",
+        after: "Available",
+        reason: "Manually cleared stale inventory lock.",
+        time: minutesAgo(280),
+      },
+      {
+        who: "System",
+        action: "Error detected",
+        before: "—",
+        after: "Pending",
+        reason: "Inventory sync job failed after cancellation.",
+        time: minutesAgo(300),
+      },
+    ],
+  },
+  {
+    id: "ERR-9722",
+    bookingId: "BK-10077",
+    customer: "Anna Rodriguez",
+    email: "anna.rodriguez@mailbox.com",
+    event: "Dua Lipa Live",
+    errorType: "Customer",
+    description: "Customer profile linked to two separate accounts.",
+    status: "Pending",
+    created: minutesAgo(360),
+    audit: [
+      {
+        who: "System",
+        action: "Error detected",
+        before: "—",
+        after: "Pending",
+        reason: "Duplicate account created via guest checkout.",
+        time: minutesAgo(360),
+      },
+    ],
+  },
+  {
+    id: "ERR-9705",
+    bookingId: "BK-10045",
+    customer: "Chris Lee",
+    email: "chris.lee@mailbox.com",
+    event: "Ed Sheeran Live",
+    errorType: "Booking",
+    description: "Booking cancelled by system due to a failed seat lock.",
+    status: "Critical",
+    created: minutesAgo(480),
+    audit: [
+      {
+        who: "System",
+        action: "Error detected",
+        before: "Confirmed",
+        after: "Critical",
+        reason: "Seat lock expired mid-transaction, auto-cancel triggered.",
+        time: minutesAgo(480),
+      },
+    ],
+  },
+];
+
+/* ------------------------------ admin actions ------------------------------ */
+const ADMIN_ACTIONS = [
+  { key: "changeBookingStatus", label: "Change Booking Status", icon: RefreshCw },
+  { key: "changeSeatStatus", label: "Change Seat Status", icon: Armchair },
+  { key: "moveSeat", label: "Move Seat", icon: ArrowRightLeft },
+  { key: "forceReleaseSeat", label: "Force Release Seat", icon: Unlock },
+  { key: "verifyPayment", label: "Verify Payment", icon: ShieldCheck },
+  { key: "markPaid", label: "Mark Payment as Paid", icon: CheckCircle2 },
+  { key: "cancelBooking", label: "Cancel Booking", icon: XCircle, danger: true },
+  { key: "restoreBooking", label: "Restore Booking", icon: RotateCcw },
+  { key: "reissueTicket", label: "Reissue Ticket", icon: Ticket },
+  { key: "syncBookingPayment", label: "Sync Booking & Payment", icon: Repeat },
+  { key: "syncSeatStatus", label: "Sync Seat Status", icon: Repeat },
+  { key: "forceRefund", label: "Force Refund", icon: DollarSign, danger: true },
+];
+
+/* ------------------------------- small pieces ------------------------------ */
+function StatCard({ label, value, tone, icon: Icon }) {
+  return (
+    <div
+      className="bg-white rounded-xl border p-5 flex items-center justify-between"
+      style={{ borderColor: COLORS.border, boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}
+    >
+      <div>
+        <p className="text-[13px] font-medium text-slate-500">{label}</p>
+        <p className="text-2xl font-bold text-slate-900 mt-1.5">{value}</p>
+      </div>
+      <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${tone}`}>
+        <Icon size={20} strokeWidth={2} />
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({ status }) {
+  const meta = STATUS_META[status];
+  const Icon = meta.icon;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${meta.bg} ${meta.text} ${meta.border}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+      {status}
+    </span>
+  );
+}
+
+function TypeTag({ type }) {
+  const meta = TYPE_META[type];
+  const Icon = meta.icon;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${meta.tint}`}
+    >
+      <Icon size={13} strokeWidth={2} />
+      {type}
+    </span>
+  );
+}
+
+function FieldRow({ label, value, icon: Icon }) {
+  return (
+    <div className="flex items-start justify-between py-2.5 gap-4">
+      <span className="text-[13px] text-slate-500 flex items-center gap-1.5 shrink-0">
+        {Icon && <Icon size={14} className="text-slate-400" />}
+        {label}
+      </span>
+      <span className="text-[13px] font-medium text-slate-800 text-right">{value}</span>
+    </div>
+  );
+}
+
+function DetailSection({ title, children }) {
+  return (
+    <div className="border-t" style={{ borderColor: COLORS.border }}>
+      <div className="px-6 pt-5 pb-1">
+        <h4 className="text-[13px] font-semibold text-slate-900 uppercase tracking-wide">
+          {title}
+        </h4>
+      </div>
+      <div className="px-6 pb-4 divide-y" style={{ borderColor: COLORS.border }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------- app ------------------------------------ */
+export default function SystemErrorManagement() {
+  useInterFont();
+
+  const [errors, setErrors] = useState(initialErrors);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All statuses");
+  const [dateRange, setDateRange] = useState("All time");
+
+  const [selectedId, setSelectedId] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null); // {key, label, danger}
+  const [reason, setReason] = useState("");
+  const [toast, setToast] = useState(null);
+
+  const actionsRef = useRef(null);
+  const timelineRef = useRef(null);
+  const drawerBodyRef = useRef(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2600);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const selected = useMemo(
+    () => errors.find((e) => e.id === selectedId) || null,
+    [errors, selectedId]
+  );
+
+  const filtered = useMemo(() => {
+    return errors.filter((e) => {
+      if (category !== "All" && e.errorType !== category) return false;
+      if (statusFilter !== "All statuses" && e.status !== statusFilter) return false;
+      if (dateRange !== "All time") {
+        const hrs = (Date.now() - e.created.getTime()) / 3600000;
+        if (dateRange === "Last hour" && hrs > 1) return false;
+        if (dateRange === "Today" && hrs > 24) return false;
+        if (dateRange === "Last 7 days" && hrs > 168) return false;
+      }
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const hay = `${e.bookingId} ${e.customer} ${e.event} ${e.errorType}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [errors, category, statusFilter, dateRange, search]);
+
+  const stats = useMemo(() => {
+    const pending = errors.filter((e) => e.status !== "Fixed").length;
+    const booking = errors.filter((e) => e.errorType === "Booking").length;
+    const payment = errors.filter((e) => e.errorType === "Payment").length;
+    const seat = errors.filter((e) => e.errorType === "Seat").length;
+    const resolved = errors.filter((e) => e.status === "Fixed").length;
+    return { pending, booking, payment, seat, resolved };
+  }, [errors]);
+
+  function openDrawer(id, focus) {
+    setSelectedId(id);
+    setDrawerOpen(true);
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (focus === "actions" && actionsRef.current) {
+          actionsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        } else if (focus === "timeline" && timelineRef.current) {
+          timelineRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        } else if (drawerBodyRef.current) {
+          drawerBodyRef.current.scrollTo({ top: 0 });
+        }
+      }, 120);
+    });
+  }
+
+  function closeDrawer() {
+    setDrawerOpen(false);
+    setTimeout(() => setSelectedId(null), 250);
+  }
+
+  function requestAction(action) {
+    setReason("");
+    setPendingAction(action);
+  }
+
+  function confirmAction() {
+    if (!pendingAction || !selected) return;
+    const newEntry = {
+      who: "You",
+      action: pendingAction.label,
+      before: selected.status,
+      after: pendingAction.key === "cancelBooking" ? "Critical" : "Fixed",
+      reason: reason.trim() || "No reason provided.",
+      time: new Date(),
+    };
+    setErrors((prev) =>
+      prev.map((e) =>
+        e.id === selected.id
+          ? {
+              ...e,
+              status: newEntry.after,
+              audit: [newEntry, ...e.audit],
+            }
+          : e
+      )
+    );
+    setToast(`${pendingAction.label} completed for ${selected.bookingId}`);
+    setPendingAction(null);
+  }
+
+  return (
+    <div
+      className="min-h-screen w-full"
+      style={{ background: COLORS.bg, fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}
+    >
+      <div className="max-w-[1400px] mx-auto px-8 py-8">
+        {/* Header */}
+        <div className="mb-7">
+          <h1 className="text-[26px] font-bold text-slate-900 tracking-tight">
+            System Error Management
+          </h1>
+          <p className="text-[14px] text-slate-500 mt-1">
+            Resolve booking, payment, seat, and system inconsistencies.
+          </p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-5 gap-4 mb-6">
+          <StatCard label="Pending Issues" value={stats.pending} tone="bg-amber-50 text-amber-600" icon={Clock} />
+          <StatCard label="Booking Errors" value={stats.booking} tone="bg-indigo-50 text-indigo-600" icon={Ticket} />
+          <StatCard label="Payment Errors" value={stats.payment} tone="bg-blue-50 text-blue-600" icon={CreditCard} />
+          <StatCard label="Seat Conflicts" value={stats.seat} tone="bg-purple-50 text-purple-600" icon={Armchair} />
+          <StatCard label="Resolved Today" value={stats.resolved} tone="bg-emerald-50 text-emerald-600" icon={CheckCircle2} />
+        </div>
+
+        {/* Search & filters */}
+        <div
+          className="bg-white rounded-xl border p-5 mb-6"
+          style={{ borderColor: COLORS.border, boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}
+        >
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[260px]">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by Booking ID, customer, or event"
+                className="w-full h-10 pl-10 pr-3 rounded-lg border text-[13.5px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                style={{ borderColor: COLORS.border }}
+                onFocus={(e) => (e.target.style.borderColor = COLORS.primary)}
+                onBlur={(e) => (e.target.style.borderColor = COLORS.border)}
+              />
+            </div>
+
+            <SelectField
+              icon={AlertCircle}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={["All statuses", "Pending", "Investigating", "Fixed", "Critical"]}
+            />
+            <SelectField
+              icon={Calendar}
+              value={dateRange}
+              onChange={setDateRange}
+              options={["All time", "Last hour", "Today", "Last 7 days"]}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2 mt-4">
+            {CATEGORIES.map((c) => {
+              const active = category === c;
+              return (
+                <button
+                  key={c}
+                  onClick={() => setCategory(c)}
+                  className="h-8 px-3.5 rounded-full text-[13px] font-medium border transition-colors"
+                  style={
+                    active
+                      ? { background: COLORS.primary, borderColor: COLORS.primary, color: "white" }
+                      : { background: "white", borderColor: COLORS.border, color: "#475569" }
+                  }
+                >
+                  {c}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Table */}
+        <div
+          className="bg-white rounded-xl border overflow-hidden"
+          style={{ borderColor: COLORS.border, boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[1100px]">
+              <thead>
+                <tr className="bg-slate-50/70 border-b" style={{ borderColor: COLORS.border }}>
+                  {["Booking ID", "Customer", "Event", "Error Type", "Description", "Status", "Created", "Actions"].map(
+                    (h, i) => (
+                      <th
+                        key={h}
+                        className={`text-[11.5px] font-semibold uppercase tracking-wide text-slate-500 py-3 px-4 ${
+                          i === 7 ? "text-right" : ""
+                        }`}
+                      >
+                        {h}
+                      </th>
+                    )
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((e) => (
+                  <tr
+                    key={e.id}
+                    className="border-b last:border-0 hover:bg-slate-50/60 transition-colors"
+                    style={{ borderColor: COLORS.border }}
+                  >
+                    <td className="py-3.5 px-4 text-[13.5px] font-semibold text-slate-800">
+                      {e.bookingId}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="text-[13.5px] font-medium text-slate-800">{e.customer}</div>
+                      <div className="text-[12px] text-slate-400">{e.email}</div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[13.5px] text-slate-600">{e.event}</td>
+                    <td className="py-3.5 px-4">
+                      <TypeTag type={e.errorType} />
+                    </td>
+                    <td className="py-3.5 px-4 text-[13px] text-slate-500 max-w-[260px]">
+                      <span className="line-clamp-2">{e.description}</span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <StatusBadge status={e.status} />
+                    </td>
+                    <td className="py-3.5 px-4 text-[13px] text-slate-500 whitespace-nowrap">
+                      {timeAgo(e.created)}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <IconBtn title="View Details" onClick={() => openDrawer(e.id)}>
+                          <Eye size={15} />
+                        </IconBtn>
+                        <IconBtn title="Fix" onClick={() => openDrawer(e.id, "actions")}>
+                          <Wrench size={15} />
+                        </IconBtn>
+                        <IconBtn title="Audit Log" onClick={() => openDrawer(e.id, "timeline")}>
+                          <History size={15} />
+                        </IconBtn>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="py-16 text-center text-slate-400 text-[13.5px]">
+                      No errors match your filters.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <p className="text-[12.5px] text-slate-400 mt-4">
+          Showing {filtered.length} of {errors.length} issues
+        </p>
+      </div>
+
+      {/* Drawer overlay */}
+      {selected && (
+        <div
+          className="fixed inset-0 z-40 transition-opacity duration-200"
+          style={{ background: "rgba(15,23,42,0.35)", opacity: drawerOpen ? 1 : 0 }}
+          onClick={closeDrawer}
+        />
+      )}
+
+      {/* Drawer */}
+      {selected && (
+        <div
+          className="fixed top-0 right-0 h-full w-full sm:w-[520px] bg-white z-50 shadow-2xl flex flex-col transition-transform duration-300"
+          style={{ transform: drawerOpen ? "translateX(0)" : "translateX(100%)" }}
+        >
+          {/* Drawer header */}
+          <div className="flex items-start justify-between px-6 py-5 border-b" style={{ borderColor: COLORS.border }}>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-[16px] font-bold text-slate-900">{selected.bookingId}</h3>
+                <StatusBadge status={selected.status} />
+              </div>
+              <p className="text-[13px] text-slate-500 mt-1">{selected.event}</p>
+            </div>
+            <button
+              onClick={closeDrawer}
+              className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+            >
+              <X size={17} />
+            </button>
+          </div>
+
+          <div ref={drawerBodyRef} className="flex-1 overflow-y-auto pb-10">
+            {/* Current status */}
+            <DetailSection title="Current Status">
+              <FieldRow label="Error type" value={<TypeTag type={selected.errorType} />} />
+              <FieldRow label="Status" value={<StatusBadge status={selected.status} />} />
+              <FieldRow label="Description" value={<span className="max-w-[240px] block">{selected.description}</span>} />
+              <FieldRow label="Reported" value={fmtDateTime(selected.created)} icon={Clock} />
+            </DetailSection>
+
+            {/* Booking info */}
+            <DetailSection title="Booking Information">
+              <FieldRow label="Booking ID" value={selected.bookingId} icon={Hash} />
+              <FieldRow label="Event" value={selected.event} icon={Ticket} />
+              <FieldRow label="Seats booked" value="2 (GA Floor)" icon={Armchair} />
+              <FieldRow label="Channel" value="Mobile app" icon={Info} />
+            </DetailSection>
+
+            {/* Customer info */}
+            <DetailSection title="Customer Information">
+              <FieldRow label="Name" value={selected.customer} icon={User} />
+              <FieldRow label="Email" value={selected.email} icon={Mail} />
+              <FieldRow label="Phone" value="+1 (415) 555-0192" icon={Phone} />
+              <FieldRow label="Member since" value="Mar 2023" icon={Calendar} />
+            </DetailSection>
+
+            {/* Payment info */}
+            <DetailSection title="Payment Information">
+              <FieldRow label="Amount" value="$248.00" icon={DollarSign} />
+              <FieldRow label="Method" value="Visa •••• 4482" icon={CreditCard} />
+              <FieldRow label="Transaction ID" value="txn_8f2a91cd" icon={Hash} />
+              <FieldRow label="Gateway status" value="Processing" icon={AlertCircle} />
+            </DetailSection>
+
+            {/* Seat info */}
+            <DetailSection title="Seat Information">
+              <FieldRow label="Section" value="GA Floor" icon={MapPin} />
+              <FieldRow label="Row / Seat" value="A / 12" icon={Armchair} />
+              <FieldRow label="Seat status" value="Locked" icon={AlertCircle} />
+            </DetailSection>
+
+            {/* System log */}
+            <DetailSection title="System Log">
+              <div className="py-2 space-y-1.5 font-mono text-[12px] text-slate-500 leading-relaxed">
+                <p><FileText size={12} className="inline mr-1.5 -mt-0.5" />[{fmtDateTime(selected.created)}] error.detected — {selected.errorType.toLowerCase()}_conflict</p>
+                <p><FileText size={12} className="inline mr-1.5 -mt-0.5" />[{fmtDateTime(selected.created)}] booking={selected.bookingId} flagged for review</p>
+                <p><FileText size={12} className="inline mr-1.5 -mt-0.5" />[{fmtDateTime(selected.created)}] retry_count=2 gateway_ack=false</p>
+              </div>
+            </DetailSection>
+
+            {/* Admin actions */}
+            <div ref={actionsRef} className="border-t" style={{ borderColor: COLORS.border }}>
+              <div className="px-6 pt-5 pb-3">
+                <h4 className="text-[13px] font-semibold text-slate-900 uppercase tracking-wide">
+                  Admin Actions
+                </h4>
+              </div>
+              <div className="px-6 pb-6 grid grid-cols-2 gap-2.5">
+                {ADMIN_ACTIONS.map((a) => {
+                  const Icon = a.icon;
+                  return (
+                    <button
+                      key={a.key}
+                      onClick={() => requestAction(a)}
+                      className={`flex items-center gap-2.5 h-11 px-3.5 rounded-xl border text-[13px] font-medium text-left transition-colors ${
+                        a.danger
+                          ? "border-red-200 text-red-600 hover:bg-red-50"
+                          : "text-slate-700 hover:bg-blue-50 hover:border-blue-200"
+                      }`}
+                      style={{ borderColor: a.danger ? undefined : COLORS.border }}
+                    >
+                      <Icon size={16} className={a.danger ? "text-red-500" : "text-blue-600"} />
+                      <span className="leading-tight">{a.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Audit timeline */}
+            <div ref={timelineRef} className="border-t" style={{ borderColor: COLORS.border }}>
+              <div className="px-6 pt-5 pb-3">
+                <h4 className="text-[13px] font-semibold text-slate-900 uppercase tracking-wide">
+                  Audit Timeline
+                </h4>
+              </div>
+              <div className="px-6 pb-6">
+                {selected.audit.map((entry, idx) => (
+                  <div key={idx} className="flex gap-3 relative">
+                    <div className="flex flex-col items-center">
+                      <div className="h-8 w-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-[11px] font-bold shrink-0">
+                        {entry.who === "System" ? "SY" : entry.who.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                      </div>
+                      {idx < selected.audit.length - 1 && (
+                        <div className="w-px flex-1 bg-slate-200 my-1" />
+                      )}
+                    </div>
+                    <div className="pb-5 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[13px] font-semibold text-slate-800">{entry.action}</p>
+                        <span className="text-[11.5px] text-slate-400 whitespace-nowrap">{fmtDateTime(entry.time)}</span>
+                      </div>
+                      <p className="text-[12.5px] text-slate-500 mt-1">
+                        by <span className="font-medium text-slate-600">{entry.who}</span>
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-1.5 text-[12.5px]">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-500">{entry.before}</span>
+                        <span className="text-slate-400">→</span>
+                        <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{entry.after}</span>
+                      </div>
+                      <p className="text-[12.5px] text-slate-500 mt-1.5 italic">"{entry.reason}"</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation dialog */}
+      {pendingAction && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center px-4"
+          style={{ background: "rgba(15,23,42,0.45)" }}
+          onClick={() => setPendingAction(null)}
+        >
+          <div
+            className="bg-white rounded-xl w-full max-w-[420px] p-6"
+            style={{ boxShadow: "0 20px 40px rgba(15,23,42,0.2)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-1">
+              <div
+                className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+                  pendingAction.danger ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+                }`}
+              >
+                <pendingAction.icon size={18} />
+              </div>
+              <h3 className="text-[16px] font-bold text-slate-900">{pendingAction.label}</h3>
+            </div>
+            <p className="text-[13.5px] text-slate-500 mt-3">
+              You're about to <span className="font-medium text-slate-700">{pendingAction.label.toLowerCase()}</span> for
+              booking <span className="font-semibold text-slate-700">{selected?.bookingId}</span>. This action will be
+              recorded in the audit log.
+            </p>
+            <label className="block text-[12.5px] font-medium text-slate-600 mt-4 mb-1.5">
+              Reason (visible in audit log)
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              placeholder="Add a short note explaining this action…"
+              className="w-full rounded-lg border px-3 py-2 text-[13px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none"
+              style={{ borderColor: COLORS.border }}
+            />
+            <div className="flex items-center justify-end gap-2.5 mt-5">
+              <button
+                onClick={() => setPendingAction(null)}
+                className="h-10 px-4 rounded-lg text-[13.5px] font-medium text-slate-600 border hover:bg-slate-50 transition-colors"
+                style={{ borderColor: COLORS.border }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAction}
+                className={`h-10 px-4 rounded-lg text-[13.5px] font-semibold text-white transition-colors ${
+                  pendingAction.danger ? "bg-red-600 hover:bg-red-700" : ""
+                }`}
+                style={pendingAction.danger ? {} : { background: COLORS.primary }}
+              >
+                Confirm {pendingAction.label}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[70]">
+          <div
+            className="bg-slate-900 text-white text-[13px] font-medium rounded-xl px-4 py-3 flex items-center gap-2.5"
+            style={{ boxShadow: "0 10px 30px rgba(15,23,42,0.35)" }}
+          >
+            <CheckCircle2 size={16} className="text-emerald-400" />
+            {toast}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function IconBtn({ children, title, onClick }) {
+  return (
+    <button
+      title={title}
+      onClick={onClick}
+      className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-500 border hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+      style={{ borderColor: COLORS.border }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SelectField({ icon: Icon, value, onChange, options }) {
+  return (
+    <div className="relative">
+      <Icon size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-10 pl-9 pr-8 rounded-lg border text-[13px] text-slate-600 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer"
+        style={{ borderColor: COLORS.border }}
+      >
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {o}
+          </option>
+        ))}
+      </select>
+      <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+    </div>
+  );
+}

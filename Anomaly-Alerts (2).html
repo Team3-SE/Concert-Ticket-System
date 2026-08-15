@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - ระบบแจ้งเตือนความผิดปกติของระบบ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-navy: #0B2F61;
+            --bg-light: #F8FAFC;
+            --card-white: #FFFFFF;
+            --text-dark: #1E293B;
+            --text-muted: #64748B;
+            --border-color: #CBD5E1;
+            --border-dark: #0F172A;
+
+            --critical-bg: #FEF2F2;
+            --critical-border: #FCA5A5;
+            --critical-text: #B91C1C;
+
+            --warning-bg: #FFFBEB;
+            --warning-border: #FCD34D;
+            --warning-text: #B45309;
+
+            --info-bg: #EFF6FF;
+            --info-border: #93C5FD;
+            --info-text: #1D4ED8;
+
+            --success-bg: #F0FDF4;
+            --success-border: #86EFAC;
+            --success-text: #15803D;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Prompt', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 260px;
+            background-color: var(--primary-navy);
+            color: white;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+        }
+
+        .sidebar-brand {
+            padding: 10px 25px 25px 25px;
+            font-size: 20px;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-menu { list-style: none; padding: 20px 0; }
+        .sidebar-menu li a {
+            display: block;
+            padding: 14px 25px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .sidebar-menu li.active a {
+            background-color: rgba(255,255,255,0.15);
+            color: white;
+            font-weight: 600;
+            border-left: 4px solid white;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-navbar {
+            background-color: var(--card-white);
+            height: 70px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .page-title-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary-navy);
+        }
+
+        .container {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .stat-card {
+            background-color: var(--card-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border-left: 4px solid var(--border-dark);
+        }
+
+        .stat-card.stat-critical { border-left-color: var(--critical-text); }
+        .stat-card.stat-warning { border-left-color: var(--warning-text); }
+        .stat-card.stat-info { border-left-color: var(--info-text); }
+        .stat-card.stat-success { border-left-color: var(--success-text); }
+
+        .stat-label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+        .stat-value { font-size: 28px; font-weight: 700; color: var(--text-dark); }
+
+        /* Toolbar & Filter */
+        .toolbar-card {
+            background-color: var(--card-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .input-text, .select-option {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: white;
+            color: var(--text-dark);
+        }
+
+        .input-text { flex: 1; min-width: 180px; }
+        .date-filter-group { display: flex; align-items: center; gap: 8px; border-left: 1px solid var(--border-color); padding-left: 15px; }
+
+        /* Data Table */
+        .table-card {
+            background-color: var(--card-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table-scroll { overflow-x: auto; }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .data-table th {
+            background-color: #F1F5F9;
+            padding: 12px 16px;
+            font-weight: 600;
+            color: var(--text-dark);
+            border-bottom: 2px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        .data-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        .data-table tbody tr:last-child td { border-bottom: none; }
+        .data-table tbody tr:hover { background-color: #F8FAFC; }
+
+        .text-tag { font-weight: 600; display: inline-block; }
+
+        .status-pill {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-unresolved { background-color: var(--critical-bg); color: var(--critical-text); }
+        .status-investigating { background-color: var(--warning-bg); color: var(--warning-text); }
+        .status-resolved { background-color: var(--success-bg); color: var(--success-text); }
+
+        .action-cell { display: flex; gap: 8px; flex-wrap: nowrap; justify-content: center; }
+
+        .btn-action {
+            padding: 6px 12px;
+            background-color: white;
+            border: 1px solid var(--border-dark);
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .btn-action:hover {
+            background-color: var(--text-dark);
+            color: white;
+        }
+
+        .btn-action:disabled {
+            border-color: var(--border-color);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            background-color: #F1F5F9;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* Drawer */
+        .drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            display: none;
+            z-index: 100;
+        }
+        .drawer-overlay.open { display: block; }
+
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: -480px;
+            width: 480px;
+            max-width: 92vw;
+            height: 100vh;
+            background: var(--card-white);
+            z-index: 101;
+            box-shadow: -4px 0 16px rgba(15, 23, 42, 0.15);
+            transition: right 0.25s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .drawer.open { right: 0; }
+
+        .drawer-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .drawer-title { font-size: 16px; font-weight: 700; color: var(--primary-navy); }
+        .drawer-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+        .drawer-close {
+            border: none;
+            background: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-muted);
+            line-height: 1;
+        }
+
+        .drawer-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .drawer-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .drawer-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 16px;
+            font-size: 13px;
+        }
+        .drawer-info-grid .label { color: var(--text-muted); }
+        .drawer-info-grid .value { font-weight: 500; }
+
+        .drawer-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* Modal / Buttons */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        .modal-overlay.open { display: flex; }
+
+        .modal-box {
+            background: var(--card-white);
+            border-radius: 8px;
+            width: 420px;
+            max-width: 90vw;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
+        }
+
+        .modal-title { font-size: 16px; font-weight: 700; color: var(--primary-navy); margin-bottom: 10px; }
+        .modal-text { font-size: 14px; color: var(--text-dark); line-height: 1.6; margin-bottom: 20px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+        .btn-secondary {
+            padding: 8px 16px;
+            background-color: white;
+            border: 1px solid var(--border-color);
+            color: var(--text-dark);
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .btn-secondary:hover { background-color: #F1F5F9; }
+        .btn-secondary.sm { padding: 4px 10px; font-size: 13px; }
+
+        .btn-primary {
+            padding: 8px 16px;
+            background-color: var(--primary-navy);
+            border: 1px solid var(--primary-navy);
+            color: white;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .btn-primary:hover { opacity: 0.88; }
+        .btn-primary.danger { background-color: var(--critical-text); border-color: var(--critical-text); }
+
+        /* Quick Actions */
+        svg.ic { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; flex-shrink: 0; }
+        .actions-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            height: 46px;
+            padding: 0 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: white;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: var(--text-dark);
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.12s;
+        }
+        .action-btn.danger { border-color: var(--critical-border); color: var(--critical-text); }
+        .action-btn.danger svg { color: var(--critical-text); }
+        .action-btn.danger:hover { background-color: var(--critical-bg); }
+
+        /* Quick Action Modal */
+        .modal-head { display: flex; align-items: center; gap: 12px; }
+        .modal-head .modal-title { margin-bottom: 0; }
+        .modal-icon {
+            height: 40px;
+            width: 40px;
+            border-radius: 10px;
+            background-color: var(--info-bg);
+            color: var(--info-text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .modal-icon.danger { background-color: var(--critical-bg); color: var(--critical-text); }
+        .modal-desc { font-size: 13.5px; color: var(--text-muted); margin: 12px 0 0; line-height: 1.6; }
+        .modal-desc b { color: var(--text-dark); font-weight: 600; }
+        .modal-label { font-size: 13px; font-weight: 600; color: var(--text-dark); margin-top: 16px; margin-bottom: 6px; display: block; }
+        
+        .modal-box textarea {
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 13px;
+            font-family: 'Prompt', sans-serif;
+            color: var(--text-dark);
+            resize: none;
+            outline: none;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 300;
+        }
+        .toast {
+            background-color: var(--border-dark);
+            color: white;
+            padding: 12px 18px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25);
+            min-width: 240px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: toast-in 0.2s ease-out;
+        }
+        .toast.toast-success { background-color: var(--success-text); }
+        @keyframes toast-in {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Menu -->
+    <div class="sidebar">
+        <div class="sidebar-brand">SYSTEM ADMIN</div>
+        <ul class="sidebar-menu">
+            <li><a href="#">1. จัดการผู้ใช้ (User Management)</a></li>
+            <li><a href="#">2. รายการจองผิดปกติ (Fraud Monitor)</a></li>
+            <li class="active"><a href="#">3. แจ้งเตือนความผิดปกติของระบบ (Anomaly Alerts)</a></li>
+            <li><a href="#">4. ประวัติการใช้งาน (System Audit Logs)</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="top-navbar">
+            <div class="page-title-text">ระบบแจ้งเตือนความผิดปกติของระบบ (System Anomaly &amp; Error Alert Dashboard)</div>
+            <div>ผู้ดูแลระบบ (Admin)</div>
+        </div>
+
+        <div class="container">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card stat-critical">
+                    <div class="stat-label">ข้อผิดพลาดทั้งหมด (Total)</div>
+                    <div class="stat-value" id="statTotal">0</div>
+                </div>
+                <div class="stat-card stat-warning">
+                    <div class="stat-label">รอดำเนินการ (Unresolved)</div>
+                    <div class="stat-value" id="statCritical">0</div>
+                </div>
+                <div class="stat-card stat-info">
+                    <div class="stat-label">กำลังตรวจสอบ (Investigating)</div>
+                    <div class="stat-value" id="statInvestigating">0</div>
+                </div>
+                <div class="stat-card stat-success">
+                    <div class="stat-label">แก้ไขแล้ว (Resolved)</div>
+                    <div class="stat-value" id="statResolved">0</div>
+                </div>
+            </div>
+
+            <!-- Filter Toolbar -->
+            <div class="toolbar-card">
+                <span>ค้นหาข้อมูล:</span>
+                <input type="text" class="input-text" id="searchInput" onkeyup="renderTable()" placeholder="ค้นหา Error ID, Booking ID...">
+                
+                <select class="select-option" id="typeFilter" onchange="renderTable()">
+                    <option value="ALL">ประเภทปัญหาทั้งหมด (Business Actions)</option>
+                    <option value="Duplicate Charge">Duplicate Charge</option>
+                    <option value="Seat Lock Expired Failed">Seat Lock Expired Failed</option>
+                    <option value="Uncaptured Authorizations">Uncaptured Authorizations</option>
+                    <option value="Orphaned PromptPay">Orphaned PromptPay</option>
+                    <option value="Seat Hoarding / Quota Abuse">Seat Hoarding / Quota Abuse</option>
+                </select>
+
+                <div class="date-filter-group">
+                    <span style="font-size: 13px;">ช่วงเวลา:</span>
+                    <input type="datetime-local" class="input-text" id="startDateFilter" onchange="renderTable()" style="min-width:unset; padding:6px 10px;">
+                    <span style="font-size: 13px;">ถึง</span>
+                    <input type="datetime-local" class="input-text" id="endDateFilter" onchange="renderTable()" style="min-width:unset; padding:6px 10px;">
+                    <button class="btn-secondary sm" onclick="clearDateFilter()">ล้างเวลา</button>
+                </div>
+            </div>
+
+            <!-- Table Card -->
+            <div class="table-card">
+                <div class="table-scroll">
+                    <table class="data-table" id="alertTable">
+                        <thead>
+                            <tr>
+                                <th>Error ID / Booking ID</th>
+                                <th>ประเภทปัญหา</th>
+                                <th>เวลาที่เกิด</th>
+                                <th>สถานะ</th>
+                                <th style="text-align: center;">การจัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alertTableBody">
+                            <!-- rendered by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="empty-state" id="emptyState" style="display:none;">ไม่พบรายการที่ตรงกับเงื่อนไขการค้นหา</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drawer: Error Detail (No Timeline) -->
+    <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+    <div class="drawer" id="drawer">
+        <div class="drawer-header">
+            <div>
+                <div class="drawer-title" id="drawerTitle">รายละเอียด Error</div>
+                <div class="drawer-subtitle" id="drawerSubtitle"></div>
+            </div>
+            <button class="drawer-close" onclick="closeDrawer()">&times;</button>
+        </div>
+        <div class="drawer-body">
+            <div>
+                <div class="drawer-section-title">ข้อมูลทั่วไป</div>
+                <div class="drawer-info-grid" id="drawerInfoGrid"></div>
+            </div>
+            <!-- Section นี้จะถูกซ่อนหากไม่มี Action (มีแค่เฉพาะเคส Ban User) -->
+            <div id="drawerActionSection" style="display: none;">
+                <div class="drawer-section-title">การจัดการ (Business Action)</div>
+                <div class="actions-grid" id="drawerActionsGrid"></div>
+            </div>
+        </div>
+        <div class="drawer-footer">
+            <button class="btn-secondary" onclick="closeDrawer()">ปิด</button>
+        </div>
+    </div>
+
+    <!-- Modal: Acknowledge Confirmation -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-box">
+            <div class="modal-title">ยืนยันการรับทราบปัญหา</div>
+            <div class="modal-text" id="modalText">คุณต้องการรับทราบปัญหานี้ใช่หรือไม่? รายการจะถูกเปลี่ยนสถานะเป็น "กำลังตรวจสอบ"</div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeModal()">ยกเลิก</button>
+                <button class="btn-primary" id="modalConfirmBtn">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Quick Action Confirmation -->
+    <div class="modal-overlay" id="actionModalOverlay">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-head">
+                <div class="modal-icon" id="actionModalIcon"></div>
+                <div class="modal-title" id="actionModalTitle"></div>
+            </div>
+            <p class="modal-desc" id="actionModalDesc"></p>
+
+            <label class="modal-label">เหตุผลประกอบการจัดการ (บันทึกในระบบ)</label>
+            <textarea id="actionReason" rows="3" placeholder="ระบุเหตุผล หรือโน้ตสั้นๆ..."></textarea>
+
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeActionModal()">ยกเลิก</button>
+                <button class="btn-primary" id="actionConfirmBtn" onclick="confirmQuickAction()">ยืนยันการดำเนินการ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Mark as Resolved -->
+    <div class="modal-overlay" id="resolveModalOverlay">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-head">
+                <div class="modal-icon" id="resolveModalIcon"></div>
+                <div class="modal-title">ยืนยันว่าแก้ไขปัญหาแล้ว</div>
+            </div>
+            <p class="modal-desc" id="resolveModalDesc"></p>
+
+            <label class="modal-label">เหตุผล / สรุปการแก้ไข (บันทึกในระบบ)</label>
+            <textarea id="resolveReason" rows="3" placeholder="ระบุวิธีการแก้ไข หรือสรุปสาเหตุ..."></textarea>
+
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeResolveModal()">ยกเลิก</button>
+                <button class="btn-primary" onclick="confirmResolve()">ยืนยันว่าแก้ไขแล้ว</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // ---------- Mock Data ----------
+        let alerts = [
+            {
+                id: 'ERR-58235',
+                bookingId: 'BK-10250',
+                severity: 'WARNING',
+                type: 'Seat Hoarding / Quota Abuse',
+                message: 'ตรวจพบพฤติกรรมกั๊กที่นั่งหรือปั๊มโค้ดส่วนลดผิดปกติจากผู้ใช้รายนี้',
+                time: '30/07/2026 10:05:12',
+                status: 'UNRESOLVED'
+            },
+            {
+                id: 'ERR-58234',
+                bookingId: 'BK-10245',
+                severity: 'WARNING',
+                type: 'Uncaptured Authorizations',
+                message: 'รายการรอการกด Capture วงเงินผ่าน Stripe แบบแมนนวลก่อนที่วงเงินจะหมดอายุ',
+                time: '30/07/2026 09:45:00',
+                status: 'UNRESOLVED'
+            },
+            {
+                id: 'ERR-58233',
+                bookingId: 'BK-10240',
+                severity: 'CRITICAL',
+                type: 'Orphaned PromptPay',
+                message: 'ระบบไม่ได้รับสถานะการชำระเงินจาก PromptPay ต้องขอสลิปตรวจสอบและกดยืนยัน',
+                time: '30/07/2026 09:30:15',
+                status: 'INVESTIGATING'
+            },
+            {
+                id: 'ERR-58229',
+                bookingId: 'BK-10198',
+                severity: 'CRITICAL',
+                type: 'Seat Lock Expired Failed',
+                message: 'ระบบไม่สามารถปลดล็อกที่นั่งคืนได้หลังหมดเวลาชำระเงิน ที่นั่งค้างสถานะ Locked',
+                time: '30/07/2026 08:47:02',
+                status: 'UNRESOLVED'
+            },
+            {
+                id: 'ERR-58209',
+                bookingId: 'BK-10099',
+                severity: 'WARNING',
+                type: 'Duplicate Charge',
+                message: 'ตรวจพบความเป็นไปได้ที่ผู้ใช้ถูกตัดเงินซ้ำซ้อนจากการกดยืนยันการชำระเงินหลายครั้ง',
+                time: '29/07/2026 22:05:55',
+                status: 'RESOLVED'
+            }
+        ];
+
+        // ---------- Icon library ----------
+        const ICON_PATHS = {
+            check: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+            alertTriangle: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
+        };
+        function icon(name, size = 16) {
+            return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24">${ICON_PATHS[name] || ''}</svg>`;
+        }
+
+        // ---------- Quick Actions Map (Only Ban Account remains) ----------
+        const QUICK_ACTIONS_BY_TYPE = {
+            'Duplicate Charge': [],
+            'Seat Lock Expired Failed': [],
+            'Uncaptured Authorizations': [],
+            'Orphaned PromptPay': [],
+            'Seat Hoarding / Quota Abuse': [
+                { key: 'banAccount', label: 'แบนบัญชีผู้ใช้ถาวร (Ban Account)', icon: 'alertTriangle', danger: true }
+            ]
+        };
+
+        const statusLabel = { UNRESOLVED: 'ยังไม่ได้แก้ไข', INVESTIGATING: 'กำลังตรวจสอบ', RESOLVED: 'แก้ไขแล้ว' };
+        const statusPillClass = { UNRESOLVED: 'status-unresolved', INVESTIGATING: 'status-investigating', RESOLVED: 'status-resolved' };
+
+        // แปลงรูปแบบ DD/MM/YYYY HH:mm:ss ให้เป็น Date object สำหรับการเปรียบเทียบ
+        function parseThDateStr(str) {
+            if (!str) return null;
+            const parts = str.split(' ');
+            const dateParts = parts[0].split('/');
+            const timeParts = parts[1].split(':');
+            return new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1], timeParts[2]);
+        }
+
+        // ---------- Rendering ----------
+        function updateStats() {
+            document.getElementById('statTotal').innerText = alerts.length;
+            document.getElementById('statCritical').innerText = alerts.filter(a => a.status === 'UNRESOLVED').length;
+            document.getElementById('statInvestigating').innerText = alerts.filter(a => a.status === 'INVESTIGATING').length;
+            document.getElementById('statResolved').innerText = alerts.filter(a => a.status === 'RESOLVED').length;
+        }
+
+        function clearDateFilter() {
+            document.getElementById('startDateFilter').value = '';
+            document.getElementById('endDateFilter').value = '';
+            renderTable();
+        }
+
+        function renderTable() {
+            const search = document.getElementById('searchInput').value.toLowerCase().trim();
+            const type = document.getElementById('typeFilter').value;
+            const startVal = document.getElementById('startDateFilter').value;
+            const endVal = document.getElementById('endDateFilter').value;
+
+            const startDate = startVal ? new Date(startVal) : null;
+            const endDate = endVal ? new Date(endVal) : null;
+
+            const filtered = alerts.filter(a => {
+                // กรอง Text & Type
+                const matchesSearch = !search || a.id.toLowerCase().includes(search) || a.bookingId.toLowerCase().includes(search);
+                const matchesType = type === 'ALL' || a.type === type;
+                
+                // กรอง Date Range
+                let matchesDate = true;
+                if (startDate || endDate) {
+                    const alertDate = parseThDateStr(a.time);
+                    if (startDate && alertDate < startDate) matchesDate = false;
+                    if (endDate && alertDate > endDate) matchesDate = false;
+                }
+
+                return matchesSearch && matchesType && matchesDate;
+            });
+
+            const tbody = document.getElementById('alertTableBody');
+            const emptyState = document.getElementById('emptyState');
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                emptyState.style.display = 'none';
+                filtered.forEach(a => {
+                    const tr = document.createElement('tr');
+                    const ackDisabled = a.status !== 'UNRESOLVED';
+                    
+                    tr.innerHTML = `
+                        <td>
+                            <strong>#${a.id}</strong><br>
+                            <small>Booking: #${a.bookingId}</small>
+                        </td>
+                        <td><span class="text-tag">${a.type}</span></td>
+                        <td><small>${a.time}</small></td>
+                        <td><span class="status-pill ${statusPillClass[a.status]}">${statusLabel[a.status]}</span></td>
+                        <td>
+                            <div class="action-cell">
+                                <button class="btn-action" onclick="openDrawer('${a.id}')">รายละเอียด</button>
+                                <button class="btn-action" ${ackDisabled ? 'disabled' : ''} onclick="openAckModal('${a.id}')">รับทราบปัญหา</button>
+                                <button class="btn-action" style="display: ${a.status === 'INVESTIGATING' ? 'inline-block' : 'none'};" onclick="openResolveModal('${a.id}')">แก้ไขแล้ว</button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            updateStats();
+        }
+
+        // ---------- Drawer Functionality ----------
+        let currentDrawerAlertId = null;
+
+        function openDrawer(errorId) {
+            const a = alerts.find(x => x.id === errorId);
+            if (!a) return;
+
+            currentDrawerAlertId = errorId;
+
+            document.getElementById('drawerTitle').innerText = `รายละเอียด Error #${a.id}`;
+            document.getElementById('drawerSubtitle').innerText = `Booking ที่เกี่ยวข้อง: #${a.bookingId}`;
+
+            document.getElementById('drawerInfoGrid').innerHTML = `
+                <div class="label">ประเภทปัญหา</div>
+                <div class="value">${a.type}</div>
+                <div class="label">สถานะปัจจุบัน</div>
+                <div class="value"><span class="status-pill ${statusPillClass[a.status]}">${statusLabel[a.status]}</span></div>
+                <div class="label">เวลาที่เกิด</div>
+                <div class="value">${a.time}</div>
+                <div class="label" style="grid-column: span 2;">ข้อความแจ้งเตือน:</div>
+                <div class="value" style="grid-column: span 2; font-size:12.5px; background:#F1F5F9; padding:8px; border-radius:4px;">${a.message}</div>
+            `;
+
+            const quickActions = QUICK_ACTIONS_BY_TYPE[a.type] || [];
+            const actionSection = document.getElementById('drawerActionSection');
+            const actionsGrid = document.getElementById('drawerActionsGrid');
+
+            if (quickActions.length > 0) {
+                actionSection.style.display = 'block';
+                actionsGrid.innerHTML = quickActions.map(act => `
+                    <button class="action-btn ${act.danger ? 'danger' : ''}" onclick='openActionModal(${JSON.stringify(act)})'>
+                        ${icon(act.icon, 18)}<span>${act.label}</span>
+                    </button>
+                `).join('');
+            } else {
+                actionSection.style.display = 'none';
+                actionsGrid.innerHTML = '';
+            }
+
+            document.getElementById('drawerOverlay').classList.add('open');
+            document.getElementById('drawer').classList.add('open');
+        }
+
+        function closeDrawer() {
+            document.getElementById('drawerOverlay').classList.remove('open');
+            document.getElementById('drawer').classList.remove('open');
+        }
+
+        // ---------- Modals Handling ----------
+        let pendingAckId = null;
+        let pendingResolveId = null;
+        let pendingQuickAction = null;
+
+        function openAckModal(errorId) {
+            const a = alerts.find(x => x.id === errorId);
+            if (!a) return;
+            pendingAckId = errorId;
+            document.getElementById('modalText').innerText =
+                `คุณต้องการรับทราบปัญหา #${a.id} (Booking #${a.bookingId}) ใช่หรือไม่? รายการจะถูกเปลี่ยนสถานะเป็น "กำลังตรวจสอบ"`;
+            document.getElementById('modalOverlay').classList.add('open');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('open');
+            pendingAckId = null;
+        }
+
+        document.getElementById('modalConfirmBtn').addEventListener('click', () => {
+            if (!pendingAckId) return;
+            const a = alerts.find(x => x.id === pendingAckId);
+            if (a && a.status === 'UNRESOLVED') {
+                a.status = 'INVESTIGATING';
+                showToast(`รับทราบปัญหา #${a.id} เรียบร้อยแล้ว`, 'success');
+            }
+            closeModal();
+            renderTable();
+        });
+
+        function openResolveModal(errorId) {
+            const a = alerts.find(x => x.id === errorId);
+            if (!a || a.status !== 'INVESTIGATING') return;
+            pendingResolveId = errorId;
+
+            document.getElementById('resolveReason').value = '';
+            document.getElementById('resolveModalIcon').innerHTML = icon('check', 20);
+            document.getElementById('resolveModalDesc').innerHTML =
+                `คุณกำลังจะทำเครื่องหมายว่า Error <b>#${a.id}</b> (Booking <b>#${a.bookingId}</b>) แก้ไขแล้ว กรุณาระบุเหตุผลหรือสรุปวิธีแก้ไข`;
+
+            document.getElementById('resolveModalOverlay').classList.add('open');
+        }
+
+        function closeResolveModal() {
+            document.getElementById('resolveModalOverlay').classList.remove('open');
+            pendingResolveId = null;
+        }
+
+        function confirmResolve() {
+            if (!pendingResolveId) return;
+            const a = alerts.find(x => x.id === pendingResolveId);
+            if (!a) return;
+
+            a.status = 'RESOLVED';
+            showToast(`ทำเครื่องหมาย #${a.id} ว่าแก้ไขแล้วเรียบร้อย`, 'success');
+            
+            closeResolveModal();
+            renderTable();
+        }
+
+        function openActionModal(action) {
+            const a = alerts.find(x => x.id === currentDrawerAlertId);
+            if (!a) return;
+            pendingQuickAction = action;
+
+            document.getElementById('actionReason').value = '';
+            document.getElementById('actionModalIcon').className = 'modal-icon' + (action.danger ? ' danger' : '');
+            document.getElementById('actionModalIcon').innerHTML = icon(action.icon, 20);
+            document.getElementById('actionModalTitle').innerText = action.label;
+            document.getElementById('actionModalDesc').innerHTML =
+                `คุณกำลังจะดำเนินการ <b>${action.label}</b> สำหรับ Booking <b>#${a.bookingId}</b> (Error #${a.id}) การกระทำนี้จะเปลี่ยนสถานะเป็นแก้ไขแล้ว`;
+
+            const btn = document.getElementById('actionConfirmBtn');
+            btn.className = 'btn-primary' + (action.danger ? ' danger' : '');
+
+            document.getElementById('actionModalOverlay').classList.add('open');
+        }
+
+        function closeActionModal() {
+            document.getElementById('actionModalOverlay').classList.remove('open');
+            pendingQuickAction = null;
+        }
+
+        function confirmQuickAction() {
+            if (!pendingQuickAction) return;
+            const a = alerts.find(x => x.id === currentDrawerAlertId);
+            if (!a) return;
+
+            a.status = 'RESOLVED';
+            showToast(`ดำเนินการ "${pendingQuickAction.label}" สำเร็จ`, 'success');
+
+            closeActionModal();
+            renderTable();
+            openDrawer(a.id); // รีเฟรช Drawer ข้อมูลล่าสุด
+        }
+
+        // Close Modals on Overlay Click
+        document.getElementById('resolveModalOverlay').addEventListener('click', function(e) { if(e.target===this) closeResolveModal(); });
+        document.getElementById('actionModalOverlay').addEventListener('click', function(e) { if(e.target===this) closeActionModal(); });
+
+        // ---------- Toast UI ----------
+        function showToast(message, variant) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${variant === 'success' ? 'toast-success' : 'toast-info'}`;
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Init
+        renderTable();
+    </script>
+</body>
+</html>
