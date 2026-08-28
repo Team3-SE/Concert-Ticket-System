@@ -1,0 +1,240 @@
+classDiagram
+
+class User {
+  <<abstract>>
+  -String userID
+  -String name
+  -String email
+  -String phone
+  -Hash password
+  -Role role
+  -Boolean isBanned
+
+  +login() Boolean
+  +logout() void
+}
+
+class Customer {
+  +register() void
+  +searchConcert(keyword) List~Concert~
+  +createBooking(concert, seats) Booking
+  +viewHistory() List~Booking~
+  +viewTickets() List~Ticket~
+}
+
+class EventOrganizer {
+  -String companyID
+
+  +createConcert(details) Concert
+  +defineSeatMap(concert, mapDetails) void
+  +viewSalesRealTime(concert) Report
+}
+
+class Staff {
+  -String companyID
+
+  +scanTicketQR(qrCode) Boolean
+}
+
+class Admin {
+  +manageUser(userID, action) void
+  +viewAnomalies(filters) List~SystemAnomaly~
+  +acknowledgeAnomaly(anomalyID) void
+  +resolveAnomaly(anomalyID, reason, files) void
+  +executeQuickAction(anomalyID, actionType) void
+}
+
+class Company {
+  -String companyID
+  -String name
+  -String initials
+  -String description
+
+  +getCompanyInfo() String
+  +listEvents() List~Concert~
+}
+
+class Concert {
+  -String concertID
+  -String name
+  -String artist
+  -DateTime dateTime
+  -String venue
+
+  +getDetails() ConcertInfo
+}
+
+class Zone {
+  -String zoneID
+  -String name
+  -Double price
+  -Integer capacity
+
+  +getAvailableSeats() List~Seat~
+}
+
+class Seat {
+  -String seatID
+  -String row
+  -Integer number
+  -SeatStatus status
+
+  +lockSeat() void
+  +unlockSeat() void
+  +forceUnlock() void
+  +confirmSeat() void
+}
+
+class Booking {
+  -String bookingID
+  -DateTime bookingDate
+  -Double totalAmount
+  -BookingStatus status
+  -DateTime expiryTime
+
+  +calculateTotal() Double
+  +confirmBooking() void
+  +cancelBooking() void
+  +checkExpiry() Boolean
+}
+
+class Payment {
+  -String paymentID
+  -Double amount
+  -PaymentMethod method
+  -PaymentStatus status
+  -DateTime paymentDate
+
+  +processPayment() Boolean
+  +verifyStatus() Boolean
+}
+
+class Ticket {
+  -String ticketID
+  -String qrCode
+  -Boolean isUsed
+
+  +generateQR() String
+  +validateTicket() Boolean
+  +markAsUsed() void
+}
+
+class SystemAnomaly {
+  -String anomalyID
+  -AnomalyType type
+  -String message
+  -DateTime timestamp
+  -AnomalyStatus status
+  -String resolveReason
+  -List~String~ attachments
+
+  +updateStatus(newStatus) void
+  +addAttachment(file) void
+}
+
+class AuditLog {
+  -String logID
+  -String action
+  -DateTime timestamp
+
+  +getDetails() String
+}
+
+class TicketValidationLog {
+  -String validationID
+  -DateTime validationTime
+  -Boolean result
+}
+
+
+class Role {
+  <<enumeration>>
+  CUSTOMER
+  ORGANIZER
+  STAFF
+  ADMIN
+}
+
+class SeatStatus {
+  <<enumeration>>
+  AVAILABLE
+  LOCKED
+  BOOKED
+}
+
+class BookingStatus {
+  <<enumeration>>
+  PENDING
+  COMPLETED
+  CANCELLED
+  FAILED
+  EXPIRED
+}
+
+class PaymentMethod {
+  <<enumeration>>
+  PROMPTPAY
+  CREDIT_CARD
+}
+
+class PaymentStatus {
+  <<enumeration>>
+  PENDING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+class AnomalyStatus {
+  <<enumeration>>
+  UNRESOLVED
+  INVESTIGATING
+  RESOLVED
+}
+
+class AnomalyType {
+  <<enumeration>>
+  PAYMENT_FRAUD_CARD_TESTING
+  SEAT_HOARDING_ABUSE
+  CHARGEBACK_ABUSE
+}
+
+
+User <|-- Customer
+User <|-- EventOrganizer
+User <|-- Staff
+User <|-- Admin
+
+
+Company "1" --> "*" EventOrganizer : has
+Company "1" --> "*" Staff : has
+Company "1" --> "*" Concert : organizes
+
+EventOrganizer "1" --> "*" Concert : manages
+
+
+Concert "1" *-- "*" Zone : contains
+Zone "1" *-- "*" Seat : contains
+
+
+Customer "1" --> "*" Booking : makes
+Concert "1" --> "*" Booking : receives
+
+Booking "1" --> "*" Seat : reserves
+Booking "1" --> "0..1" Payment : has
+Booking "1" --> "*" Ticket : generates
+
+
+Ticket "*" --> "1" Concert : belongs to
+Ticket "1" --> "1" Seat : assigned to
+
+
+Staff "1" --> "*" TicketValidationLog : performs
+Ticket "1" --> "*" TicketValidationLog : has
+
+
+Booking "1" --> "*" SystemAnomaly : may trigger
+Admin "1" --> "*" SystemAnomaly : reviews
+
+
+User "1" --> "*" AuditLog : generates
