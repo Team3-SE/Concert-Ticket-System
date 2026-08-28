@@ -64,6 +64,7 @@ erDiagram
     BOOKING {
         string booking_id PK
         string customer_id FK
+        string concert_id FK
         datetime booking_date
         decimal total_amount
         string status
@@ -77,20 +78,45 @@ erDiagram
 
     PAYMENT {
         string payment_id PK
-        string booking_id FK
+        string booking_id FK,UK
         decimal amount
         string method
         string status
         datetime payment_date
+        string provider_transaction_id
+        string decline_code
+        string risk_level
+        string card_fingerprint
     }
 
     TICKET {
         string ticket_id PK
         string booking_id FK
         string concert_id FK
-        string seat_id FK
+        string seat_id FK,UK
         string qr_code UK
         boolean is_used
+    }
+
+    SEAT_LOCK_LOG {
+        string lock_id PK
+        string booking_id FK
+        string seat_id FK
+        datetime locked_at
+        datetime expired_at
+        datetime released_at
+        string status
+    }
+
+    CHARGEBACK {
+        string chargeback_id PK
+        string payment_id FK
+        string provider_chargeback_id UK
+        string reason
+        decimal amount
+        string status
+        datetime created_at
+        datetime resolved_at
     }
 
     STAFF_CONCERT {
@@ -128,6 +154,7 @@ erDiagram
         string user_id FK
         string action
         datetime timestamp
+        string ip_address
     }
 
 
@@ -142,17 +169,12 @@ erDiagram
 
 
     %% ==============================
-    %% COMPANY
+    %% COMPANY / CONCERT
     %% ==============================
 
     COMPANY ||--o{ EVENT_ORGANIZER : employs
     COMPANY ||--o{ STAFF : employs
-    COMPANY ||--o{ CONCERT : owns
-
-
-    %% ==============================
-    %% CONCERT
-    %% ==============================
+    COMPANY ||--o{ CONCERT : organizes
 
     EVENT_ORGANIZER ||--o{ CONCERT : manages
 
@@ -165,13 +187,23 @@ erDiagram
     %% ==============================
 
     CUSTOMER ||--o{ BOOKING : makes
+    CONCERT ||--o{ BOOKING : receives
 
     BOOKING ||--o{ BOOKING_SEAT : contains
     SEAT ||--o{ BOOKING_SEAT : reserved_in
 
     BOOKING ||--o| PAYMENT : has
-
     BOOKING ||--o{ TICKET : generates
+
+    BOOKING ||--o{ SEAT_LOCK_LOG : records
+    SEAT ||--o{ SEAT_LOCK_LOG : has_lock_history
+
+
+    %% ==============================
+    %% PAYMENT / CHARGEBACK
+    %% ==============================
+
+    PAYMENT ||--o{ CHARGEBACK : may_have
 
 
     %% ==============================
@@ -183,7 +215,7 @@ erDiagram
 
 
     %% ==============================
-    %% STAFF / TICKET VALIDATION
+    %% STAFF / CONCERT / VALIDATION
     %% ==============================
 
     STAFF ||--o{ STAFF_CONCERT : assigned
@@ -197,8 +229,7 @@ erDiagram
     %% SYSTEM ANOMALY
     %% ==============================
 
-    BOOKING ||--o{ SYSTEM_ANOMALY : has
-
+    BOOKING ||--o{ SYSTEM_ANOMALY : may_trigger
     ADMIN ||--o{ SYSTEM_ANOMALY : reviews
 
     SYSTEM_ANOMALY ||--o{ ANOMALY_ATTACHMENT : has

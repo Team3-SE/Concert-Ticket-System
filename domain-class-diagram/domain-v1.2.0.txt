@@ -282,6 +282,7 @@ Ticket "*" --> "1" Concert : belongs to
 Ticket "1" --> "1" Seat : assigned to
 
 
+Staff "*" --> "*" Concert : assigned to
 Staff "1" --> "*" TicketValidationLog : performs
 Ticket "1" --> "*" TicketValidationLog : has
 
