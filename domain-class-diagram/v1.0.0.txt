@@ -1,7 +1,7 @@
-@startuml
+	@startuml
 skinparam classAttributeIconSize 0
 
-' ================= Enumerations =================
+' Enums for Status
 enum Role {
   CUSTOMER
   ORGANIZER
@@ -18,8 +18,6 @@ enum BookingStatus {
   PENDING
   COMPLETED
   CANCELLED
-  FAILED
-  EXPIRED
 }
 
 enum PaymentMethod {
@@ -27,37 +25,7 @@ enum PaymentMethod {
   CREDIT_CARD
 }
 
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
-  EXPIRED
-}
-
-enum ErrorStatus {
-  UNRESOLVED
-  INVESTIGATING
-  RESOLVED
-}
-
-enum ErrorType {
-  SEAT_HOARDING
-  UNCAPTURED_AUTH
-  ORPHANED_PROMPTPAY
-  SEAT_LOCK_FAILED
-  DUPLICATE_CHARGE
-}
-
-' ================= Users & Organizations =================
-class Company {
-  - companyID: String
-  - name: String
-  - initials: String
-  - description: String
-  + getCompanyInfo(): String
-  + listEvents(): List<Concert>
-}
-
+' Users
 abstract class User {
   - userID: String
   - name: String
@@ -65,9 +33,9 @@ abstract class User {
   - phone: String
   - password: Hash
   - role: Role
-  - isBanned: Boolean
   + login(): Boolean
   + logout(): void
+  + updateProfile(): void
 }
 
 class Customer {
@@ -79,33 +47,33 @@ class Customer {
 }
 
 class EventOrganizer {
-  - companyID: String
   + createConcert(details): Concert
   + defineSeatMap(concert, mapDetails): void
   + viewSalesRealTime(concert): Report
+  + generateReport(concert): Report
   + scanTicketQR(qrCode): Boolean
 }
 
 class Admin {
   + manageUser(userID, action): void
-  + viewAnomalies(filters): List<SystemError>
-  + acknowledgeError(errorID): void
-  + resolveError(errorID, reason, files): void
-  + executeQuickAction(errorID, actionType): void
+  + viewSystemLogs(): List<Log>
+  + resolveIssue(issueID): void
 }
 
 User <|-- Customer
 User <|-- EventOrganizer
 User <|-- Admin
 
-' ================= Core Ticketing System =================
+' Core System
 class Concert {
   - concertID: String
   - name: String
   - artist: String
   - dateTime: DateTime
   - venue: String
+  - description: String
   + getDetails(): ConcertInfo
+  + checkAvailability(): Boolean
 }
 
 class Zone {
@@ -123,7 +91,6 @@ class Seat {
   - status: SeatStatus
   + lockSeat(): void
   + unlockSeat(): void
-  + forceUnlock(): void 
   + confirmSeat(): void
 }
 
@@ -143,11 +110,10 @@ class Payment {
   - paymentID: String
   - amount: Double
   - method: PaymentMethod
-  - status: PaymentStatus
   - paymentDate: DateTime
+  - isSuccess: Boolean
   + processPayment(): Boolean
   + verifyStatus(): Boolean
-  + manualCapture(): void
 }
 
 class Ticket {
@@ -158,23 +124,7 @@ class Ticket {
   + validateTicket(): Boolean
 }
 
-' ================= Anomaly & System Error =================
-class SystemError {
-  - errorID: String
-  - type: ErrorType
-  - message: String
-  - timestamp: DateTime
-  - status: ErrorStatus
-  - resolveReason: String
-  - attachments: List<String>
-  + updateStatus(newStatus): void
-  + addAttachment(file): void
-}
-
-' ================= Relationships =================
-Company "1" *-- "*" EventOrganizer : employs >
-Company "1" -- "*" Concert : owns/hosts >
-
+' Relationships
 EventOrganizer "1" -- "*" Concert : manages >
 Concert "1" *-- "*" Zone : contains >
 Zone "1" *-- "*" Seat : contains >
@@ -186,8 +136,5 @@ Booking "1" -- "*" Ticket : generates >
 
 Ticket "1" -- "1" Seat : assigned to >
 Ticket "*" -- "1" Concert : belongs to >
-
-SystemError "*" -- "1" Booking : references >
-Admin "1" -- "*" SystemError : monitors & resolves >
 
 @enduml

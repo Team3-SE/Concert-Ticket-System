@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - ระบบแจ้งเตือนความผิดปกติของระบบ</title>
+    <title>Admin - ตรวจสอบพฤติกรรมผู้ใช้ผิดปกติ</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -144,11 +144,43 @@
             background-color: var(--card-white);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 16px 20px;
-            display: flex;
-            gap: 15px;
+            padding: 18px 20px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
             align-items: center;
-            flex-wrap: wrap;
+        }
+
+        .filter-item {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .filter-label {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
+
+        .toolbar-card .input-text,
+        .toolbar-card .select-option,
+        .toolbar-card .custom-dropdown {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .toolbar-card .input-text,
+        .toolbar-card .select-option,
+        .toolbar-card .cd-trigger {
+            height: 40px;
+        }
+
+        .filter-reset {
+            width: 100%;
+            height: 40px;
         }
 
         .input-text, .select-option {
@@ -165,15 +197,37 @@
             border-color: var(--primary-navy);
         }
 
-        .input-text { flex: 1; min-width: 180px; }
+        .input-text { min-width: 0; }
         
         /* สไตล์กรองเวลาแบบ Custom Date Range */
         .custom-date-range { 
+            grid-column: 1 / -1;
             display: flex; 
             align-items: center; 
-            gap: 8px; 
-            border-left: 1px solid var(--border-color); 
-            padding-left: 15px; 
+            gap: 10px; 
+            padding-top: 2px;
+        }
+
+        .custom-date-range .input-text {
+            flex: 1;
+        }
+
+        @media (max-width: 1100px) {
+            .toolbar-card {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 720px) {
+            .toolbar-card {
+                grid-template-columns: 1fr;
+            }
+
+            .custom-date-range {
+                grid-column: 1;
+                flex-direction: column;
+                align-items: stretch;
+            }
         }
 
         /* Data Table */
@@ -560,7 +614,7 @@
         <ul class="sidebar-menu">
             <li><a href="#">1. จัดการผู้ใช้ (User Management)</a></li>
             <li><a href="#">2. รายการจองผิดปกติ (Fraud Monitor)</a></li>
-            <li class="active"><a href="#">3. แจ้งเตือนความผิดปกติของระบบ (Anomaly Alerts)</a></li>
+            <li class="active"><a href="#">3. ตรวจสอบพฤติกรรมผู้ใช้ (Abuse Review)</a></li>
             <li><a href="#">4. ประวัติการใช้งาน (System Audit Logs)</a></li>
         </ul>
     </div>
@@ -568,7 +622,7 @@
     <!-- Main Content -->
     <div class="main-content">
         <div class="top-navbar">
-            <div class="page-title-text">ระบบแจ้งเตือนความผิดปกติของระบบ (System Anomaly &amp; Error Alert Dashboard)</div>
+            <div class="page-title-text">ศูนย์ตรวจสอบพฤติกรรมผู้ใช้ผิดปกติ (User Abuse & Fraud Review)</div>
             <div>ผู้ดูแลระบบ (Admin)</div>
         </div>
 
@@ -576,11 +630,11 @@
             <!-- Stats Cards -->
             <div class="stats-grid">
                 <div class="stat-card stat-critical">
-                    <div class="stat-label">ข้อผิดพลาดทั้งหมด (Total)</div>
+                    <div class="stat-label">เคสทั้งหมด (Total Cases)</div>
                     <div class="stat-value" id="statTotal">0</div>
                 </div>
                 <div class="stat-card stat-warning">
-                    <div class="stat-label">รอดำเนินการ (Unresolved)</div>
+                    <div class="stat-label">รอตรวจสอบ (Pending Review)</div>
                     <div class="stat-value" id="statCritical">0</div>
                 </div>
                 <div class="stat-card stat-info">
@@ -588,78 +642,105 @@
                     <div class="stat-value" id="statInvestigating">0</div>
                 </div>
                 <div class="stat-card stat-success">
-                    <div class="stat-label">แก้ไขแล้ว (Resolved)</div>
+                    <div class="stat-label">ตัดสินแล้ว (Decided)</div>
                     <div class="stat-value" id="statResolved">0</div>
                 </div>
             </div>
 
-            <!-- Filter Toolbar (อัปเดตให้เหมือน Reservation Dashboard) -->
+            <!-- Filter Toolbar: fixed grid layout -->
             <div class="toolbar-card">
-                <span>ค้นหาข้อมูล:</span>
-                <input type="text" class="input-text" id="searchInput" onkeyup="renderTable()" placeholder="ค้นหา Error ID, Booking ID...">
-                
-                <!-- Custom Dropdown: องค์กร -->
-                <div class="custom-dropdown" id="orgDropdown">
-                    <div class="cd-trigger" id="orgTrigger">
-                        <div class="cd-trigger-inner">
-                            <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M3 7v14"/><path d="M21 7v14"/><path d="M6 21V3h12v18"/><path d="M10 7h4"/><path d="M10 11h4"/><path d="M10 15h4"/></svg>
-                            <span class="cd-trigger-text" id="orgSelectedText">ทุกองค์กร / ผู้จัด</span>
+                <div class="filter-item">
+                    <input type="text" class="input-text" id="searchInput" onkeyup="renderTable()" placeholder="ค้นหา Case ID, User Email, Booking ID...">
+                </div>
+
+                <div class="filter-item">
+                    <div class="custom-dropdown" id="orgDropdown">
+                        <div class="cd-trigger" id="orgTrigger">
+                            <div class="cd-trigger-inner">
+                                <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M3 7v14"/><path d="M21 7v14"/><path d="M6 21V3h12v18"/><path d="M10 7h4"/><path d="M10 11h4"/><path d="M10 15h4"/></svg>
+                                <span class="cd-trigger-text" id="orgSelectedText">ทุกองค์กร / ผู้จัด</span>
+                            </div>
+                            <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                         </div>
-                        <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                    <div class="cd-menu" id="orgMenu">
-                        <div class="cd-search">
-                            <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                            <input type="text" id="orgSearch" placeholder="Search company name...">
+                        <div class="cd-menu" id="orgMenu">
+                            <div class="cd-search">
+                                <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                <input type="text" id="orgSearch" placeholder="Search company name...">
+                            </div>
+                            <div class="cd-list" id="orgList"></div>
                         </div>
-                        <div class="cd-list" id="orgList"></div>
                     </div>
                 </div>
 
-                <!-- Custom Dropdown: งานคอนเสิร์ต -->
-                <div class="custom-dropdown" id="evtDropdown">
-                    <div class="cd-trigger" id="evtTrigger">
-                        <div class="cd-trigger-inner">
-                            <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                            <span class="cd-trigger-text" id="evtSelectedText">งานคอนเสิร์ตทั้งหมด</span>
+                <div class="filter-item">
+                    <div class="custom-dropdown" id="evtDropdown">
+                        <div class="cd-trigger" id="evtTrigger">
+                            <div class="cd-trigger-inner">
+                                <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                <span class="cd-trigger-text" id="evtSelectedText">งานคอนเสิร์ตทั้งหมด</span>
+                            </div>
+                            <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                         </div>
-                        <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                    <div class="cd-menu" id="evtMenu">
-                        <div class="cd-search">
-                            <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                            <input type="text" id="evtSearch" placeholder="Search event name...">
+                        <div class="cd-menu" id="evtMenu">
+                            <div class="cd-search">
+                                <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                <input type="text" id="evtSearch" placeholder="Search event name...">
+                            </div>
+                            <div class="cd-list" id="evtList"></div>
                         </div>
-                        <div class="cd-list" id="evtList"></div>
                     </div>
                 </div>
-                
-                <select class="select-option" id="typeFilter" onchange="renderTable()">
-                    <option value="ALL">ประเภทปัญหาทั้งหมด (Business Actions)</option>
-                    <option value="Duplicate Charge">Duplicate Charge</option>
-                    <option value="Seat Lock Expired Failed">Seat Lock Expired Failed</option>
-                    <option value="Uncaptured Authorizations">Uncaptured Authorizations</option>
-                    <option value="Orphaned PromptPay">Orphaned PromptPay</option>
-                    <option value="Seat Hoarding / Quota Abuse">Seat Hoarding / Quota Abuse</option>
-                </select>
 
-                <!-- ตัวกรองเวลาแบบเดียวกับ Reservation Dashboard -->
-                <select class="select-option" id="dateRangeFilter" onchange="onDateRangeChange()">
-                    <option value="all">ทุกช่วงเวลา</option>
-                    <option value="today">วันนี้</option>
-                    <option value="7d">7 วันล่าสุด</option>
-                    <option value="30d">30 วันล่าสุด</option>
-                    <option value="custom">กำหนดเอง...</option>
-                </select>
+                <div class="filter-item">
+                    <div class="custom-dropdown" id="typeDropdown">
+                        <div class="cd-trigger" id="typeTrigger">
+                            <div class="cd-trigger-inner">
+                                <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                <span class="cd-trigger-text" id="typeSelectedText">ประเภทความผิดปกติทั้งหมด</span>
+                            </div>
+                            <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div class="cd-menu" id="typeMenu">
+                            <div class="cd-list" id="typeList">
+                                <div class="cd-item selected" data-type="ALL"><div class="cd-info"><span class="cd-title">ประเภทความผิดปกติทั้งหมด</span></div></div>
+                                <div class="cd-item" data-type="PAYMENT_FRAUD_CARD_TESTING"><div class="cd-info"><span class="cd-title">Payment Fraud / Card Testing</span></div></div>
+                                <div class="cd-item" data-type="SEAT_HOARDING_ABUSE"><div class="cd-info"><span class="cd-title">Booking Limit / Seat Hoarding Abuse</span></div></div>
+                                <div class="cd-item" data-type="CHARGEBACK_ABUSE"><div class="cd-info"><span class="cd-title">Chargeback Abuse</span></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                <!-- ส่วนเลือกวันแบบ Custom (ซ่อนไว้เป็นค่าเริ่มต้น) -->
+                <div class="filter-item">
+                    <div class="custom-dropdown" id="dateDropdown">
+                        <div class="cd-trigger" id="dateTrigger">
+                            <div class="cd-trigger-inner">
+                                <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                <span class="cd-trigger-text" id="dateSelectedText">ทุกช่วงเวลา</span>
+                            </div>
+                            <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div class="cd-menu" id="dateMenu">
+                            <div class="cd-list" id="dateList">
+                                <div class="cd-item selected" data-range="all"><div class="cd-info"><span class="cd-title">ทุกช่วงเวลา</span></div></div>
+                                <div class="cd-item" data-range="today"><div class="cd-info"><span class="cd-title">วันนี้</span></div></div>
+                                <div class="cd-item" data-range="7d"><div class="cd-info"><span class="cd-title">7 วันล่าสุด</span></div></div>
+                                <div class="cd-item" data-range="30d"><div class="cd-info"><span class="cd-title">30 วันล่าสุด</span></div></div>
+                                <div class="cd-item" data-range="custom"><div class="cd-info"><span class="cd-title">กำหนดเอง...</span></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-item">
+                    <button class="btn-action filter-reset" onclick="resetFilter()">รีเซ็ตตัวกรอง</button>
+                </div>
+
                 <div class="custom-date-range" id="customDateRange" style="display:none;">
-                    <input type="date" id="dateFrom" class="input-text" onchange="onCustomDateChange()" style="min-width:unset; padding:6px 10px;">
-                    <span style="font-size: 13px;">ถึง</span>
-                    <input type="date" id="dateTo" class="input-text" onchange="onCustomDateChange()" style="min-width:unset; padding:6px 10px;">
+                    <input type="date" id="dateFrom" class="input-text" onchange="onCustomDateChange()">
+                    <span style="font-size: 13px; color: var(--text-muted);">ถึง</span>
+                    <input type="date" id="dateTo" class="input-text" onchange="onCustomDateChange()">
                 </div>
-                
-                <button class="btn-action" onclick="resetFilter()" style="align-self:flex-end;">รีเซ็ตตัวกรอง</button>
             </div>
 
             <!-- Table Card -->
@@ -668,8 +749,8 @@
                     <table class="data-table" id="alertTable">
                         <thead>
                             <tr>
-                                <th>Error ID / Booking ID</th>
-                                <th>ประเภทปัญหา</th>
+                                <th>Case / User</th>
+                                <th>ประเภทความผิดปกติ</th>
                                 <th>เวลาที่เกิด</th>
                                 <th>สถานะ</th>
                                 <th style="text-align: center;">การจัดการ</th>
@@ -690,7 +771,7 @@
     <div class="drawer" id="drawer">
         <div class="drawer-header">
             <div>
-                <div class="drawer-title" id="drawerTitle">รายละเอียด Error</div>
+                <div class="drawer-title" id="drawerTitle">รายละเอียดเคส</div>
                 <div class="drawer-subtitle" id="drawerSubtitle"></div>
             </div>
             <button class="drawer-close" onclick="closeDrawer()">&times;</button>
@@ -701,21 +782,21 @@
                 <div class="drawer-info-grid" id="drawerInfoGrid"></div>
             </div>
             <div id="drawerActionSection" style="display: none;">
-                <div class="drawer-section-title">การจัดการ (Business Action)</div>
+                <div class="drawer-section-title">การตัดสินใจของ Admin</div>
                 <div class="actions-grid" id="drawerActionsGrid"></div>
             </div>
         </div>
         <div class="drawer-footer">
             <button class="btn-secondary" onclick="closeDrawer()">ปิด</button>
-            <button class="btn-primary" id="drawerResolveBtn" style="display:none;" onclick="openResolveModal(currentDrawerAlertId)">แก้ไขแล้ว</button>
+            <button class="btn-primary" id="drawerResolveBtn" style="display:none;" onclick="openResolveModal(currentDrawerAlertId)">ไม่พบความผิด</button>
         </div>
     </div>
 
     <!-- Modal: Acknowledge Confirmation -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal-box">
-            <div class="modal-title">ยืนยันการรับทราบปัญหา</div>
-            <div class="modal-text" id="modalText">คุณต้องการรับทราบปัญหานี้ใช่หรือไม่? รายการจะถูกเปลี่ยนสถานะเป็น "กำลังตรวจสอบ"</div>
+            <div class="modal-title">ยืนยันการเริ่มตรวจสอบ</div>
+            <div class="modal-text" id="modalText">คุณต้องการเริ่มตรวจสอบนี้ใช่หรือไม่? รายการจะถูกเปลี่ยนสถานะเป็น "กำลังตรวจสอบ"</div>
             <div class="modal-actions">
                 <button class="btn-secondary" onclick="closeModal()">ยกเลิก</button>
                 <button class="btn-primary" id="modalConfirmBtn">ยืนยัน</button>
@@ -747,12 +828,12 @@
         <div class="modal-box" onclick="event.stopPropagation()">
             <div class="modal-head">
                 <div class="modal-icon" id="resolveModalIcon"></div>
-                <div class="modal-title">ยืนยันว่าแก้ไขปัญหาแล้ว</div>
+                <div class="modal-title">ยืนยันว่าไม่พบความผิด</div>
             </div>
             <p class="modal-desc" id="resolveModalDesc"></p>
 
-            <label class="modal-label">เหตุผล / สรุปการแก้ไข (บันทึกในระบบ)</label>
-            <textarea id="resolveReason" rows="3" placeholder="ระบุวิธีการแก้ไข หรือสรุปสาเหตุ..."></textarea>
+            <label class="modal-label">เหตุผล / สรุปผลการตรวจสอบ (บันทึกในระบบ)</label>
+            <textarea id="resolveReason" rows="3" placeholder="ระบุเหตุผลที่ตัดสินว่าไม่พบความผิด..."></textarea>
 
             <label class="modal-label">แนบไฟล์หลักฐาน (ถ้ามี)</label>
             <input type="file" id="resolveFileInput" multiple style="display:none;" onchange="handleResolveFileSelect(event)">
@@ -762,7 +843,7 @@
 
             <div class="modal-actions">
                 <button class="btn-secondary" onclick="closeResolveModal()">ยกเลิก</button>
-                <button class="btn-primary" onclick="confirmResolve()">ยืนยันว่าแก้ไขแล้ว</button>
+                <button class="btn-primary" onclick="confirmResolve()">ยืนยันว่าไม่พบความผิด</button>
             </div>
         </div>
     </div>
@@ -772,7 +853,7 @@
 
     <script>
         /* ---------------- State & Data Sources ---------------- */
-        let filterState = { dateRange: "all", customFrom: null, customTo: null, orgId: "ALL", eventId: "ALL" };
+        let filterState = { dateRange: "all", customFrom: null, customTo: null, orgId: "ALL", eventId: "ALL", type: "ALL" };
         const ORGANIZATIONS = [
           { id: "ALL", name: "ทุกองค์กร / ผู้จัด", initials: "AL", sub: "ดูข้อมูลทั้งหมด" },
           { id: "ORG-01", name: "Live Nation Tero", initials: "LT", sub: "Company · Thailand" },
@@ -817,6 +898,60 @@
         document.addEventListener('click', () => {
           document.querySelectorAll('.cd-menu').forEach(m => m.classList.remove('show'));
           document.querySelectorAll('.cd-trigger').forEach(t => t.classList.remove('active'));
+        });
+
+        // Custom Dropdown: ประเภทความผิดปกติ
+        const typeTrigger = document.getElementById('typeTrigger');
+        const typeMenu = document.getElementById('typeMenu');
+        typeTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = typeMenu.classList.contains('show');
+            document.querySelectorAll('.cd-menu').forEach(m => m.classList.remove('show'));
+            document.querySelectorAll('.cd-trigger').forEach(t => t.classList.remove('active'));
+            if (!isOpen) {
+                typeMenu.classList.add('show');
+                typeTrigger.classList.add('active');
+            }
+        });
+
+        document.querySelectorAll('#typeList .cd-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                filterState.type = item.dataset.type;
+                document.getElementById('typeSelectedText').textContent = item.querySelector('.cd-title').textContent;
+                document.querySelectorAll('#typeList .cd-item').forEach(x => x.classList.remove('selected'));
+                item.classList.add('selected');
+                typeMenu.classList.remove('show');
+                typeTrigger.classList.remove('active');
+                renderTable();
+            });
+        });
+
+        // Custom Dropdown: ช่วงเวลา
+        const dateTrigger = document.getElementById('dateTrigger');
+        const dateMenu = document.getElementById('dateMenu');
+        dateTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = dateMenu.classList.contains('show');
+            document.querySelectorAll('.cd-menu').forEach(m => m.classList.remove('show'));
+            document.querySelectorAll('.cd-trigger').forEach(t => t.classList.remove('active'));
+            if (!isOpen) {
+                dateMenu.classList.add('show');
+                dateTrigger.classList.add('active');
+            }
+        });
+
+        document.querySelectorAll('#dateList .cd-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const range = item.dataset.range;
+                document.getElementById('dateSelectedText').textContent = item.querySelector('.cd-title').textContent;
+                document.querySelectorAll('#dateList .cd-item').forEach(x => x.classList.remove('selected'));
+                item.classList.add('selected');
+                dateMenu.classList.remove('show');
+                dateTrigger.classList.remove('active');
+                onDateRangeChange(range);
+            });
         });
 
         function renderOrgList(searchQuery = '') {
@@ -887,50 +1022,79 @@
 
         // ---------- Mock Data ----------
         let alerts = [
+            // ---- Payment Fraud / Card Testing ----
             {
-                id: 'ERR-58235',
-                bookingId: 'BK-10250',
-                severity: 'WARNING',
-                type: 'Seat Hoarding / Quota Abuse',
-                message: 'ตรวจพบพฤติกรรมกั๊กที่นั่งหรือปั๊มโค้ดส่วนลดผิดปกติจากผู้ใช้รายนี้',
-                time: '30/07/2026 10:05:12',
-                status: 'UNRESOLVED'
+                id: 'CASE-71001', bookingId: '-', userEmail: 'cardtest01@example.com',
+                type: 'PAYMENT_FRAUD_CARD_TESTING', typeLabel: 'Payment Fraud / Card Testing', severity: 'CRITICAL',
+                message: 'ตรวจพบการใช้บัตรเครดิต 7 ใบต่างเลขกับบัญชีเดียวกันภายใน 5 นาที ทุกรายการถูก Decline',
+                evidence: ['7 distinct cards in 5 min', 'All 7 attempts declined', 'Provider risk score 92/100'],
+                time: '19/08/2026 21:03:12', status: 'BANNED',
+                resolveReason: 'ยืนยันเป็นการทดสอบบัตรโดยมิชอบ (card testing) — ระงับบัญชีถาวร',
+                attachments: ['fraud_log_0801.csv', 'provider_alert_0801.png']
             },
             {
-                id: 'ERR-58234',
-                bookingId: 'BK-10245',
-                severity: 'WARNING',
-                type: 'Uncaptured Authorizations',
-                message: 'รายการรอการกด Capture วงเงินผ่าน Stripe แบบแมนนวลก่อนที่วงเงินจะหมดอายุ',
-                time: '30/07/2026 09:45:00',
-                status: 'UNRESOLVED'
+                id: 'CASE-71002', bookingId: 'BK-15231', userEmail: 'shopper.kk@example.com',
+                type: 'PAYMENT_FRAUD_CARD_TESTING', typeLabel: 'Payment Fraud / Card Testing', severity: 'WARNING',
+                message: 'Payment Provider แจ้ง Risk Score สูงผิดปกติ (92/100) สำหรับรายการชำระเงินล่าสุด',
+                evidence: ['Risk score 92/100', '4 declines before 1 success', 'New card added 3 times in 10 min'],
+                time: '17/08/2026 03:41:55', status: 'INVESTIGATING'
             },
             {
-                id: 'ERR-58233',
-                bookingId: 'BK-10240',
-                severity: 'CRITICAL',
-                type: 'Orphaned PromptPay',
-                message: 'ระบบไม่ได้รับสถานะการชำระเงินจาก PromptPay ต้องขอสลิปตรวจสอบและกดยืนยัน',
-                time: '30/07/2026 09:30:15',
-                status: 'INVESTIGATING'
+                id: 'CASE-71003', bookingId: '-', userEmail: 'guest2208@example.com',
+                type: 'PAYMENT_FRAUD_CARD_TESTING', typeLabel: 'Payment Fraud / Card Testing', severity: 'CRITICAL',
+                message: 'มีรายการ Payment Failed ติดต่อกัน 15 ครั้งภายใน 10 นาทีจาก IP เดียวกัน',
+                evidence: ['15 failed payments / 10 min', 'Single IP address', '3 different cards used'],
+                time: '19/08/2026 14:22:07', status: 'PENDING'
+            },
+
+            // ---- Booking Limit / Seat Hoarding Abuse ----
+            {
+                id: 'CASE-71004', bookingId: 'BK-14980', userEmail: 'vipseat.somchai@example.com',
+                type: 'SEAT_HOARDING_ABUSE', typeLabel: 'Booking Limit / Seat Hoarding Abuse', severity: 'WARNING',
+                message: 'ผู้ใช้จอง-ปล่อยที่นั่งโซน VIP ซ้ำ 12 ครั้งภายใน 1 ชั่วโมง (Lock → Timeout → Lock)',
+                evidence: ['12 lock-expire cycles / 1 hr', 'Zone: VIP', 'No completed payment in any cycle'],
+                time: '10/07/2026 19:15:30', status: 'SUSPENDED',
+                resolveReason: 'ยืนยันเจตนากั๊กที่นั่งเพื่อขัดขวางผู้ซื้อรายอื่น — ระงับบัญชี 30 วัน',
+                attachments: ['seat_lock_history_0705.csv']
             },
             {
-                id: 'ERR-58229',
-                bookingId: 'BK-10198',
-                severity: 'CRITICAL',
-                type: 'Seat Lock Expired Failed',
-                message: 'ระบบไม่สามารถปลดล็อกที่นั่งคืนได้หลังหมดเวลาชำระเงิน ที่นั่งค้างสถานะ Locked',
-                time: '30/07/2026 08:47:02',
-                status: 'UNRESOLVED'
+                id: 'CASE-71005', bookingId: '-', userEmail: 'ticket.hunter88@example.com',
+                type: 'SEAT_HOARDING_ABUSE', typeLabel: 'Booking Limit / Seat Hoarding Abuse', severity: 'CRITICAL',
+                message: 'พยายามล็อกที่นั่งรวม 24 ที่นั่งในคอนเสิร์ตเดียว เกิน Ticket Limit ที่กำหนด (4 ที่นั่ง/คน)',
+                evidence: ['24 seats locked in one event', 'Ticket limit: 4 seats/person', '6x over limit'],
+                time: '05/08/2026 20:47:11', status: 'INVESTIGATING'
             },
             {
-                id: 'ERR-58209',
-                bookingId: 'BK-10099',
-                severity: 'WARNING',
-                type: 'Duplicate Charge',
-                message: 'ตรวจพบความเป็นไปได้ที่ผู้ใช้ถูกตัดเงินซ้ำซ้อนจากการกดยืนยันการชำระเงินหลายครั้ง',
-                time: '29/07/2026 22:05:55',
-                status: 'RESOLVED'
+                id: 'CASE-71006', bookingId: '-', userEmail: 'zonea.reseller@example.com',
+                type: 'SEAT_HOARDING_ABUSE', typeLabel: 'Booking Limit / Seat Hoarding Abuse', severity: 'WARNING',
+                message: 'ที่นั่งโซน A ถูกล็อกโดยไม่ชำระเงินและปล่อยหมดอายุซ้ำ 8 รอบติดต่อกัน',
+                evidence: ['8 lock-expire cycles', 'Zone: A', '0 completed payments'],
+                time: '18/08/2026 22:09:44', status: 'PENDING'
+            },
+
+            // ---- Chargeback Abuse ----
+            {
+                id: 'CASE-71007', bookingId: 'BK-10234', userEmail: 'usedticket.user@example.com',
+                type: 'CHARGEBACK_ABUSE', typeLabel: 'Chargeback Abuse', severity: 'CRITICAL',
+                message: 'ลูกค้าแจ้ง Chargeback ทั้งที่ Ticket ถูก markAsUsed แล้ว (สแกนเข้างานจริง)',
+                evidence: ['Chargeback filed after ticket scanned', 'Ticket status: USED', 'Scan location: Gate 2, 18:47'],
+                time: '25/06/2026 11:30:00', status: 'BANNED',
+                resolveReason: 'ตรวจสอบ Ticket Validation Log ยืนยันการเข้างานจริงของลูกค้า — Ban บัญชีถาวร',
+                attachments: ['ticket_scan_log_0620.png', 'bank_dispute_0620.pdf']
+            },
+            {
+                id: 'CASE-71008', bookingId: 'BK-16210', userEmail: 'repeat.disputer@example.com',
+                type: 'CHARGEBACK_ABUSE', typeLabel: 'Chargeback Abuse', severity: 'CRITICAL',
+                message: 'พบ Chargeback จากบัญชีเดียวกัน 3 ครั้งในรอบ 2 เดือน กับ Booking คนละคอนเสิร์ต',
+                evidence: ['3 chargebacks / 2 months', '3 different concerts', 'All 3 tickets previously scanned'],
+                time: '30/07/2026 09:12:18', status: 'INVESTIGATING'
+            },
+            {
+                id: 'CASE-71009', bookingId: 'BK-19045', userEmail: 'newdispute04@example.com',
+                type: 'CHARGEBACK_ABUSE', typeLabel: 'Chargeback Abuse', severity: 'WARNING',
+                message: 'ธนาคารแจ้งปฏิเสธรายการชำระเงินหลังสถานะ Booking เป็น COMPLETED แล้ว',
+                evidence: ['Bank dispute after COMPLETED status', 'Booking amount: ฿3,600', 'First dispute on this account'],
+                time: '18/08/2026 16:05:29', status: 'PENDING'
             }
         ];
 
@@ -944,17 +1108,37 @@
         }
 
         const QUICK_ACTIONS_BY_TYPE = {
-            'Duplicate Charge': [],
-            'Seat Lock Expired Failed': [],
-            'Uncaptured Authorizations': [],
-            'Orphaned PromptPay': [],
-            'Seat Hoarding / Quota Abuse': [
-                { key: 'banAccount', label: 'แบนบัญชีผู้ใช้ถาวร (Ban Account)', icon: 'alertTriangle', danger: true }
+            'PAYMENT_FRAUD_CARD_TESTING': [
+                { key: 'suspend', label: 'ระงับบัญชีชั่วคราว (Suspend)', icon: 'alertTriangle', danger: true, targetStatus: 'SUSPENDED' },
+                { key: 'ban', label: 'แบนบัญชีถาวร (Ban)', icon: 'alertTriangle', danger: true, targetStatus: 'BANNED' }
+            ],
+            'SEAT_HOARDING_ABUSE': [
+                { key: 'warn', label: 'เตือนผู้ใช้ (Warning)', icon: 'check', targetStatus: 'WARNED' },
+                { key: 'suspend', label: 'ระงับบัญชีชั่วคราว (Suspend)', icon: 'alertTriangle', danger: true, targetStatus: 'SUSPENDED' },
+                { key: 'ban', label: 'แบนบัญชีถาวร (Ban)', icon: 'alertTriangle', danger: true, targetStatus: 'BANNED' }
+            ],
+            'CHARGEBACK_ABUSE': [
+                { key: 'suspend', label: 'ระงับบัญชีชั่วคราว (Suspend)', icon: 'alertTriangle', danger: true, targetStatus: 'SUSPENDED' },
+                { key: 'ban', label: 'แบนบัญชีถาวร (Ban)', icon: 'alertTriangle', danger: true, targetStatus: 'BANNED' }
             ]
         };
 
-        const statusLabel = { UNRESOLVED: 'ยังไม่ได้แก้ไข', INVESTIGATING: 'กำลังตรวจสอบ', RESOLVED: 'แก้ไขแล้ว' };
-        const statusPillClass = { UNRESOLVED: 'status-unresolved', INVESTIGATING: 'status-investigating', RESOLVED: 'status-resolved' };
+        const statusLabel = {
+            PENDING: 'รอตรวจสอบ',
+            INVESTIGATING: 'กำลังตรวจสอบ',
+            CLEARED: 'ไม่พบความผิด',
+            WARNED: 'เตือนแล้ว',
+            SUSPENDED: 'ระงับชั่วคราว',
+            BANNED: 'แบนแล้ว'
+        };
+        const statusPillClass = {
+            PENDING: 'status-unresolved',
+            INVESTIGATING: 'status-investigating',
+            CLEARED: 'status-resolved',
+            WARNED: 'status-investigating',
+            SUSPENDED: 'status-unresolved',
+            BANNED: 'status-unresolved'
+        };
 
         // State สำหรับจัดเก็บสถานะตัวกรองเวลา (แบบเดียวกับ Reservation Dashboard)
         
@@ -989,8 +1173,8 @@
             return true;
         }
 
-        function onDateRangeChange() {
-            filterState.dateRange = document.getElementById('dateRangeFilter').value;
+        function onDateRangeChange(range = filterState.dateRange) {
+            filterState.dateRange = range;
             const customBox = document.getElementById('customDateRange');
             customBox.style.display = (filterState.dateRange === 'custom') ? 'flex' : 'none';
             if (filterState.dateRange !== 'custom') {
@@ -1012,8 +1196,12 @@
 
         function resetFilter() {
             document.getElementById('searchInput').value = '';
-            document.getElementById('typeFilter').value = 'ALL';
-            document.getElementById('dateRangeFilter').value = 'all';
+            filterState.type = 'ALL';
+            document.getElementById('typeSelectedText').textContent = 'ประเภทความผิดปกติทั้งหมด';
+            document.querySelectorAll('#typeList .cd-item').forEach(x => x.classList.toggle('selected', x.dataset.type === 'ALL'));
+            filterState.dateRange = 'all';
+            document.getElementById('dateSelectedText').textContent = 'ทุกช่วงเวลา';
+            document.querySelectorAll('#dateList .cd-item').forEach(x => x.classList.toggle('selected', x.dataset.range === 'all'));
             document.getElementById('dateFrom').value = '';
             document.getElementById('dateTo').value = '';
             
@@ -1024,23 +1212,23 @@
             document.getElementById('orgSelectedText').textContent = 'ทุกองค์กร / ผู้จัด';
             document.getElementById('evtSelectedText').textContent = 'งานคอนเสิร์ตทั้งหมด';
             
-            onDateRangeChange();
+            onDateRangeChange('all');
             renderTable();
         }
 
         function updateStats() {
             document.getElementById('statTotal').innerText = alerts.length;
-            document.getElementById('statCritical').innerText = alerts.filter(a => a.status === 'UNRESOLVED').length;
+            document.getElementById('statCritical').innerText = alerts.filter(a => a.status === 'PENDING').length;
             document.getElementById('statInvestigating').innerText = alerts.filter(a => a.status === 'INVESTIGATING').length;
-            document.getElementById('statResolved').innerText = alerts.filter(a => a.status === 'RESOLVED').length;
+            document.getElementById('statResolved').innerText = alerts.filter(a => ['CLEARED','WARNED','SUSPENDED','BANNED'].includes(a.status)).length;
         }
 
         function renderTable() {
             const search = document.getElementById('searchInput').value.toLowerCase().trim();
-            const type = document.getElementById('typeFilter').value;
+            const type = filterState.type;
 
             const filtered = alerts.filter(a => {
-                const matchesSearch = !search || a.id.toLowerCase().includes(search) || a.bookingId.toLowerCase().includes(search);
+                const matchesSearch = !search || a.id.toLowerCase().includes(search) || a.bookingId.toLowerCase().includes(search) || a.userEmail.toLowerCase().includes(search);
                 const matchesType = type === 'ALL' || a.type === type;
                 
                 // กรองด้วยเงื่อนไขเวลาแบบใหม่
@@ -1060,20 +1248,21 @@
                 emptyState.style.display = 'none';
                 filtered.forEach(a => {
                     const tr = document.createElement('tr');
-                    const ackDisabled = a.status !== 'UNRESOLVED';
+                    const ackDisabled = a.status !== 'PENDING';
                     
                     tr.innerHTML = `
                         <td>
                             <strong>#${a.id}</strong><br>
-                            <small>Booking: #${a.bookingId}</small>
+                            <small>${a.userEmail}</small><br>
+                            <small>Booking: ${a.bookingId === '-' ? '—' : '#' + a.bookingId}</small>
                         </td>
-                        <td><span class="text-tag">${a.type}</span></td>
+                        <td><span class="text-tag">${a.typeLabel || a.type}</span></td>
                         <td><small>${a.time}</small></td>
                         <td><span class="status-pill ${statusPillClass[a.status]}">${statusLabel[a.status]}</span></td>
                         <td>
                             <div class="action-cell">
                                 <button class="btn-action" onclick="openDrawer('${a.id}')">รายละเอียด${a.status === 'INVESTIGATING' ? '<span class="action-badge" title="มีการดำเนินการรอดำเนินการในหน้ารายละเอียด"></span>' : ''}</button>
-                                <button class="btn-action" ${ackDisabled ? 'disabled' : ''} onclick="openAckModal('${a.id}')">รับทราบปัญหา</button>
+                                <button class="btn-action" ${ackDisabled ? 'disabled' : ''} onclick="openAckModal('${a.id}')">เริ่มตรวจสอบ</button>
                             </div>
                         </td>
                     `;
@@ -1092,19 +1281,27 @@
 
             currentDrawerAlertId = errorId;
 
-            document.getElementById('drawerTitle').innerText = `รายละเอียด Error #${a.id}`;
-            document.getElementById('drawerSubtitle').innerText = `Booking ที่เกี่ยวข้อง: #${a.bookingId}`;
+            document.getElementById('drawerTitle').innerText = `รายละเอียดเคส #${a.id}`;
+            document.getElementById('drawerSubtitle').innerText = `ผู้ใช้: ${a.userEmail}`;
 
             document.getElementById('drawerInfoGrid').innerHTML = `
-                <div class="label">ประเภทปัญหา</div>
-                <div class="value">${a.type}</div>
+                <div class="label">ประเภทความผิดปกติ</div>
+                <div class="value">${a.typeLabel || a.type}</div>
+                <div class="label">บัญชีผู้ใช้</div>
+                <div class="value">${a.userEmail}</div>
+                <div class="label">Booking ที่เกี่ยวข้อง</div>
+                <div class="value">${a.bookingId === '-' ? '—' : '#' + a.bookingId}</div>
                 <div class="label">สถานะปัจจุบัน</div>
                 <div class="value"><span class="status-pill ${statusPillClass[a.status]}">${statusLabel[a.status]}</span></div>
                 <div class="label">เวลาที่เกิด</div>
                 <div class="value">${a.time}</div>
                 <div class="label" style="grid-column: span 2;">ข้อความแจ้งเตือน:</div>
                 <div class="value" style="grid-column: span 2; font-size:12.5px; background:#F1F5F9; padding:8px; border-radius:4px;">${a.message}</div>
-                ${a.status === 'RESOLVED' && (a.resolveReason || (a.attachments && a.attachments.length)) ? `
+                <div class="label" style="grid-column: span 2;">หลักฐาน / Signals:</div>
+                <div class="value" style="grid-column: span 2; font-size:12.5px; background:#FFF7ED; padding:8px; border-radius:4px;">
+                    ${(a.evidence || []).map(x => `<div>• ${x}</div>`).join('')}
+                </div>
+                ${['CLEARED','WARNED','SUSPENDED','BANNED'].includes(a.status) && (a.resolveReason || (a.attachments && a.attachments.length)) ? `
                 <div class="label" style="grid-column: span 2;">สรุปการแก้ไข:</div>
                 <div class="value" style="grid-column: span 2; font-size:12.5px; background:var(--success-bg); border:1px solid var(--success-border); padding:8px; border-radius:4px;">
                     ${a.resolveReason ? a.resolveReason : '<span style="color:var(--text-muted);">— ไม่ได้ระบุเหตุผล —</span>'}
@@ -1116,7 +1313,7 @@
             const actionSection = document.getElementById('drawerActionSection');
             const actionsGrid = document.getElementById('drawerActionsGrid');
 
-            if (quickActions.length > 0) {
+            if (quickActions.length > 0 && a.status === 'INVESTIGATING') {
                 actionSection.style.display = 'block';
                 actionsGrid.innerHTML = quickActions.map(act => `
                     <button class="action-btn ${act.danger ? 'danger' : ''}" onclick='openActionModal(${JSON.stringify(act)})'>
@@ -1130,6 +1327,7 @@
 
             const resolveBtn = document.getElementById('drawerResolveBtn');
             resolveBtn.style.display = (a.status === 'INVESTIGATING') ? 'inline-block' : 'none';
+            resolveBtn.textContent = 'ไม่พบความผิด';
 
             document.getElementById('drawerOverlay').classList.add('open');
             document.getElementById('drawer').classList.add('open');
@@ -1151,7 +1349,7 @@
             if (!a) return;
             pendingAckId = errorId;
             document.getElementById('modalText').innerText =
-                `คุณต้องการรับทราบปัญหา #${a.id} (Booking #${a.bookingId}) ใช่หรือไม่? รายการจะถูกเปลี่ยนสถานะเป็น "กำลังตรวจสอบ"`;
+                `คุณต้องการเริ่มตรวจสอบ #${a.id} (Booking #${a.bookingId}) ใช่หรือไม่? รายการจะถูกเปลี่ยนสถานะเป็น "กำลังตรวจสอบ"`;
             document.getElementById('modalOverlay').classList.add('open');
         }
 
@@ -1163,9 +1361,9 @@
         document.getElementById('modalConfirmBtn').addEventListener('click', () => {
             if (!pendingAckId) return;
             const a = alerts.find(x => x.id === pendingAckId);
-            if (a && a.status === 'UNRESOLVED') {
+            if (a && a.status === 'PENDING') {
                 a.status = 'INVESTIGATING';
-                showToast(`รับทราบปัญหา #${a.id} เรียบร้อยแล้ว`, 'success');
+                showToast(`เริ่มตรวจสอบ #${a.id} เรียบร้อยแล้ว`, 'success');
             }
             closeModal();
             renderTable();
@@ -1184,7 +1382,7 @@
             renderResolveFileList();
             document.getElementById('resolveModalIcon').innerHTML = icon('check', 20);
             document.getElementById('resolveModalDesc').innerHTML =
-                `คุณกำลังจะทำเครื่องหมายว่า Error <b>#${a.id}</b> (Booking <b>#${a.bookingId}</b>) แก้ไขแล้ว กรุณาระบุเหตุผลหรือสรุปวิธีแก้ไข`;
+                `คุณกำลังจะตัดสินเคส <b>#${a.id}</b> ของ <b>${a.userEmail}</b> ว่าไม่พบความผิด กรุณาระบุเหตุผลประกอบ`;
 
             document.getElementById('resolveModalOverlay').classList.add('open');
         }
@@ -1230,12 +1428,12 @@
             const a = alerts.find(x => x.id === pendingResolveId);
             if (!a) return;
 
-            a.status = 'RESOLVED';
+            a.status = 'CLEARED';
             a.resolveReason = document.getElementById('resolveReason').value.trim();
             a.attachments = resolveFiles.map(f => f.name);
 
             const fileNote = a.attachments.length ? ` (แนบไฟล์ ${a.attachments.length} รายการ)` : '';
-            showToast(`ทำเครื่องหมาย #${a.id} ว่าแก้ไขแล้วเรียบร้อย${fileNote}`, 'success');
+            showToast(`ทำเครื่องหมาย #${a.id} ว่าไม่พบความผิดเรียบร้อย${fileNote}`, 'success');
             
             closeResolveModal();
             renderTable();
@@ -1254,7 +1452,7 @@
             document.getElementById('actionModalIcon').innerHTML = icon(action.icon, 20);
             document.getElementById('actionModalTitle').innerText = action.label;
             document.getElementById('actionModalDesc').innerHTML =
-                `คุณกำลังจะดำเนินการ <b>${action.label}</b> สำหรับ Booking <b>#${a.bookingId}</b> (Error #${a.id}) การกระทำนี้จะเปลี่ยนสถานะเป็นแก้ไขแล้ว`;
+                `คุณกำลังจะดำเนินการ <b>${action.label}</b> กับบัญชี <b>${a.userEmail}</b> สำหรับเคส <b>#${a.id}</b> กรุณาตรวจหลักฐานก่อนยืนยัน`;
 
             const btn = document.getElementById('actionConfirmBtn');
             btn.className = 'btn-primary' + (action.danger ? ' danger' : '');
@@ -1272,7 +1470,8 @@
             const a = alerts.find(x => x.id === currentDrawerAlertId);
             if (!a) return;
 
-            a.status = 'RESOLVED';
+            a.status = pendingQuickAction.targetStatus || 'WARNED';
+            a.resolveReason = document.getElementById('actionReason').value.trim();
             showToast(`ดำเนินการ "${pendingQuickAction.label}" สำเร็จ`, 'success');
 
             closeActionModal();

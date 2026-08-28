@@ -50,19 +50,22 @@
         .container { padding: 30px; display: flex; flex-direction: column; gap: 20px; width: 100%; min-width: 0; }
 
         /* Toolbar & Filter Form */
-        .toolbar-card { background-color: var(--card-white); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px 20px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-        .filter-field { display: flex; flex-direction: column; gap: 6px; }
-        .filter-field label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.02em; }
-        
-        .input-text, .select-option { height: 40px; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13.5px; background-color: white; color: var(--text-dark); }
-        .input-text:focus, .select-option:focus { outline: none; border-color: var(--primary-navy); }
-        .filter-field .input-text { min-width: 220px; }
-        .select-option { appearance: none; -webkit-appearance: none; padding-right: 32px; cursor: pointer; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>"); background-repeat: no-repeat; background-position: right 10px center; }
+        .toolbar-card { background-color: var(--card-white); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px 20px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: center; }
+        .filter-field { min-width: 0; }
+        .filter-field.search-field { grid-column: span 2; }
+        .input-text { width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; background-color: white; color: var(--text-dark); outline: none; transition: border-color .15s, box-shadow .15s; }
+        .input-text:hover { border-color: var(--text-muted); }
+        .input-text:focus { border-color: var(--primary-navy); box-shadow: 0 0 0 2px rgba(11,47,97,0.1); }
+        .input-text::placeholder { color: var(--text-muted); }
+        .native-filter { display:none !important; }
 
-        .custom-date-range { display: flex; align-items: flex-end; gap: 8px; }
-        .date-input { height: 40px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; color: var(--text-dark); background-color: white; }
-        .date-input:focus { outline: none; border-color: var(--primary-navy); }
-        .date-sep { font-size: 13px; color: var(--text-muted); padding-bottom: 10px; }
+        .custom-date-range { grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .date-input { width:100%; height:40px; padding:0 10px; border:1px solid var(--border-color); border-radius:6px; font-size:13px; color:var(--text-dark); background:#fff; outline:none; transition:border-color .15s, box-shadow .15s; }
+        .date-input:hover { border-color: var(--text-muted); }
+        .date-input:focus { border-color: var(--primary-navy); box-shadow:0 0 0 2px rgba(11,47,97,0.1); }
+        @media (max-width: 1180px) { .toolbar-card { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+        @media (max-width: 900px) { .toolbar-card { grid-template-columns: repeat(2, minmax(0,1fr)); } .filter-field.search-field { grid-column: span 2; } }
+        @media (max-width: 640px) { .toolbar-card { grid-template-columns: 1fr; } .filter-field.search-field, .custom-date-range { grid-column: span 1; } .custom-date-range { grid-template-columns: 1fr; } }
 
         .btn-action { height: 40px; padding: 0 16px; background-color: white; border: 1px solid var(--border-dark); border-radius: 6px; font-size: 13.5px; font-weight: 500; cursor: pointer; white-space: nowrap; }
         .btn-action:hover { background-color: var(--text-dark); color: white; }
@@ -91,13 +94,6 @@
         .cat-SECURITY_AUDIT { background: var(--warning-bg); color: var(--warning-text); }
 
         /* Status Pill */
-        .status-pill { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-        .status-SUCCESS { background: var(--success-bg); color: var(--success-text); }
-        .status-FAILED { background: var(--critical-bg); color: var(--critical-text); }
-        .status-PENDING { background: var(--info-bg); color: var(--info-text); }
-        .status-ALERT { background: var(--warning-bg); color: var(--warning-text); }
-        .status-BLOCKED { background: var(--blocked-bg); color: var(--blocked-text); }
-        .status-CANCELLED { background: var(--muted-bg); color: var(--muted-text); }
 
         .empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); font-size: 14px; }
 
@@ -111,7 +107,7 @@
         .select-field select { height: 40px; width: 100%; padding: 0 30px 0 36px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; color: var(--text-dark); background: #fff; outline: none; appearance: none; cursor: pointer; }
         .select-field select:focus { border-color: var(--primary-navy); }
         
-        .custom-dropdown { position: relative; width: 200px; }
+        .custom-dropdown { position: relative; width: 100%; min-width: 0; }
         .cd-trigger { height: 40px; border: 1px solid var(--border-color); border-radius: 6px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: #fff; font-size: 13px; color: var(--text-dark); transition: border-color 0.15s; }
         .cd-trigger:hover { border-color: var(--text-muted); }
         .cd-trigger.active { border-color: var(--primary-navy); box-shadow: 0 0 0 2px rgba(11,47,97,0.1); }
@@ -119,7 +115,7 @@
         .cd-trigger-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
         .cd-trigger svg.caret { color: var(--text-muted); flex-shrink: 0; }
         
-        .cd-menu { position: absolute; top: calc(100% + 6px); left: 0; width: 280px; background: #fff; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 25px rgba(15,23,42,0.1); z-index: 100; display: none; flex-direction: column; overflow: hidden; }
+        .cd-menu { position: absolute; top: calc(100% + 6px); left: 0; width: max(100%, 280px); background: #fff; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 25px rgba(15,23,42,0.1); z-index: 100; display: none; flex-direction: column; overflow: hidden; }
         .cd-menu.show { display: flex; animation: slideDown 0.15s ease-out forwards; transform-origin: top; }
         @keyframes slideDown { from{opacity:0; transform:scaleY(0.95);} to{opacity:1; transform:scaleY(1);} }
         
@@ -189,98 +185,42 @@
 
             <!-- Toolbar & Filter -->
             <div class="toolbar-card">
-                <div class="filter-field" style="flex: 1; min-width: 220px;">
-                    <label>ค้นหา</label>
-                    <input type="text" class="input-text" id="searchInput" onkeyup="renderTable()" placeholder="พิมพ์ User ID, คำอธิบายกิจกรรม หรือ IP Address...">
+                <div class="filter-field search-field">
+                    <input type="text" class="input-text" id="searchInput" onkeyup="renderTable()" placeholder="ค้นหา Email, กิจกรรม หรือ Public IP...">
                 </div>
-                
-                <!-- Custom Dropdown: องค์กร -->
+
                 <div class="filter-field">
-                    <label>องค์กร / ผู้จัด</label>
                     <div class="custom-dropdown" id="orgDropdown">
-                        <div class="cd-trigger" id="orgTrigger">
-                            <div class="cd-trigger-inner">
-                                <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M3 7v14"/><path d="M21 7v14"/><path d="M6 21V3h12v18"/><path d="M10 7h4"/><path d="M10 11h4"/><path d="M10 15h4"/></svg>
-                                <span class="cd-trigger-text" id="orgSelectedText">ทุกองค์กร / ผู้จัด</span>
-                            </div>
-                            <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                        </div>
-                        <div class="cd-menu" id="orgMenu">
-                            <div class="cd-search">
-                                <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                                <input type="text" id="orgSearch" placeholder="Search company name...">
-                            </div>
-                            <div class="cd-list" id="orgList"></div>
-                        </div>
+                        <div class="cd-trigger" id="orgTrigger"><div class="cd-trigger-inner"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M3 7v14"/><path d="M21 7v14"/><path d="M6 21V3h12v18"/><path d="M10 7h4"/><path d="M10 11h4"/><path d="M10 15h4"/></svg><span class="cd-trigger-text" id="orgSelectedText">ทุกองค์กร / ผู้จัด</span></div><svg class="ic caret" width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+                        <div class="cd-menu" id="orgMenu"><div class="cd-search"><svg class="ic" width="15" height="15" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="orgSearch" placeholder="Search company name..."></div><div class="cd-list" id="orgList"></div></div>
                     </div>
                 </div>
 
-                <!-- Custom Dropdown: งานคอนเสิร์ต -->
                 <div class="filter-field">
-                    <label>งานคอนเสิร์ต</label>
                     <div class="custom-dropdown" id="evtDropdown">
-                        <div class="cd-trigger" id="evtTrigger">
-                            <div class="cd-trigger-inner">
-                                <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                <span class="cd-trigger-text" id="evtSelectedText">งานคอนเสิร์ตทั้งหมด</span>
-                            </div>
-                            <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                        </div>
-                        <div class="cd-menu" id="evtMenu">
-                            <div class="cd-search">
-                                <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                                <input type="text" id="evtSearch" placeholder="Search event name...">
-                            </div>
-                            <div class="cd-list" id="evtList"></div>
-                        </div>
+                        <div class="cd-trigger" id="evtTrigger"><div class="cd-trigger-inner"><svg class="ic" width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span class="cd-trigger-text" id="evtSelectedText">งานคอนเสิร์ตทั้งหมด</span></div><svg class="ic caret" width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+                        <div class="cd-menu" id="evtMenu"><div class="cd-search"><svg class="ic" width="15" height="15" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="evtSearch" placeholder="Search event name..."></div><div class="cd-list" id="evtList"></div></div>
                     </div>
                 </div>
 
                 <div class="filter-field">
-                    <label>บทบาทผู้ดำเนินการ (Role)</label>
-                    <select class="select-option" id="roleFilter" onchange="onRoleChange()">
-                        <option value="ALL">ทุกบทบาท</option>
-                        <option value="ADMIN">Admin (ผู้ดูแลระบบ)</option>
-                        <option value="ORGANIZER">Event Organizer</option>
-                        <option value="CUSTOMER">Customer (ผู้ใช้ทั่วไป)</option>
-                        <option value="SYSTEM">System (ระบบอัตโนมัติ)</option>
-                    </select>
+                    <select class="native-filter" id="roleFilter" onchange="onRoleChange()"><option value="ALL">ทุกบทบาท</option><option value="ADMIN">Admin (ผู้ดูแลระบบ)</option><option value="ORGANIZER">Event Organizer</option><option value="CUSTOMER">Customer (ผู้ใช้ทั่วไป)</option><option value="SYSTEM">System (ระบบอัตโนมัติ)</option></select>
+                    <div class="custom-dropdown" id="roleDropdown"><div class="cd-trigger" id="roleTrigger"><div class="cd-trigger-inner"><svg class="ic" width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0 1 13 0"/></svg><span class="cd-trigger-text" id="roleSelectedText">ทุกบทบาท</span></div><svg class="ic caret" width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div><div class="cd-menu" id="roleMenu"><div class="cd-list" id="roleList"></div></div></div>
                 </div>
 
                 <div class="filter-field">
-                    <label>หมวดหมู่ Log</label>
-                    <select class="select-option" id="typeFilter" onchange="renderTable()">
-                        <option value="ALL">หมวดหมู่ทั้งหมด</option>
-                    </select>
+                    <select class="native-filter" id="typeFilter" onchange="renderTable()"><option value="ALL">หมวดหมู่ทั้งหมด</option></select>
+                    <div class="custom-dropdown" id="typeDropdown"><div class="cd-trigger" id="typeTrigger"><div class="cd-trigger-inner"><svg class="ic" width="15" height="15" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg><span class="cd-trigger-text" id="typeSelectedText">หมวดหมู่ทั้งหมด</span></div><svg class="ic caret" width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div><div class="cd-menu" id="typeMenu"><div class="cd-list" id="typeList"></div></div></div>
                 </div>
 
-                <!-- ตัวกรองช่วงเวลา -->
                 <div class="filter-field">
-                    <label>ช่วงเวลา</label>
-                    <div class="select-field">
-                        <svg class="ic pre" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        <select id="dateRangeFilter" onchange="onDateRangeChange()">
-                            <option value="all">ทุกช่วงเวลา</option>
-                            <option value="today">วันนี้</option>
-                            <option value="7d">7 วันล่าสุด</option>
-                            <option value="30d">30 วันล่าสุด</option>
-                            <option value="custom">กำหนดเอง...</option>
-                        </select>
-                        <svg class="ic post" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
+                    <select class="native-filter" id="dateRangeFilter" onchange="onDateRangeChange()"><option value="all">ทุกช่วงเวลา</option><option value="today">วันนี้</option><option value="7d">7 วันล่าสุด</option><option value="30d">30 วันล่าสุด</option><option value="custom">กำหนดเอง...</option></select>
+                    <div class="custom-dropdown" id="dateDropdown"><div class="cd-trigger" id="dateTrigger"><div class="cd-trigger-inner"><svg class="ic" width="15" height="15" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="cd-trigger-text" id="dateSelectedText">ทุกช่วงเวลา</span></div><svg class="ic caret" width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div><div class="cd-menu" id="dateMenu"><div class="cd-list" id="dateList"></div></div></div>
                 </div>
 
-                <!-- กำหนดกรองวันที่เอง -->
                 <div class="custom-date-range" id="customDateRange" style="display:none;">
-                    <div class="filter-field">
-                        <label>จากวันที่</label>
-                        <input type="date" class="date-input" id="dateFrom" onchange="renderTable()">
-                    </div>
-                    <span class="date-sep">ถึง</span>
-                    <div class="filter-field">
-                        <label>ถึงวันที่</label>
-                        <input type="date" class="date-input" id="dateTo" onchange="renderTable()">
-                    </div>
+                    <input type="date" class="date-input" id="dateFrom" onchange="renderTable()" title="จากวันที่">
+                    <input type="date" class="date-input" id="dateTo" onchange="renderTable()" title="ถึงวันที่">
                 </div>
 
                 <button class="btn-action" onclick="resetFilter()">รีเซ็ตตัวกรอง</button>
@@ -295,9 +235,9 @@
                             <tr>
                                 <th>วัน-เวลา (Timestamp)</th>
                                 <th>หมวดหมู่ Log</th>
-                                <th>ผู้ดำเนินการ (User / Role)</th>
+                                <th>ผู้ดำเนินการ (Email / Role)</th>
                                 <th>รายละเอียดกิจกรรม</th>
-                                <th>IP Address</th>
+                                <th>Public IP</th>
                             </tr>
                         </thead>
                         <tbody id="logTableBody"></tbody>
@@ -332,6 +272,11 @@
             <div class="detail-modal-body">
                 <div class="detail-info-grid" id="detailInfoGrid"></div>
 
+                <div id="detailMetaWrap" style="display:none;">
+                    <div class="detail-section-title" id="detailMetaTitle">ข้อมูลเฉพาะหมวดหมู่</div>
+                    <div class="detail-info-grid" id="detailMetaGrid"></div>
+                </div>
+
                 <div>
                     <div class="detail-section-title">รายละเอียดกิจกรรม</div>
                     <div class="detail-desc-box" id="detailDescBox"></div>
@@ -352,14 +297,75 @@
     <!-- JavaScript สำหรับระบบ Log -->
     <script>
         // ---------- หมวดหมู่ Log ----------
+        // แต่ละหมวดหมู่มีชุด "metadata fields" ของตัวเอง (จำลอง JSONB metadata column)
+        // การเก็บข้อมูลจริงจึงต่างกันตาม category แม้จะอยู่ใน log table เดียวกัน
         const CATEGORY_META = {
-            USER_AUTH:        { label: '[USER_AUTH] เข้า/ออกระบบ',        css: 'cat-USER_AUTH' },
-            BOOKING:           { label: '[BOOKING] จองตั๋ว/ชำระเงิน',       css: 'cat-BOOKING' },
-            ADMIN_ACTION:      { label: '[ADMIN_ACTION] การแก้ไขโดย Admin', css: 'cat-ADMIN_ACTION' },
-            SYSTEM_ERROR:      { label: '[SYSTEM_ERROR] ข้อผิดพลาดระบบ',   css: 'cat-SYSTEM_ERROR' },
-            EVENT_MANAGEMENT:  { label: '[EVENT_MANAGEMENT] จัดการคอนเสิร์ต', css: 'cat-EVENT_MANAGEMENT' },
-            TICKET_USAGE:      { label: '[TICKET_USAGE] การใช้งานตั๋ว',    css: 'cat-TICKET_USAGE' },
-            SECURITY_AUDIT:    { label: '[SECURITY_AUDIT] ความปลอดภัย',   css: 'cat-SECURITY_AUDIT' }
+            USER_AUTH: {
+                label: '[USER_AUTH] เข้า/ออกระบบ', css: 'cat-USER_AUTH',
+                fields: [
+                    { key: 'method',       label: 'วิธีเข้าสู่ระบบ' },
+                    { key: 'phone_masked', label: 'เบอร์โทรศัพท์' },
+                    { key: 'session_id',   label: 'Session ID' }
+                ]
+            },
+            BOOKING: {
+                label: '[BOOKING] จองตั๋ว/ชำระเงิน', css: 'cat-BOOKING',
+                fields: [
+                    { key: 'booking_id',      label: 'รหัสคำสั่งซื้อ' },
+                    { key: 'event_name',      label: 'งานคอนเสิร์ต' },
+                    { key: 'zone',            label: 'โซนที่นั่ง' },
+                    { key: 'seat_no',         label: 'เลขที่นั่ง' },
+                    { key: 'qty',             label: 'จำนวนตั๋ว' },
+                    { key: 'amount',          label: 'ยอดชำระ' },
+                    { key: 'payment_method',  label: 'ช่องทางชำระเงิน' }
+                ]
+            },
+            ADMIN_ACTION: {
+                label: '[ADMIN_ACTION] การแก้ไขโดย Admin', css: 'cat-ADMIN_ACTION',
+                fields: [
+                    { key: 'field_changed', label: 'ฟิลด์ที่แก้ไข' },
+                    { key: 'old_value',     label: 'ค่าเดิม' },
+                    { key: 'new_value',     label: 'ค่าใหม่' },
+                    { key: 'reason',        label: 'เหตุผล' }
+                ]
+            },
+            SYSTEM_ERROR: {
+                label: '[SYSTEM_ERROR] ข้อผิดพลาดระบบ', css: 'cat-SYSTEM_ERROR',
+                fields: [
+                    { key: 'service',      label: 'Service ที่เกิดข้อผิดพลาด' },
+                    { key: 'error_code',   label: 'รหัสข้อผิดพลาด' },
+                    { key: 'http_status',  label: 'HTTP Status' },
+                    { key: 'retry_count',  label: 'จำนวนครั้งที่ลองใหม่' }
+                ]
+            },
+            EVENT_MANAGEMENT: {
+                label: '[EVENT_MANAGEMENT] จัดการคอนเสิร์ต', css: 'cat-EVENT_MANAGEMENT',
+                fields: [
+                    { key: 'event_id',        label: 'รหัสงาน' },
+                    { key: 'event_name',      label: 'ชื่องาน' },
+                    { key: 'zones_created',   label: 'จำนวนโซนที่สร้าง' },
+                    { key: 'starting_price',  label: 'ราคาเริ่มต้น' }
+                ]
+            },
+            TICKET_USAGE: {
+                label: '[TICKET_USAGE] การใช้งานตั๋ว', css: 'cat-TICKET_USAGE',
+                fields: [
+                    { key: 'ticket_id',    label: 'รหัสตั๋ว' },
+                    { key: 'gate',         label: 'ประตูทางเข้า' },
+                    { key: 'scan_result',  label: 'ผลการสแกน' },
+                    { key: 'minutes_since_first_scan', label: 'นาทีหลังสแกนครั้งแรก' }
+                ]
+            },
+            SECURITY_AUDIT: {
+                label: '[SECURITY_AUDIT] ความปลอดภัย', css: 'cat-SECURITY_AUDIT',
+                fields: [
+                    { key: 'pattern',           label: 'รูปแบบที่ตรวจพบ' },
+                    { key: 'failed_attempts',   label: 'จำนวนครั้งที่ผิดพลาด' },
+                    { key: 'window_minutes',    label: 'ภายในช่วงเวลา (นาที)' },
+                    { key: 'lock_minutes',      label: 'ระยะเวลาที่ถูกล็อก (นาที)' },
+                    { key: 'alert_id',          label: 'รหัส Alert' }
+                ]
+            }
         };
 
         /* ---------------- State & Data Sources ---------------- */
@@ -385,8 +391,7 @@
         function setupDropdown(dropdownId, triggerId, menuId, searchId, listId, dataRenderer) {
           const trigger = document.getElementById(triggerId);
           const menu = document.getElementById(menuId);
-          const search = document.getElementById(searchId);
-          
+          const search = searchId ? document.getElementById(searchId) : null;
           trigger.addEventListener('click', (e) => {
             e.stopPropagation();
             const isOpen = menu.classList.contains('show');
@@ -395,14 +400,14 @@
             if (!isOpen) {
               menu.classList.add('show');
               trigger.classList.add('active');
-              search.value = '';
-              dataRenderer('');
-              setTimeout(() => search.focus(), 100);
+              if (search) { search.value=''; dataRenderer(''); setTimeout(() => search.focus(), 100); }
+              else { dataRenderer(''); }
             }
           });
-
-          search.addEventListener('click', e => e.stopPropagation());
-          search.addEventListener('input', e => dataRenderer(e.target.value.toLowerCase()));
+          if (search) {
+            search.addEventListener('click', e => e.stopPropagation());
+            search.addEventListener('input', e => dataRenderer(e.target.value.toLowerCase()));
+          }
         }
 
         document.addEventListener('click', () => {
@@ -484,90 +489,82 @@
             SYSTEM:    { label: 'System (ระบบอัตโนมัติ)', categories: ['SYSTEM_ERROR', 'SECURITY_AUDIT'] }
         };
 
-        const STATUS_LABEL = {
-            SUCCESS: 'สำเร็จ (SUCCESS)',
-            FAILED: 'ล้มเหลว (FAILED)',
-            PENDING: 'รอดำเนินการ (PENDING)',
-            ALERT: 'แจ้งเตือน (ALERT)',
-            BLOCKED: 'ถูกบล็อก (BLOCKED)',
-            CANCELLED: 'ยกเลิก (CANCELLED)'
-        };
 
         // ---------- Mock Data ----------
         const logs = [
             {
                 id: 'LOG-90775-01', time: '22/07/2026 23:10:05', category: 'ADMIN_ACTION', role: 'ADMIN',
-                actor: 'Admin (#ADM-001)', ip: '125.25.77.10', device: 'Chrome 126 / macOS',
-                desc: 'ปรับแก้ไขสถานะคำสั่งซื้อ #BK-90775 เป็น "ชำระเงินสำเร็จ" | เหตุผล: ยืนยันสลิปโอนเงินส่วนที่เหลือถูกต้อง',
-                status: 'SUCCESS', ref: { type: 'booking', id: 'BK-90775' }
+                actor: 'admin01@ticket.example.com (Admin)', ip: '125.25.77.10',
+                desc: 'ปรับแก้ไขสถานะคำสั่งซื้อ #BK-90775 เป็น "ชำระเงินสำเร็จ" | เหตุผล: ยืนยันสลิปโอนเงินส่วนที่เหลือถูกต้อง', ref: { type: 'booking', id: 'BK-90775' },
+                meta: { field_changed: 'order_status', old_value: 'PENDING_PAYMENT', new_value: 'PAID', reason: 'ยืนยันสลิปโอนเงินส่วนที่เหลือถูกต้อง' }
             },
             {
                 id: 'LOG-90775-00', time: '22/07/2026 23:02:40', category: 'BOOKING', role: 'CUSTOMER',
-                actor: 'User (#USR-001)', ip: '49.229.12.88', device: 'Safari 17 / iOS 18',
-                desc: 'ทำรายการจองตั๋ว คอนเสิร์ต Summer Music Fest โซน Regular (B12) จำนวน 1 ใบ (BK-90775)',
-                status: 'SUCCESS', ref: { type: 'booking', id: 'BK-90775' }
+                actor: 'narin@example.com (Customer)', ip: '49.229.12.88',
+                desc: 'ทำรายการจองตั๋ว คอนเสิร์ต Summer Music Fest โซน Regular (B12) จำนวน 1 ใบ (BK-90775)', ref: { type: 'booking', id: 'BK-90775' },
+                meta: { booking_id: 'BK-90775', event_name: 'Summer Music Fest', zone: 'Regular', seat_no: 'B12', qty: 1, amount: '฿1,590', payment_method: 'บัตรเครดิต/เดบิต' }
             },
             {
                 id: 'LOG-90502', time: '22/07/2026 22:58:03', category: 'BOOKING', role: 'CUSTOMER',
-                actor: 'User (#USR-045)', ip: '110.164.20.5', device: 'Chrome 126 / Android 14',
-                desc: 'รอการยืนยันสถานะชำระเงินผ่าน PromptPay สำหรับคำสั่งซื้อ #BK-90502 (รอ Callback จาก Payment Gateway)',
-                status: 'PENDING', ref: { type: 'booking', id: 'BK-90502' }
+                actor: 'pimchanok@example.com (Customer)', ip: '110.164.20.5',
+                desc: 'รอการยืนยันสถานะชำระเงินผ่าน PromptPay สำหรับคำสั่งซื้อ #BK-90502 (รอ Callback จาก Payment Gateway)', ref: { type: 'booking', id: 'BK-90502' },
+                meta: { booking_id: 'BK-90502', event_name: 'Summer Music Fest', zone: 'VIP', seat_no: 'A05', qty: 2, amount: '฿6,000', payment_method: 'PromptPay' }
             },
             {
                 id: 'LOG-58235', time: '22/07/2026 22:50:40', category: 'SECURITY_AUDIT', role: 'SYSTEM',
-                actor: 'System Controller', ip: '127.0.0.1 (Internal)', device: 'Fraud Detection Engine v2',
-                desc: 'ตรวจพบพฤติกรรมกั๊กที่นั่ง/ปั๊มโค้ดส่วนลดผิดปกติจาก User (#USR-070) เกินเกณฑ์ที่กำหนดในคำสั่งซื้อ #BK-10250',
-                status: 'ALERT', ref: { type: 'alert', id: 'ERR-58235', extra: 'Seat Hoarding / Quota Abuse' },
-                notif: 'ระบบส่งการแจ้งเตือนนี้ไปยังหน้า "รายการจองผิดปกติ (Fraud Monitor)" โดยอัตโนมัติ เพื่อให้ Admin ตรวจสอบและดำเนินการต่อ (อ้างอิง Alert #ERR-58235)'
+                actor: 'System (ระบบอัตโนมัติ)', ip: null,
+                desc: 'ตรวจพบพฤติกรรมกั๊กที่นั่ง/ปั๊มโค้ดส่วนลดผิดปกติจากบัญชี user070@example.com เกินเกณฑ์ที่กำหนดในคำสั่งซื้อ #BK-10250', ref: { type: 'alert', id: 'ERR-58235', extra: 'Seat Hoarding / Quota Abuse' },
+                notif: 'ระบบส่งการแจ้งเตือนนี้ไปยังหน้า "รายการจองผิดปกติ (Fraud Monitor)" โดยอัตโนมัติ เพื่อให้ Admin ตรวจสอบและดำเนินการต่อ (อ้างอิง Alert #ERR-58235)',
+                meta: { pattern: 'Seat Hoarding / Quota Abuse', failed_attempts: null, window_minutes: null, lock_minutes: null, alert_id: 'ERR-58235' }
             },
             {
                 id: 'LOG-90775-A', time: '22/07/2026 22:45:18', category: 'ADMIN_ACTION', role: 'ADMIN',
-                actor: 'Admin (#ADM-001)', ip: '125.25.77.10', device: 'Chrome 126 / macOS',
-                desc: 'ระงับการใช้งานบัญชีผู้ใช้ (Ban User) #USR-003 | เหตุผล: ตรวจพบพฤติกรรมจองตั๋วถี่ผิดปกติเข้าข่ายบอท',
-                status: 'SUCCESS', ref: { type: 'user', id: 'USR-003' }
+                actor: 'admin01@ticket.example.com (Admin)', ip: '125.25.77.10',
+                desc: 'ระงับการใช้งานบัญชีผู้ใช้ badactor@example.com | เหตุผล: ตรวจพบพฤติกรรมจองตั๋วถี่ผิดปกติเข้าข่ายบอท', ref: { type: 'user', id: 'USR-003' },
+                meta: { field_changed: 'account_status', old_value: 'ACTIVE', new_value: 'BANNED', reason: 'ตรวจพบพฤติกรรมจองตั๋วถี่ผิดปกติเข้าข่ายบอท' }
             },
             {
                 id: 'LOG-90510', time: '22/07/2026 22:15:00', category: 'SYSTEM_ERROR', role: 'SYSTEM',
-                actor: 'System Controller', ip: '127.0.0.1 (Internal)', device: 'Payment Service v3.2',
-                desc: 'เกิดข้อผิดพลาดในการเชื่อมต่อ Payment Gateway API Timeout สำหรับคำสั่งซื้อ #BK-90510',
-                status: 'FAILED', ref: { type: 'booking', id: 'BK-90510' }
+                actor: 'System (ระบบอัตโนมัติ)', ip: null,
+                desc: 'เกิดข้อผิดพลาดในการเชื่อมต่อ Payment Gateway API Timeout สำหรับคำสั่งซื้อ #BK-90510', ref: { type: 'booking', id: 'BK-90510' },
+                meta: { service: 'Payment Service v3.2', error_code: 'GATEWAY_TIMEOUT', http_status: '504', retry_count: 3 }
             },
             {
                 id: 'LOG-90045', time: '22/07/2026 21:40:22', category: 'TICKET_USAGE', role: 'ORGANIZER',
-                actor: 'Gate Staff (#ORG-012)', ip: '10.20.4.8 (LAN)', device: 'Scanner App v1.4 (Android)',
-                desc: 'สแกน QR Code ตั๋ว #TKT-44210 (Booking #BK-88012) เข้างาน Summer Music Fest สำเร็จ ประตู Gate A',
-                status: 'SUCCESS', ref: { type: 'ticket', id: 'TKT-44210' }
+                actor: 'gate.staff@organizer.example.com (Organizer)', ip: '203.0.113.42',
+                desc: 'สแกน QR Code ตั๋ว #TKT-44210 (Booking #BK-88012) เข้างาน Summer Music Fest สำเร็จ ประตู Gate A', ref: { type: 'ticket', id: 'TKT-44210' },
+                meta: { ticket_id: 'TKT-44210', gate: 'Gate A', scan_result: 'สำเร็จ (ผ่านเข้างาน)', minutes_since_first_scan: null }
             },
             {
                 id: 'LOG-89990', time: '22/07/2026 21:12:09', category: 'TICKET_USAGE', role: 'ORGANIZER',
-                actor: 'Gate Staff (#ORG-012)', ip: '10.20.4.8 (LAN)', device: 'Scanner App v1.4 (Android)',
-                desc: 'พยายามสแกนตั๋ว #TKT-44210 ซ้ำที่ประตู Gate B แต่ตั๋วถูกใช้งานไปแล้วก่อนหน้านี้ 91 นาที',
-                status: 'BLOCKED', ref: { type: 'ticket', id: 'TKT-44210' }
+                actor: 'gate.staff@organizer.example.com (Organizer)', ip: '203.0.113.42',
+                desc: 'พยายามสแกนตั๋ว #TKT-44210 ซ้ำที่ประตู Gate B แต่ตั๋วถูกใช้งานไปแล้วก่อนหน้านี้ 91 นาที', ref: { type: 'ticket', id: 'TKT-44210' },
+                meta: { ticket_id: 'TKT-44210', gate: 'Gate B', scan_result: 'ถูกปฏิเสธ (ตั๋วถูกใช้ไปแล้ว)', minutes_since_first_scan: 91 }
             },
             {
                 id: 'LOG-88900', time: '22/07/2026 20:55:30', category: 'EVENT_MANAGEMENT', role: 'ORGANIZER',
-                actor: 'Organizer (#ORG-005)', ip: '203.144.5.20', device: 'Chrome 126 / Windows 11',
-                desc: 'สร้างคอนเสิร์ตใหม่ "Rainy Night Live 2026" และกำหนดผังที่นั่ง 4 โซน ราคาเริ่มต้น 990 บาท',
-                status: 'SUCCESS', ref: { type: 'event', id: 'EVT-1042' }
+                actor: 'organizer05@example.com (Organizer)', ip: '203.144.5.20',
+                desc: 'สร้างคอนเสิร์ตใหม่ "Rainy Night Live 2026" และกำหนดผังที่นั่ง 4 โซน ราคาเริ่มต้น 990 บาท', ref: { type: 'event', id: 'EVT-1042' },
+                meta: { event_id: 'EVT-1042', event_name: 'Rainy Night Live 2026', zones_created: 4, starting_price: '฿990' }
             },
             {
                 id: 'LOG-88010', time: '22/07/2026 20:30:15', category: 'SECURITY_AUDIT', role: 'SYSTEM',
-                actor: 'System Controller', ip: '127.0.0.1 (Internal)', device: 'Auth Guard Middleware',
-                desc: 'ตรวจพบความพยายามเข้าสู่ระบบผิดพลาดซ้ำ 7 ครั้งภายใน 2 นาทีจาก IP 118.174.30.9 บนบัญชี #USR-118',
-                status: 'BLOCKED', ref: { type: 'user', id: 'USR-118' },
-                notif: 'ระบบล็อกบัญชีชั่วคราว 15 นาที และส่งการแจ้งเตือนไปยังหน้า "รายการจองผิดปกติ (Fraud Monitor)" เพื่อให้ Admin ตรวจสอบเพิ่มเติม'
+                actor: 'System (ระบบอัตโนมัติ)', ip: null,
+                desc: 'ตรวจพบความพยายามเข้าสู่ระบบผิดพลาดซ้ำ 7 ครั้งภายใน 2 นาทีจาก IP 118.174.30.9 บนบัญชี user118@example.com', ref: { type: 'user', id: 'USR-118' },
+                notif: 'ระบบล็อกบัญชีชั่วคราว 15 นาที และส่งการแจ้งเตือนไปยังหน้า "รายการจองผิดปกติ (Fraud Monitor)" เพื่อให้ Admin ตรวจสอบเพิ่มเติม',
+                meta: { pattern: 'Repeated Login Failure', failed_attempts: 7, window_minutes: 2, lock_minutes: 15, alert_id: null }
             },
             {
                 id: 'LOG-87500', time: '22/07/2026 19:50:00', category: 'ADMIN_ACTION', role: 'ADMIN',
-                actor: 'Admin (#ADM-002)', ip: '125.25.77.44', device: 'Firefox 128 / Windows 11',
-                desc: 'ยกเลิกคำขอคืนเงินคำสั่งซื้อ #BK-87500 | เหตุผล: ลูกค้าขอยกเลิกคำขอด้วยตนเองผ่านแชท',
-                status: 'CANCELLED', ref: { type: 'booking', id: 'BK-87500' }
+                actor: 'admin02@ticket.example.com (Admin)', ip: '125.25.77.44',
+                desc: 'ยกเลิกคำขอคืนเงินคำสั่งซื้อ #BK-87500 | เหตุผล: ลูกค้าขอยกเลิกคำขอด้วยตนเองผ่านแชท', ref: { type: 'booking', id: 'BK-87500' },
+                meta: { field_changed: 'refund_request_status', old_value: 'REQUESTED', new_value: 'CANCELLED', reason: 'ลูกค้าขอยกเลิกคำขอด้วยตนเองผ่านแชท' }
             },
             {
                 id: 'LOG-86200', time: '22/07/2026 19:20:11', category: 'USER_AUTH', role: 'CUSTOMER',
-                actor: 'User (#USR-002)', ip: '182.52.100.12', device: 'Chrome 126 / Windows 11',
-                desc: 'เข้าสู่ระบบ (Login) ผ่านเบอร์โทรศัพท์ 02-123-4567',
-                status: 'SUCCESS', ref: null
+                actor: 'somchai@example.com (Customer)', ip: '182.52.100.12',
+                desc: 'เข้าสู่ระบบ (Login) ผ่านเบอร์โทรศัพท์ 02-123-4567', ref: null,
+                meta: { method: 'เบอร์โทรศัพท์ + OTP', phone_masked: '02-123-45XX', session_id: 'SESS-8f31a2' }
             }
         ];
 
@@ -586,60 +583,70 @@
         function inDateRange(log) {
             const range = document.getElementById('dateRangeFilter').value;
             if (range === 'all') return true;
-
             const t = parseLogTime(log.time);
-
-            if (range === 'today') {
-                return t.toDateString() === NOW_REF.toDateString();
-            }
-            if (range === '7d') {
-                return (NOW_REF - t) <= 7 * 24 * 60 * 60000 && t <= NOW_REF;
-            }
-            if (range === '30d') {
-                return (NOW_REF - t) <= 30 * 24 * 60 * 60000 && t <= NOW_REF;
-            }
+            if (range === 'today') return t.toDateString() === NOW_REF.toDateString();
+            if (range === '7d') return (NOW_REF - t) <= 7 * 24 * 60 * 60000 && t <= NOW_REF;
+            if (range === '30d') return (NOW_REF - t) <= 30 * 24 * 60 * 60000 && t <= NOW_REF;
             if (range === 'custom') {
                 const fromVal = document.getElementById('dateFrom').value;
                 const toVal = document.getElementById('dateTo').value;
-                if (fromVal) {
-                    const from = new Date(fromVal + 'T00:00:00');
-                    if (t < from) return false;
-                }
-                if (toVal) {
-                    const to = new Date(toVal + 'T23:59:59');
-                    if (t > to) return false;
-                }
-                return true;
+                if (fromVal && t < new Date(fromVal + 'T00:00:00')) return false;
+                if (toVal && t > new Date(toVal + 'T23:59:59')) return false;
             }
             return true;
         }
 
         function onDateRangeChange() {
             const range = document.getElementById('dateRangeFilter').value;
-            document.getElementById('customDateRange').style.display = (range === 'custom') ? 'flex' : 'none';
-            if (range !== 'custom') {
-                document.getElementById('dateFrom').value = '';
-                document.getElementById('dateTo').value = '';
-            }
+            document.getElementById('customDateRange').style.display = (range === 'custom') ? 'grid' : 'none';
+            if (range !== 'custom') { document.getElementById('dateFrom').value=''; document.getElementById('dateTo').value=''; }
             renderTable();
+        }
+
+        function renderRoleList() {
+            const selected = document.getElementById('roleFilter').value;
+            document.getElementById('roleList').innerHTML = Object.entries(ROLE_META).map(([value, meta]) => `<div class="cd-item ${selected===value?'selected':''}" onclick="selectRole('${value}')"><div class="cd-info"><span class="cd-title">${meta.label}</span></div></div>`).join('');
+        }
+        function selectRole(value) {
+            document.getElementById('roleFilter').value = value;
+            document.getElementById('roleSelectedText').textContent = ROLE_META[value].label;
+            document.getElementById('roleMenu').classList.remove('show'); document.getElementById('roleTrigger').classList.remove('active');
+            onRoleChange();
         }
 
         function populateCategoryOptions(role) {
             const select = document.getElementById('typeFilter');
             const prevValue = select.value;
             const cats = (role !== 'ALL' && ROLE_META[role]) ? ROLE_META[role].categories : Object.keys(CATEGORY_META);
-
-            select.innerHTML = '<option value="ALL">หมวดหมู่ทั้งหมด</option>' +
-                cats.map(c => `<option value="${c}">${CATEGORY_META[c].label}</option>`).join('');
-
+            select.innerHTML = '<option value="ALL">หมวดหมู่ทั้งหมด</option>' + cats.map(c => `<option value="${c}">${CATEGORY_META[c].label}</option>`).join('');
             select.value = cats.includes(prevValue) ? prevValue : 'ALL';
+            document.getElementById('typeSelectedText').textContent = select.value === 'ALL' ? 'หมวดหมู่ทั้งหมด' : CATEGORY_META[select.value].label;
+            renderTypeList();
         }
-
+        function renderTypeList() {
+            const select = document.getElementById('typeFilter');
+            const selected = select.value;
+            document.getElementById('typeList').innerHTML = Array.from(select.options).map(o => `<div class="cd-item ${selected===o.value?'selected':''}" onclick="selectType('${o.value}')"><div class="cd-info"><span class="cd-title">${o.textContent}</span></div></div>`).join('');
+        }
+        function selectType(value) {
+            const select = document.getElementById('typeFilter'); select.value=value;
+            document.getElementById('typeSelectedText').textContent = select.options[select.selectedIndex].textContent;
+            document.getElementById('typeMenu').classList.remove('show'); document.getElementById('typeTrigger').classList.remove('active');
+            renderTable();
+        }
+        function renderDateList() {
+            const select = document.getElementById('dateRangeFilter'); const selected=select.value;
+            document.getElementById('dateList').innerHTML = Array.from(select.options).map(o => `<div class="cd-item ${selected===o.value?'selected':''}" onclick="selectDateRange('${o.value}')"><div class="cd-info"><span class="cd-title">${o.textContent}</span></div></div>`).join('');
+        }
+        function selectDateRange(value) {
+            const select=document.getElementById('dateRangeFilter'); select.value=value;
+            document.getElementById('dateSelectedText').textContent=select.options[select.selectedIndex].textContent;
+            document.getElementById('dateMenu').classList.remove('show'); document.getElementById('dateTrigger').classList.remove('active');
+            onDateRangeChange();
+        }
         function onRoleChange() {
             const role = document.getElementById('roleFilter').value;
-            populateCategoryOptions(role);
-            updateScopeNote(role);
-            renderTable();
+            populateCategoryOptions(role); updateScopeNote(role); renderTable();
         }
 
         function updateScopeNote(role) {
@@ -662,7 +669,7 @@
                 const matchesSearch = !search ||
                     l.actor.toLowerCase().includes(search) ||
                     l.desc.toLowerCase().includes(search) ||
-                    l.ip.toLowerCase().includes(search);
+                    (l.ip || '').toLowerCase().includes(search);
                 const matchesRole = role === 'ALL' || l.role === role;
                 const matchesCategory = category === 'ALL' || l.category === category;
                 const matchesDate = inDateRange(l);
@@ -689,7 +696,7 @@
                                 ดูรายละเอียด
                             </button>
                         </td>
-                        <td class="mono-text">${l.ip}</td>
+                        <td class="mono-text">${l.ip || '—'}</td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -701,7 +708,9 @@
         function resetFilter() {
             document.getElementById('searchInput').value = '';
             document.getElementById('roleFilter').value = 'ALL';
+            document.getElementById('roleSelectedText').textContent = 'ทุกบทบาท';
             document.getElementById('dateRangeFilter').value = 'all';
+            document.getElementById('dateSelectedText').textContent = 'ทุกช่วงเวลา';
             document.getElementById('customDateRange').style.display = 'none';
             document.getElementById('dateFrom').value = '';
             document.getElementById('dateTo').value = '';
@@ -729,12 +738,25 @@
 
             document.getElementById('detailInfoGrid').innerHTML = `
                 <div><div class="label">ผู้ดำเนินการ</div><div class="value">${l.actor}</div></div>
-                <div><div class="label">IP Address</div><div class="value mono-text">${l.ip}</div></div>
-                <div><div class="label">อุปกรณ์ / แหล่งที่มา</div><div class="value">${l.device}</div></div>
+                <div><div class="label">Public IP</div><div class="value mono-text">${l.ip || '—'}</div></div>
                 ${l.ref ? `<div class="span-2"><div class="label">อ้างอิงที่เกี่ยวข้อง</div><div class="value mono-text">${l.ref.type.toUpperCase()} #${l.ref.id}${l.ref.extra ? ' — ' + l.ref.extra : ''}</div></div>` : ''}
             `;
 
             document.getElementById('detailDescBox').innerText = l.desc;
+
+            // ---- ข้อมูลเฉพาะหมวดหมู่ (จำลอง metadata JSONB ต่อ category) ----
+            const metaWrap = document.getElementById('detailMetaWrap');
+            const metaGrid = document.getElementById('detailMetaGrid');
+            const metaFields = (cat.fields || []).filter(f => l.meta && l.meta[f.key] !== undefined && l.meta[f.key] !== null && l.meta[f.key] !== '');
+            if (metaFields.length > 0) {
+                metaWrap.style.display = 'block';
+                metaGrid.innerHTML = metaFields.map(f => `
+                    <div><div class="label">${f.label}</div><div class="value">${l.meta[f.key]}</div></div>
+                `).join('');
+            } else {
+                metaWrap.style.display = 'none';
+                metaGrid.innerHTML = '';
+            }
 
             const notifWrap = document.getElementById('detailNotifWrap');
             const gotoBtn = document.getElementById('detailGotoBtn');
@@ -760,6 +782,9 @@
         // ---------- Init ----------
         setupDropdown('orgDropdown', 'orgTrigger', 'orgMenu', 'orgSearch', 'orgList', renderOrgList);
         setupDropdown('evtDropdown', 'evtTrigger', 'evtMenu', 'evtSearch', 'evtList', renderEventList);
+        setupDropdown('roleDropdown','roleTrigger','roleMenu',null,'roleList',renderRoleList);
+        setupDropdown('typeDropdown','typeTrigger','typeMenu',null,'typeList',renderTypeList);
+        setupDropdown('dateDropdown','dateTrigger','dateMenu',null,'dateList',renderDateList);
         
         populateCategoryOptions('ALL');
         renderTable();

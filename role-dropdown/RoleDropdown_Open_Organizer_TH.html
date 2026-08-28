@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>บทบาท - Dropdown (Open State) - Organizer</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --bg-white: #FFFFFF;
+        --primary-blue: #2563EB;
+        --text-main: #0F172A;
+        --text-secondary: #475569;
+        --text-muted: #94A3B8;
+        --border-color: #E2E8F0;
+        --border-hover: #CBD5E1;
+
+        --badge-active-bg: #EFF6FF;
+        --badge-active-text: #1D4ED8;
+
+        --radius-md: 10px;
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+        background: #F1F5F9;
+        color: var(--text-main);
+        line-height: 1.5;
+        min-height: 100vh;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 60px 24px;
+    }
+
+    /* Card just to frame the component nicely for the Figma screenshot */
+    .frame {
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 28px;
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .form-group {
+        position: relative;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 6px;
+    }
+
+    .form-label .req {
+        color: #DC2626;
+        margin-left: 2px;
+    }
+
+    /* Trigger (closed look, but rendered in its "focused/open" visual state) */
+    .dropdown-trigger {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        font-size: 14px;
+        color: var(--text-main);
+        background-color: var(--bg-white);
+        border: 1px solid var(--primary-blue);
+        border-radius: var(--radius-md);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        cursor: pointer;
+    }
+
+    .dropdown-trigger .chevron {
+        color: var(--text-muted);
+        flex-shrink: 0;
+        transform: rotate(180deg);
+        transition: transform 0.15s ease;
+    }
+
+    .field-hint {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 6px;
+    }
+
+    /* Open option list */
+    .dropdown-list {
+        position: absolute;
+        top: calc(100% - 6px);
+        left: 0;
+        right: 0;
+        margin-top: 6px;
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+        z-index: 10;
+    }
+
+    .dropdown-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        font-size: 14px;
+        color: var(--text-main);
+        cursor: pointer;
+        border-bottom: 1px solid #F1F5F9;
+    }
+
+    .dropdown-option:last-child {
+        border-bottom: none;
+    }
+
+    .dropdown-option .option-text strong {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .dropdown-option .option-text span {
+        display: block;
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+
+    .dropdown-option:hover {
+        background-color: #F8FAFC;
+    }
+
+    .dropdown-option.selected {
+        background-color: var(--badge-active-bg);
+    }
+
+    .dropdown-option.selected .option-text strong {
+        color: var(--badge-active-text);
+    }
+
+    .check-icon {
+        flex-shrink: 0;
+        color: var(--primary-blue);
+        opacity: 0;
+    }
+
+    .dropdown-option.selected .check-icon {
+        opacity: 1;
+    }
+</style>
+</head>
+<body>
+
+    <div class="frame">
+        <div class="form-group">
+            <label class="form-label" for="roleSelect">บทบาท <span class="req">*</span></label>
+
+            <!-- Trigger shown in its open/focused state -->
+            <div class="dropdown-trigger" id="roleDropdownTrigger">
+                <span id="roleDropdownValue">ผู้จัดงาน (Organizer)</span>
+                <svg class="chevron" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </div>
+
+            <!-- Options list, always rendered open for this export -->
+            <div class="dropdown-list" id="roleDropdownList">
+                <div class="dropdown-option selected" data-value="organizer">
+                    <div class="option-text">
+                        <strong>ผู้จัดงาน (Organizer)</strong>
+                        <span>ต้องระบุบริษัท</span>
+                    </div>
+                    <svg class="check-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                </div>
+                <div class="dropdown-option" data-value="staff">
+                    <div class="option-text">
+                        <strong>พนักงาน (Staff)</strong>
+                        <span>ต้องระบุบริษัท</span>
+                    </div>
+                    <svg class="check-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                </div>
+                <div class="dropdown-option" data-value="admin">
+                    <div class="option-text">
+                        <strong>ผู้ดูแลระบบ (Admin)</strong>
+                        <span>ไม่ต้องระบุบริษัท</span>
+                    </div>
+                    <svg class="check-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                </div>
+            </div>
+
+            <p class="field-hint">บทบาทกำหนดสิทธิ์การใช้งานของผู้ใช้ในระบบ ไม่ใช่ตำแหน่งในบริษัท</p>
+        </div>
+    </div>
+
+<script>
+    // Optional interactivity kept in case this is opened in a browser instead of Figma.
+    const options = document.querySelectorAll('.dropdown-option');
+    const valueLabel = document.getElementById('roleDropdownValue');
+
+    options.forEach(opt => {
+        opt.addEventListener('click', () => {
+            options.forEach(o => o.classList.remove('selected'));
+            opt.classList.add('selected');
+            valueLabel.textContent = opt.querySelector('strong').textContent;
+        });
+    });
+</script>
+
+</body>
+</html>

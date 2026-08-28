@@ -1,0 +1,202 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+' ================= Enumerations =================
+enum Role {
+  CUSTOMER
+  ORGANIZER
+  STAFF
+  ADMIN
+}
+
+enum SeatStatus {
+  AVAILABLE
+  LOCKED
+  BOOKED
+}
+
+enum BookingStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  FAILED
+  EXPIRED
+}
+
+enum PaymentMethod {
+  PROMPTPAY
+  CREDIT_CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+enum AnomalyStatus {
+  UNRESOLVED
+  INVESTIGATING
+  RESOLVED
+}
+
+enum AnomalyType {
+  PAYMENT_FRAUD_CARD_TESTING
+  SEAT_HOARDING_ABUSE
+  CHARGEBACK_ABUSE
+}
+
+' ================= Users & Organizations =================
+class Company {
+  - companyID: String
+  - name: String
+  - initials: String
+  - description: String
+  + getCompanyInfo(): String
+  + listEvents(): List<Concert>
+}
+
+abstract class User {
+  - userID: String
+  - name: String
+  - email: String
+  - phone: String
+  - password: Hash
+  - role: Role
+  - isBanned: Boolean
+  + login(): Boolean
+  + logout(): void
+}
+
+class Customer {
+  + register(): void
+  + searchConcert(keyword): List<Concert>
+  + createBooking(concert, seats): Booking
+  + viewHistory(): List<Booking>
+  + viewTickets(): List<Ticket>
+}
+
+class EventOrganizer {
+  - companyID: String
+  + createConcert(details): Concert
+  + defineSeatMap(concert, mapDetails): void
+  + viewSalesRealTime(concert): Report
+}
+
+class Staff {
+  - companyID: String
+  + scanTicketQR(qrCode): Boolean
+}
+
+class Admin {
+  + manageUser(userID, action): void
+  + viewAnomalies(filters): List<SystemAnomaly>
+  + acknowledgeAnomaly(anomalyID): void
+  + resolveAnomaly(anomalyID, reason, files): void
+  + executeQuickAction(anomalyID, actionType): void
+}
+
+User <|-- Customer
+User <|-- EventOrganizer
+User <|-- Staff
+User <|-- Admin
+
+' ================= Core Ticketing System =================
+class Concert {
+  - concertID: String
+  - name: String
+  - artist: String
+  - dateTime: DateTime
+  - venue: String
+  + getDetails(): ConcertInfo
+}
+
+class Zone {
+  - zoneID: String
+  - name: String
+  - price: Double
+  - capacity: Integer
+  + getAvailableSeats(): List<Seat>
+}
+
+class Seat {
+  - seatID: String
+  - row: String
+  - number: Integer
+  - status: SeatStatus
+  + lockSeat(): void
+  + unlockSeat(): void
+  + forceUnlock(): void
+  + confirmSeat(): void
+}
+
+class Booking {
+  - bookingID: String
+  - bookingDate: DateTime
+  - totalAmount: Double
+  - status: BookingStatus
+  - expiryTime: DateTime
+  + calculateTotal(): Double
+  + confirmBooking(): void
+  + cancelBooking(): void
+  + checkExpiry(): Boolean
+}
+
+class Payment {
+  - paymentID: String
+  - amount: Double
+  - method: PaymentMethod
+  - status: PaymentStatus
+  - paymentDate: DateTime
+  + processPayment(): Boolean
+  + verifyStatus(): Boolean
+}
+
+class Ticket {
+  - ticketID: String
+  - qrCode: String
+  - isUsed: Boolean
+  + generateQR(): String
+  + validateTicket(): Boolean
+  + markAsUsed(): void
+}
+
+' ================= Anomaly =================
+class SystemAnomaly {
+  - anomalyID: String
+  - type: AnomalyType
+  - message: String
+  - timestamp: DateTime
+  - status: AnomalyStatus
+  - resolveReason: String
+  - attachments: List<String>
+  + updateStatus(newStatus): void
+  + addAttachment(file): void
+}
+
+' ================= Relationships =================
+
+Company "1" *-- "*" EventOrganizer : employs >
+Company "1" *-- "*" Staff : employs >
+Company "1" -- "*" Concert : owns/hosts >
+
+EventOrganizer "1" -- "*" Concert : manages >
+
+Concert "1" *-- "*" Zone : contains >
+Zone "1" *-- "*" Seat : contains >
+
+Customer "1" -- "*" Booking : makes >
+Booking "1" -- "*" Seat : reserves >
+Booking "1" -- "1" Payment : has >
+Booking "1" -- "*" Ticket : generates >
+
+Ticket "1" -- "1" Seat : assigned to >
+Ticket "*" -- "1" Concert : belongs to >
+
+Staff "*" -- "*" Concert : scans tickets for >
+
+SystemAnomaly "*" -- "1" Booking : references >
+Admin "1" -- "*" SystemAnomaly : reviews >
+
+@enduml

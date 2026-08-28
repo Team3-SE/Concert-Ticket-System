@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - จัดการบริษัท (Company Management)</title>
+    <!-- Google Fonts: Prompt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-navy: #0B2F61;
+            --secondary-blue: #2563EB;
+            --accent-orange: #F27A18;
+            --bg-light: #F8FAFC;
+            --card-white: #FFFFFF;
+            --text-dark: #1E293B;
+            --text-muted: #64748B;
+            --border-color: #E2E8F0;
+            --success-green: #10B981;
+            --error-red: #EF4444;
+            --warning-yellow: #F59E0B;
+            --radius-md: 8px;
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Prompt', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Navigation Layout */
+        .sidebar {
+            width: 260px;
+            background-color: var(--primary-navy);
+            color: white;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 10px 25px 25px 25px;
+            font-size: 20px;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-brand span { color: var(--accent-orange); }
+        .sidebar-menu { list-style: none; padding: 20px 0; }
+        .sidebar-menu li a {
+            display: block;
+            padding: 14px 25px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .sidebar-menu li a:hover {
+            color: white;
+            background-color: rgba(255,255,255,0.05);
+        }
+        .sidebar-menu li.active a {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            font-weight: 500;
+            border-left: 4px solid var(--accent-orange);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-navbar {
+            background-color: var(--card-white);
+            height: 70px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .page-title-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary-navy);
+        }
+
+        .admin-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            background-color: var(--primary-navy);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .container {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Toolbar & Controls Row */
+        .toolbar-card {
+            background-color: var(--card-white);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-filter-group {
+            display: flex;
+            gap: 12px;
+            flex: 1;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .input-search {
+            min-width: 260px;
+            flex: 1;
+            padding: 10px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            height: 42px;
+        }
+
+        .input-search:focus {
+            border-color: var(--secondary-blue);
+        }
+
+        .select-filter {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: white;
+            outline: none;
+            cursor: pointer;
+            height: 42px;
+        }
+
+        /* --- Action Buttons --- */
+        .action-buttons-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-add-org-company {
+            background-color: #0F172A;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.2s;
+            height: 42px;
+        }
+
+        .btn-add-org-company:hover { background-color: #334155; }
+
+        /* Company List Table */
+        .table-card {
+            background-color: var(--card-white);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .user-table th {
+            background-color: #F8FAFC;
+            padding: 14px 20px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .user-table td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        .user-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Badges */
+        .company-id-badge {
+            padding: 4px 10px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+            background-color: #F3E8FF;
+            color: #6B21A8;
+        }
+
+        .company-name-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--secondary-blue);
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            font-family: 'Prompt', sans-serif;
+        }
+
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* Action Buttons */
+        .btn-action {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+        .btn-edit { background-color: #DBEAFE; color: var(--secondary-blue); border-color: #BFDBFE; }
+        .btn-edit:hover { background-color: var(--secondary-blue); color: white; }
+        .btn-save { background-color: #D1FAE5; color: #065F46; border-color: #A7F3D0; }
+        .btn-save:hover { background-color: var(--success-green); color: white; }
+        .btn-cancel { background-color: #F1F5F9; color: #475569; border-color: #E2E8F0; }
+        .btn-cancel:hover { background-color: #E2E8F0; color: #334155; }
+        .btn-delete { background-color: #FEE2E2; color: var(--error-red); border-color: #FCA5A5; }
+        .btn-delete:hover { background-color: var(--error-red); color: white; }
+        .btn-reset { background-color: #F1F5F9; color: #475569; border-color: #E2E8F0; }
+        .btn-reset:hover { background-color: #E2E8F0; color: #334155; }
+
+        .action-cell {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .hidden { display: none !important; }
+
+        /* --- Modal (Add Company) --- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal-box {
+            background: var(--card-white);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 420px;
+            padding: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary-navy);
+            margin-bottom: 16px;
+        }
+
+        .modal-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            margin-bottom: 6px;
+        }
+
+        .modal-input:focus {
+            border-color: var(--secondary-blue);
+        }
+
+        .modal-error {
+            font-size: 12px;
+            color: var(--error-red);
+            min-height: 16px;
+            margin-bottom: 10px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-modal-cancel {
+            background-color: #F1F5F9;
+            color: #475569;
+            border: 1px solid var(--border-color);
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .btn-modal-cancel:hover { background-color: #E2E8F0; }
+
+        .btn-modal-confirm {
+            background-color: var(--secondary-blue);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .btn-modal-confirm:hover { background-color: #1D4ED8; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background-color: #0F172A;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: var(--shadow-md);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.25s ease;
+            pointer-events: none;
+            z-index: 300;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Menu -->
+    <div class="sidebar">
+        <div class="sidebar-brand">SYSTEM <span>ADMIN</span></div>
+        <ul class="sidebar-menu">
+            <li><a href="#">1. จัดการผู้ใช้ (User Management)</a></li>
+            <li class="active"><a href="#">2. จัดการบริษัท (Company Management)</a></li>
+            <li><a href="#">3. รายการจองผิดปกติ (Fraud Monitor)</a></li>
+            <li><a href="#">4. แก้ไขข้อมูลในระบบ (Data Correction)</a></li>
+            <li><a href="#">5. ประวัติการใช้งาน (System Audit Logs)</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="main-content">
+        <div class="top-navbar">
+            <div class="page-title-text">จัดการบริษัท (Company Management)</div>
+            <div class="admin-profile">
+                <span>ผู้ดูแลระบบ (Super Admin)</span>
+                <div class="avatar">A</div>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- Toolbar -->
+            <div class="toolbar-card">
+                <div class="search-filter-group">
+                    <input type="text" class="input-search" id="searchInput" onkeyup="renderTable()" placeholder="ค้นหาด้วยชื่อบริษัท...">
+
+                    <!-- กรองเรียงตามวันที่สร้าง -->
+                    <select class="select-filter" id="sortFilter" onchange="renderTable()">
+                        <option value="newest">วันที่สร้าง: ใหม่ไปเก่า</option>
+                        <option value="oldest">วันที่สร้าง: เก่าไปใหม่</option>
+                        <option value="name_asc">ชื่อบริษัท: A-Z</option>
+                        <option value="name_desc">ชื่อบริษัท: Z-A</option>
+                    </select>
+
+                    <!-- ปุ่มรีเซ็ตตัวกรอง -->
+                    <button class="btn-action btn-reset" onclick="resetFilter()">รีเซ็ตตัวกรอง</button>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons-group">
+                    <button type="button" class="btn-add-org-company" onclick="openAddModal()">
+                        ➕ เพิ่มบริษัท
+                    </button>
+                </div>
+            </div>
+
+            <!-- Company Data Table -->
+            <div class="table-card">
+                <table class="user-table" id="companyTable">
+                    <thead>
+                        <tr>
+                            <th>ชื่อบริษัท (Company Name)</th>
+                            <th style="width: 160px;">วันที่สร้าง (Created Date)</th>
+                            <th style="text-align: center; width: 220px;">การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="companyTableBody">
+                        <!-- Rendered by JS -->
+                    </tbody>
+                </table>
+                <div class="empty-state hidden" id="emptyState">ไม่พบบริษัทที่ค้นหา</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Company Modal -->
+    <div class="modal-overlay" id="addModalOverlay">
+        <div class="modal-box">
+            <div class="modal-title">เพิ่มบริษัทใหม่</div>
+            <label class="modal-label" for="newCompanyName">ชื่อบริษัท</label>
+            <input type="text" id="newCompanyName" class="modal-input" placeholder="เช่น GMM Show Co., Ltd." maxlength="150">
+            <div class="modal-error" id="addCompanyError"></div>
+            <div class="modal-actions">
+                <button class="btn-modal-cancel" onclick="closeAddModal()">ยกเลิก</button>
+                <button class="btn-modal-confirm" onclick="confirmAddCompany()">บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        /* ---------- Mock Company Data (พร้อมวันที่สร้าง) ---------- */
+        let companies = [
+            { id: 1, name: 'GMM Show Co., Ltd.', createdAt: '2024-02-10T09:12:00' },
+            { id: 2, name: 'Live Nation Tero', createdAt: '2024-05-22T14:30:00' },
+            { id: 3, name: 'BEC-Tero Entertainment', createdAt: '2023-11-03T10:05:00' },
+            { id: 4, name: '4NOLOGUE Co., Ltd.', createdAt: '2025-01-18T16:45:00' },
+            { id: 5, name: 'SM True Co., Ltd.', createdAt: '2024-09-07T08:20:00' }
+        ];
+        let nextId = 6;
+        let editingId = null; // company id currently being edited inline
+
+        const tableBody = document.getElementById('companyTableBody');
+        const emptyState = document.getElementById('emptyState');
+        const searchInput = document.getElementById('searchInput');
+        const sortFilter = document.getElementById('sortFilter');
+        const addModalOverlay = document.getElementById('addModalOverlay');
+        const newCompanyNameInput = document.getElementById('newCompanyName');
+        const addCompanyError = document.getElementById('addCompanyError');
+        const toast = document.getElementById('toast');
+
+        /* ---------- Helpers ---------- */
+        function formatDate(iso) {
+            const d = new Date(iso);
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear() + 543; // พ.ศ.
+            return `${dd}/${mm}/${yyyy}`;
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function getSortedFilteredCompanies() {
+            const query = searchInput.value.trim().toLowerCase();
+            const sortValue = sortFilter.value;
+
+            let list = companies.filter(c => c.name.toLowerCase().includes(query));
+
+            list.sort((a, b) => {
+                switch (sortValue) {
+                    case 'newest':
+                        return new Date(b.createdAt) - new Date(a.createdAt);
+                    case 'oldest':
+                        return new Date(a.createdAt) - new Date(b.createdAt);
+                    case 'name_asc':
+                        return a.name.localeCompare(b.name, 'th');
+                    case 'name_desc':
+                        return b.name.localeCompare(a.name, 'th');
+                    default:
+                        return 0;
+                }
+            });
+
+            return list;
+        }
+
+        /* ---------- Render Table ---------- */
+        function renderTable() {
+            const filtered = getSortedFilteredCompanies();
+
+            tableBody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            filtered.forEach(company => {
+                const tr = document.createElement('tr');
+                tr.dataset.id = company.id;
+
+                if (editingId === company.id) {
+                    tr.innerHTML = `
+                        <td>
+                            <input type="text" class="company-name-input" id="editInput-${company.id}" value="${escapeHtml(company.name)}" maxlength="150">
+                        </td>
+                        <td style="color: var(--text-muted);">${formatDate(company.createdAt)}</td>
+                        <td class="action-cell">
+                            <button class="btn-action btn-save" onclick="saveEdit(${company.id})">บันทึก</button>
+                            <button class="btn-action btn-cancel" onclick="cancelEdit()">ยกเลิก</button>
+                        </td>
+                    `;
+                } else {
+                    tr.innerHTML = `
+                        <td><strong>${escapeHtml(company.name)}</strong></td>
+                        <td style="color: var(--text-muted);">${formatDate(company.createdAt)}</td>
+                        <td class="action-cell">
+                            <button class="btn-action btn-edit" onclick="startEdit(${company.id})">แก้ไข</button>
+                            <button class="btn-action btn-delete" onclick="deleteCompany(${company.id})">ลบ</button>
+                        </td>
+                    `;
+                }
+
+                tableBody.appendChild(tr);
+            });
+
+            if (editingId !== null) {
+                const input = document.getElementById(`editInput-${editingId}`);
+                if (input) {
+                    input.focus();
+                    input.select();
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') saveEdit(editingId);
+                        if (e.key === 'Escape') cancelEdit();
+                    });
+                }
+            }
+        }
+
+        function resetFilter() {
+            searchInput.value = '';
+            sortFilter.value = 'newest';
+            renderTable();
+        }
+
+        /* ---------- Inline Edit ---------- */
+        function startEdit(id) {
+            editingId = id;
+            renderTable();
+        }
+
+        function cancelEdit() {
+            editingId = null;
+            renderTable();
+        }
+
+        function saveEdit(id) {
+            const input = document.getElementById(`editInput-${id}`);
+            const newName = input.value.trim();
+
+            if (!newName) {
+                showToast('กรุณากรอกชื่อบริษัท');
+                input.focus();
+                return;
+            }
+
+            const duplicate = companies.some(c => c.id !== id && c.name.toLowerCase() === newName.toLowerCase());
+            if (duplicate) {
+                showToast('มีชื่อบริษัทนี้อยู่แล้วในระบบ');
+                input.focus();
+                return;
+            }
+
+            const company = companies.find(c => c.id === id);
+            company.name = newName;
+            editingId = null;
+            renderTable();
+            showToast('บันทึกการแก้ไขเรียบร้อยแล้ว');
+        }
+
+        /* ---------- Delete ---------- */
+        function deleteCompany(id) {
+            const company = companies.find(c => c.id === id);
+            if (!company) return;
+
+            if (confirm(`ยืนยันการลบบริษัท "${company.name}" ใช่หรือไม่?`)) {
+                companies = companies.filter(c => c.id !== id);
+                renderTable();
+                showToast('ลบบริษัทเรียบร้อยแล้ว');
+            }
+        }
+
+        /* ---------- Add Company Modal ---------- */
+        function openAddModal() {
+            newCompanyNameInput.value = '';
+            addCompanyError.textContent = '';
+            addModalOverlay.classList.add('open');
+            setTimeout(() => newCompanyNameInput.focus(), 50);
+        }
+
+        function closeAddModal() {
+            addModalOverlay.classList.remove('open');
+        }
+
+        function confirmAddCompany() {
+            const name = newCompanyNameInput.value.trim();
+
+            if (!name) {
+                addCompanyError.textContent = 'กรุณากรอกชื่อบริษัท';
+                return;
+            }
+
+            const duplicate = companies.some(c => c.name.toLowerCase() === name.toLowerCase());
+            if (duplicate) {
+                addCompanyError.textContent = 'มีชื่อบริษัทนี้อยู่แล้วในระบบ';
+                return;
+            }
+
+            companies.push({ id: nextId++, name, createdAt: new Date().toISOString() });
+            closeAddModal();
+            searchInput.value = '';
+            sortFilter.value = 'newest';
+            renderTable();
+            showToast('เพิ่มบริษัทใหม่เรียบร้อยแล้ว');
+        }
+
+        newCompanyNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') confirmAddCompany();
+        });
+
+        addModalOverlay.addEventListener('click', (e) => {
+            if (e.target === addModalOverlay) closeAddModal();
+        });
+
+        /* ---------- Toast ---------- */
+        let toastTimeout;
+        function showToast(message) {
+            clearTimeout(toastTimeout);
+            toast.textContent = message;
+            toast.classList.add('show');
+            toastTimeout = setTimeout(() => toast.classList.remove('show'), 2200);
+        }
+
+        /* ---------- Init ---------- */
+        renderTable();
+    </script>
+</body>
+</html>

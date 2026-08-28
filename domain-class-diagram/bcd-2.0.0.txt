@@ -1,0 +1,563 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+' =========================================================
+' ENUMERATIONS
+' =========================================================
+
+enum Role {
+  CUSTOMER
+  ORGANIZER
+  STAFF
+  ADMIN
+}
+
+enum SeatStatus {
+  AVAILABLE
+  LOCKED
+  BOOKED
+}
+
+enum BookingStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  FAILED
+  EXPIRED
+}
+
+enum PaymentMethod {
+  PROMPTPAY
+  CREDIT_CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+enum AnomalyStatus {
+  UNRESOLVED
+  INVESTIGATING
+  RESOLVED
+}
+
+enum AnomalyType {
+  PAYMENT_FRAUD_CARD_TESTING
+  SEAT_HOARDING_ABUSE
+  CHARGEBACK_ABUSE
+}
+
+
+' =========================================================
+' INTERFACE / BOUNDARY
+' =========================================================
+
+package "Interface" {
+
+  class RegisterInterface <<interface>>
+  class ConcertSearchInterface <<interface>>
+  class ConcertListInterface <<interface>>
+  class ConcertDetailInterface <<interface>>
+
+  class ETicketInterface <<interface>>
+  class SeatSelectionInterface <<interface>>
+  class PaymentInterface <<interface>>
+  class ProfileInterface <<interface>>
+  class BookingHistoryInterface <<interface>>
+
+  class ConcertManagementInterface <<interface>>
+  class SeatMapManagementInterface <<interface>>
+  class SalesReportInterface <<interface>>
+  class CustomerContactInterface <<interface>>
+  class StaffManagementInterface <<interface>>
+
+  class TicketScannerInterface <<interface>>
+
+  class UserManagementInterface <<interface>>
+  class BookingManagementInterface <<interface>>
+  class AuditLogInterface <<interface>>
+  class SystemAnomalyInterface <<interface>>
+  class AccountManagementInterface <<interface>>
+}
+
+
+' =========================================================
+' CONTROLLER
+' =========================================================
+
+package "Controller" {
+
+  class AuthController <<controller>> {
+    + registerCustomer(data): Customer
+    + login(email, password): Boolean
+    + logout(userID): void
+  }
+
+  class ConcertController <<controller>> {
+    + searchConcert(keyword): List<Concert>
+    + getConcertList(): List<Concert>
+    + getConcertDetail(concertID): Concert
+    + createConcert(details): Concert
+    + updateConcert(concertID, details): void
+  }
+
+  class BookingController <<controller>> {
+    + createBooking(customerID, concertID, seats): Booking
+    + getBookingHistory(customerID): List<Booking>
+    + getCustomerContact(concertID): List<Customer>
+  }
+
+  class PaymentController <<controller>> {
+    + processPayment(bookingID, method): Boolean
+    + verifyPayment(paymentID): Boolean
+  }
+
+  class TicketController <<controller>> {
+    + getTickets(customerID): List<Ticket>
+  }
+
+  class UserController <<controller>> {
+    + getProfile(userID): User
+    + updateProfile(userID, data): void
+    + changePassword(userID, password): void
+  }
+
+  class SeatMapController <<controller>> {
+    + createZone(concertID, details): Zone
+    + updateZone(zoneID, details): void
+    + defineSeatMap(zoneID, seats): void
+    + updateSeat(seatID, details): void
+  }
+
+  class ReportController <<controller>> {
+    + getMonthlySales(concertID): Report
+    + getYearlySales(concertID): Report
+  }
+
+  class StaffController <<controller>> {
+    + createStaff(companyID, data): Staff
+  }
+
+  class TicketValidationController <<controller>> {
+    + scanTicketQR(qrCode): Boolean
+    + validateTicketNumber(ticketID): Boolean
+    + getValidationHistory(concertID): List<TicketValidationLog>
+  }
+
+  class UserManagementController <<controller>> {
+    + getUsers(): List<User>
+    + searchUser(keyword): List<User>
+    + banUser(userID): void
+    + unbanUser(userID): void
+    + changeOrganizerCompany(userID, companyID): void
+    + createOrganizer(data): EventOrganizer
+    + createAdmin(data): Admin
+  }
+
+  class BookingManagementController <<controller>> {
+    + getBookings(): List<Booking>
+    + searchBooking(keyword): List<Booking>
+  }
+
+  class AuditLogController <<controller>> {
+    + getLogs(): List<AuditLog>
+    + searchLogs(keyword): List<AuditLog>
+  }
+
+  class AnomalyController <<controller>> {
+    + getAnomalies(): List<SystemAnomaly>
+    + getAnomalyDetail(anomalyID): SystemAnomaly
+    + updateAnomalyStatus(anomalyID, status): void
+    + executeAction(anomalyID, action): void
+  }
+}
+
+
+' =========================================================
+' ENTITY
+' =========================================================
+
+package "Entity" {
+
+  class Company <<entity>> {
+    - companyID: String
+    - name: String
+    - initials: String
+    - description: String
+
+    + getCompanyInfo(): String
+    + listEvents(): List<Concert>
+  }
+
+
+  abstract class User <<entity>> {
+    - userID: String
+    - name: String
+    - email: String
+    - phone: String
+    - password: Hash
+    - role: Role
+    - isBanned: Boolean
+
+    + login(): Boolean
+    + logout(): void
+  }
+
+
+  class Customer <<entity>> {
+    + register(): void
+    + searchConcert(keyword): List<Concert>
+    + createBooking(concert, seats): Booking
+    + viewHistory(): List<Booking>
+    + viewTickets(): List<Ticket>
+  }
+
+
+  class EventOrganizer <<entity>> {
+    - companyID: String
+
+    + createConcert(details): Concert
+    + defineSeatMap(concert, mapDetails): void
+    + viewSalesRealTime(concert): Report
+  }
+
+
+  class Staff <<entity>> {
+    - companyID: String
+
+    + scanTicketQR(qrCode): Boolean
+  }
+
+
+  class Admin <<entity>> {
+    + manageUser(userID, action): void
+    + viewAnomalies(filters): List<SystemAnomaly>
+    + acknowledgeAnomaly(anomalyID): void
+    + resolveAnomaly(anomalyID, reason, files): void
+    + executeQuickAction(anomalyID, actionType): void
+  }
+
+
+  class Concert <<entity>> {
+    - concertID: String
+    - name: String
+    - artist: String
+    - dateTime: DateTime
+    - venue: String
+
+    + getDetails(): ConcertInfo
+  }
+
+
+  class Zone <<entity>> {
+    - zoneID: String
+    - name: String
+    - price: Double
+    - capacity: Integer
+
+    + getAvailableSeats(): List<Seat>
+  }
+
+
+  class Seat <<entity>> {
+    - seatID: String
+    - row: String
+    - number: Integer
+    - status: SeatStatus
+
+    + lockSeat(): void
+    + unlockSeat(): void
+    + forceUnlock(): void
+    + confirmSeat(): void
+  }
+
+
+  class Booking <<entity>> {
+    - bookingID: String
+    - bookingDate: DateTime
+    - totalAmount: Double
+    - status: BookingStatus
+    - expiryTime: DateTime
+
+    + calculateTotal(): Double
+    + confirmBooking(): void
+    + cancelBooking(): void
+    + checkExpiry(): Boolean
+  }
+
+
+  class Payment <<entity>> {
+    - paymentID: String
+    - amount: Double
+    - method: PaymentMethod
+    - status: PaymentStatus
+    - paymentDate: DateTime
+
+    + processPayment(): Boolean
+    + verifyStatus(): Boolean
+  }
+
+
+  class Ticket <<entity>> {
+    - ticketID: String
+    - qrCode: String
+    - isUsed: Boolean
+
+    + generateQR(): String
+    + validateTicket(): Boolean
+    + markAsUsed(): void
+  }
+
+
+  class SystemAnomaly <<entity>> {
+    - anomalyID: String
+    - type: AnomalyType
+    - message: String
+    - timestamp: DateTime
+    - status: AnomalyStatus
+    - resolveReason: String
+    - attachments: List<String>
+
+    + updateStatus(newStatus): void
+    + addAttachment(file): void
+  }
+
+
+  class AuditLog <<entity>> {
+    - logID: String
+    - userID: String
+    - action: String
+    - timestamp: DateTime
+    - ipAddress: String
+
+    + getDetails(): String
+  }
+
+
+  class TicketValidationLog <<entity>> {
+    - validationID: String
+    - ticketID: String
+    - staffID: String
+    - validationTime: DateTime
+    - result: Boolean
+  }
+}
+
+
+' =========================================================
+' USER INHERITANCE
+' =========================================================
+
+User <|-- Customer
+User <|-- EventOrganizer
+User <|-- Staff
+User <|-- Admin
+
+
+' =========================================================
+' ENTITY RELATIONSHIPS
+' =========================================================
+
+Company "1" *-- "*" EventOrganizer : employs >
+Company "1" *-- "*" Staff : employs >
+Company "1" -- "*" Concert : owns/hosts >
+
+EventOrganizer "1" -- "*" Concert : manages >
+
+Concert "1" *-- "*" Zone : contains >
+Zone "1" *-- "*" Seat : contains >
+
+Customer "1" -- "*" Booking : makes >
+Booking "1" -- "*" Seat : reserves >
+Booking "1" -- "1" Payment : has >
+Booking "1" -- "*" Ticket : generates >
+
+Ticket "1" -- "1" Seat : assigned to >
+Ticket "*" -- "1" Concert : belongs to >
+
+Staff "*" -- "*" Concert : scans tickets for >
+
+TicketValidationLog "*" -- "1" Ticket : validates >
+TicketValidationLog "*" -- "1" Staff : performed by >
+
+SystemAnomaly "*" -- "1" Booking : references >
+Admin "1" -- "*" SystemAnomaly : reviews >
+
+AuditLog "*" -- "1" User : performed by >
+
+
+' =========================================================
+' INTERFACE -> CONTROLLER
+' =========================================================
+
+RegisterInterface --> AuthController
+
+ConcertSearchInterface --> ConcertController
+ConcertListInterface --> ConcertController
+ConcertDetailInterface --> ConcertController
+
+ETicketInterface --> TicketController
+SeatSelectionInterface --> BookingController
+PaymentInterface --> PaymentController
+ProfileInterface --> UserController
+BookingHistoryInterface --> BookingController
+
+ConcertManagementInterface --> ConcertController
+SeatMapManagementInterface --> SeatMapController
+SalesReportInterface --> ReportController
+CustomerContactInterface --> BookingController
+StaffManagementInterface --> StaffController
+
+TicketScannerInterface --> TicketValidationController
+
+UserManagementInterface --> UserManagementController
+BookingManagementInterface --> BookingManagementController
+AuditLogInterface --> AuditLogController
+SystemAnomalyInterface --> AnomalyController
+AccountManagementInterface --> UserManagementController
+
+
+' =========================================================
+' CONTROLLER -> ENTITY
+' =========================================================
+
+AuthController --> User
+AuthController --> Customer
+
+ConcertController --> Concert
+ConcertController --> Company
+
+BookingController --> Booking
+BookingController --> Customer
+BookingController --> Concert
+BookingController --> Seat
+
+PaymentController --> Payment
+PaymentController --> Booking
+
+TicketController --> Ticket
+
+UserController --> User
+
+SeatMapController --> Concert
+SeatMapController --> Zone
+SeatMapController --> Seat
+
+ReportController --> Concert
+ReportController --> Booking
+ReportController --> Payment
+
+StaffController --> Staff
+StaffController --> Company
+
+TicketValidationController --> Ticket
+TicketValidationController --> Concert
+TicketValidationController --> TicketValidationLog
+
+UserManagementController --> User
+UserManagementController --> EventOrganizer
+UserManagementController --> Admin
+UserManagementController --> Company
+
+BookingManagementController --> Booking
+BookingManagementController --> Customer
+BookingManagementController --> Payment
+
+AuditLogController --> AuditLog
+
+AnomalyController --> SystemAnomaly
+AnomalyController --> Booking
+AnomalyController --> User
+
+
+' =========================================================
+' UC MAPPING NOTES
+' =========================================================
+
+note right of RegisterInterface
+UC-01 สมัครสมาชิก
+end note
+
+note right of ConcertSearchInterface
+UC-02 ค้นหาคอนเสิร์ต
+end note
+
+note right of ConcertListInterface
+UC-03 ดูรายการคอนเสิร์ต
+end note
+
+note right of ConcertDetailInterface
+UC-04 ดูรายละเอียดคอนเสิร์ต
+end note
+
+note right of ETicketInterface
+UC-05 ดู E-Ticket
+end note
+
+note right of SeatSelectionInterface
+UC-06 จองบัตร
+end note
+
+note right of PaymentInterface
+UC-07 ชำระเงิน
+end note
+
+note right of ProfileInterface
+UC-08 แก้ไขข้อมูลส่วนตัว
+end note
+
+note right of BookingHistoryInterface
+UC-09 ดูประวัติการจอง
+end note
+
+note right of ConcertManagementInterface
+UC-10 / UC-12
+สร้าง / แก้ไขคอนเสิร์ต
+end note
+
+note right of SeatMapManagementInterface
+UC-11
+กำหนดผังที่นั่งและราคา
+end note
+
+note right of SalesReportInterface
+UC-13 ดูยอดขาย/รายงาน
+end note
+
+note right of CustomerContactInterface
+UC-14 ดูช่องทางติดต่อผู้ใช้
+end note
+
+note right of StaffManagementInterface
+UC-15 สร้างบัญชี Staff
+end note
+
+note right of TicketScannerInterface
+UC-16 ตรวจสอบสิทธิ์เข้างาน
+end note
+
+note right of UserManagementInterface
+UC-17 จัดการผู้ใช้
+end note
+
+note right of BookingManagementInterface
+UC-18 ตรวจสอบการจอง
+end note
+
+note right of AuditLogInterface
+UC-19 ดู Log การใช้งานระบบ
+end note
+
+note right of SystemAnomalyInterface
+UC-20 ตรวจสอบความผิดปกติ
+end note
+
+note right of AccountManagementInterface
+UC-21 สร้างบัญชีผู้ใช้
+end note
+
+@enduml 

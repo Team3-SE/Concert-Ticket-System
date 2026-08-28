@@ -70,7 +70,19 @@
 
   /* filter card — matches Action Logs toolbar-card design */
   .filter-card{background:#fff;border:1px solid var(--al-border);border-radius:8px;padding:16px 20px;margin-bottom:24px;box-shadow:0 1px 2px rgba(15,23,42,.04);font-family:'Prompt',sans-serif;}
-  .filter-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
+  .filter-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end;}
+  .filter-row > .filter-field,.filter-row > .custom-date-range,.filter-row > .btn-action{width:100%;min-width:0;}
+  .filter-field.search-box{grid-column:span 2;}
+  .filter-field .custom-dropdown,.filter-field .select-option,.filter-field .select-field,.filter-field .input-text{width:100%;}
+  .custom-dropdown{width:100%;}
+  .select-field select{width:100%;}
+  .custom-date-range{grid-column:span 2;display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:8px;}
+  .custom-date-range .filter-field{width:100%;}
+  .date-input{width:100%;}
+  .filter-row > .btn-action{justify-self:stretch;}
+  @media (max-width:1200px){.filter-row{grid-template-columns:repeat(3,minmax(0,1fr));}.filter-field.search-box{grid-column:span 2;}}
+  @media (max-width:900px){.filter-row{grid-template-columns:repeat(2,minmax(0,1fr));}.filter-field.search-box,.custom-date-range{grid-column:span 2;}}
+  @media (max-width:640px){.filter-row{grid-template-columns:1fr;}.filter-field.search-box,.custom-date-range{grid-column:span 1;}.custom-date-range{grid-template-columns:1fr;}.date-sep{display:none;}}
   .filter-field{display:flex;flex-direction:column;gap:6px;}
   .filter-field label{font-size:11px;font-weight:600;color:var(--al-text-muted);text-transform:uppercase;letter-spacing:0.02em;}
   .input-text{height:40px;padding:0 12px;border:1px solid var(--al-border);border-radius:6px;font-size:13.5px;background:#fff;color:var(--al-text-dark);outline:none;transition:border-color .15s;}
@@ -124,6 +136,43 @@
   .cd-title { font-size: 13.5px; font-weight: 600; color: #1e293b; }
   .cd-subtitle { font-size: 11.5px; color: var(--muted-light); }
   .cd-empty { padding: 16px; text-align: center; font-size: 13px; color: var(--muted); }
+
+
+  /* Unified filter controls — all follow Organization dropdown */
+  .filter-row{align-items:start;}
+  .filter-field{display:block;min-width:0;}
+  .filter-field label{display:none!important;}
+  .filter-field.search-box{position:relative;}
+  .filter-field.search-box::before{
+    content:"";position:absolute;left:12px;top:50%;width:15px;height:15px;transform:translateY(-50%);
+    background-repeat:no-repeat;background-size:15px 15px;opacity:.72;pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  }
+  .filter-field.search-box .input-text{
+    height:40px;width:100%;padding:0 12px 0 36px;border:1px solid var(--al-border);border-radius:6px;
+    background:#fff;font-size:13px;color:var(--al-text-dark);font-weight:500;transition:border-color .15s,box-shadow .15s;
+  }
+  .filter-field.search-box .input-text:hover{border-color:var(--muted-light);}
+  .filter-field.search-box .input-text:focus{border-color:var(--al-navy);box-shadow:0 0 0 2px rgba(11,47,97,.1);}
+  .filter-row .custom-dropdown{width:100%;}
+  .filter-row .cd-menu{width:100%;min-width:220px;}
+  .simple-list .cd-item{min-height:42px;gap:10px;}
+  .simple-list .cd-item .simple-icon{width:30px;height:30px;border-radius:7px;background:#eff6ff;color:var(--al-navy);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .simple-list .cd-item.selected .cd-title{color:var(--al-navy);}
+  .simple-list .cd-info{min-width:0;}
+  .simple-list .cd-title{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .custom-date-range{grid-column:span 2!important;display:grid!important;grid-template-columns:1fr 1fr;gap:12px;align-items:start;}
+  .custom-date-range[hidden]{display:none!important;}
+  .custom-date-range .date-input{
+    width:100%;height:40px;padding:0 12px;border:1px solid var(--al-border);border-radius:6px;background:#fff;
+    color:var(--al-text-dark);font-size:13px;font-weight:500;transition:border-color .15s,box-shadow .15s;
+  }
+  .custom-date-range .date-input:hover{border-color:var(--muted-light);}
+  .custom-date-range .date-input:focus{border-color:var(--al-navy);box-shadow:0 0 0 2px rgba(11,47,97,.1);}
+  .custom-date-range .date-sep{display:none;}
+  .filter-row>.btn-action{height:40px;border:1px solid var(--al-border);border-radius:6px;background:#fff;color:var(--al-text-dark);font-size:13px;font-weight:500;transition:border-color .15s,box-shadow .15s,background .15s;}
+  .filter-row>.btn-action:hover{border-color:var(--muted-light);background:#F8FAFC;color:var(--al-text-dark);}
+  .filter-row>.btn-action:focus{border-color:var(--al-navy);box-shadow:0 0 0 2px rgba(11,47,97,.1);outline:none;}
 
   /* table — matches Action Logs grid-line design */
   .table-card{background:#fff;border:1px solid var(--al-border);border-radius:8px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04);}
@@ -228,14 +277,11 @@
 
         <div class="filter-card">
           <div class="filter-row">
-            <div class="filter-field search-box" style="flex: 1; min-width: 220px;">
-              <label>ค้นหา</label>
+            <div class="filter-field search-box">
               <input class="input-text" id="searchInput" type="text" placeholder="ค้นหารหัสจอง, ชื่อ, อีเมล..." />
             </div>
-            
-            <!-- 1. Custom Dropdown: องค์กร -->
+
             <div class="filter-field">
-              <label>องค์กร / ผู้จัด</label>
               <div class="custom-dropdown" id="orgDropdown">
                 <div class="cd-trigger" id="orgTrigger">
                   <div class="cd-trigger-inner">
@@ -254,9 +300,7 @@
               </div>
             </div>
 
-            <!-- 2. Custom Dropdown: งานคอนเสิร์ต -->
             <div class="filter-field">
-              <label>งานคอนเสิร์ต</label>
               <div class="custom-dropdown" id="evtDropdown">
                 <div class="cd-trigger" id="evtTrigger">
                   <div class="cd-trigger-inner">
@@ -276,67 +320,62 @@
             </div>
 
             <div class="filter-field">
-              <label>ช่องทางชำระเงิน</label>
-              <select class="select-option" id="paymentFilter">
-                <option value="All">ทุกช่องทาง</option>
-                <option value="PromptPay QR">PromptPay QR</option>
-                <option value="บัตรเครดิต">บัตรเครดิต</option>
-              </select>
-            </div>
-
-            <!-- ตัวกรองสถานะการจอง -->
-            <div class="filter-field">
-              <label>สถานะการจอง</label>
-              <select class="select-option" id="statusFilter">
-                <option value="All Statuses">สถานะการจองทั้งหมด</option>
-                <option value="Confirmed">ยืนยันแล้ว</option>
-                <option value="Locked">ล็อกที่นั่ง</option>
-                <option value="Cancelled">ยกเลิกแล้ว</option>
-                <option value="Expired">หมดอายุ</option>
-              </select>
-            </div>
-
-            <!-- ตัวกรองสถานะการเงิน -->
-            <div class="filter-field">
-              <label>สถานะการเงิน</label>
-              <select class="select-option" id="paymentStatusFilter">
-                <option value="All">สถานะการเงินทั้งหมด</option>
-                <option value="Paid">ชำระแล้ว</option>
-                <option value="Pending">รอชำระ</option>
-                <option value="Failed">ล้มเหลว</option>
-                <option value="Expired">หมดอายุ</option>
-              </select>
-            </div>
-            
-            <!-- ตัวกรองเวลา (อัปเดตมีตัวเลือกกำหนดเอง) -->
-            <div class="filter-field">
-              <label>ช่วงเวลา</label>
-              <div class="select-field">
-                <svg class="ic pre" width="15" height="15" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                <select id="dateRangeFilter">
-                  <option value="all">ทุกช่วงเวลา</option>
-                  <option value="today">วันนี้</option>
-                  <option value="7d">7 วันล่าสุด</option>
-                  <option value="30d">30 วันล่าสุด</option>
-                  <option value="custom">กำหนดเอง</option>
-                </select>
-                <svg class="ic post" width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+              <div class="custom-dropdown" id="paymentDropdown">
+                <div class="cd-trigger" id="paymentTrigger">
+                  <div class="cd-trigger-inner">
+                    <svg class="ic" width="15" height="15" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                    <span class="cd-trigger-text" id="paymentSelectedText">ทุกช่องทาง</span>
+                  </div>
+                  <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="cd-menu" id="paymentMenu"><div class="cd-list simple-list" id="paymentList"></div></div>
               </div>
             </div>
 
-            <!-- กล่องป้อนวันที่แบบกำหนดเอง -->
-            <div class="custom-date-range" id="customDateRange" style="display: none;">
-              <div class="filter-field">
-                <label>จากวันที่</label>
-                <input type="date" class="date-input" id="startDate" />
-              </div>
-              <span class="date-sep">ถึง</span>
-              <div class="filter-field">
-                <label>ถึงวันที่</label>
-                <input type="date" class="date-input" id="endDate" />
+            <div class="filter-field">
+              <div class="custom-dropdown" id="statusDropdown">
+                <div class="cd-trigger" id="statusTrigger">
+                  <div class="cd-trigger-inner">
+                    <svg class="ic" width="15" height="15" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    <span class="cd-trigger-text" id="statusSelectedText">สถานะการจองทั้งหมด</span>
+                  </div>
+                  <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="cd-menu" id="statusMenu"><div class="cd-list simple-list" id="statusList"></div></div>
               </div>
             </div>
-            
+
+            <div class="filter-field">
+              <div class="custom-dropdown" id="paymentStatusDropdown">
+                <div class="cd-trigger" id="paymentStatusTrigger">
+                  <div class="cd-trigger-inner">
+                    <svg class="ic" width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+                    <span class="cd-trigger-text" id="paymentStatusSelectedText">สถานะการเงินทั้งหมด</span>
+                  </div>
+                  <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="cd-menu" id="paymentStatusMenu"><div class="cd-list simple-list" id="paymentStatusList"></div></div>
+              </div>
+            </div>
+
+            <div class="filter-field">
+              <div class="custom-dropdown" id="dateDropdown">
+                <div class="cd-trigger" id="dateTrigger">
+                  <div class="cd-trigger-inner">
+                    <svg class="ic" width="15" height="15" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <span class="cd-trigger-text" id="dateSelectedText">ทุกช่วงเวลา</span>
+                  </div>
+                  <svg class="ic caret" width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="cd-menu" id="dateMenu"><div class="cd-list simple-list" id="dateList"></div></div>
+              </div>
+            </div>
+
+            <div class="custom-date-range" id="customDateRange" hidden>
+              <input type="date" class="date-input" id="startDate" title="จากวันที่" />
+              <input type="date" class="date-input" id="endDate" title="ถึงวันที่" />
+            </div>
+
             <button class="btn-action" onclick="resetFilter()">รีเซ็ตตัวกรอง</button>
           </div>
         </div>
@@ -529,9 +568,90 @@ function selectEvent(id, name) {
   renderTable();
 }
 
+
+const FILTER_OPTIONS = {
+  payment: [
+    { value:'All', label:'ทุกช่องทาง', icon:'card' },
+    { value:'PromptPay QR', label:'PromptPay QR', icon:'qr' },
+    { value:'บัตรเครดิต', label:'บัตรเครดิต', icon:'card' }
+  ],
+  status: [
+    { value:'All Statuses', label:'สถานะการจองทั้งหมด', icon:'check' },
+    { value:'Confirmed', label:'ยืนยันแล้ว', icon:'check' },
+    { value:'Locked', label:'ล็อกที่นั่ง', icon:'clock' },
+    { value:'Cancelled', label:'ยกเลิกแล้ว', icon:'x' },
+    { value:'Expired', label:'หมดอายุ', icon:'clock' }
+  ],
+  paymentStatus: [
+    { value:'All', label:'สถานะการเงินทั้งหมด', icon:'money' },
+    { value:'Paid', label:'ชำระแล้ว', icon:'check' },
+    { value:'Pending', label:'รอชำระ', icon:'clock' },
+    { value:'Failed', label:'ล้มเหลว', icon:'x' },
+    { value:'Expired', label:'หมดอายุ', icon:'clock' }
+  ],
+  date: [
+    { value:'all', label:'ทุกช่วงเวลา', icon:'calendar' },
+    { value:'today', label:'วันนี้', icon:'calendar' },
+    { value:'7d', label:'7 วันล่าสุด', icon:'calendar' },
+    { value:'30d', label:'30 วันล่าสุด', icon:'calendar' },
+    { value:'custom', label:'กำหนดเอง', icon:'calendar' }
+  ]
+};
+
+function filterIcon(name){
+  const paths={
+    card:'<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>',
+    qr:'<rect x="3" y="3" width="6" height="6"/><rect x="15" y="3" width="6" height="6"/><rect x="3" y="15" width="6" height="6"/><path d="M15 15h2v2h-2zM19 15h2v6h-6v-2"/>',
+    check:'<polyline points="20 6 9 17 4 12"/>',
+    clock:'<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/>',
+    x:'<circle cx="12" cy="12" r="9"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/>',
+    money:'<circle cx="12" cy="12" r="9"/><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="18"/>',
+    calendar:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>'
+  };
+  return `<svg class="ic" width="15" height="15" viewBox="0 0 24 24">${paths[name]||paths.check}</svg>`;
+}
+
+function setupSimpleDropdown(prefix, options, getValue, onSelect){
+  const trigger=document.getElementById(prefix+'Trigger');
+  const menu=document.getElementById(prefix+'Menu');
+  const list=document.getElementById(prefix+'List');
+  const textEl=document.getElementById(prefix+'SelectedText');
+
+  function render(){
+    const current=getValue();
+    list.innerHTML=options.map(o=>`<div class="cd-item ${current===o.value?'selected':''}" data-value="${o.value}"><div class="simple-icon">${filterIcon(o.icon)}</div><div class="cd-info"><span class="cd-title">${o.label}</span></div></div>`).join('');
+    list.querySelectorAll('.cd-item').forEach(item=>item.addEventListener('click',e=>{
+      e.stopPropagation();
+      const opt=options.find(o=>o.value===item.dataset.value);
+      onSelect(opt.value,opt.label);
+      textEl.textContent=opt.label;
+      menu.classList.remove('show');trigger.classList.remove('active');
+      render();
+    }));
+  }
+  trigger.addEventListener('click',e=>{
+    e.stopPropagation();
+    const isOpen=menu.classList.contains('show');
+    document.querySelectorAll('.cd-menu').forEach(m=>m.classList.remove('show'));
+    document.querySelectorAll('.cd-trigger').forEach(t=>t.classList.remove('active'));
+    if(!isOpen){render();menu.classList.add('show');trigger.classList.add('active');}
+  });
+  render();
+  return render;
+}
+
 /* ---------------- Initialize UI & Logic ---------------- */
 setupDropdown('orgDropdown', 'orgTrigger', 'orgMenu', 'orgSearch', 'orgList', renderOrgList);
 setupDropdown('evtDropdown', 'evtTrigger', 'evtMenu', 'evtSearch', 'evtList', renderEventList);
+setupSimpleDropdown('payment', FILTER_OPTIONS.payment, ()=>state.paymentFilter, (v)=>{state.paymentFilter=v;renderTable();});
+setupSimpleDropdown('status', FILTER_OPTIONS.status, ()=>state.statusFilter, (v)=>{state.statusFilter=v;renderTable();});
+setupSimpleDropdown('paymentStatus', FILTER_OPTIONS.paymentStatus, ()=>state.paymentStatusFilter||'All', (v)=>{state.paymentStatusFilter=v==='All'?null:v;renderTable();});
+setupSimpleDropdown('date', FILTER_OPTIONS.date, ()=>state.dateRange, (v)=>{
+  state.dateRange=v;
+  const customDateRange=document.getElementById('customDateRange');
+  customDateRange.hidden = v !== 'custom';
+  renderTable();
+});
 
 
 function getFiltered(){
@@ -691,11 +811,7 @@ function resetFilter() {
   state.endDate = "";
   
   document.getElementById('searchInput').value = '';
-  document.getElementById('statusFilter').value = 'All Statuses';
-  document.getElementById('paymentFilter').value = 'All';
-  document.getElementById('paymentStatusFilter').value = 'All';
-  document.getElementById('dateRangeFilter').value = 'all';
-  document.getElementById('customDateRange').style.display = 'none';
+  document.getElementById('customDateRange').hidden = true;
   document.getElementById('startDate').value = '';
   document.getElementById('endDate').value = '';
   
@@ -703,27 +819,18 @@ function resetFilter() {
   document.getElementById('evtSearch').value = '';
   document.getElementById('orgSelectedText').textContent = 'ทุกองค์กร / ผู้จัด';
   document.getElementById('evtSelectedText').textContent = 'งานคอนเสิร์ตทั้งหมด';
+  document.getElementById('paymentSelectedText').textContent = 'ทุกช่องทาง';
+  document.getElementById('statusSelectedText').textContent = 'สถานะการจองทั้งหมด';
+  document.getElementById('paymentStatusSelectedText').textContent = 'สถานะการเงินทั้งหมด';
+  document.getElementById('dateSelectedText').textContent = 'ทุกช่วงเวลา';
   
   renderTable();
 }
 
 // Event Listeners สำหรับการค้นหาและตัวกรองเวลา
 document.getElementById('searchInput').addEventListener('input', e=>{ state.search=e.target.value; renderTable(); });
-document.getElementById('statusFilter').addEventListener('change', e=>{ state.statusFilter = e.target.value; renderTable(); });
-document.getElementById('paymentFilter').addEventListener('change', e=>{ state.paymentFilter=e.target.value; renderTable(); });
-document.getElementById('paymentStatusFilter').addEventListener('change', e=>{ state.paymentStatusFilter = e.target.value==='All' ? null : e.target.value; renderTable(); });
 
 // Event Listener ตัวกรองเวลาแบบกำหนดเอง
-document.getElementById('dateRangeFilter').addEventListener('change', e=>{ 
-  state.dateRange = e.target.value; 
-  const customBox = document.getElementById('customDateRange');
-  if(state.dateRange === 'custom'){
-    customBox.style.display = 'flex';
-  } else {
-    customBox.style.display = 'none';
-  }
-  renderTable(); 
-});
 
 document.getElementById('startDate').addEventListener('change', e=>{ state.startDate = e.target.value; renderTable(); });
 document.getElementById('endDate').addEventListener('change', e=>{ state.endDate = e.target.value; renderTable(); });

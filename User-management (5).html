@@ -465,9 +465,8 @@
                 <table class="user-table" id="userTable">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>ชื่อ-นามสกุล</th>
                             <th>อีเมล / เบอร์โทรศัพท์</th>
+                            <th>ชื่อ-นามสกุล</th>
                             <th>บทบาท (User Role)</th>
                             <th>องค์กร (Organization)</th>
                             <th>สถานะบัญชี</th>
@@ -477,45 +476,40 @@
                     <tbody>
                         <!-- Users... -->
                         <tr>
-                            <td>#USR-001</td>
-                            <td><strong>สมชาย เข็มกลัด</strong></td>
                             <td>somchai@email.com<br><small style="color: var(--text-muted);">081-234-5678</small></td>
+                            <td><strong>สมชาย เข็มกลัด</strong></td>
                             <td><span class="role-badge role-customer">Customer</span></td>
                             <td style="color: var(--text-muted);">-</td>
                             <td><span class="status-dot status-active"></span>ปกติ</td>
                             <td style="text-align: center;"><button class="btn-action btn-ban" onclick="toggleBan(this)">Ban ผู้ใช้</button></td>
                         </tr>
                         <tr>
-                            <td>#USR-002</td>
-                            <td><strong>นอร์ธ ปัญญา</strong></td>
                             <td>north@gmmshow.com<br><small style="color: var(--text-muted);">02-123-4567</small></td>
+                            <td><strong>นอร์ธ ปัญญา</strong></td>
                             <td><span class="role-badge role-organizer">Event Organizer</span></td>
                             <td><strong>GMM Show Co., Ltd.</strong></td>
                             <td><span class="status-dot status-active"></span>ปกติ</td>
                             <td style="text-align: center;"><button class="btn-action btn-ban" onclick="toggleBan(this)">Ban ผู้ใช้</button></td>
                         </tr>
                         <tr>
-                            <td>#USR-003</td>
-                            <td><strong>เจสสิก้า สุขสวัสดิ์</strong></td>
                             <td>jessica@livenation.co.th<br><small style="color: var(--text-muted);">089-111-2233</small></td>
+                            <td><strong>เจสสิก้า สุขสวัสดิ์</strong></td>
                             <td><span class="role-badge role-organizer">Event Organizer</span></td>
                             <td><strong>Live Nation Tero</strong></td>
                             <td><span class="status-dot status-active"></span>ปกติ</td>
                             <td style="text-align: center;"><button class="btn-action btn-ban" onclick="toggleBan(this)">Ban ผู้ใช้</button></td>
                         </tr>
                         <tr>
-                            <td>#USR-004</td>
-                            <td><strong>ประภาส จัดคอนเสิร์ต</strong></td>
                             <td>prapas@bectero.com<br><small style="color: var(--text-muted);">083-444-5566</small></td>
+                            <td><strong>ประภาส จัดคอนเสิร์ต</strong></td>
                             <td><span class="role-badge role-organizer">Event Organizer</span></td>
                             <td><strong>BEC-Tero Entertainment</strong></td>
                             <td><span class="status-dot status-active"></span>ปกติ</td>
                             <td style="text-align: center;"><button class="btn-action btn-ban" onclick="toggleBan(this)">Ban ผู้ใช้</button></td>
                         </tr>
                         <tr>
-                            <td>#USR-005</td>
-                            <td><strong>พิมพ์ชนก ไอดอลโชว์</strong></td>
                             <td>pim@4nologue.com<br><small style="color: var(--text-muted);">086-777-8899</small></td>
+                            <td><strong>พิมพ์ชนก ไอดอลโชว์</strong></td>
                             <td><span class="role-badge role-organizer">Event Organizer</span></td>
                             <td><strong>4NOLOGUE Co., Ltd.</strong></td>
                             <td><span class="status-dot status-active"></span>ปกติ</td>
@@ -701,10 +695,10 @@
             const tr = table.getElementsByTagName('tr');
 
             for (let i = 1; i < tr.length; i++) {
+                const emailCell = tr[i].cells[0].innerText.toLowerCase();
                 const nameCell = tr[i].cells[1].innerText.toLowerCase();
-                const emailCell = tr[i].cells[2].innerText.toLowerCase();
-                const roleCell = tr[i].cells[3].innerText;
-                const orgCell = tr[i].cells[4].innerText;
+                const roleCell = tr[i].cells[2].innerText;
+                const orgCell = tr[i].cells[3].innerText;
 
                 const matchesSearch = nameCell.includes(searchInput) || emailCell.includes(searchInput);
                 const matchesRole = (roleFilter === 'ALL') || roleCell.includes(roleFilter);
@@ -726,7 +720,7 @@
         /* ---------- 7. Ban / Unban ---------- */
         function toggleBan(btn) {
             const row = btn.closest('tr');
-            const statusCell = row.cells[5];
+            const statusCell = row.cells[4];
             const userName = row.cells[1].innerText;
 
             if (btn.classList.contains('btn-ban')) {

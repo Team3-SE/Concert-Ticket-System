@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>เพิ่มผู้จัดงาน - Modal Card</title>
+<title>เพิ่มผู้ใช้ในระบบ - Modal Card</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -501,15 +501,15 @@
             <!-- Modal Header -->
             <header class="modal-header">
                 <div class="modal-title-row">
-                    <h1 class="modal-title">เพิ่มผู้จัดงาน (Organizer)</h1>
+                    <h1 class="modal-title">เพิ่มผู้ใช้ในระบบ</h1>
                     <button type="button" class="btn-close" aria-label="ปิดหน้าต่าง">
                         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
                 </div>
-                <p class="modal-description">
-                    เลือกบริษัทที่มีอยู่แล้ว หรือเพิ่มบริษัทใหม่ จากนั้นเพิ่มอีเมลของพนักงาน ผู้รับแต่ละคนจะได้รับลิงก์สำหรับลงทะเบียน
+                <p class="modal-description" id="modalDescription">
+                    เลือกบทบาทของผู้ใช้ จากนั้นเลือกบริษัทที่มีอยู่แล้วหรือเพิ่มบริษัทใหม่ แล้วเพิ่มอีเมลของผู้ใช้ ผู้รับแต่ละคนจะได้รับลิงก์สำหรับลงทะเบียน
                 </p>
             </header>
 
@@ -517,6 +517,16 @@
             <div class="modal-body">
 
                 <div class="form-group">
+                    <label class="form-label" for="roleSelect">บทบาท <span class="req">*</span></label>
+                    <select id="roleSelect" class="form-select" onchange="handleRoleChange(this.value)">
+                        <option value="organizer" selected>ผู้จัดงาน (Organizer)</option>
+                        <option value="staff">พนักงาน (Staff)</option>
+                        <option value="admin">ผู้ดูแลระบบ (Admin)</option>
+                    </select>
+                    <p class="field-hint">บทบาทกำหนดสิทธิ์การใช้งานของผู้ใช้ในระบบ ไม่ใช่ตำแหน่งในบริษัท</p>
+                </div>
+
+                <div class="form-group" id="companyGroup">
                     <label class="form-label">บริษัท <span class="req">*</span></label>
 
                     <div class="toggle-group">
@@ -566,19 +576,14 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="staffEmailInput">อีเมลพนักงาน <span class="req">*</span></label>
+                    <label class="form-label" for="staffEmailInput" id="emailLabel">อีเมลผู้ใช้ <span class="req">*</span></label>
                     <div class="input-group">
-                        <input type="email" id="staffEmailInput" class="form-input" placeholder="staff@organizer.com" autocomplete="off">
+                        <input type="email" id="staffEmailInput" class="form-input" placeholder="user@organizer.com" autocomplete="off">
                         <button type="button" class="btn btn-secondary btn-sm" id="addEmailBtn" onclick="addStaffEmail()">เพิ่ม</button>
                     </div>
                     <div id="staffEmailChips" class="email-chip-list"></div>
                     <p class="field-hint" id="emailHint">กด Enter หรือคลิก "เพิ่ม" เพื่อใส่อีเมลได้หลายรายการ</p>
-                    <p class="field-error" id="emailError">กรุณาเพิ่มอีเมลพนักงานอย่างน้อย 1 รายการ</p>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="roleInput">ตำแหน่ง</label>
-                    <input type="text" id="roleInput" class="form-input" value="ผู้ดูแลระบบผู้จัดงาน (Organizer Admin)" readonly>
+                    <p class="field-error" id="emailError">กรุณาเพิ่มอีเมลผู้ใช้อย่างน้อย 1 รายการ</p>
                 </div>
 
                 <div class="info-box">
@@ -609,7 +614,16 @@
         logo: i < 5 ? ['LT', 'BT', 'GS', 'SP', '4N'][i] : `C${i+1}`
     }));
 
+    /* ---------- Role config ---------- */
+    const ROLE_LABELS = {
+        organizer: 'ผู้จัดงาน (Organizer)',
+        staff: 'พนักงาน (Staff)',
+        admin: 'ผู้ดูแลระบบ (Admin)'
+    };
+    const ROLES_REQUIRE_COMPANY = ['organizer', 'staff'];
+
     /* ---------- State ---------- */
+    let currentRole = 'organizer'; // 'organizer' | 'staff' | 'admin'
     let companyMode = 'existing'; // 'existing' | 'new'
     let selectedOrg = null;
     let staffEmails = [];
@@ -619,6 +633,10 @@
     let isFetching = false;
     let hasMoreData = true;
     const PAGE_SIZE = 10;
+
+    const roleSelect = document.getElementById('roleSelect');
+    const companyGroup = document.getElementById('companyGroup');
+    const emailLabel = document.getElementById('emailLabel');
 
     const modeExistingLabel = document.getElementById('modeExistingLabel');
     const modeNewLabel = document.getElementById('modeNewLabel');
@@ -643,6 +661,22 @@
     const addEmailBtn = document.getElementById('addEmailBtn');
     const staffEmailChips = document.getElementById('staffEmailChips');
     const emailError = document.getElementById('emailError');
+
+    /* ---------- Init (pre-set to Organizer view for Figma export) ---------- */
+    window.addEventListener('DOMContentLoaded', () => { handleRoleChange('organizer'); setCompanyMode('existing'); });
+
+    /* ---------- Role toggle ---------- */
+    function handleRoleChange(role) {
+        currentRole = role;
+        const needsCompany = ROLES_REQUIRE_COMPANY.includes(role);
+
+        companyGroup.style.display = needsCompany ? 'block' : 'none';
+        companyError.classList.remove('show');
+
+        emailLabel.innerHTML = role === 'admin'
+            ? 'อีเมลผู้ดูแลระบบ <span class="req">*</span>'
+            : 'อีเมลผู้ใช้ <span class="req">*</span>';
+    }
 
     /* ---------- Mode toggle ---------- */
     function setCompanyMode(mode) {
@@ -856,22 +890,25 @@
         let hasError = false;
         let companyName = '';
         let isNewCompany = false;
+        const needsCompany = ROLES_REQUIRE_COMPANY.includes(currentRole);
 
-        if (companyMode === 'existing') {
-            if (!selectedOrg) {
-                companyError.classList.add('show');
-                hasError = true;
+        if (needsCompany) {
+            if (companyMode === 'existing') {
+                if (!selectedOrg) {
+                    companyError.classList.add('show');
+                    hasError = true;
+                } else {
+                    companyName = selectedOrg.name;
+                }
             } else {
-                companyName = selectedOrg.name;
-            }
-        } else {
-            companyName = companyNameInput.value.trim();
-            if (!companyName) {
-                companyNameInput.classList.add('error');
-                companyError.classList.add('show');
-                hasError = true;
-            } else {
-                isNewCompany = true;
+                companyName = companyNameInput.value.trim();
+                if (!companyName) {
+                    companyNameInput.classList.add('error');
+                    companyError.classList.add('show');
+                    hasError = true;
+                } else {
+                    isNewCompany = true;
+                }
             }
         }
 
@@ -882,8 +919,13 @@
         if (hasError) return;
 
         const emailCount = staffEmails.length;
-        const companyMsg = isNewCompany ? `สร้างบริษัท "${companyName}" เรียบร้อยแล้ว` : `เพิ่มพนักงานให้กับบริษัท "${companyName}" เรียบร้อยแล้ว`;
-        alert(`${companyMsg} และระบบได้ส่งลิงก์ลงทะเบียนไปยังอีเมลทั้งหมด ${emailCount} รายการ ในตำแหน่ง "ผู้ดูแลระบบผู้จัดงาน (Organizer Admin)"`);
+        let companyMsg = '';
+        if (needsCompany) {
+            companyMsg = (isNewCompany
+                ? `สร้างบริษัท "${companyName}" เรียบร้อยแล้ว และ`
+                : `เพิ่มผู้ใช้ให้กับบริษัท "${companyName}" เรียบร้อยแล้ว และ`);
+        }
+        alert(`${companyMsg}ระบบได้ส่งลิงก์ลงทะเบียนไปยังอีเมลทั้งหมด ${emailCount} รายการ ในบทบาท "${ROLE_LABELS[currentRole]}"`);
     }
 </script>
 

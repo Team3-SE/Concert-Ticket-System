@@ -1,140 +1,193 @@
-@startuml
+	@startuml
 skinparam classAttributeIconSize 0
-skinparam monochrome false
-skinparam roundcorner 10
-skinparam shadowing true
 
-title Admin Dashboard System - Class Diagram
-
-package "User & Actor Management" {
-    class User {
-        + userId: String
-        + username: String
-        + email: String
-        + role: ActorRole
-        + status: UserStatus
-        + createdAt: DateTime
-    }
-
-    class Admin {
-        + adminId: String
-        + department: String
-        + acknowledgeAlert(alertId: String): void
-        + resolveAlert(alertId: String, notes: String, attachment: File): void
-        + takeQuickAction(userId: String, action: String): void
-        + exportLogs(filters: LogFilter): File
-    }
-
-    enum UserStatus {
-        ACTIVE
-        SUSPENDED
-        BANNED
-    }
-
-    Admin -up-|> User
+' ================= Enumerations =================
+enum Role {
+  CUSTOMER
+  ORGANIZER
+  ADMIN
 }
 
-package "System Anomaly & Alert Module" {
-    class SystemAlert {
-        + alertId: String
-        + title: String
-        + description: String
-        + type: AlertType
-        + status: AlertStatus
-        + organizationId: String
-        + concertId: String
-        + detectedAt: DateTime
-        + getDetails(): AlertDetail
-        + updateStatus(newStatus: AlertStatus): void
-    }
-
-    class AlertResolution {
-        + resolutionId: String
-        + resolvedAt: DateTime
-        + adminId: String
-        + resolutionNotes: String
-        + attachmentUrl: String
-    }
-
-    class AlertFilter {
-        + organizationId: String
-        + concertId: String
-        + dateRange: DateRange
-        + alertType: AlertType
-    }
-
-    enum AlertType {
-        DUPLICATE_CHARGE
-        SEAT_LOCK_EXPIRED_FAILED
-        SEAT_HOARDING
-        SYSTEM_ERROR
-    }
-
-    enum AlertStatus {
-        TOTAL_ERRORS
-        PENDING
-        INVESTIGATING
-        RESOLVED
-    }
-
-    SystemAlert "1" *-- "0..1" AlertResolution : resolves with >
-    SystemAlert -> AlertType
-    SystemAlert -> AlertStatus
+enum SeatStatus {
+  AVAILABLE
+  LOCKED
+  BOOKED
 }
 
-package "System Audit Logs Module" {
-    class AuditLog {
-        + logId: String
-        + timestamp: DateTime
-        + actorId: String
-        + actorRole: ActorRole
-        + action: String
-        + category: LogCategory
-        + status: LogStatus
-        + ipAddress: String
-        + userAgent: String
-        + rawMetadata: JSON
-        + fraudMonitorFlag: Boolean
-        + showDetails(): JSON
-    }
-
-    class LogFilter {
-        + role: ActorRole
-        + category: LogCategory
-        + status: LogStatus
-        + dateRange: DateRange
-    }
-
-    enum ActorRole {
-        ADMIN
-        EVENT_ORGANIZER
-        CUSTOMER
-        SYSTEM
-    }
-
-    enum LogCategory {
-        AUTH_LOGIN
-        PAYMENT_GATEWAY
-        CONCERT_MANAGEMENT
-        USER_MANAGEMENT
-        FRAUD_MONITOR
-    }
-
-    enum LogStatus {
-        SUCCESS
-        FAILED
-        BLOCKED
-    }
-
-    AuditLog -> ActorRole
-    AuditLog -> LogCategory
-    AuditLog -> LogStatus
+enum BookingStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  FAILED
+  EXPIRED
 }
 
-' Relationships between packages
-Admin "1" -- "*" SystemAlert : investigates & resolves >
-Admin "1" -- "*" AuditLog : views & filters >
-User "1" -- "*" AuditLog : generates >
-AuditLog "0..1" -- "1" SystemAlert : triggers (Fraud/Error) >
+enum PaymentMethod {
+  PROMPTPAY
+  CREDIT_CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+enum ErrorStatus {
+  UNRESOLVED
+  INVESTIGATING
+  RESOLVED
+}
+
+enum ErrorType {
+  SEAT_HOARDING
+  UNCAPTURED_AUTH
+  ORPHANED_PROMPTPAY
+  SEAT_LOCK_FAILED
+  DUPLICATE_CHARGE
+}
+
+' ================= Users & Organizations =================
+class Company {
+  - companyID: String
+  - name: String
+  - initials: String
+  - description: String
+  + getCompanyInfo(): String
+  + listEvents(): List<Concert>
+}
+
+abstract class User {
+  - userID: String
+  - name: String
+  - email: String
+  - phone: String
+  - password: Hash
+  - role: Role
+  - isBanned: Boolean
+  + login(): Boolean
+  + logout(): void
+}
+
+class Customer {
+  + register(): void
+  + searchConcert(keyword): List<Concert>
+  + createBooking(concert, seats): Booking
+  + viewHistory(): List<Booking>
+  + viewTickets(): List<Ticket>
+}
+
+class EventOrganizer {
+  - companyID: String
+  + createConcert(details): Concert
+  + defineSeatMap(concert, mapDetails): void
+  + viewSalesRealTime(concert): Report
+  + scanTicketQR(qrCode): Boolean
+}
+
+class Admin {
+  + manageUser(userID, action): void
+  + viewAnomalies(filters): List<SystemError>
+  + acknowledgeError(errorID): void
+  + resolveError(errorID, reason, files): void
+  + executeQuickAction(errorID, actionType): void
+}
+
+User <|-- Customer
+User <|-- EventOrganizer
+User <|-- Admin
+
+' ================= Core Ticketing System =================
+class Concert {
+  - concertID: String
+  - name: String
+  - artist: String
+  - dateTime: DateTime
+  - venue: String
+  + getDetails(): ConcertInfo
+}
+
+class Zone {
+  - zoneID: String
+  - name: String
+  - price: Double
+  - capacity: Integer
+  + getAvailableSeats(): List<Seat>
+}
+
+class Seat {
+  - seatID: String
+  - row: String
+  - number: Integer
+  - status: SeatStatus
+  + lockSeat(): void
+  + unlockSeat(): void
+  + forceUnlock(): void 
+  + confirmSeat(): void
+}
+
+class Booking {
+  - bookingID: String
+  - bookingDate: DateTime
+  - totalAmount: Double
+  - status: BookingStatus
+  - expiryTime: DateTime
+  + calculateTotal(): Double
+  + confirmBooking(): void
+  + cancelBooking(): void
+  + checkExpiry(): Boolean
+}
+
+class Payment {
+  - paymentID: String
+  - amount: Double
+  - method: PaymentMethod
+  - status: PaymentStatus
+  - paymentDate: DateTime
+  + processPayment(): Boolean
+  + verifyStatus(): Boolean
+  + manualCapture(): void
+}
+
+class Ticket {
+  - ticketID: String
+  - qrCode: String
+  - isUsed: Boolean
+  + generateQR(): String
+  + validateTicket(): Boolean
+}
+
+' ================= Anomaly & System Error =================
+class SystemError {
+  - errorID: String
+  - type: ErrorType
+  - message: String
+  - timestamp: DateTime
+  - status: ErrorStatus
+  - resolveReason: String
+  - attachments: List<String>
+  + updateStatus(newStatus): void
+  + addAttachment(file): void
+}
+
+' ================= Relationships =================
+Company "1" *-- "*" EventOrganizer : employs >
+Company "1" -- "*" Concert : owns/hosts >
+
+EventOrganizer "1" -- "*" Concert : manages >
+Concert "1" *-- "*" Zone : contains >
+Zone "1" *-- "*" Seat : contains >
+
+Customer "1" -- "*" Booking : makes >
+Booking "1" -- "*" Seat : reserves >
+Booking "1" -- "1" Payment : has >
+Booking "1" -- "*" Ticket : generates >
+
+Ticket "1" -- "1" Seat : assigned to >
+Ticket "*" -- "1" Concert : belongs to >
+
+SystemError "*" -- "1" Booking : references >
+Admin "1" -- "*" SystemError : monitors & resolves >
 
 @enduml
