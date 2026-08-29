@@ -1,0 +1,176 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Standalone Model Tester</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8 font-sans">
+    <div class="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold mb-6 text-gray-800">ðŸ§ª Standalone Model Tester (External)</h1>
+        <p class="text-sm text-gray-500 mb-6">à¹€à¸Šà¸·à¹ˆà¸­à¸¡à¸•à¹ˆà¸­à¸à¸±à¸š API à¸‚à¸­à¸‡ Laravel à¸—à¸µà¹ˆà¸žà¸­à¸£à¹Œà¸• 8080</p>
+        
+        <div class="grid grid-cols-2 gap-6 mb-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">1. à¸žà¸´à¸¡à¸žà¹Œà¸Šà¸·à¹ˆà¸­ Model (à¹€à¸Šà¹ˆà¸™ User, Concert)</label>
+                <div class="flex gap-2">
+                    <input type="text" id="modelInput" placeholder="User" class="w-full border-gray-300 rounded-md shadow-sm p-2 border focus:border-blue-500 focus:ring-1 focus:ring-blue-500" value="User">
+                    <button id="loadMethodsBtn" class="bg-gray-800 text-white px-4 py-2 rounded">Load</button>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">2. à¹€à¸¥à¸·à¸­à¸ Function</label>
+                <select id="methodSelect" class="w-full border-gray-300 rounded-md shadow-sm p-2 border focus:border-blue-500 focus:ring-1 focus:ring-blue-500" disabled>
+                    <option value="">-- à¸£à¸­à¸à¸²à¸£à¸”à¸¶à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ --</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="instanceIdContainer" class="mb-6 hidden bg-blue-50 p-4 rounded-md border border-blue-100">
+            <label class="block text-sm font-bold text-blue-800 mb-2">à¸£à¸°à¸šà¸¸ ID à¸‚à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥ (à¸ªà¸³à¸«à¸£à¸±à¸šà¸—à¸”à¸ªà¸­à¸š Instance Method)</label>
+            <input type="text" id="instanceIdInput" placeholder="à¹ƒà¸ªà¹ˆ Primary Key (UUID)..." class="w-full border-gray-300 rounded-md shadow-sm p-2 border">
+            <p class="text-xs text-blue-600 mt-1">* à¸Ÿà¸±à¸‡à¸à¹Œà¸Šà¸±à¸™à¸šà¸²à¸‡à¸•à¸±à¸§ (à¹€à¸Šà¹ˆà¸™à¸à¸²à¸£à¸”à¸¶à¸‡ Relationship) à¸•à¹‰à¸­à¸‡à¸¡à¸µà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸­à¹‰à¸²à¸‡à¸­à¸´à¸‡à¸à¹ˆà¸­à¸™</p>
+        </div>
+
+        <div id="paramsContainer" class="mb-6 hidden">
+            <h3 class="text-sm font-bold text-gray-700 mb-2">à¸£à¸°à¸šà¸¸ Parameter (à¸–à¹‰à¸²à¸¡à¸µ)</h3>
+            <div id="paramsList" class="space-y-3 p-4 bg-gray-50 border border-gray-200 rounded-md"></div>
+        </div>
+
+        <button id="executeBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded hover:bg-blue-700 disabled:opacity-50 transition-colors" disabled>
+            ðŸš€ à¸£à¸±à¸™à¸„à¸³à¸ªà¸±à¹ˆà¸‡ Execute
+        </button>
+
+        <div class="mt-8">
+            <h3 class="text-lg font-semibold mb-2 text-gray-800">à¸œà¸¥à¸¥à¸±à¸žà¸˜à¹Œ (Result Data):</h3>
+            <pre id="resultOutput" class="bg-gray-900 text-green-400 p-4 rounded-md overflow-x-auto min-h-[150px] max-h-[500px] text-sm font-mono shadow-inner">à¸£à¸­à¸à¸²à¸£à¸ªà¸±à¹ˆà¸‡à¸£à¸±à¸™...</pre>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8080/dev/models'; // Pointing to Docker API
+        
+        const modelInput = document.getElementById('modelInput');
+        const loadMethodsBtn = document.getElementById('loadMethodsBtn');
+        const methodSelect = document.getElementById('methodSelect');
+        const paramsContainer = document.getElementById('paramsContainer');
+        const paramsList = document.getElementById('paramsList');
+        const executeBtn = document.getElementById('executeBtn');
+        const resultOutput = document.getElementById('resultOutput');
+        const instanceIdContainer = document.getElementById('instanceIdContainer');
+        const instanceIdInput = document.getElementById('instanceIdInput');
+
+        let currentMethods = [];
+        let selectedMethodObj = null;
+
+        loadMethodsBtn.addEventListener('click', async function() {
+            const model = modelInput.value.trim();
+            if (!model) return;
+
+            resultOutput.textContent = 'à¸à¸³à¸¥à¸±à¸‡à¹‚à¸«à¸¥à¸” Functions à¸‚à¸­à¸‡ ' + model + '...';
+            try {
+                const res = await fetch(API_URL + '/methods', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model })
+                });
+                const methods = await res.json();
+                
+                if(methods.length === 0) {
+                     resultOutput.textContent = 'à¹„à¸¡à¹ˆà¸žà¸š Model à¸—à¸µà¹ˆà¸Šà¸·à¹ˆà¸­ ' + model;
+                     methodSelect.disabled = true;
+                     return;
+                }
+
+                currentMethods = methods;
+                
+                methodSelect.innerHTML = '<option value="">-- à¹€à¸¥à¸·à¸­à¸ Function --</option>';
+                methods.forEach(m => {
+                    const typeLabel = m.type === 'static' ? '[Static]' : '[Instance]';
+                    methodSelect.innerHTML += <option value=" + m.name + "> + m.name +   + typeLabel + </option>;
+                });
+                methodSelect.disabled = false;
+                resultOutput.textContent = 'à¹‚à¸«à¸¥à¸”à¸ªà¸³à¹€à¸£à¹‡à¸ˆ à¸žà¸£à¹‰à¸­à¸¡à¹ƒà¸Šà¹‰à¸‡à¸²à¸™';
+            } catch (e) {
+                resultOutput.textContent = 'Error fetching methods (Make sure Docker is running): ' + e.message;
+            }
+        });
+
+        methodSelect.addEventListener('change', function() {
+            const methodName = this.value;
+            selectedMethodObj = currentMethods.find(m => m.name === methodName);
+            
+            if (!selectedMethodObj) {
+                paramsContainer.classList.add('hidden');
+                instanceIdContainer.classList.add('hidden');
+                executeBtn.disabled = true;
+                return;
+            }
+
+            executeBtn.disabled = false;
+            
+            if (selectedMethodObj.type === 'instance') {
+                instanceIdContainer.classList.remove('hidden');
+            } else {
+                instanceIdContainer.classList.add('hidden');
+            }
+
+            if (selectedMethodObj.params.length > 0) {
+                paramsContainer.classList.remove('hidden');
+                let html = '';
+                selectedMethodObj.params.forEach(p => {
+                    html += 
+                        <div>
+                            <label class="text-sm text-gray-700 font-medium mb-1 block"> + p + </label>
+                            <input type="text" data-param=" + p + " placeholder="à¹ƒà¸ªà¹ˆà¸„à¹ˆà¸²à¹ƒà¸«à¹‰ parameter à¸™à¸µà¹‰..." class="param-input w-full border-gray-300 rounded-md shadow-sm p-2 border text-sm">
+                        </div>
+                    ;
+                });
+                paramsList.innerHTML = html;
+            } else {
+                paramsContainer.classList.add('hidden');
+                paramsList.innerHTML = '';
+            }
+        });
+
+        executeBtn.addEventListener('click', async function() {
+            if (!modelInput.value || !selectedMethodObj) return;
+
+            const params = {};
+            document.querySelectorAll('.param-input').forEach(input => {
+                params[input.dataset.param] = input.value;
+            });
+
+            resultOutput.textContent = 'Executing...';
+            this.disabled = true;
+
+            try {
+                const res = await fetch(API_URL + '/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: modelInput.value.trim(),
+                        method_name: selectedMethodObj.name,
+                        type: selectedMethodObj.type,
+                        params: params,
+                        instance_id: instanceIdInput.value
+                    })
+                });
+                
+                const result = await res.json();
+                if (result.success) {
+                    resultOutput.textContent = JSON.stringify(result.data, null, 2);
+                } else {
+                    resultOutput.textContent = 'ERROR:\n' + (result.error || JSON.stringify(result));
+                }
+            } catch (e) {
+                resultOutput.textContent = 'Network Error:\n' + e.message;
+            } finally {
+                this.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
