@@ -131,35 +131,8 @@ docker exec concert_app php artisan cache:clear
 docker exec concert_app php artisan view:clear
 ```
 
----
 
-### Git Workflow (ตามที่ทีมตกลง)
-
-```bash
-# สร้าง branch ของ squad ตัวเอง
-git checkout -b squad-a/feature-auth
-
-# commit
-git add .
-git commit -m "feat(auth): add login controller"
-
-# push
-git push origin squad-a/feature-auth
-
-# เปิด PR ให้ Member 12 review ก่อน merge
-```
 
 > ❌ ห้าม commit `.env` เด็ดขาด — `.env` อยู่ใน `.gitignore` แล้ว
 
----
 
-### ทีมพัฒนา
-
-| Squad | โมดูล |
-|---|---|
-| A | Auth & Access |
-| B | Company / Concert / Zone / Seat |
-| C | Booking & Redis Seat Lock |
-| D | Payment & Chargeback |
-| E | Ticket & QR Validation |
-| F | Admin / Infra / DevOps |

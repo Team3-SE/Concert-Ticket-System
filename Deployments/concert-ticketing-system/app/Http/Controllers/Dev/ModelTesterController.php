@@ -1,40 +1,67 @@
-﻿<?php
+<?php
+
 namespace App\Http\Controllers\Dev;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use ReflectionClass;
 use ReflectionMethod;
-use Illuminate\Support\Facades\File;
 
+/**
+ * ModelTesterController
+ * Dev-only controller to test Eloquent model methods via HTTP
+ * Author : AI Agent
+ * Created : 30/08/2026
+ */
 class ModelTesterController extends Controller
 {
-    private function corsResponse($data, $status = 200) {
+    /**
+     * corsResponse(data, status)
+     * Return a JSON response with CORS headers.
+     * param : data, status
+     * return : JsonResponse
+     */
+    private function corsResponse($data, $status = 200)
+    {
         return response()->json($data, $status)
             ->header('Access-Control-Allow-Origin', '*')
-            ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+            ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type');
     }
 
+    /**
+     * getMethods(request)
+     * Return list of public methods on a given Model class.
+     * param : request
+     * return : JsonResponse
+     */
     public function getMethods(Request $request)
     {
         if ($request->isMethod('options')) {
             return $this->corsResponse(['status' => 'ok']);
         }
 
-        $model = $request->model;
+        $model = $request->input('model');
+        if (empty($model)) {
+            return $this->corsResponse(['debug_error' => 'No model provided', 'all_inputs' => $request->all()]);
+        }
         $className = "App\\Models\\" . $model;
-        
-        if (!class_exists($className)) return $this->corsResponse([]);
+
+        if (!class_exists($className)) {
+            return $this->corsResponse([]);
+        }
 
         $reflector = new ReflectionClass($className);
-        $methods = [];
-        
-        $methods[] = ['name' => 'all', 'params' => [], 'type' => 'static'];
-        $methods[] = ['name' => 'find', 'params' => ['id'], 'type' => 'static'];
-        $methods[] = ['name' => 'first', 'params' => [], 'type' => 'static'];
-        $methods[] = ['name' => 'count', 'params' => [], 'type' => 'static'];
 
+        // Always add common Eloquent static methods
+        $methods = [
+            ['name' => 'all',   'params' => [],     'type' => 'static'],
+            ['name' => 'find',  'params' => ['id'], 'type' => 'static'],
+            ['name' => 'first', 'params' => [],     'type' => 'static'],
+            ['name' => 'count', 'params' => [],     'type' => 'static'],
+        ];
+
+        // Add methods defined directly on this model class
         foreach ($reflector->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
             if ($method->class === $className) {
                 $params = [];
@@ -42,44 +69,57 @@ class ModelTesterController extends Controller
                     $params[] = $param->getName();
                 }
                 $methods[] = [
-                    'name' => $method->getName(),
+                    'name'   => $method->getName(),
                     'params' => $params,
-                    'type' => $method->isStatic() ? 'static' : 'instance'
+                    'type'   => $method->isStatic() ? 'static' : 'instance',
                 ];
             }
         }
+
         return $this->corsResponse($methods);
     }
 
+    /**
+     * execute(request)
+     * Execute the specified method on the given Model and return result.
+     * param : request
+     * return : JsonResponse
+     */
     public function execute(Request $request)
     {
         if ($request->isMethod('options')) {
             return $this->corsResponse(['status' => 'ok']);
         }
 
-        $model = "App\\Models\\" . $request->model;
-        $method = $request->method_name;
-        $params = $request->params ?? [];
-        $instanceId = $request->instance_id;
-        $type = $request->type;
+        $modelClass = "App\\Models\\" . $request->input('model');
+        $methodName = $request->input('method_name');
+        $params     = array_values($request->input('params', []));
+        $instanceId = $request->input('instance_id');
+        $type       = $request->input('type');
+
+        if (!class_exists($modelClass)) {
+            return $this->corsResponse(['success' => false, 'error' => 'Model not found: ' . $modelClass], 404);
+        }
 
         try {
             if ($type === 'static') {
-                $result = $model::$method(...\array_values($params));
+                $result = $modelClass::$methodName(...$params);
             } else {
                 if (!$instanceId) {
-                    return $this->corsResponse(['error' => 'à¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸„à¹ˆà¸² Instance ID (PK) à¹€à¸žà¸·à¹ˆà¸­à¹ƒà¸Šà¹‰à¸”à¸¶à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸à¹‰à¸­à¸™à¸™à¸±à¹‰à¸™à¸¡à¸²à¸à¹ˆà¸­à¸™à¹€à¸£à¸µà¸¢à¸à¸Ÿà¸±à¸‡à¸à¹Œà¸Šà¸±à¸™'], 400);
+                    return $this->corsResponse(['success' => false, 'error' => 'Please provide Instance ID (Primary Key) to call an instance method.'], 400);
                 }
-                $instance = $model::find($instanceId);
+                $instance = $modelClass::find($instanceId);
                 if (!$instance) {
-                    return $this->corsResponse(['error' => 'à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸‚à¸­à¸‡ ID: ' . $instanceId], 404);
+                    return $this->corsResponse(['success' => false, 'error' => 'Record not found for ID: ' . $instanceId], 404);
                 }
-                $result = $instance->$method(...\array_values($params));
-                
+                $result = $instance->$methodName(...$params);
+
+                // If result is a relation, resolve it
                 if ($result instanceof \Illuminate\Database\Eloquent\Relations\Relation) {
                     $result = $result->get();
                 }
             }
+
             return $this->corsResponse(['success' => true, 'data' => $result]);
         } catch (\Exception $e) {
             return $this->corsResponse(['success' => false, 'error' => $e->getMessage()], 500);
