@@ -14,4 +14,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class AuditLog extends Model
 {
     use HasUuids;
+
+    protected $table = 'cts_audit_logs';
+    protected $primaryKey = 'log_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+
 }

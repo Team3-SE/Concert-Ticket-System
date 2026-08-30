@@ -14,4 +14,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class Payment extends Model
 {
     use HasUuids;
+
+    protected $table = 'cts_payments';
+    protected $primaryKey = 'payment_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+
 }

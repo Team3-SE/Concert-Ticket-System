@@ -65,4 +65,8 @@ class Concert extends Model
     {
         return "{$this->name} by {$this->artist} at {$this->venue} on {$this->date_time}";
     }
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'company_id', 'company_id');
+    }
 }

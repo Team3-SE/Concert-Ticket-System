@@ -1,4 +1,4 @@
-﻿# Concert Ticketing System
+# Concert Ticketing System
 
 ระบบจองตั๋วคอนเสิร์ต — Team 3, Software Engineering, Burapha University
 
@@ -131,8 +131,24 @@ docker exec concert_app php artisan cache:clear
 docker exec concert_app php artisan view:clear
 ```
 
+---
 
+### การเขียนโค้ดและทดสอบ (Development Workflow)
+
+**Q: ถ้าเขียนฟังก์ชันใหม่เพิ่ม หรือแก้ไฟล์ PHP ต้องรัน `docker-compose build` ใหม่ไหม?**
+> **ตอบ: ไม่ต้องครับ!** 🎉
+> 
+> โฟลเดอร์โปรเจกต์ของคุณ (`concert-ticketing-system`) ถูก Map (Volume) เข้าไปใน Docker Container โดยตรง 
+> ดังนั้น **"เมื่อคุณ Save ไฟล์ใน VS Code โค้ดใน Docker จะอัปเดตตามทันที"** คุณสามารถสลับไปกด Refresh หน้าเว็บเพื่อดูผลลัพธ์ หรือรันเทสต์ผ่าน Model Tester ได้เลย
+>
+> **กรณีเดียวที่ต้องสั่ง Rebuild (`docker-compose build`) คือ:**
+> 1. มีการแก้ไขไฟล์ `Dockerfile` (เช่น ต้องการลง PHP Extension เพิ่ม)
+> 2. มีการแก้ไขไฟล์ `docker-compose.yml` (เช่น เพิ่ม/เปลี่ยน Service ใหม่)
+>
+> **กรณีที่แก้โค้ดแล้วหา Class ไม่เจอ (Class not found):**
+> หากคุณสร้างไฟล์ Model/Controller ใหม่ แล้วระบบมองไม่เห็น ให้รันคำสั่งอัปเดต Autoload:
+> ```bash
+> docker exec concert_app composer dump-autoload
+> ```
 
 > ❌ ห้าม commit `.env` เด็ดขาด — `.env` อยู่ใน `.gitignore` แล้ว
-
-

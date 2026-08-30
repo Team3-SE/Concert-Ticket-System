@@ -14,4 +14,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class TicketValidationLog extends Model
 {
     use HasUuids;
+
+    protected $table = 'cts_ticket_validation_logs';
+    protected $primaryKey = 'validation_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+
 }

@@ -14,4 +14,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class BookingSeat extends Model
 {
     use HasUuids;
+
+    protected $table = 'cts_booking_seats';
+    protected $primaryKey = 'booking_seat_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+
 }

@@ -14,4 +14,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class Zone extends Model
 {
     use HasUuids;
+
+    protected $table = 'cts_zones';
+    protected $primaryKey = 'zone_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+
 }

@@ -14,4 +14,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class Staff extends Model
 {
     use HasUuids;
+
+    protected $table = 'cts_staff';
+    protected $primaryKey = 'staff_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+
 }

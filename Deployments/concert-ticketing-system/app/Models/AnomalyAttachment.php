@@ -14,4 +14,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class AnomalyAttachment extends Model
 {
     use HasUuids;
+
+    protected $table = 'cts_anomaly_attachments';
+    protected $primaryKey = 'attachment_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+
 }

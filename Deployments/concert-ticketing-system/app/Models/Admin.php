@@ -14,4 +14,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class Admin extends Model
 {
     use HasUuids;
+
+    protected $table = 'cts_admins';
+    protected $primaryKey = 'admin_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+
 }

@@ -14,4 +14,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class SeatLockLog extends Model
 {
     use HasUuids;
+
+    protected $table = 'cts_seat_lock_logs';
+    protected $primaryKey = 'lock_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+
 }

@@ -14,4 +14,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class Ticket extends Model
 {
     use HasUuids;
+
+    protected $table = 'cts_tickets';
+    protected $primaryKey = 'ticket_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+
 }

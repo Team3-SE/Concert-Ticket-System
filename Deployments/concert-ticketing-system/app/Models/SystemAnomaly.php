@@ -14,4 +14,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class SystemAnomaly extends Model
 {
     use HasUuids;
+
+    protected $table = 'cts_system_anomalies';
+    protected $primaryKey = 'anomaly_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+
 }

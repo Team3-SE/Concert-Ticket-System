@@ -14,4 +14,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class Chargeback extends Model
 {
     use HasUuids;
+
+    protected $table = 'cts_chargebacks';
+    protected $primaryKey = 'chargeback_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+
 }

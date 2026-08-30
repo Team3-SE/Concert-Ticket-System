@@ -14,4 +14,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class EventOrganizer extends Model
 {
     use HasUuids;
+
+    protected $table = 'cts_event_organizers';
+    protected $primaryKey = 'organizer_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+
 }

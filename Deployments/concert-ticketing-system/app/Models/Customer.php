@@ -14,4 +14,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class Customer extends Model
 {
     use HasUuids;
+
+    protected $table = 'cts_customers';
+    protected $primaryKey = 'customer_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+
 }
