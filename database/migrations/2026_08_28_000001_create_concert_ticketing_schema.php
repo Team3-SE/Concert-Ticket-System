@@ -78,6 +78,7 @@ return new class extends Migration
             $table->dateTime('sale_end_datetime');
             $table->integer('max_ticket_per_order');
             $table->string('status');
+            $table->string('concert_code')->unique();
 
             $table->foreign('company_id')->references('company_id')->on('company')->onDelete('restrict');
             $table->foreign('organizer_id')->references('organizer_id')->on('event_organizer')->onDelete('restrict');
@@ -90,6 +91,7 @@ return new class extends Migration
             $table->string('value');
 
             $table->foreign('concert_id')->references('concert_id')->on('concert')->onDelete('cascade');
+            $table->unique(['concert_id', 'contact_type']);
         });
 
         Schema::create('zone', function (Blueprint $table) {
@@ -114,6 +116,7 @@ return new class extends Migration
             $table->integer('seats_per_row');
 
             $table->foreign('zone_id')->references('zone_id')->on('zone')->onDelete('cascade');
+            $table->unique('zone_id');
         });
 
         Schema::create('seat', function (Blueprint $table) {
@@ -144,6 +147,9 @@ return new class extends Migration
         Schema::create('booking_seat', function (Blueprint $table) {
             $table->ulid('booking_id');
             $table->ulid('seat_id');
+            $table->string('zone_name_snapshot');
+            $table->string('seat_label_snapshot');
+            $table->decimal('unit_price_snapshot', 10, 2);
             $table->primary(['booking_id', 'seat_id']);
 
             $table->foreign('booking_id')->references('booking_id')->on('booking')->onDelete('cascade');
@@ -154,6 +160,8 @@ return new class extends Migration
             $table->ulid('booking_id');
             $table->ulid('zone_id');
             $table->integer('quantity');
+            $table->string('zone_name_snapshot');
+            $table->decimal('unit_price_snapshot', 10, 2);
             $table->primary(['booking_id', 'zone_id']);
 
             $table->foreign('booking_id')->references('booking_id')->on('booking')->onDelete('cascade');
@@ -193,6 +201,10 @@ return new class extends Migration
             $table->ulid('booking_id')->unique();
             $table->ulid('payment_id')->unique();
             $table->dateTime('order_date');
+            $table->string('concert_name_snapshot');
+            $table->string('artist_snapshot');
+            $table->string('venue_snapshot');
+            $table->dateTime('event_datetime_snapshot');
 
             $table->foreign('booking_id')->references('booking_id')->on('booking')->onDelete('restrict');
             $table->foreign('payment_id')->references('payment_id')->on('payment')->onDelete('restrict');
@@ -207,6 +219,9 @@ return new class extends Migration
             $table->ulid('seat_id')->nullable()->unique();
             $table->string('qr_code')->unique();
             $table->boolean('is_used');
+            $table->string('zone_name_snapshot');
+            $table->string('seat_label_snapshot')->nullable();
+            $table->decimal('unit_price_snapshot', 10, 2);
 
             $table->foreign('order_id')->references('order_id')->on('customer_order')->onDelete('restrict');
             $table->foreign('concert_id')->references('concert_id')->on('concert')->onDelete('restrict');

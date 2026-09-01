@@ -24,6 +24,7 @@ class Concert extends Model
     protected $fillable = [
         'company_id',
         'organizer_id',
+        'concert_code',
         'name',
         'artist',
         'event_datetime',
