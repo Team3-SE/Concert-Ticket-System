@@ -1,11 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\HomeController;
 
-// Main home page (using team3-ticket mockup)
-Route::get('/', function () {
-    return view('home');
-});
+// Main home page
+Route::get('/', [HomeController::class, 'index']);
 
 // ===== DEV TOOLS (Model Tester) =====
 Route::get('/dev/models', function () {
