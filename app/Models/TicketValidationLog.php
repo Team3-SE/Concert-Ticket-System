@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 
 /**
  * TicketValidationLog
@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
  */
 class TicketValidationLog extends Model
 {
-    use HasUuids;
+    use HasUlids;
 
     protected $table = 'ticket_validation_log';
     protected $primaryKey = 'validation_id';

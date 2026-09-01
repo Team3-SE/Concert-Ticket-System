@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\AppUser;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * @extends Factory<AppUser>
@@ -26,7 +27,7 @@ class AppUserFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => fake()->uuid(),
+            'user_id' => (string) Str::ulid(),
             'password_hash' => static::$password ??= Hash::make('password'),
             'role' => 'customer',
             'account_status' => 'active',

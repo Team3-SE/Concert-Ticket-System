@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('company', function (Blueprint $table) {
-            $table->uuid('company_id')->primary();
+            $table->ulid('company_id')->primary();
             $table->string('name');
             $table->string('initials');
             $table->text('description')->nullable();
@@ -17,7 +17,7 @@ return new class extends Migration
         });
 
         Schema::create('app_user', function (Blueprint $table) {
-            $table->uuid('user_id')->primary();
+            $table->ulid('user_id')->primary();
             $table->string('password_hash');
             $table->string('role');
             $table->string('account_status');
@@ -25,7 +25,7 @@ return new class extends Migration
         });
 
         Schema::create('customer', function (Blueprint $table) {
-            $table->uuid('customer_id')->primary();
+            $table->ulid('customer_id')->primary();
             $table->string('email')->unique();
             $table->string('phone')->unique();
             $table->string('first_name');
@@ -35,8 +35,8 @@ return new class extends Migration
         });
 
         Schema::create('event_organizer', function (Blueprint $table) {
-            $table->uuid('organizer_id')->primary();
-            $table->uuid('company_id');
+            $table->ulid('organizer_id')->primary();
+            $table->ulid('company_id');
             $table->string('email')->unique();
             $table->string('username')->unique();
 
@@ -45,9 +45,9 @@ return new class extends Migration
         });
 
         Schema::create('staff', function (Blueprint $table) {
-            $table->uuid('staff_id')->primary();
-            $table->uuid('company_id');
-            $table->uuid('created_by_organizer_id')->nullable();
+            $table->ulid('staff_id')->primary();
+            $table->ulid('company_id');
+            $table->ulid('created_by_organizer_id')->nullable();
             $table->string('username')->unique();
 
             $table->foreign('staff_id')->references('user_id')->on('app_user')->onDelete('cascade');
@@ -56,7 +56,7 @@ return new class extends Migration
         });
 
         Schema::create('admin', function (Blueprint $table) {
-            $table->uuid('admin_id')->primary();
+            $table->ulid('admin_id')->primary();
             $table->string('email')->unique();
             $table->string('username')->unique();
 
@@ -64,9 +64,9 @@ return new class extends Migration
         });
 
         Schema::create('concert', function (Blueprint $table) {
-            $table->uuid('concert_id')->primary();
-            $table->uuid('company_id');
-            $table->uuid('organizer_id');
+            $table->ulid('concert_id')->primary();
+            $table->ulid('company_id');
+            $table->ulid('organizer_id');
             $table->string('name');
             $table->string('artist');
             $table->string('venue');
@@ -78,23 +78,25 @@ return new class extends Migration
             $table->dateTime('sale_end_datetime');
             $table->integer('max_ticket_per_order');
             $table->string('status');
+            $table->string('concert_code')->unique();
 
             $table->foreign('company_id')->references('company_id')->on('company')->onDelete('restrict');
             $table->foreign('organizer_id')->references('organizer_id')->on('event_organizer')->onDelete('restrict');
         });
 
         Schema::create('concert_contact', function (Blueprint $table) {
-            $table->uuid('contact_id')->primary();
-            $table->uuid('concert_id');
+            $table->ulid('contact_id')->primary();
+            $table->ulid('concert_id');
             $table->string('contact_type');
             $table->string('value');
 
             $table->foreign('concert_id')->references('concert_id')->on('concert')->onDelete('cascade');
+            $table->unique(['concert_id', 'contact_type']);
         });
 
         Schema::create('zone', function (Blueprint $table) {
-            $table->uuid('zone_id')->primary();
-            $table->uuid('concert_id');
+            $table->ulid('zone_id')->primary();
+            $table->ulid('concert_id');
             $table->string('name');
             $table->string('zone_type');
             $table->decimal('price', 10, 2);
@@ -105,8 +107,8 @@ return new class extends Migration
         });
 
         Schema::create('zone_seat_pattern', function (Blueprint $table) {
-            $table->uuid('pattern_id')->primary();
-            $table->uuid('zone_id');
+            $table->ulid('pattern_id')->primary();
+            $table->ulid('zone_id');
             $table->string('pattern_type');
             $table->string('start_row');
             $table->integer('start_seat_number');
@@ -114,11 +116,12 @@ return new class extends Migration
             $table->integer('seats_per_row');
 
             $table->foreign('zone_id')->references('zone_id')->on('zone')->onDelete('cascade');
+            $table->unique('zone_id');
         });
 
         Schema::create('seat', function (Blueprint $table) {
-            $table->uuid('seat_id')->primary();
-            $table->uuid('zone_id');
+            $table->ulid('seat_id')->primary();
+            $table->ulid('zone_id');
             $table->string('row');
             $table->integer('number');
             $table->string('status');
@@ -128,9 +131,10 @@ return new class extends Migration
         });
 
         Schema::create('booking', function (Blueprint $table) {
-            $table->uuid('booking_id')->primary();
-            $table->uuid('customer_id');
-            $table->uuid('concert_id');
+            $table->ulid('booking_id')->primary();
+            $table->string('booking_code')->unique();
+            $table->ulid('customer_id');
+            $table->ulid('concert_id');
             $table->dateTime('booking_date');
             $table->decimal('total_amount', 10, 2);
             $table->string('status');
@@ -141,8 +145,11 @@ return new class extends Migration
         });
 
         Schema::create('booking_seat', function (Blueprint $table) {
-            $table->uuid('booking_id');
-            $table->uuid('seat_id');
+            $table->ulid('booking_id');
+            $table->ulid('seat_id');
+            $table->string('zone_name_snapshot');
+            $table->string('seat_label_snapshot');
+            $table->decimal('unit_price_snapshot', 10, 2);
             $table->primary(['booking_id', 'seat_id']);
 
             $table->foreign('booking_id')->references('booking_id')->on('booking')->onDelete('cascade');
@@ -150,9 +157,11 @@ return new class extends Migration
         });
 
         Schema::create('booking_standing_item', function (Blueprint $table) {
-            $table->uuid('booking_id');
-            $table->uuid('zone_id');
+            $table->ulid('booking_id');
+            $table->ulid('zone_id');
             $table->integer('quantity');
+            $table->string('zone_name_snapshot');
+            $table->decimal('unit_price_snapshot', 10, 2);
             $table->primary(['booking_id', 'zone_id']);
 
             $table->foreign('booking_id')->references('booking_id')->on('booking')->onDelete('cascade');
@@ -160,8 +169,8 @@ return new class extends Migration
         });
 
         Schema::create('payment', function (Blueprint $table) {
-            $table->uuid('payment_id')->primary();
-            $table->uuid('booking_id')->unique();
+            $table->ulid('payment_id')->primary();
+            $table->ulid('booking_id')->unique();
             $table->decimal('amount', 10, 2);
             $table->string('method');
             $table->string('status');
@@ -175,8 +184,8 @@ return new class extends Migration
         });
 
         Schema::create('chargeback', function (Blueprint $table) {
-            $table->uuid('chargeback_id')->primary();
-            $table->uuid('payment_id');
+            $table->ulid('chargeback_id')->primary();
+            $table->ulid('payment_id');
             $table->string('provider_chargeback_id')->unique();
             $table->string('reason');
             $table->decimal('amount', 10, 2);
@@ -187,23 +196,32 @@ return new class extends Migration
         });
 
         Schema::create('customer_order', function (Blueprint $table) {
-            $table->uuid('order_id')->primary();
-            $table->uuid('booking_id')->unique();
-            $table->uuid('payment_id')->unique();
+            $table->ulid('order_id')->primary();
+            $table->string('order_code')->unique();
+            $table->ulid('booking_id')->unique();
+            $table->ulid('payment_id')->unique();
             $table->dateTime('order_date');
+            $table->string('concert_name_snapshot');
+            $table->string('artist_snapshot');
+            $table->string('venue_snapshot');
+            $table->dateTime('event_datetime_snapshot');
 
             $table->foreign('booking_id')->references('booking_id')->on('booking')->onDelete('restrict');
             $table->foreign('payment_id')->references('payment_id')->on('payment')->onDelete('restrict');
         });
 
         Schema::create('ticket', function (Blueprint $table) {
-            $table->uuid('ticket_id')->primary();
-            $table->uuid('order_id');
-            $table->uuid('concert_id');
-            $table->uuid('zone_id');
-            $table->uuid('seat_id')->nullable()->unique();
+            $table->ulid('ticket_id')->primary();
+            $table->string('ticket_code')->unique();
+            $table->ulid('order_id');
+            $table->ulid('concert_id');
+            $table->ulid('zone_id');
+            $table->ulid('seat_id')->nullable()->unique();
             $table->string('qr_code')->unique();
             $table->boolean('is_used');
+            $table->string('zone_name_snapshot');
+            $table->string('seat_label_snapshot')->nullable();
+            $table->decimal('unit_price_snapshot', 10, 2);
 
             $table->foreign('order_id')->references('order_id')->on('customer_order')->onDelete('restrict');
             $table->foreign('concert_id')->references('concert_id')->on('concert')->onDelete('restrict');
@@ -212,8 +230,8 @@ return new class extends Migration
         });
 
         Schema::create('staff_concert', function (Blueprint $table) {
-            $table->uuid('staff_id');
-            $table->uuid('concert_id');
+            $table->ulid('staff_id');
+            $table->ulid('concert_id');
             $table->primary(['staff_id', 'concert_id']);
 
             $table->foreign('staff_id')->references('staff_id')->on('staff')->onDelete('cascade');
@@ -221,9 +239,9 @@ return new class extends Migration
         });
 
         Schema::create('ticket_validation_log', function (Blueprint $table) {
-            $table->uuid('validation_id')->primary();
-            $table->uuid('ticket_id');
-            $table->uuid('staff_id');
+            $table->ulid('validation_id')->primary();
+            $table->ulid('ticket_id');
+            $table->ulid('staff_id');
             $table->dateTime('validation_time');
             $table->boolean('result');
 
@@ -232,9 +250,9 @@ return new class extends Migration
         });
 
         Schema::create('seat_lock_log', function (Blueprint $table) {
-            $table->uuid('lock_id')->primary();
-            $table->uuid('booking_id')->nullable();
-            $table->uuid('seat_id');
+            $table->ulid('lock_id')->primary();
+            $table->ulid('booking_id')->nullable();
+            $table->ulid('seat_id');
             $table->dateTime('locked_at');
             $table->dateTime('expired_at');
             $table->dateTime('released_at')->nullable();
@@ -245,9 +263,10 @@ return new class extends Migration
         });
 
         Schema::create('system_anomaly', function (Blueprint $table) {
-            $table->uuid('anomaly_id')->primary();
-            $table->uuid('booking_id')->nullable();
-            $table->uuid('reviewed_by_admin_id')->nullable();
+            $table->ulid('anomaly_id')->primary();
+            $table->string('anomaly_code')->unique();
+            $table->ulid('booking_id')->nullable();
+            $table->ulid('reviewed_by_admin_id')->nullable();
             $table->string('type');
             $table->text('message');
             $table->dateTime('timestamp');
@@ -259,16 +278,16 @@ return new class extends Migration
         });
 
         Schema::create('anomaly_attachment', function (Blueprint $table) {
-            $table->uuid('attachment_id')->primary();
-            $table->uuid('anomaly_id');
+            $table->ulid('attachment_id')->primary();
+            $table->ulid('anomaly_id');
             $table->string('file_path');
 
             $table->foreign('anomaly_id')->references('anomaly_id')->on('system_anomaly')->onDelete('cascade');
         });
 
         Schema::create('audit_log', function (Blueprint $table) {
-            $table->uuid('log_id')->primary();
-            $table->uuid('user_id')->nullable();
+            $table->ulid('log_id')->primary();
+            $table->ulid('user_id')->nullable();
             $table->string('action');
             $table->dateTime('timestamp');
             $table->string('ip_address')->nullable();

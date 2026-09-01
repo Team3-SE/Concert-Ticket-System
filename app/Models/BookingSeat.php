@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 /**
  * BookingSeat
@@ -13,8 +12,6 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
  */
 class BookingSeat extends Model
 {
-    use HasUuids;
-
     protected $table = 'booking_seat';
     protected $primaryKey = null;
     public $incrementing = false;
