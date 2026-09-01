@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 
 /**
  * AuditLog
@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
  */
 class AuditLog extends Model
 {
-    use HasUuids;
+    use HasUlids;
 
     protected $table = 'audit_log';
     protected $primaryKey = 'log_id';

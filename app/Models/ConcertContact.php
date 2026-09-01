@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 
 class ConcertContact extends Model
 {
-    use HasUuids;
+    use HasUlids;
 
     protected $table = 'concert_contact';
     protected $primaryKey = 'contact_id';

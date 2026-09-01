@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 
 /**
  * SystemAnomaly
@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
  */
 class SystemAnomaly extends Model
 {
-    use HasUuids;
+    use HasUlids;
 
     protected $table = 'system_anomaly';
     protected $primaryKey = 'anomaly_id';

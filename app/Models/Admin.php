@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 
 /**
  * Admin
@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
  */
 class Admin extends Model
 {
-    use HasUuids;
+    use HasUlids;
 
     protected $table = 'admin';
     protected $primaryKey = 'admin_id';

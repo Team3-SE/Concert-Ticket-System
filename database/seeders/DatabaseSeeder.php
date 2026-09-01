@@ -16,19 +16,19 @@ class DatabaseSeeder extends Seeder
 
         $now = now();
         $ids = [
-            'company_gmm' => (string) Str::uuid(),
-            'company_bec' => (string) Str::uuid(),
-            'admin' => (string) Str::uuid(),
-            'organizer_gmm' => (string) Str::uuid(),
-            'organizer_bec' => (string) Str::uuid(),
-            'staff_gmm_1' => (string) Str::uuid(),
-            'staff_gmm_2' => (string) Str::uuid(),
-            'staff_bec_1' => (string) Str::uuid(),
-            'customer_1' => (string) Str::uuid(),
-            'customer_2' => (string) Str::uuid(),
-            'customer_3' => (string) Str::uuid(),
-            'concert_rock' => (string) Str::uuid(),
-            'concert_pop' => (string) Str::uuid(),
+            'company_gmm' => (string) Str::ulid(),
+            'company_bec' => (string) Str::ulid(),
+            'admin' => (string) Str::ulid(),
+            'organizer_gmm' => (string) Str::ulid(),
+            'organizer_bec' => (string) Str::ulid(),
+            'staff_gmm_1' => (string) Str::ulid(),
+            'staff_gmm_2' => (string) Str::ulid(),
+            'staff_bec_1' => (string) Str::ulid(),
+            'customer_1' => (string) Str::ulid(),
+            'customer_2' => (string) Str::ulid(),
+            'customer_3' => (string) Str::ulid(),
+            'concert_rock' => (string) Str::ulid(),
+            'concert_pop' => (string) Str::ulid(),
         ];
 
         DB::table('company')->insert([
@@ -163,13 +163,13 @@ class DatabaseSeeder extends Seeder
 
         DB::table('concert_contact')->insert([
             [
-                'contact_id' => (string) Str::uuid(),
+                'contact_id' => (string) Str::ulid(),
                 'concert_id' => $ids['concert_rock'],
                 'contact_type' => 'email',
                 'value' => 'support@gmm.local',
             ],
             [
-                'contact_id' => (string) Str::uuid(),
+                'contact_id' => (string) Str::ulid(),
                 'concert_id' => $ids['concert_pop'],
                 'contact_type' => 'phone',
                 'value' => '021234567',
@@ -187,12 +187,13 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $vipSeats = DB::table('seat')->where('zone_id', $rockVipZone)->orderBy('row')->orderBy('number')->take(2)->get();
-        $seatBookingId = (string) Str::uuid();
-        $seatPaymentId = (string) Str::uuid();
-        $seatOrderId = (string) Str::uuid();
+        $seatBookingId = (string) Str::ulid();
+        $seatPaymentId = (string) Str::ulid();
+        $seatOrderId = (string) Str::ulid();
 
         DB::table('booking')->insert([
             'booking_id' => $seatBookingId,
+            'booking_code' => $this->makeCode('BKG'),
             'customer_id' => $ids['customer_1'],
             'concert_id' => $ids['concert_rock'],
             'booking_date' => $now->copy()->subMinutes(30),
@@ -219,12 +220,13 @@ class DatabaseSeeder extends Seeder
             6000,
         );
 
-        $standingBookingId = (string) Str::uuid();
-        $standingPaymentId = (string) Str::uuid();
-        $standingOrderId = (string) Str::uuid();
+        $standingBookingId = (string) Str::ulid();
+        $standingPaymentId = (string) Str::ulid();
+        $standingOrderId = (string) Str::ulid();
 
         DB::table('booking')->insert([
             'booking_id' => $standingBookingId,
+            'booking_code' => $this->makeCode('BKG'),
             'customer_id' => $ids['customer_2'],
             'concert_id' => $ids['concert_pop'],
             'booking_date' => $now->copy()->subMinutes(45),
@@ -250,7 +252,7 @@ class DatabaseSeeder extends Seeder
         );
 
         DB::table('seat_lock_log')->insert([
-            'lock_id' => (string) Str::uuid(),
+            'lock_id' => (string) Str::ulid(),
             'booking_id' => $seatBookingId,
             'seat_id' => $vipSeats[0]->seat_id,
             'locked_at' => $now->copy()->subMinutes(40),
@@ -260,16 +262,17 @@ class DatabaseSeeder extends Seeder
         ]);
 
         DB::table('ticket_validation_log')->insert([
-            'validation_id' => (string) Str::uuid(),
+            'validation_id' => (string) Str::ulid(),
             'ticket_id' => DB::table('ticket')->where('order_id', $seatOrderId)->value('ticket_id'),
             'staff_id' => $ids['staff_gmm_1'],
             'validation_time' => $now->copy()->subMinutes(5),
             'result' => true,
         ]);
 
-        $anomalyId = (string) Str::uuid();
+        $anomalyId = (string) Str::ulid();
         DB::table('system_anomaly')->insert([
             'anomaly_id' => $anomalyId,
+            'anomaly_code' => $this->makeCode('ERR'),
             'booking_id' => $standingBookingId,
             'reviewed_by_admin_id' => $ids['admin'],
             'type' => 'suspicious_payment',
@@ -280,21 +283,21 @@ class DatabaseSeeder extends Seeder
         ]);
 
         DB::table('anomaly_attachment')->insert([
-            'attachment_id' => (string) Str::uuid(),
+            'attachment_id' => (string) Str::ulid(),
             'anomaly_id' => $anomalyId,
             'file_path' => 'anomaly-attachments/payment-risk-sample.json',
         ]);
 
         DB::table('audit_log')->insert([
             [
-                'log_id' => (string) Str::uuid(),
+                'log_id' => (string) Str::ulid(),
                 'user_id' => $ids['customer_1'],
                 'action' => 'booking_confirmed',
                 'timestamp' => $now->copy()->subMinutes(25),
                 'ip_address' => '127.0.0.1',
             ],
             [
-                'log_id' => (string) Str::uuid(),
+                'log_id' => (string) Str::ulid(),
                 'user_id' => $ids['admin'],
                 'action' => 'anomaly_review_started',
                 'timestamp' => $now->copy()->subMinutes(8),
@@ -382,7 +385,7 @@ class DatabaseSeeder extends Seeder
         int $rowCount,
         int $seatsPerRow
     ): string {
-        $zoneId = (string) Str::uuid();
+        $zoneId = (string) Str::ulid();
 
         DB::table('zone')->insert([
             'zone_id' => $zoneId,
@@ -395,7 +398,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         DB::table('zone_seat_pattern')->insert([
-            'pattern_id' => (string) Str::uuid(),
+            'pattern_id' => (string) Str::ulid(),
             'zone_id' => $zoneId,
             'pattern_type' => 'grid',
             'start_row' => $startRow,
@@ -409,7 +412,7 @@ class DatabaseSeeder extends Seeder
             $row = chr(ord($startRow) + $rowOffset);
             for ($seatNumber = $startSeatNumber; $seatNumber < $startSeatNumber + $seatsPerRow; $seatNumber++) {
                 $seats[] = [
-                    'seat_id' => (string) Str::uuid(),
+                    'seat_id' => (string) Str::ulid(),
                     'zone_id' => $zoneId,
                     'row' => $row,
                     'number' => $seatNumber,
@@ -425,7 +428,7 @@ class DatabaseSeeder extends Seeder
 
     private function seedStandingZone(string $concertId, string $name, float $price, int $capacity, string $color): string
     {
-        $zoneId = (string) Str::uuid();
+        $zoneId = (string) Str::ulid();
 
         DB::table('zone')->insert([
             'zone_id' => $zoneId,
@@ -464,16 +467,18 @@ class DatabaseSeeder extends Seeder
 
         DB::table('customer_order')->insert([
             'order_id' => $orderId,
+            'order_code' => $this->makeCode('ORD'),
             'booking_id' => $bookingId,
             'payment_id' => $paymentId,
             'order_date' => now()->subMinutes(18),
         ]);
 
         foreach ($seatIds as $seatId) {
-            $ticketId = (string) Str::uuid();
+            $ticketId = (string) Str::ulid();
 
             DB::table('ticket')->insert([
                 'ticket_id' => $ticketId,
+                'ticket_code' => $this->makeCode('TKT'),
                 'order_id' => $orderId,
                 'concert_id' => $concertId,
                 'zone_id' => $zoneId,
@@ -482,5 +487,10 @@ class DatabaseSeeder extends Seeder
                 'is_used' => false,
             ]);
         }
+    }
+
+    private function makeCode(string $prefix): string
+    {
+        return $prefix . '-' . strtoupper(Str::random(10));
     }
 }

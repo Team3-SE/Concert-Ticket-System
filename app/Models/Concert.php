@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 
 /**
  * Concert
@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
  */
 class Concert extends Model
 {
-    use HasUuids;
+    use HasUlids;
 
     protected $table = 'concert';
     protected $primaryKey = 'concert_id';
