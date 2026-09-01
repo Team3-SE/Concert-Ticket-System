@@ -144,7 +144,7 @@ class DatabaseSeeder extends Seeder
                 'sale_end_datetime' => '2026-10-31 23:59:59',
                 'max_ticket_per_order' => 4,
                 'status' => 'ON_SALE',
-                'concert_code' => 'C024',
+                'concert_code' => 'C0024',
             ],
             [
                 'concert_id' => $ids['concert_pop'],
@@ -161,7 +161,7 @@ class DatabaseSeeder extends Seeder
                 'sale_end_datetime' => '2026-12-14 23:59:59',
                 'max_ticket_per_order' => 6,
                 'status' => 'SCHEDULED',
-                'concert_code' => 'C025',
+                'concert_code' => 'C0025',
             ],
         ]);
 
