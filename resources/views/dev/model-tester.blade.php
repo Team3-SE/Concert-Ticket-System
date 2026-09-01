@@ -13,10 +13,36 @@
 
         <div class="grid grid-cols-2 gap-6 mb-6">
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">1. Model Name (e.g. User, Concert)</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">1. Model Name (e.g. AppUser, Concert)</label>
                 <div class="flex gap-2">
-                    <input type="text" id="modelInput" placeholder="Concert" value="Concert"
+                    <input type="text" id="modelInput" list="modelOptions" placeholder="Concert" value="Concert"
                         class="w-full border-gray-300 rounded-md shadow-sm p-2 border focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                    <datalist id="modelOptions">
+                        <option value="Admin"></option>
+                        <option value="AnomalyAttachment"></option>
+                        <option value="AppUser"></option>
+                        <option value="AuditLog"></option>
+                        <option value="Booking"></option>
+                        <option value="BookingSeat"></option>
+                        <option value="BookingStandingItem"></option>
+                        <option value="Chargeback"></option>
+                        <option value="Company"></option>
+                        <option value="Concert"></option>
+                        <option value="ConcertContact"></option>
+                        <option value="Customer"></option>
+                        <option value="CustomerOrder"></option>
+                        <option value="EventOrganizer"></option>
+                        <option value="Payment"></option>
+                        <option value="Seat"></option>
+                        <option value="SeatLockLog"></option>
+                        <option value="Staff"></option>
+                        <option value="StaffConcert"></option>
+                        <option value="SystemAnomaly"></option>
+                        <option value="Ticket"></option>
+                        <option value="TicketValidationLog"></option>
+                        <option value="Zone"></option>
+                        <option value="ZoneSeatPattern"></option>
+                    </datalist>
                     <button id="loadMethodsBtn" class="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-700">
                         Load
                     </button>
@@ -33,7 +59,7 @@
 
         <div id="instanceIdContainer" class="mb-6 hidden bg-blue-50 p-4 rounded-md border border-blue-100">
             <label class="block text-sm font-bold text-blue-800 mb-2">Instance ID (Primary Key)</label>
-            <input type="text" id="instanceIdInput" placeholder="Enter UUID..."
+            <input type="text" id="instanceIdInput" placeholder="Enter ULID..."
                 class="w-full border-gray-300 rounded-md shadow-sm p-2 border">
             <p class="text-xs text-blue-600 mt-1">Required for instance methods (e.g. relationships)</p>
         </div>

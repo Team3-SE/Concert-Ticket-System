@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Dev;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use ReflectionClass;
 use ReflectionMethod;
+use Throwable;
 
 /**
  * ModelTesterController
@@ -15,6 +18,19 @@ use ReflectionMethod;
  */
 class ModelTesterController extends Controller
 {
+    private const MODEL_ALIASES = [
+        'User' => 'AppUser',
+    ];
+
+    private const HIDDEN_METHODS = [
+        'getKeyType',
+        'getIncrementing',
+        'newUniqueId',
+        'uniqueIds',
+        'initializeHasUniqueStringIds',
+        'resolveRouteBindingQuery',
+    ];
+
     /**
      * corsResponse(data, status)
      * Return a JSON response with CORS headers.
@@ -45,25 +61,45 @@ class ModelTesterController extends Controller
         if (empty($model)) {
             return $this->corsResponse(['debug_error' => 'No model provided', 'all_inputs' => $request->all()]);
         }
-        $className = "App\\Models\\" . $model;
+        $className = $this->resolveModelClass($model);
 
         if (!class_exists($className)) {
             return $this->corsResponse([]);
         }
 
         $reflector = new ReflectionClass($className);
+        $instance = $reflector->newInstance();
+        $primaryKey = $instance instanceof Model ? $instance->getKeyName() : null;
+        $hasSinglePrimaryKey = !empty($primaryKey);
 
-        // Always add common Eloquent static methods
         $methods = [
             ['name' => 'all',   'params' => [],     'type' => 'static'],
-            ['name' => 'find',  'params' => ['id'], 'type' => 'static'],
             ['name' => 'first', 'params' => [],     'type' => 'static'],
             ['name' => 'count', 'params' => [],     'type' => 'static'],
         ];
 
-        // Add methods defined directly on this model class
+        if ($hasSinglePrimaryKey) {
+            $methods[] = ['name' => 'find', 'params' => [$primaryKey], 'type' => 'static'];
+        }
+
         foreach ($reflector->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
             if ($method->class === $className) {
+                if (str_starts_with($method->getName(), '__')) {
+                    continue;
+                }
+
+                if ($method->getFileName() !== $reflector->getFileName()) {
+                    continue;
+                }
+
+                if (in_array($method->getName(), self::HIDDEN_METHODS, true)) {
+                    continue;
+                }
+
+                if (!$method->isStatic() && !$hasSinglePrimaryKey) {
+                    continue;
+                }
+
                 $params = [];
                 foreach ($method->getParameters() as $param) {
                     $params[] = $param->getName();
@@ -91,7 +127,7 @@ class ModelTesterController extends Controller
             return $this->corsResponse(['status' => 'ok']);
         }
 
-        $modelClass = "App\\Models\\" . $request->input('model');
+        $modelClass = $this->resolveModelClass($request->input('model'));
         $methodName = $request->input('method_name');
         $params     = array_values($request->input('params', []));
         $instanceId = $request->input('instance_id');
@@ -102,7 +138,27 @@ class ModelTesterController extends Controller
         }
 
         try {
+            $commonStaticMethods = ['all', 'find', 'first', 'count'];
+            $isCommonStaticMethod = $type === 'static' && in_array($methodName, $commonStaticMethods, true);
+
+            if (empty($methodName) || (!$isCommonStaticMethod && !method_exists($modelClass, $methodName))) {
+                return $this->corsResponse([
+                    'success' => false,
+                    'error' => 'Method not found: ' . $methodName,
+                ], 404);
+            }
+
             if ($type === 'static') {
+                if ($methodName === 'find' && count($params) === 0) {
+                    $instance = new $modelClass();
+                    $primaryKey = $instance instanceof Model ? $instance->getKeyName() : 'id';
+
+                    return $this->corsResponse([
+                        'success' => false,
+                        'error' => "Please provide {$primaryKey} to call find().",
+                    ], 400);
+                }
+
                 $result = $modelClass::$methodName(...$params);
             } else {
                 if (!$instanceId) {
@@ -114,15 +170,28 @@ class ModelTesterController extends Controller
                 }
                 $result = $instance->$methodName(...$params);
 
-                // If result is a relation, resolve it
-                if ($result instanceof \Illuminate\Database\Eloquent\Relations\Relation) {
+                if ($result instanceof Relation) {
                     $result = $result->get();
                 }
             }
 
             return $this->corsResponse(['success' => true, 'data' => $result]);
-        } catch (\Exception $e) {
-            return $this->corsResponse(['success' => false, 'error' => $e->getMessage()], 500);
+        } catch (Throwable $e) {
+            return $this->corsResponse([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'exception' => $e::class,
+            ], 500);
         }
+    }
+
+    private function resolveModelClass(?string $model): string
+    {
+        $model = trim((string) $model);
+        $model = ltrim($model, '\\');
+        $model = str_starts_with($model, 'App\\Models\\') ? substr($model, 11) : $model;
+        $model = self::MODEL_ALIASES[$model] ?? $model;
+
+        return "App\\Models\\" . $model;
     }
 }
