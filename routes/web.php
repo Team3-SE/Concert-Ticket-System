@@ -24,3 +24,10 @@ Route::get('/dev/models', function () {
 })->withoutMiddleware($statelessDevMiddleware);
 Route::post('/dev/models/methods', [\App\Http\Controllers\Dev\ModelTesterController::class, 'getMethods'])->withoutMiddleware($statelessDevMiddleware);
 Route::post('/dev/models/execute', [\App\Http\Controllers\Dev\ModelTesterController::class, 'execute'])->withoutMiddleware($statelessDevMiddleware);
+
+// ===== ADMIN: Audit Logs =====
+Route::prefix('admin')->group(function () {
+    Route::get('/audit-logs', [\App\Http\Controllers\AuditLogController::class, 'index']);
+    Route::get('/audit-logs/export', [\App\Http\Controllers\AuditLogController::class, 'export']);
+    Route::get('/audit-logs/{logId}', [\App\Http\Controllers\AuditLogController::class, 'show']);
+});
