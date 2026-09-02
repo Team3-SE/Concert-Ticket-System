@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class CustomerOrder extends Model
 {
@@ -14,4 +17,83 @@ class CustomerOrder extends Model
     public $incrementing = false;
     protected $keyType = 'string';
     public $timestamps = false;
+
+    protected $fillable = [
+        'booking_id',
+        'payment_id',
+        'order_date',
+        'order_code',
+        'concert_name_snapshot',
+        'artist_snapshot',
+        'venue_snapshot',
+        'event_datetime_snapshot',
+    ];
+
+    protected $casts = [
+        'order_date' => 'datetime',
+        'event_datetime_snapshot' => 'datetime',
+    ];
+
+    /**
+     * Relationships
+     */
+    public function booking(): BelongsTo
+    {
+        return $this->belongsTo(Booking::class, 'booking_id', 'booking_id');
+    }
+
+    public function payment(): BelongsTo
+    {
+        return $this->belongsTo(Payment::class, 'payment_id', 'payment_id');
+    }
+
+    public function tickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class, 'order_id', 'order_id');
+    }
+
+    /**
+     * generateTickets(): List<Ticket>
+     *
+     * สร้าง Ticket หลัง Payment สถานะ COMPLETED โดย CustomerOrder เก็บ orderCode
+     * และ Snapshot ชื่อ Concert, Artist, Venue และ Event DateTime ณ เวลาสร้าง Order
+     */
+    public function generateTickets(): \Illuminate\Support\Collection
+    {
+        // ตรวจสอบว่า Payment ผูกกับ Order นี้ COMPLETED แล้วจริง ก่อนสร้าง Ticket
+        if (!$this->payment || $this->payment->status !== 'COMPLETED') {
+            throw new \RuntimeException('Cannot generate tickets: payment is not completed.');
+        }
+
+        $seats = $this->booking->bookingSeats ?? collect();
+
+        $tickets = $seats->map(function ($bookingSeat) {
+            return Ticket::create([
+                'order_id' => $this->order_id,
+                'seat_id' => $bookingSeat->seat_id ?? null,
+                'ticket_code' => Str::upper(Str::random(10)),
+                'concert_name_snapshot' => $this->concert_name_snapshot,
+                'artist_snapshot' => $this->artist_snapshot,
+                'venue_snapshot' => $this->venue_snapshot,
+                'event_datetime_snapshot' => $this->event_datetime_snapshot,
+            ]);
+        });
+
+        return $tickets;
+    }
+    /*อันนี้ไม่มีในคลาส Ai เพิ่มมา */
+    /**
+     * สร้าง orderCode อัตโนมัติตอนสร้าง Order (เช่น ORD-XXXXXXXX)
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (CustomerOrder $order) {
+            if (empty($order->order_code)) {
+                $order->order_code = 'ORD-' . Str::upper(Str::random(8));
+            }
+            if (empty($order->order_date)) {
+                $order->order_date = now();
+            }
+        });
+    }
 }

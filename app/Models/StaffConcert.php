@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * StaffConcert
@@ -18,5 +19,16 @@ class StaffConcert extends Model
     protected $keyType = 'string';
     public $timestamps = false;
 
+    protected $fillable = ['staff_id', 'concert_id'];
+
+    public function staff(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class, 'staff_id', 'staff_id');
+    }
+
+    public function concert(): BelongsTo
+    {
+        return $this->belongsTo(Concert::class, 'concert_id', 'concert_id');
+    }
 
 }

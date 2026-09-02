@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * AuditLog
@@ -21,5 +22,20 @@ class AuditLog extends Model
     protected $keyType = 'string';
     public $timestamps = false;
 
+    protected $fillable = [
+        'log_id', 'user_id', 'action', 'timestamp', 'ip_address',
+    ];
+
+    protected $casts = ['timestamp' => 'datetime'];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(AppUser::class, 'user_id', 'user_id');
+    }
+
+    public function getDetails(): string
+    {
+        return trim("{$this->action} at {$this->timestamp} from {$this->ip_address}");
+    }
 
 }

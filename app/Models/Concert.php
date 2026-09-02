@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Concert
@@ -36,6 +38,13 @@ class Concert extends Model
         'max_ticket_per_order',
         'status',
         'venue',
+    ];
+
+    protected $casts = [
+        'event_datetime' => 'datetime',
+        'sale_start_datetime' => 'datetime',
+        'sale_end_datetime' => 'datetime',
+        'max_ticket_per_order' => 'integer',
     ];
 
     /**
@@ -74,8 +83,38 @@ class Concert extends Model
     {
         return "{$this->name} by {$this->artist} at {$this->venue} on {$this->event_datetime}";
     }
-    public function company()
+    public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class, 'company_id', 'company_id');
+    }
+
+    public function organizer(): BelongsTo
+    {
+        return $this->belongsTo(EventOrganizer::class, 'organizer_id', 'organizer_id');
+    }
+
+    public function contacts(): HasMany
+    {
+        return $this->hasMany(ConcertContact::class, 'concert_id', 'concert_id');
+    }
+
+    public function zones(): HasMany
+    {
+        return $this->hasMany(Zone::class, 'concert_id', 'concert_id');
+    }
+
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class, 'concert_id', 'concert_id');
+    }
+
+    public function tickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class, 'concert_id', 'concert_id');
+    }
+
+    public function staffConcerts(): HasMany
+    {
+        return $this->hasMany(StaffConcert::class, 'concert_id', 'concert_id');
     }
 }

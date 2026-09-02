@@ -32,6 +32,23 @@ class Seat extends Model
         'status',
     ];
 
+    protected $casts = ['number' => 'integer'];
+
+    public function lockSeat(): void
+    {
+        $this->update(['status' => 'LOCKED']);
+    }
+
+    public function unlockSeat(): void
+    {
+        $this->update(['status' => 'AVAILABLE']);
+    }
+
+    public function confirmSeat(): void
+    {
+        $this->update(['status' => 'BOOKED']);
+    }
+
     // ─── Relationships ───────────────────────────────────────
 
     /**
