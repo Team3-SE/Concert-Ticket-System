@@ -25,7 +25,7 @@ class HomeController extends Controller
         $concerts = Concert::orderBy('sale_start_datetime', 'asc')->limit(12)->get();
 
         // ดึงคอนเสิร์ต highlight สำหรับ hero banner (ล่าสุด 3 รายการ)
-        $highlights = Concert::orderBy('name', 'desc')->limit(3)->get();
+        $highlights = Concert::orderBy('name', 'desc')->limit(5)->get();
 
         return view('home', compact('concerts', 'highlights'));
     }

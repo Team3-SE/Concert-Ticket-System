@@ -15,6 +15,10 @@ $statelessDevMiddleware = [
     VerifyCsrfToken::class,
 ];
 
+Route::get('/welcome', function(){
+    return view('welcome');
+});
+
 // Main home page (using team3-ticket mockup)
 Route::get('/', [\App\Http\Controllers\HomeController::class, 'index']);
 
@@ -22,5 +26,6 @@ Route::get('/', [\App\Http\Controllers\HomeController::class, 'index']);
 Route::get('/dev/models', function () {
     return view('dev.model-tester');
 })->withoutMiddleware($statelessDevMiddleware);
+
 Route::post('/dev/models/methods', [\App\Http\Controllers\Dev\ModelTesterController::class, 'getMethods'])->withoutMiddleware($statelessDevMiddleware);
 Route::post('/dev/models/execute', [\App\Http\Controllers\Dev\ModelTesterController::class, 'execute'])->withoutMiddleware($statelessDevMiddleware);

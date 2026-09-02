@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Seat
@@ -21,5 +24,45 @@ class Seat extends Model
     protected $keyType = 'string';
     public $timestamps = false;
 
+    protected $fillable = [
+        'seat_id',
+        'zone_id',
+        'row',
+        'number',
+        'status',
+    ];
 
+    // ─── Relationships ───────────────────────────────────────
+
+    /**
+     * Seat belongs to a Zone
+     */
+    public function zone(): BelongsTo
+    {
+        return $this->belongsTo(Zone::class, 'zone_id', 'zone_id');
+    }
+
+    /**
+     * Seat has many BookingSeat (pivot)
+     */
+    public function bookingSeats(): HasMany
+    {
+        return $this->hasMany(BookingSeat::class, 'seat_id', 'seat_id');
+    }
+
+    /**
+     * Seat has one Ticket (nullable)
+     */
+    public function ticket(): HasOne
+    {
+        return $this->hasOne(Ticket::class, 'seat_id', 'seat_id');
+    }
+
+    /**
+     * Seat has many SeatLockLog
+     */
+    public function seatLockLogs(): HasMany
+    {
+        return $this->hasMany(SeatLockLog::class, 'seat_id', 'seat_id');
+    }
 }
