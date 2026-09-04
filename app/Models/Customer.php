@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,7 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class Customer extends Model
 {
-    use HasUlids;
+    // ไม่ใช้ HasUlids เพราะ customer_id = app_user.user_id (รับมาจากภายนอก ไม่ auto-generate)
 
     protected $table = 'customer';
     protected $primaryKey = 'customer_id';

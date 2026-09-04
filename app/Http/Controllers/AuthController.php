@@ -28,7 +28,7 @@ class AuthController extends Controller
             'password'   => ['required', 'confirmed', 'regex:/^(?=.*[A-Za-z])(?=.*\d)\S{8,}$/'],
             'first_name' => ['required', 'regex:/^[\p{Thai}a-zA-Z]{2,50}$/u'],
             'last_name'  => ['required', 'regex:/^[\p{Thai}a-zA-Z]{2,50}$/u'],
-            'phone'      => ['required', 'regex:/^0[0-9]{9}$/'],
+            'phone'      => ['required', 'regex:/^0[0-9]{9}$/', 'unique:customer,phone'],
         ], [
             'email.required'      => 'กรุณากรอกอีเมล',
             'email.email'         => 'รูปแบบอีเมลไม่ถูกต้อง',
@@ -42,6 +42,7 @@ class AuthController extends Controller
             'last_name.regex'     => 'นามสกุลต้องมี 2–50 ตัวอักษร และใช้ได้เฉพาะภาษาไทยหรืออังกฤษเท่านั้น',
             'phone.required'      => 'กรุณากรอกเบอร์โทรศัพท์',
             'phone.regex'         => 'เบอร์โทรต้องเป็นตัวเลข 10 หลัก และขึ้นต้นด้วย 0 (ตัวอย่าง: 0812345678)',
+            'phone.unique'        => 'เบอร์โทรศัพท์นี้ถูกใช้งานแล้ว',
         ]);
 
         if ($validator->fails()) {

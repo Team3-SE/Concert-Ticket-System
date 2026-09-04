@@ -183,8 +183,9 @@
                               :class="{
                                 'bg-[#F47B1F] scale-110 shadow-md z-10': selectedSeats.includes(row + col),
                                 'seat-btn-occupied': isOccupied(row + col),
-                                'seat-btn-default cursor-pointer': !isOccupied(row + col) && !selectedSeats.includes(row + col)
+                                'cursor-pointer': !isOccupied(row + col) && !selectedSeats.includes(row + col)
                               }"
+                              :style="!isOccupied(row + col) && !selectedSeats.includes(row + col) ? { backgroundColor: getZoneColorForRow(row) } : {}"
                               class="seat-icon-shape transition-all duration-150 flex-shrink-0 border-0 outline-none">
                       </button>
                     </template>
@@ -197,7 +198,7 @@
             <!-- Legend -->
             <div class="flex justify-center gap-5 mt-4 text-[10px] text-gray-500">
               <div class="flex items-center gap-1.5">
-                <span class="seat-legend-icon seat-btn-default"></span> ว่าง
+                <span class="seat-legend-icon" :style="{ backgroundColor: selectedZone ? selectedZone.color : '#4D7EE0' }"></span> ว่าง
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="seat-legend-icon seat-btn-occupied"></span> ขายแล้ว
@@ -286,8 +287,9 @@
                               :class="{
                                 'bg-[#F47B1F] scale-110 shadow-md z-10': selectedSeats.includes(row + col),
                                 'seat-btn-occupied': isOccupied(row + col),
-                                'seat-btn-default cursor-pointer': !isOccupied(row + col) && !selectedSeats.includes(row + col)
+                                'cursor-pointer': !isOccupied(row + col) && !selectedSeats.includes(row + col)
                               }"
+                              :style="!isOccupied(row + col) && !selectedSeats.includes(row + col) ? { backgroundColor: getZoneColorForRow(row) } : {}"
                               class="seat-icon-shape transition-all duration-150 flex-shrink-0 border-0 outline-none">
                       </button>
                     </template>
@@ -300,7 +302,7 @@
             <!-- Seat Legend -->
             <div class="flex justify-center gap-6 pt-2 text-[10px] text-gray-500">
               <div class="flex items-center gap-1.5">
-                <span class="seat-legend-icon seat-btn-default"></span> ว่าง
+                <span class="seat-legend-icon" :style="{ backgroundColor: selectedZone ? selectedZone.color : '#4D7EE0' }"></span> ว่าง
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="seat-legend-icon seat-btn-occupied"></span> ขายแล้ว
@@ -411,6 +413,19 @@
                     }
                 }
             }
+        },
+
+        getZoneColorForRow(row) {
+          if (this.selectedZone && this.selectedZone.color) {
+            return this.selectedZone.color;
+          }
+          // fallback: find zone that contains this row
+          for (const z of this.zones) {
+            if (z.rows && z.rows.includes(row)) {
+              return z.color || '#4D7EE0';
+            }
+          }
+          return '#4D7EE0';
         },
 
         isOccupied(seatId) { return this.occupiedSeats.includes(seatId); },
