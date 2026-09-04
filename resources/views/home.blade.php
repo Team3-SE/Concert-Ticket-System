@@ -68,6 +68,8 @@
     font-family:inherit;font-size:14px;
     color:var(--text);background:transparent;
   }
+  .search-bar button{border:0;background:transparent;color:var(--navy-700);font:600 13px inherit;cursor:pointer;padding:4px 8px;}
+  .search-bar button:hover{color:var(--orange-dark);}
   .search-bar input::placeholder{color:var(--gray-500);}
 
   /* ===== Hero ===== */
@@ -211,6 +213,11 @@
     position:absolute;top:14px;right:16px;background:none;border:none;
     font-size:16px;color:var(--gray-500);cursor:pointer;
   }
+  .modal-error{
+    background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;
+    border-radius:8px;padding:9px 13px;font-size:12px;margin-bottom:14px;
+  }
+
   .modal h2{
     text-align:center;color:var(--navy-800);font-size:19px;font-weight:800;margin-bottom:4px;
   }
@@ -261,16 +268,16 @@
 <body>
 
 {{-- ===== Header ===== --}}
-<header class="site">
-  <div class="logo"><img src="{{ asset('images/logo.png') }}" alt="TEAM 3 Ticket"> TEAM <span style="color:var(--orange);margin:0 2px;">3</span> Ticket</div>
-  <button class="btn-orange" id="openLogin">เข้าสู่ระบบ</button>
-</header>
+@include('navbar')
+
 
 {{-- ===== Search Bar ===== --}}
 <div class="search-wrap">
-  <div class="search-bar">
-    <input type="text" placeholder="ค้นหาชื่องานคอนเสิร์ต หรือ ศิลปิน" aria-label="ค้นหาคอนเสิร์ต">
-  </div>
+  <form class="search-bar" method="GET" action="{{ url('/') }}">
+    <span aria-hidden="true">⌕</span>
+    <input type="search" name="search" value="{{ $search ?? request('search') }}" placeholder="ค้นหาชื่อคอนเสิร์ต ศิลปิน หรือองค์กร" aria-label="ค้นหาคอนเสิร์ต ศิลปิน หรือองค์กร">
+    <button type="submit">ค้นหา</button>
+  </form>
 </div>
 
 {{-- ===== Hero Banner ===== --}}
@@ -309,7 +316,7 @@
 {{-- ===== Recommend Concerts ===== --}}
 <div class="section">
   <div class="section-head">
-    <div class="section-title">Recommend Concerts</div>
+    <div class="section-title">{{ ($search ?? '') !== '' ? 'ผลการค้นหา' : 'Recommend Concerts' }}</div>
     <a href="#" class="show-all">Show All</a>
   </div>
 
@@ -370,6 +377,10 @@
         </div>
       </div>
       @endforeach
+    @elseif(($search ?? '') !== '')
+      <div style="grid-column:1/-1;background:#fff;border:1px solid var(--gray-300);border-radius:10px;padding:42px 20px;text-align:center;color:var(--gray-500);font-size:14px;">
+        ไม่พบคอนเสิร์ตที่ตรงกับ “{{ $search }}”
+      </div>
     @else
       {{-- แสดง card placeholder 12 ใบ (6x2) ตาม layout ในรูป แต่ยังไม่มีข้อมูลจริง --}}
       @for($i = 0; $i < 12; $i++)
@@ -418,18 +429,25 @@
     <button class="modal-close" data-close>✕</button>
     <h2>เข้าสู่ระบบ</h2>
     <p class="sub">ยินดีต้อนรับกลับมาอีกครั้ง</p>
-    <form id="loginForm">
+
+    {{-- แสดง error --}}
+    @if(session('open_modal') === 'login' && $errors->any())
+      <div class="modal-error">{{ $errors->first() }}</div>
+    @endif
+
+    <form id="loginForm" method="POST" action="{{ route('auth.login') }}">
       @csrf
       <div class="field">
         <label>อีเมล</label>
-        <input type="email" name="email" placeholder="example@email.com" required>
+        <input type="email" name="email" placeholder="example@email.com"
+               value="{{ old('email') }}" required>
       </div>
       <div class="field">
         <label>รหัสผ่าน</label>
         <input type="password" name="password" placeholder="••••••••" required>
       </div>
       <div class="options-row">
-        <label><input type="checkbox" style="width:auto;"> จดจำฉัน</label>
+        <label><input type="checkbox" name="remember" style="width:auto;"> จดจำฉัน</label>
         <a href="#">ลืมรหัสผ่าน?</a>
       </div>
       <button type="submit" class="btn-orange">เข้าสู่ระบบ</button>
@@ -444,11 +462,18 @@
     <button class="modal-close" data-close>✕</button>
     <h2>สมัครสมาชิก</h2>
     <p class="sub">เป็นสมาชิกอยู่แล้ว? <a href="#" id="toLoginFromSub" style="color:var(--orange-dark);font-weight:700;text-decoration:none;">เข้าสู่ระบบ</a></p>
-    <form id="registerForm">
+
+    {{-- แสดง error --}}
+    @if(session('open_modal') === 'register' && $errors->any())
+      <div class="modal-error">{{ $errors->first() }}</div>
+    @endif
+
+    <form id="registerForm" method="POST" action="{{ route('auth.register') }}">
       @csrf
       <div class="field">
         <label>อีเมล <span class="req">*</span></label>
-        <input type="email" name="email" placeholder="example@email.com" required>
+        <input type="email" name="email" placeholder="example@email.com"
+               value="{{ old('email') }}" required>
       </div>
       <div class="field">
         <label>รหัสผ่าน <span class="req">*</span></label>
@@ -461,24 +486,28 @@
       <div class="row-2">
         <div class="field">
           <label>ชื่อ <span class="req">*</span></label>
-          <input type="text" name="first_name" placeholder="กรุณากรอกชื่อจริงตามบัตรประชาชน" required>
+          <input type="text" name="first_name" placeholder="ชื่อจริงตามบัตรประชาชน"
+                 value="{{ old('first_name') }}" required>
         </div>
         <div class="field">
           <label>นามสกุล <span class="req">*</span></label>
-          <input type="text" name="last_name" placeholder="กรุณากรอกนามสกุลตามบัตรประชาชน" required>
+          <input type="text" name="last_name" placeholder="นามสกุลตามบัตรประชาชน"
+                 value="{{ old('last_name') }}" required>
         </div>
       </div>
       <div class="field">
         <label>เบอร์โทรศัพท์ <span class="req">*</span></label>
         <div class="phone-field">
           <span class="phone-prefix">🇹🇭 +66</span>
-          <input type="tel" name="phone" placeholder="0XXXXXXXX" required>
+          <input type="tel" name="phone" placeholder="0XXXXXXXX"
+                 value="{{ old('phone') }}" required>
         </div>
       </div>
       <button type="submit" class="btn-orange" style="margin-top:6px;">สมัครสมาชิก</button>
     </form>
   </div>
 </div>
+
 
 <script>
   // ----- Hero Slider -----
@@ -507,14 +536,18 @@
   }
 
   // ----- Modal logic -----
-  const loginOverlay = document.getElementById('loginOverlay');
+  const loginOverlay    = document.getElementById('loginOverlay');
   const registerOverlay = document.getElementById('registerOverlay');
 
-  function openModal(el){ el.classList.add('open'); }
-  function closeModal(el){ el.classList.remove('open'); }
-  function closeAll(){ closeModal(loginOverlay); closeModal(registerOverlay); }
+  function openModal(el)  { el.classList.add('open'); }
+  function closeModal(el) { el.classList.remove('open'); }
+  function closeAll()     { closeModal(loginOverlay); closeModal(registerOverlay); }
 
-  document.getElementById('openLogin').addEventListener('click', () => openModal(loginOverlay));
+  const openLoginBtn = document.getElementById('openLogin');
+  if (openLoginBtn) {
+    openLoginBtn.addEventListener('click', () => openModal(loginOverlay));
+  }
+
   document.getElementById('toRegister').addEventListener('click', (e) => {
     e.preventDefault(); closeModal(loginOverlay); openModal(registerOverlay);
   });
@@ -530,17 +563,12 @@
   });
   document.addEventListener('keydown', (e) => { if(e.key==='Escape') closeAll(); });
 
-  // Form submissions — รอต่อหลังบ้าน (ยังไม่ส่งจริง)
-  document.getElementById('loginForm').addEventListener('submit', e => {
-    e.preventDefault();
-    // TODO: เชื่อมต่อ API login จริง
-    console.log('Login form submitted — waiting for backend integration');
-  });
-  document.getElementById('registerForm').addEventListener('submit', e => {
-    e.preventDefault();
-    // TODO: เชื่อมต่อ API register จริง
-    console.log('Register form submitted — waiting for backend integration');
-  });
+  // ----- เปิด modal อัตโนมัติเมื่อ server ส่ง error กลับมา -----
+  @if(session('open_modal') === 'login')
+    openModal(loginOverlay);
+  @elseif(session('open_modal') === 'register')
+    openModal(registerOverlay);
+  @endif
 </script>
 
 </body>

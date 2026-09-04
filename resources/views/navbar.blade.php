@@ -1,70 +1,116 @@
-<header class="bg-[#0B2F61] text-white px-8 md:px-16 py-3.5 flex justify-between items-center shadow-md relative z-30">
+@php
+  $showLogo = $showLogo ?? true;
+  $profileCustomer = auth()->check() ? auth()->user()->customer : null;
+  $profileName = trim(($profileCustomer->first_name ?? 'สมาชิก') . ' ' . ($profileCustomer->last_name ?? ''));
+  $profileInitial = mb_strtoupper(mb_substr($profileCustomer->first_name ?? 'ส', 0, 1));
+  $profileColors = ['#2563eb', '#0f766e', '#c2410c', '#7c3aed', '#be123c', '#0369a1'];
+  $profileColor = $profileColors[auth()->check() ? (crc32((string) auth()->id()) % count($profileColors)) : 0];
+@endphp
+
+<style>
+  .team-header{background:linear-gradient(90deg,#0a1a4a,#12297d);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:14px 32px;min-height:64px;position:relative;z-index:30;}
+  .team-header.no-logo{justify-content:flex-end;}
+  .team-logo{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;font-size:18px;text-decoration:none;}
+  .team-logo img{width:36px;height:36px;object-fit:contain;mix-blend-mode:screen;}
+  .profile-trigger{display:flex;align-items:center;gap:12px;background:none;border:0;color:#fff;font:500 13px inherit;cursor:pointer;padding:0;}
+  .profile-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px;overflow:hidden;border:2px solid rgba(255,255,255,.7);}
+  .profile-popup{position:absolute;right:4.5%;top:calc(100% + 9px);width:278px;background:#fff;color:#263247;border-radius:8px;box-shadow:0 12px 30px rgba(15,32,65,.18);border:1px solid #edf0f5;overflow:visible;}
+  .profile-popup::before{content:'';position:absolute;right:19px;top:-8px;width:15px;height:15px;background:#fff;border-left:1px solid #edf0f5;border-top:1px solid #edf0f5;transform:rotate(45deg);}
+  .profile-popup-head{position:relative;background:#fff;padding:21px 20px 18px;border-bottom:1px solid #edf0f5;z-index:1;}
+  .profile-popup-head strong{display:block;font-size:16px;line-height:1.4;}
+  .profile-popup-head span{display:block;color:#a6adba;font-size:12px;margin-top:2px;}
+  .profile-popup-menu{position:relative;background:#fff;padding:7px 0;z-index:1;}
+  .profile-popup-menu a,.profile-popup-menu button{display:block;width:100%;padding:11px 20px;border:0;background:none;text-align:left;color:#334155;font:500 13px inherit;text-decoration:none;cursor:pointer;}
+  .profile-popup-menu a:hover,.profile-popup-menu button:hover{background:#f7f8fa;color:#f47b1f;}
+  .profile-popup-menu .profile-logout{border-top:1px solid #edf0f5;color:#475569;padding-top:14px;padding-bottom:14px;}
+  .profile-login{background:#f47b1f;border:0;border-radius:22px;color:#fff;padding:10px 22px;font:600 14px inherit;cursor:pointer;}
+  [data-profile-menu][hidden]{display:none;}
+  @media(max-width:640px){.team-header{padding:12px 16px;}.team-logo{font-size:16px;}.team-logo img{width:32px;height:32px;}.profile-name{display:none;}.profile-popup{right:16px;width:calc(100vw - 32px);}}
+</style>
+
+<header class="team-header {{ $showLogo ? '' : 'no-logo' }}">
 
   <!-- LOGO SECTION -->
-  <div class="flex items-center space-x-2.5">
+  @if($showLogo)
+  <a href="{{ url('/') }}" class="team-logo">
     <img src="{{ asset('images/logo.png') }}" alt="TEAM 3 Ticket Logo" class="w-7 h-7 object-contain" style="mix-blend-mode:screen;">
     <span class="font-bold text-base tracking-wide">TEAM <span class="text-[#F47B1F]">3</span> Ticket</span>
-  </div>
+  </a>
+  @endif
 
   <!-- PROFILE & DROPDOWN SECTION -->
-  <div class="relative" x-data="{ open: false }">
+  <div class="profile-area">
 
     <!-- Profile Trigger Button -->
-    <button @click="open = !open"
-            @click.outside="open = false"
-            class="flex items-center space-x-3 focus:outline-none cursor-pointer group">
-      <span class="text-xs text-gray-200 font-medium hidden sm:inline group-hover:text-white transition">อนิรุธ สุขวิรกาล</span>
-      <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden border border-white/20 group-hover:border-white transition">
-        <svg class="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-        </svg>
-      </div>
+    @auth
+    <button type="button" class="profile-trigger" data-profile-toggle aria-expanded="false">
+      <span class="profile-name">{{ $profileName }}</span>
+      <span class="profile-avatar" style="background-color:{{ $profileColor }};">{{ $profileInitial }}</span>
     </button>
+    @else
+    <button class="profile-login" id="openLogin">เข้าสู่ระบบ</button>
+    @endauth
 
     <!-- Profile Dropdown Popup (Matching Mockup) -->
-    <div x-show="open"
-         x-transition:enter="transition ease-out duration-150"
-         x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
-         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-         x-transition:leave="transition ease-in duration-100"
-         x-transition:leave-start="opacity-100 scale-100 translate-y-0"
-         x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
-         x-cloak
-         class="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 text-gray-800 z-50 overflow-hidden">
+    @auth
+    <div data-profile-menu hidden class="profile-popup">
 
       <!-- Top Arrow Indicator -->
       <div class="absolute -top-2 right-3 w-4 h-4 bg-white rotate-45 border-t border-l border-gray-100"></div>
 
       <!-- User Header Info -->
-      <div class="p-5 border-b border-gray-100 relative bg-white z-10">
-        <h3 class="font-bold text-base text-[#1E293B]">อนิรุธ สุขวิรกาล</h3>
-        <p class="text-xs text-gray-400 font-normal mt-0.5">ข้อมูลส่วนตัว</p>
+      <div class="profile-popup-head">
+        <strong>{{ $profileName }}</strong>
+        <span>ข้อมูลส่วนตัว</span>
       </div>
 
       <!-- Menu Items -->
-      <div class="py-1 text-xs font-medium text-[#334155] relative bg-white z-10">
+      <div class="profile-popup-menu">
 
-        <a href="#" class="block px-5 py-3 hover:bg-gray-50 hover:text-[#F47B1F] transition">
+        <a href="#" aria-disabled="true">
           ตั๋วของฉัน
         </a>
 
-        <a href="#" class="block px-5 py-3 hover:bg-gray-50 hover:text-[#F47B1F] transition">
+        <a href="{{ route('orders.history') }}">
           ประวัติการสั่งซื้อ
         </a>
 
-        <a href="#" class="block px-5 py-3 border-b border-gray-100 hover:bg-gray-50 hover:text-[#F47B1F] transition">
+        <a href="{{ route('profile.edit') }}">
           แก้ไขข้อมูลส่วนตัว
         </a>
 
         <!-- Logout Item -->
-        <a href="#" class="block px-5 py-3.5 text-gray-600 hover:bg-red-50 hover:text-red-500 transition">
-          ออกจากระบบ
-        </a>
+        <form method="POST" action="{{ route('auth.logout') }}">
+          @csrf
+          <button type="submit" class="profile-logout">ออกจากระบบ</button>
+        </form>
 
       </div>
 
     </div>
+    @endauth
 
   </div>
 
 </header>
+
+@auth
+<script>
+  (() => {
+    const trigger = document.querySelector('[data-profile-toggle]');
+    const menu = document.querySelector('[data-profile-menu]');
+    if (!trigger || !menu) return;
+    trigger.addEventListener('click', () => {
+      const isOpen = !menu.hidden;
+      menu.hidden = isOpen;
+      trigger.setAttribute('aria-expanded', String(!isOpen));
+    });
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.profile-area')) {
+        menu.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+    });
+  })();
+</script>
+@endauth
