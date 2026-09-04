@@ -1,0 +1,85 @@
+/* THAI QR PAYMENT MODAL STYLES */
+.qr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.qr-modal-card {
+  background-color: #ffffff;
+  width: 100%;
+  max-width: 650px;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  margin: auto;
+}
+
+.qr-modal-header {
+  background-color: #18355C;
+  color: #ffffff;
+  padding: 24px;
+  position: relative;
+}
+
+.qr-modal-close-btn {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  color: #D1D5DB;
+  font-size: 24px;
+  font-weight: bold;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 150ms;
+}
+.qr-modal-close-btn:hover { color: #ffffff; }
+
+.qr-placeholder-box {
+  width: 224px;
+  height: 224px;
+  background-color: #F9FAFB;
+  border: 2px dashed #D1D5DB;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  text-align: center;
+}
+
+.qr-timer-box {
+  width: 100%;
+  background-color: #FFF9EE;
+  border: 1px solid #FDE3B7;
+  border-radius: 9999px;
+  padding: 10px 16px;
+  text-align: center;
+  color: #D97706;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.btn-qr-submit {
+  width: 100%;
+  background-color: #18355C;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: background-color 150ms;
+}
+.btn-qr-submit:hover { background-color: #112745; }

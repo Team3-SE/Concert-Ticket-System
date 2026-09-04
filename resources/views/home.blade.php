@@ -362,7 +362,11 @@
         <div class="card-body">
           <div class="title">{{ $concert->name }}</div>
           <div class="date">{{ $concertDate->translatedFormat('j F Y') }}</div>
-          <span class="card-btn {{ $btnClass }}">{{ $btnText }}</span>
+          @if($btnClass === 'buy')
+            <a href="{{ url('/booking?concert_id=' . $concert->concert_id) }}" class="card-btn buy">{{ $btnText }}</a>
+          @else
+            <span class="card-btn {{ $btnClass }}">{{ $btnText }}</span>
+          @endif
         </div>
       </div>
       @endforeach

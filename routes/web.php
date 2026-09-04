@@ -29,3 +29,11 @@ Route::get('/dev/models', function () {
 
 Route::post('/dev/models/methods', [\App\Http\Controllers\Dev\ModelTesterController::class, 'getMethods'])->withoutMiddleware($statelessDevMiddleware);
 Route::post('/dev/models/execute', [\App\Http\Controllers\Dev\ModelTesterController::class, 'execute'])->withoutMiddleware($statelessDevMiddleware);
+
+
+// Route Booking
+Route::get('/booking', [\App\Http\Controllers\BookingController::class, 'index']);
+
+// Route Payment
+Route::get('/payment', [\App\Http\Controllers\PaymentController::class, 'index']);
+
