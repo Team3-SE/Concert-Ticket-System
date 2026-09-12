@@ -25,7 +25,7 @@ class AuthController extends Controller
     {
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'email'      => ['required', 'email', 'unique:customer,email'],
-            'password'   => ['required', 'confirmed', 'regex:/^(?=.*[A-Za-z])(?=.*\d)\S{8,}$/'],
+            'password'   => ['required', 'confirmed', 'regex:/^(?=.*[A-Za-z])(?=.*\d)\S{6,}$/'],
             'first_name' => ['required', 'regex:/^[\p{Thai}a-zA-Z]{2,50}$/u'],
             'last_name'  => ['required', 'regex:/^[\p{Thai}a-zA-Z]{2,50}$/u'],
             'phone'      => ['required', 'regex:/^0[0-9]{9}$/', 'unique:customer,phone'],
@@ -34,7 +34,7 @@ class AuthController extends Controller
             'email.email'         => 'รูปแบบอีเมลไม่ถูกต้อง',
             'email.unique'        => 'อีเมลนี้ถูกใช้งานแล้ว',
             'password.required'   => 'กรุณากรอกรหัสผ่าน',
-            'password.regex'      => 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร มีตัวอักษรภาษาอังกฤษและตัวเลขอย่างน้อยอย่างละ 1 ตัว และไม่มีช่องว่าง',
+            'password.regex'      => 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร มีตัวอักษรภาษาอังกฤษและตัวเลขอย่างน้อยอย่างละ 1 ตัว และไม่มีช่องว่าง',
             'password.confirmed'  => 'รหัสผ่านยืนยันไม่ตรงกัน',
             'first_name.required' => 'กรุณากรอกชื่อ',
             'first_name.regex'    => 'ชื่อต้องมี 2–50 ตัวอักษร และใช้ได้เฉพาะภาษาไทยหรืออังกฤษเท่านั้น',
