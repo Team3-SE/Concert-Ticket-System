@@ -1,0 +1,197 @@
+---
+config:
+  themeVariables:
+    fontFamily: "Angsana New"
+    fontSize: "20px"
+---
+
+classDiagram
+
+direction TB
+
+class COMPANY {
+    -string company_id [PK]
+    -string name
+    -string initials
+    -string description
+}
+
+class USER {
+    -string user_id [PK]
+    -string name
+    -string email [UK]
+    -string phone
+    -string password_hash
+    -string role
+    -boolean is_banned
+}
+
+class CUSTOMER {
+    -string customer_id [PK,FK]
+}
+
+class EVENT_ORGANIZER {
+    -string organizer_id [PK,FK]
+    -string company_id [FK]
+}
+
+class STAFF {
+    -string staff_id [PK,FK]
+    -string company_id [FK]
+}
+
+class ADMIN {
+    -string admin_id [PK,FK]
+}
+
+class CONCERT {
+    -string concert_id [PK]
+    -string company_id [FK]
+    -string organizer_id [FK]
+    -string name
+    -string artist
+    -datetime date_time
+    -string venue
+}
+
+class ZONE {
+    -string zone_id [PK]
+    -string concert_id [FK]
+    -string name
+    -decimal price
+    -int capacity
+}
+
+class SEAT {
+    -string seat_id [PK]
+    -string zone_id [FK]
+    -string row
+    -int number
+    -string status
+}
+
+class BOOKING {
+    -string booking_id [PK]
+    -string customer_id [FK]
+    -string concert_id [FK]
+    -datetime booking_date
+    -decimal total_amount
+    -string status
+    -datetime expiry_time
+}
+
+class BOOKING_SEAT {
+    -string booking_id [PK,FK]
+    -string seat_id [PK,FK]
+}
+
+class PAYMENT {
+    -string payment_id [PK]
+    -string booking_id [FK,UK]
+    -decimal amount
+    -string method
+    -string status
+    -datetime payment_date
+    -string provider_transaction_id
+    -string decline_code
+    -string risk_level
+    -string card_fingerprint
+}
+
+class TICKET {
+    -string ticket_id [PK]
+    -string booking_id [FK]
+    -string concert_id [FK]
+    -string seat_id [FK,UK]
+    -string qr_code [UK]
+    -boolean is_used
+}
+
+class SEAT_LOCK_LOG {
+    -string lock_id [PK]
+    -string booking_id [FK]
+    -string seat_id [FK]
+    -datetime locked_at
+    -datetime expired_at
+    -datetime released_at
+    -string status
+}
+
+class CHARGEBACK {
+    -string chargeback_id [PK]
+    -string payment_id [FK]
+    -string provider_chargeback_id [UK]
+    -string reason
+    -decimal amount
+    -string status
+    -datetime created_at
+    -datetime resolved_at
+}
+
+class STAFF_CONCERT {
+    -string staff_id [PK,FK]
+    -string concert_id [PK,FK]
+}
+
+class TICKET_VALIDATION_LOG {
+    -string validation_id [PK]
+    -string ticket_id [FK]
+    -string staff_id [FK]
+    -datetime validation_time
+    -boolean result
+}
+
+class SYSTEM_ANOMALY {
+    -string anomaly_id [PK]
+    -string booking_id [FK]
+    -string reviewed_by_admin_id [FK]
+    -string type
+    -string message
+    -datetime timestamp
+    -string status
+    -string resolve_reason
+}
+
+class ANOMALY_ATTACHMENT {
+    -string attachment_id [PK]
+    -string anomaly_id [FK]
+    -string file_path
+}
+
+class AUDIT_LOG {
+    -string log_id [PK]
+    -string user_id [FK]
+    -string action
+    -datetime timestamp
+    -string ip_address
+}
+
+USER "1" --> "0..1" CUSTOMER : is
+USER "1" --> "0..1" EVENT_ORGANIZER : is
+USER "1" --> "0..1" STAFF : is
+USER "1" --> "0..1" ADMIN : is
+COMPANY "1" --> "0..*" EVENT_ORGANIZER : employs
+COMPANY "1" --> "0..*" STAFF : employs
+COMPANY "1" --> "0..*" CONCERT : organizes
+EVENT_ORGANIZER "1" --> "0..*" CONCERT : manages
+CONCERT "1" --> "1..*" ZONE : contains
+ZONE "1" --> "1..*" SEAT : contains
+CUSTOMER "1" --> "0..*" BOOKING : makes
+CONCERT "1" --> "0..*" BOOKING : receives
+BOOKING "1" --> "0..*" BOOKING_SEAT : contains
+SEAT "1" --> "0..*" BOOKING_SEAT : reserved_in
+BOOKING "1" --> "0..1" PAYMENT : has
+BOOKING "1" --> "0..*" TICKET : generates
+BOOKING "1" --> "0..*" SEAT_LOCK_LOG : records
+SEAT "1" --> "0..*" SEAT_LOCK_LOG : has_lock_history
+PAYMENT "1" --> "0..*" CHARGEBACK : may_have
+CONCERT "1" --> "0..*" TICKET : has
+SEAT "1" --> "0..1" TICKET : assigned_to
+STAFF "1" --> "0..*" STAFF_CONCERT : assigned
+CONCERT "1" --> "0..*" STAFF_CONCERT : has_staff
+STAFF "1" --> "0..*" TICKET_VALIDATION_LOG : performs
+TICKET "1" --> "0..*" TICKET_VALIDATION_LOG : validated
+BOOKING "1" --> "0..*" SYSTEM_ANOMALY : may_trigger
+ADMIN "1" --> "0..*" SYSTEM_ANOMALY : reviews
+SYSTEM_ANOMALY "1" --> "0..*" ANOMALY_ATTACHMENT : has
+USER "1" --> "0..*" AUDIT_LOG : generates

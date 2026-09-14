@@ -1,0 +1,18 @@
+{
+  "pages": 24,
+  "logical_tables": 20,
+  "table_fragments": 24,
+  "continuation_captions": [
+    "ตารางที่ 1.2 user (ต่อ)",
+    "ตารางที่ 1.12 payment (ต่อ)",
+    "ตารางที่ 1.15 chargeback (ต่อ)",
+    "ตารางที่ 1.18 system_anomaly (ต่อ)"
+  ],
+  "fonts": {
+    "Angsana New": 8948
+  },
+  "all_original_table_cells_preserved": true,
+  "each_fragment_on_one_page": true,
+  "all_captions_on_same_page_as_their_table": true,
+  "blank_pages": 0
+}

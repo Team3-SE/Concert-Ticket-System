@@ -1,0 +1,158 @@
+[
+  [
+    "1",
+    "Raspberry Pi computer hardware",
+    "พอร์ต GPIO นาฬิกา ปุ่ม พัดลม และไฟเลี้ยง",
+    "https://www.raspberrypi.com/documentation/computers/raspberry-pi.html"
+  ],
+  [
+    "2",
+    "Raspberry Pi 5 product brief",
+    "สเปกหลักและข้อแนะนำใช้งาน",
+    "https://datasheets.raspberrypi.com/rpi5/raspberry-pi-5-product-brief.pdf"
+  ],
+  [
+    "3",
+    "Introducing Raspberry Pi 5",
+    "ที่มาของชิปและโรงงานผลิต",
+    "https://www.raspberrypi.com/news/introducing-raspberry-pi-5/"
+  ],
+  [
+    "4",
+    "27W USB C Power Supply",
+    "ข้อมูลแหล่งจ่ายไฟทางการ",
+    "https://www.raspberrypi.com/products/27w-power-supply/"
+  ],
+  [
+    "5",
+    "Raspberry Pi configuration",
+    "การตั้งค่าและไฟแสดงสถานะ",
+    "https://www.raspberrypi.com/documentation/computers/configuration.html"
+  ],
+  [
+    "6",
+    "Raspberry Pi RTC Battery",
+    "แบตเตอรี่นาฬิกาที่ออกแบบสำหรับบอร์ด",
+    "https://www.raspberrypi.com/products/rtc-battery/"
+  ],
+  [
+    "7",
+    "Raspberry Pi connector overview",
+    "อินเทอร์เฟซและการแสดงผล",
+    "https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#video-and-audio"
+  ],
+  [
+    "8",
+    "Composite video on Raspberry Pi 5",
+    "ตำแหน่ง J7 จากผู้จัดจำหน่าย element14",
+    "https://community.element14.com/products/raspberry-pi/f/raspberry-pi-5-faq/53747/where-is-the-composite-video-on-the-raspberry-pi-5"
+  ],
+  [
+    "9",
+    "Raspberry Pi network configuration",
+    "การตั้งค่าเครือข่าย",
+    "https://www.raspberrypi.com/documentation/computers/configuration.html#networking"
+  ],
+  [
+    "10",
+    "Raspberry Pi Connector for PCIe",
+    "ข้อกำหนดหัวต่อ PCIe",
+    "https://datasheets.raspberrypi.com/pcie/pcie-connector-standard.pdf"
+  ],
+  [
+    "11",
+    "Raspberry Pi M2 HAT plus",
+    "บอร์ดต่อ NVMe",
+    "https://www.raspberrypi.com/products/m2-hat-plus/"
+  ],
+  [
+    "12",
+    "Raspberry Pi Active Cooler",
+    "ชุดระบายความร้อนและหัว FAN",
+    "https://www.raspberrypi.com/products/active-cooler/"
+  ],
+  [
+    "13",
+    "GPIO usage and best practices",
+    "แนวทางใช้งาน GPIO และเครื่องมือ",
+    "https://pip-assets.raspberrypi.com/categories/685-whitepapers-app-notes/documents/RP-006553-WP/A-history-of-GPIO-usage-on-Raspberry-Pi-devices-and-current-best-practices"
+  ],
+  [
+    "14",
+    "Raspberry Pi HAT plus specification",
+    "ข้อกำหนดของบอร์ดเสริม",
+    "https://datasheets.raspberrypi.com/hat/hat-plus-specification.pdf"
+  ],
+  [
+    "15",
+    "UART configuration",
+    "ความแตกต่างของ UART และ Debug header",
+    "https://www.raspberrypi.com/documentation/computers/configuration.html#configuring-uarts"
+  ],
+  [
+    "16",
+    "Raspberry Pi OS GPIO Python",
+    "ตัวอย่าง gpiozero",
+    "https://www.raspberrypi.com/documentation/computers/os.html#use-gpio-from-python"
+  ],
+  [
+    "17",
+    "GPIO Zero documentation",
+    "การติดตั้งและ API ของไลบรารี",
+    "https://gpiozero.readthedocs.io/en/latest/"
+  ],
+  [
+    "18",
+    "Raspberry Pi boot configuration source",
+    "EEPROM write protection และ TP14 TP1",
+    "https://github.com/raspberrypi/documentation/blob/master/documentation/asciidoc/computers/config_txt/boot.adoc"
+  ],
+  [
+    "19",
+    "Raspberry Pi 5 approvals",
+    "ใบรับรองรายประเทศ รวมประเทศไทย",
+    "https://pip.raspberrypi.com/categories/894-approvals"
+  ],
+  [
+    "20",
+    "CE marking European Commission",
+    "ความหมายและบทบาทของเครื่องหมาย CE",
+    "https://single-market-economy.ec.europa.eu/single-market/goods/ce-marking_en"
+  ],
+  [
+    "21",
+    "FCC Equipment Authorization System",
+    "ระบบข้อมูลการอนุญาตอุปกรณ์",
+    "https://apps.fcc.gov/oetcf/kdb/index.cfm"
+  ],
+  [
+    "22",
+    "UL Recognized Component",
+    "ความหมายของการรับรองระดับชิ้นส่วน",
+    "https://www.ul.com/thecodeauthority/knowledge/ul-component-recognition-classification"
+  ],
+  [
+    "23",
+    "UL flammability testing",
+    "การทดสอบวัสดุและระดับ V 0",
+    "https://www.ul.com/services/combustion-fire-tests-plastics"
+  ],
+  [
+    "24",
+    "WEEE label European Union",
+    "ถังขยะกากบาทและแถบใต้เครื่องหมาย",
+    "https://europa.eu/youreurope/business/product-rules-compliance/recycling-waste-management/weee-label/index_en.htm"
+  ],
+  [
+    "25",
+    "Raspberry Pi licensing",
+    "Abracon และ Proant antenna technology",
+    "https://www.raspberrypi.com/licensing/"
+  ],
+  [
+    "26",
+    "Raspberry Pi getting started",
+    "เตรียมระบบปฏิบัติการและเปิดเครื่องครั้งแรก",
+    "https://www.raspberrypi.com/documentation/computers/getting-started.html"
+  ]
+]
