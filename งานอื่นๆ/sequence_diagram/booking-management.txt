@@ -1,0 +1,46 @@
+sequenceDiagram
+    autonumber
+    actor Admin as Admin / Staff
+    participant BookingUI as :BookingManagementInterface
+    participant BookingCtrl as :BookingManagementController
+    participant BookingEntity as :Booking
+    participant SeatLockEntity as :SeatLockLog
+
+    %% 1. ดูรายการและค้นหา Booking
+    rect rgb(240, 248, 255)
+    note right of Admin: 1. ดูรายการและค้นหา Booking (View & Search)
+    Admin->>BookingUI: displayBookings() / searchBooking(keyword)
+    activate BookingUI
+    
+    alt ดูการจองทั้งหมด
+        BookingUI->>BookingCtrl: getBookings()
+        activate BookingCtrl
+        BookingCtrl->>BookingEntity: ดึงข้อมูลการจองทั้งหมด
+        BookingCtrl-->>BookingUI: List<Booking>
+        deactivate BookingCtrl
+    else ค้นหาการจอง (เช่น จาก bookingCode)
+        BookingUI->>BookingCtrl: searchBooking(keyword)
+        activate BookingCtrl
+        BookingCtrl->>BookingEntity: ค้นหาข้อมูลตาม keyword
+        BookingCtrl-->>BookingUI: List<Booking>
+        deactivate BookingCtrl
+    end
+    
+    BookingUI-->>Admin: แสดงรายการ Booking
+    deactivate BookingUI
+    end
+
+    %% 2. ดูประวัติการล็อกที่นั่ง (Seat Lock History)
+    rect rgb(245, 245, 245)
+    note right of Admin: 2. ดูประวัติการล็อกที่นั่ง (Seat Lock History)
+    Admin->>BookingUI: displaySeatLockHistory(seatID)
+    activate BookingUI
+    BookingUI->>BookingCtrl: getSeatLockHistory(seatID)
+    activate BookingCtrl
+    BookingCtrl->>SeatLockEntity: ดึงประวัติของ seatID
+    SeatLockEntity-->>BookingCtrl: รายการประวัติ
+    BookingCtrl-->>BookingUI: List<SeatLockLog>
+    deactivate BookingCtrl
+    BookingUI-->>Admin: แสดงประวัติการ Lock / Release / Expire ของที่นั่ง
+    deactivate BookingUI
+    end

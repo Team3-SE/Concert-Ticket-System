@@ -1,0 +1,81 @@
+sequenceDiagram
+    autonumber
+    actor Admin as Admin
+    participant UserMgmtUI as :UserManagementInterface
+    participant UserMgmtCtrl as :UserManagementController
+    participant AdminEntity as :Admin
+    participant AppUserEntity as :AppUser
+    participant OrgEntity as :EventOrganizer
+
+    %% 1. แสดงและค้นหารายชื่อผู้ใช้
+    rect rgb(240, 248, 255)
+    note right of Admin: 1. แสดงและค้นหารายชื่อผู้ใช้ (List / Search Users)
+    Admin->>UserMgmtUI: displayUsers() / searchUser(keyword)
+    activate UserMgmtUI
+    alt แสดงผู้ใช้ทั้งหมด
+        UserMgmtUI->>UserMgmtCtrl: getUsers()
+        activate UserMgmtCtrl
+        UserMgmtCtrl-->>UserMgmtUI: List<AppUser>
+        deactivate UserMgmtCtrl
+    else ค้นหาผู้ใช้
+        UserMgmtUI->>UserMgmtCtrl: searchUser(keyword)
+        activate UserMgmtCtrl
+        UserMgmtCtrl-->>UserMgmtUI: List<AppUser>
+        deactivate UserMgmtCtrl
+    end
+    UserMgmtUI-->>Admin: แสดงรายการผู้ใช้
+    deactivate UserMgmtUI
+    end
+
+    %% 2. ระงับ / เปิดใช้งานบัญชีผู้ใช้
+    rect rgb(245, 245, 245)
+    note right of Admin: 2. ระงับ / เปิดใช้งานบัญชีผู้ใช้ (Suspend / Activate User)
+    Admin->>UserMgmtUI: submitSuspend(userID) / submitActivate(userID)
+    activate UserMgmtUI
+    alt ระงับบัญชี (Suspend)
+        UserMgmtUI->>UserMgmtCtrl: suspendUser(userID)
+        activate UserMgmtCtrl
+        UserMgmtCtrl->>AdminEntity: manageUser(userID, "SUSPEND")
+        activate AdminEntity
+        AdminEntity->>AppUserEntity: setAccountStatus(SUSPENDED) (Added)
+        activate AppUserEntity
+        AppUserEntity-->>AdminEntity: void
+        deactivate AppUserEntity
+        AdminEntity-->>UserMgmtCtrl: void
+        deactivate AdminEntity
+        UserMgmtCtrl-->>UserMgmtUI: void
+        deactivate UserMgmtCtrl
+    else เปิดใช้งานบัญชี (Activate)
+        UserMgmtUI->>UserMgmtCtrl: activateUser(userID)
+        activate UserMgmtCtrl
+        UserMgmtCtrl->>AdminEntity: manageUser(userID, "ACTIVATE")
+        activate AdminEntity
+        AdminEntity->>AppUserEntity: setAccountStatus(ACTIVE) (Added)
+        activate AppUserEntity
+        AppUserEntity-->>AdminEntity: void
+        deactivate AppUserEntity
+        AdminEntity-->>UserMgmtCtrl: void
+        deactivate AdminEntity
+        UserMgmtCtrl-->>UserMgmtUI: void
+        deactivate UserMgmtCtrl
+    end
+    UserMgmtUI-->>Admin: แสดงสถานะผู้ใช้ที่ถูกอัปเดต
+    deactivate UserMgmtUI
+    end
+
+    %% 3. เปลี่ยนบริษัทสังกัดของ Organizer
+    rect rgb(255, 240, 245)
+    note right of Admin: 3. เปลี่ยนบริษัทสังกัดของ Organizer (Change Company)
+    Admin->>UserMgmtUI: submitCompanyChange(userID, companyID)
+    activate UserMgmtUI
+    UserMgmtUI->>UserMgmtCtrl: changeOrganizerCompany(userID, companyID)
+    activate UserMgmtCtrl
+    UserMgmtCtrl->>OrgEntity: setCompanyID(companyID) (Added)
+    activate OrgEntity
+    OrgEntity-->>UserMgmtCtrl: void
+    deactivate OrgEntity
+    UserMgmtCtrl-->>UserMgmtUI: void
+    deactivate UserMgmtCtrl
+    UserMgmtUI-->>Admin: แสดงผลการเปลี่ยนบริษัทสำเร็จ
+    deactivate UserMgmtUI
+    end
