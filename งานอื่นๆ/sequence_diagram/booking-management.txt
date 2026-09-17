@@ -1,10 +1,10 @@
 sequenceDiagram
     autonumber
     actor Admin as Admin / Staff
-    participant BookingUI as :BookingManagementInterface
-    participant BookingCtrl as :BookingManagementController
-    participant BookingEntity as :Booking
-    participant SeatLockEntity as :SeatLockLog
+    participant BookingUI@{ "type": "boundary" } as :BookingManagementInterface
+    participant BookingCtrl@{ "type": "control" } as :BookingManagementController
+    participant BookingEntity@{ "type": "entity" } as :Booking
+    participant SeatLockEntity@{ "type": "entity" } as :SeatLockLog
 
     %% 1. ดูรายการและค้นหา Booking
     rect rgb(240, 248, 255)
@@ -16,12 +16,18 @@ sequenceDiagram
         BookingUI->>BookingCtrl: getBookings()
         activate BookingCtrl
         BookingCtrl->>BookingEntity: ดึงข้อมูลการจองทั้งหมด
+        activate BookingEntity
+        BookingEntity-->>BookingCtrl: List<Booking>
+        deactivate BookingEntity
         BookingCtrl-->>BookingUI: List<Booking>
         deactivate BookingCtrl
     else ค้นหาการจอง (เช่น จาก bookingCode)
         BookingUI->>BookingCtrl: searchBooking(keyword)
         activate BookingCtrl
         BookingCtrl->>BookingEntity: ค้นหาข้อมูลตาม keyword
+        activate BookingEntity
+        BookingEntity-->>BookingCtrl: List<Booking>
+        deactivate BookingEntity
         BookingCtrl-->>BookingUI: List<Booking>
         deactivate BookingCtrl
     end
@@ -38,7 +44,9 @@ sequenceDiagram
     BookingUI->>BookingCtrl: getSeatLockHistory(seatID)
     activate BookingCtrl
     BookingCtrl->>SeatLockEntity: ดึงประวัติของ seatID
+    activate SeatLockEntity
     SeatLockEntity-->>BookingCtrl: รายการประวัติ
+    deactivate SeatLockEntity
     BookingCtrl-->>BookingUI: List<SeatLockLog>
     deactivate BookingCtrl
     BookingUI-->>Admin: แสดงประวัติการ Lock / Release / Expire ของที่นั่ง

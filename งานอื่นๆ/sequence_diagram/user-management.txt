@@ -1,11 +1,11 @@
 sequenceDiagram
     autonumber
     actor Admin as Admin
-    participant UserMgmtUI as :UserManagementInterface
-    participant UserMgmtCtrl as :UserManagementController
-    participant AdminEntity as :Admin
-    participant AppUserEntity as :AppUser
-    participant OrgEntity as :EventOrganizer
+    participant UserMgmtUI@{ "type": "boundary" } as :UserManagementInterface
+    participant UserMgmtCtrl@{ "type": "control" } as :UserManagementController
+    participant AdminEntity@{ "type": "entity" } as :Admin
+    participant AppUserEntity@{ "type": "entity" } as :AppUser
+    participant OrgEntity@{ "type": "entity" } as :EventOrganizer
 
     %% 1. แสดงและค้นหารายชื่อผู้ใช้
     rect rgb(240, 248, 255)
@@ -15,11 +15,19 @@ sequenceDiagram
     alt แสดงผู้ใช้ทั้งหมด
         UserMgmtUI->>UserMgmtCtrl: getUsers()
         activate UserMgmtCtrl
+        UserMgmtCtrl->>AppUserEntity: ดึงข้อมูลผู้ใช้ทั้งหมด
+        activate AppUserEntity
+        AppUserEntity-->>UserMgmtCtrl: List<AppUser>
+        deactivate AppUserEntity
         UserMgmtCtrl-->>UserMgmtUI: List<AppUser>
         deactivate UserMgmtCtrl
     else ค้นหาผู้ใช้
         UserMgmtUI->>UserMgmtCtrl: searchUser(keyword)
         activate UserMgmtCtrl
+        UserMgmtCtrl->>AppUserEntity: ค้นหาข้อมูลตาม keyword
+        activate AppUserEntity
+        AppUserEntity-->>UserMgmtCtrl: List<AppUser>
+        deactivate AppUserEntity
         UserMgmtCtrl-->>UserMgmtUI: List<AppUser>
         deactivate UserMgmtCtrl
     end
@@ -37,7 +45,7 @@ sequenceDiagram
         activate UserMgmtCtrl
         UserMgmtCtrl->>AdminEntity: manageUser(userID, "SUSPEND")
         activate AdminEntity
-        AdminEntity->>AppUserEntity: setAccountStatus(SUSPENDED) (Added)
+        AdminEntity->>AppUserEntity: setAccountStatus(SUSPENDED)
         activate AppUserEntity
         AppUserEntity-->>AdminEntity: void
         deactivate AppUserEntity
@@ -50,7 +58,7 @@ sequenceDiagram
         activate UserMgmtCtrl
         UserMgmtCtrl->>AdminEntity: manageUser(userID, "ACTIVATE")
         activate AdminEntity
-        AdminEntity->>AppUserEntity: setAccountStatus(ACTIVE) (Added)
+        AdminEntity->>AppUserEntity: setAccountStatus(ACTIVE)
         activate AppUserEntity
         AppUserEntity-->>AdminEntity: void
         deactivate AppUserEntity
@@ -70,7 +78,7 @@ sequenceDiagram
     activate UserMgmtUI
     UserMgmtUI->>UserMgmtCtrl: changeOrganizerCompany(userID, companyID)
     activate UserMgmtCtrl
-    UserMgmtCtrl->>OrgEntity: setCompanyID(companyID) (Added)
+    UserMgmtCtrl->>OrgEntity: setCompanyID(companyID)
     activate OrgEntity
     OrgEntity-->>UserMgmtCtrl: void
     deactivate OrgEntity

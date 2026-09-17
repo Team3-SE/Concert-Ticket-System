@@ -1,9 +1,10 @@
 sequenceDiagram
     autonumber
+
     actor Admin as Admin
-    participant AuditUI as :AuditLogInterface
-    participant AuditCtrl as :AuditLogController
-    participant LogEntity as :AuditLog
+    participant AuditUI@{ "type": "boundary" } as :AuditLogInterface
+    participant AuditCtrl@{ "type": "control" } as :AuditLogController
+    participant LogEntity@{ "type": "entity" } as :AuditLog
 
     %% 1. ดูรายการและค้นหา Log
     rect rgb(255, 248, 240)
