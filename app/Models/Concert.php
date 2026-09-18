@@ -32,6 +32,7 @@ class Concert extends Model
         'event_datetime',
         'description',
         'poster_path',
+        'banner_path',
         'seat_map_image_path',
         'sale_start_datetime',
         'sale_end_datetime',

@@ -129,12 +129,14 @@
   }
   /* card image area: artist name + tag are centered (both axes), matches reference */
   .card-img{
-    height:230px;position:relative;
+    aspect-ratio: 2/3;
+    position:relative;
     display:flex;flex-direction:column;
     align-items:center;justify-content:center;
     gap:8px;
     padding:16px 10px;
     text-align:center;
+    overflow:hidden;
   }
   .card-img .card-artist{
     font-weight:700;font-size:13px;
@@ -362,9 +364,12 @@
         $tagText = $concert->tag_text ?? 'CONCERT';
       @endphp
       <div class="card">
-        <div class="card-img {{ $colorClass }}">
-          <span class="card-artist">{{ $concert->artist }}</span>
-          <span class="tag {{ $tagClass }}">{{ $tagText }}</span>
+        <div class="card-img {{ $colorClass }}" @if($concert->poster_path) style="padding:0;" @endif>
+          @if($concert->poster_path)
+            <img src="{{ asset('storage/' . $concert->poster_path) }}" alt="{{ $concert->name }}" style="width:100%;height:100%;object-fit:cover;">
+          @else
+            <span class="card-artist">{{ $concert->artist }}</span>
+          @endif
         </div>
         <div class="card-body">
           <div class="title">{{ $concert->name }}</div>
@@ -387,7 +392,6 @@
       <div class="card">
         <div class="card-img {{ $colorClasses[$i % 6] }}">
           <span class="card-artist">&nbsp;</span>
-          <span class="tag tag-default">&nbsp;</span>
         </div>
         <div class="card-body">
           <div class="title">&nbsp;</div>

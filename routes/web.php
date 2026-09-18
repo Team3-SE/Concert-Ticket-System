@@ -18,6 +18,10 @@ $statelessDevMiddleware = [
 ];
 
 Route::view('/welcome', 'welcome');
+// ===== จัดการรูปภาพคอนเสิร์ต =====
+Route::get('/manage-images', [\App\Http\Controllers\ConcertImageController::class, 'index']);
+Route::post('/manage/images/{concertId}/{type}', [\App\Http\Controllers\ConcertImageController::class, 'upload']);
+Route::delete('/manage/images/{concertId}/{type}', [\App\Http\Controllers\ConcertImageController::class, 'destroy']);
 
 // Main home page (using team3-ticket mockup)
 Route::get('/', [\App\Http\Controllers\HomeController::class, 'index']);
@@ -61,6 +65,5 @@ Route::middleware('auth')->group(function () {
 Route::post('/auth/register', [\App\Http\Controllers\AuthController::class, 'register'])->name('auth.register');
 Route::post('/auth/login',    [\App\Http\Controllers\AuthController::class, 'login'])->name('auth.login');
 Route::post('/auth/logout',   [\App\Http\Controllers\AuthController::class, 'logout'])->name('auth.logout');
-
 
 
