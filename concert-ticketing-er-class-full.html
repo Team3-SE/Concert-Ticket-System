@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Concert Ticketing System: ER Diagram และ Domain Class</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --f-display:"Prompt","IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --paper:#eef0f8; --panel:#ffffff; --ink:#15173a; --ink2:#454863; --muted:#63678a;
+  --line:#d6d9ea; --edge:#7f84a8; --brand:#24236b; --brand-ink:#f3f1ff; --bi:#ffffff;
+  --user:#0b7fbf; --concert:#7a45e0; --booking:#c96f00; --ticket:#0a8f63; --risk:#d92f4b;
+  --pk:#a87400; --fk:#2563eb; --uk:#8b2fd6;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0c0e24; --panel:#141736; --ink:#eceefb; --ink2:#b7bbd8; --muted:#8a8fb4;
+    --line:#272b55; --edge:#5f6592; --brand:#2d2c91; --brand-ink:#f3f1ff; --bi:#10122b;
+    --user:#5cc0ff; --concert:#b394ff; --booking:#ffb547; --ticket:#45e0a4; --risk:#ff7088;
+    --pk:#f5c542; --fk:#7db0ff; --uk:#cd9bff;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0c0e24; --panel:#141736; --ink:#eceefb; --ink2:#b7bbd8; --muted:#8a8fb4;
+  --line:#272b55; --edge:#5f6592; --brand:#2d2c91; --brand-ink:#f3f1ff; --bi:#10122b;
+  --user:#5cc0ff; --concert:#b394ff; --booking:#ffb547; --ticket:#45e0a4; --risk:#ff7088;
+  --pk:#f5c542; --fk:#7db0ff; --uk:#cd9bff;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.7 var(--f-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+a{color:inherit}
+code{font:500 .86em var(--f-mono);background:color-mix(in srgb,var(--ink) 8%,transparent);padding:1px 6px;border-radius:4px;overflow-wrap:anywhere}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--fk);outline-offset:2px}
+
+.shell{display:grid;grid-template-columns:208px minmax(0,1fr);max-width:1560px;margin:0 auto}
+.rail{position:sticky;top:0;align-self:start;height:100vh;padding:32px 20px;display:flex;flex-direction:column;gap:4px;border-right:1px solid var(--line)}
+.rail .brand{font:700 15px/1.35 var(--f-display);margin:0 0 20px 10px;letter-spacing:-.01em}
+.rail .brand small{display:block;font:400 12px var(--f-body);color:var(--muted);margin-top:2px}
+.rail a{padding:7px 10px;border-radius:6px;color:var(--ink2);text-decoration:none;font-size:14px;line-height:1.4}
+.rail a:hover{color:var(--ink)}
+.rail a.on{background:var(--panel);color:var(--ink);box-shadow:inset 3px 0 0 var(--brand);font-weight:500}
+main{padding:0 clamp(20px,4vw,56px) 120px;min-width:0}
+section{padding-top:104px;scroll-margin-top:8px}
+
+h2{font:700 clamp(26px,3.2vw,40px)/1.18 var(--f-display);letter-spacing:-.015em;margin:0 0 14px}
+h3{font-family:var(--f-display)}
+.lead{max-width:68ch;color:var(--ink2);font-size:17px;margin:0}
+
+/* hero ticket */
+.hero{padding-top:56px}
+.ticket{display:grid;grid-template-columns:minmax(0,1fr) 260px;background-color:var(--brand);color:var(--brand-ink);border-radius:14px;position:relative;
+  background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.05) 0 2px,transparent 2px 15px)}
+.tk-main{padding:52px 52px 46px}
+.tk-main h1{font:700 clamp(34px,5.6vw,68px)/1.02 var(--f-display);letter-spacing:-.028em;margin:0;overflow-wrap:anywhere}
+.tk-main .th{font:500 clamp(18px,2.3vw,27px)/1.3 var(--f-display);margin:16px 0 0;opacity:.88}
+.tk-main .sum{max-width:54ch;margin:26px 0 0;color:#d6d3f6;font-size:16px}
+.tk-stub{position:relative;border-left:2px dashed rgba(243,241,255,.4);padding:34px 28px 30px;display:flex;flex-direction:column;justify-content:space-between;gap:24px;animation:settle 1s cubic-bezier(.2,.8,.2,1) .25s both}
+.tk-stub::before,.tk-stub::after{content:"";position:absolute;left:-13px;width:24px;height:24px;border-radius:50%;background:var(--paper)}
+.tk-stub::before{top:-12px}
+.tk-stub::after{bottom:-12px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:18px 12px;margin:0}
+.stats div{min-width:0}
+.stats dd{margin:0;font:700 36px/1 var(--f-display)}
+.stats dt{font-size:13px;color:#cfcbf3;margin-top:4px;line-height:1.3}
+.bars{height:46px;background:repeating-linear-gradient(90deg,#f3f1ff 0 2px,transparent 2px 5px,#f3f1ff 5px 6px,transparent 6px 10px,#f3f1ff 10px 13px,transparent 13px 15px,#f3f1ff 15px 16px,transparent 16px 21px);opacity:.9;border-radius:2px}
+.ver{font:500 12px var(--f-mono);color:#cfcbf3;margin-top:-10px}
+@keyframes settle{from{transform:translateX(26px) rotate(2.4deg);opacity:0}to{transform:none;opacity:1}}
+
+/* overview map */
+.mapwrap{overflow-x:auto;margin-top:36px;padding-bottom:6px}
+.map{display:block;width:100%;min-width:760px;height:auto}
+.map .blk{cursor:pointer}
+.map .blk .bg{fill:var(--panel);stroke:var(--line);stroke-width:1.2}
+.map .blk:hover .bg,.map .blk:focus-visible .bg{stroke:var(--gc);stroke-width:2}
+.map .blk .bar{fill:var(--gc)}
+.map .t{font:600 15px var(--f-display);fill:var(--ink)}
+.map .s{font:400 11.5px var(--f-body);fill:var(--muted)}
+.map .n{font:500 11px var(--f-mono);fill:var(--ink2)}
+.map .mp path{fill:none;stroke:var(--edge);stroke-width:1.6}
+.map .ml text{font:600 11px var(--f-body);fill:var(--ink2);paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+.hint{font-size:13.5px;color:var(--muted);margin:10px 0 0}
+
+.concepts{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:0 60px;margin:56px 0 0}
+.concepts div{border-top:2px solid var(--ink);padding:16px 0 30px}
+.concepts dt{font:600 18px/1.3 var(--f-display);margin-bottom:8px}
+.concepts dd{margin:0;color:var(--ink2);font-size:15px}
+
+/* tabs and panes */
+.toolbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px 24px;margin:36px 0 6px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.tab{appearance:none;border:1px solid var(--line);background:transparent;color:var(--ink2);padding:8px 15px;border-radius:999px;font:500 14px var(--f-body);cursor:pointer;display:inline-flex;gap:9px;align-items:center}
+.tab i{width:9px;height:9px;border-radius:50%;background:var(--gc)}
+.tab:hover{border-color:var(--ink2)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.sw{display:inline-flex;align-items:center;gap:10px;font-size:14px;color:var(--ink2);cursor:pointer;user-select:none}
+.sw input{width:38px;height:22px;appearance:none;border-radius:999px;background:var(--line);position:relative;cursor:pointer;transition:background .15s;margin:0}
+.sw input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--panel);box-shadow:0 1px 2px rgba(0,0,0,.35);transition:transform .15s}
+.sw input:checked{background:var(--brand)}
+.sw input:checked::after{transform:translateX(16px)}
+
+.pane-h{margin:34px 0 26px}
+.pane-h h3{font:600 22px/1.3 var(--f-display);margin:0}
+.pane-h p{color:var(--ink2);max-width:72ch;margin:6px 0 0}
+
+.er-grid{position:relative;display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));column-gap:84px;row-gap:64px;align-items:center;padding:8px 0}
+.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:0}
+.eg path{fill:none;stroke:var(--edge);stroke-width:1.6;transition:opacity .15s}
+.eg text{font:600 11px var(--f-mono);fill:var(--ink2);paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+.edges.focus .eg{opacity:.14}
+.edges.focus .eg.hot{opacity:1}
+.eg.hot path{stroke:var(--ink);stroke-width:2.2}
+.tri{fill:var(--paper);stroke:var(--edge);stroke-width:1.4}
+
+.ent{position:relative;z-index:1;justify-self:center;width:100%;max-width:410px;background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--gc);border-radius:6px;font-size:13.5px}
+.ent:hover,.ent:focus-visible{border-color:var(--gc)}
+.ent.flash{animation:flash 1.6s ease-out}
+@keyframes flash{0%,40%{box-shadow:0 0 0 4px color-mix(in srgb,var(--gc) 45%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
+.eh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:11px 14px 4px}
+.eh b{font:600 15px/1.3 var(--f-display);letter-spacing:.01em;overflow-wrap:anywhere}
+.tag{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.ep{margin:0;padding:0 14px 9px;font-size:12.5px;color:var(--ink2);line-height:1.5}
+.attrs,.meths{list-style:none;margin:0;padding:0}
+.attrs li{display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:2px 8px;align-items:baseline;padding:5px 14px;border-top:1px dashed var(--line)}
+.attrs.cls li{grid-template-columns:minmax(0,1fr) auto}
+.attrs .a{font:500 12.5px var(--f-mono);overflow-wrap:anywhere}
+.attrs .t{font:400 11.5px var(--f-mono);color:var(--muted)}
+.attrs li small,.meths li small{display:none;color:var(--muted);font-size:12px;line-height:1.45}
+.attrs li small{grid-column:2 / 4}
+.attrs.cls li small{grid-column:1 / 3}
+.show-desc .attrs li small,.show-desc .meths li small{display:block}
+.ks{display:flex;gap:3px;flex-wrap:wrap;min-height:1px}
+.b{font:600 9.5px/1 var(--f-mono);padding:3px 5px;border-radius:3px;color:var(--bi);font-style:normal}
+.b.PK{background:var(--pk)} .b.FK{background:var(--fk)} .b.UK{background:var(--uk)} .b.NULL{background:var(--muted)}
+.meths{border-top:1px solid var(--line);background:color-mix(in srgb,var(--gc) 5%,transparent)}
+.meths li{padding:6px 14px;border-top:1px dashed var(--line)}
+.meths li:first-child{border-top:0}
+.meths code{background:none;padding:0;font-size:12px}
+.nom{margin:0;padding:8px 14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+.note{margin:0;padding:8px 14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink2);line-height:1.5}
+.ext{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:9px 14px 11px;border-top:1px solid var(--line)}
+.ext > span{font-size:12px;color:var(--muted);margin-right:2px}
+.xc{border:1px solid var(--line);border-left:3px solid var(--xc);background:transparent;color:var(--ink2);padding:2px 8px;border-radius:4px;font:500 11px var(--f-mono);cursor:pointer}
+.xc em{font-style:normal;color:var(--muted);margin-left:4px}
+.xc:hover{border-color:var(--xc);color:var(--ink)}
+
+.rels{margin-top:44px;border-top:2px solid var(--ink)}
+.rels h4{font:600 15px var(--f-display);margin:12px 0 4px}
+.rel{display:grid;grid-template-columns:minmax(140px,1.1fr) 84px minmax(140px,1.1fr) 2fr;gap:4px 14px;padding:9px 0;border-bottom:1px solid var(--line);align-items:baseline;font-size:14px}
+.rel .n{font:500 12.5px var(--f-mono)}
+.rel .c{font:600 12.5px var(--f-mono);color:var(--ink);text-align:center}
+.rel .m{color:var(--ink2)}
+.xt{font:400 11.5px var(--f-body);color:var(--muted)}
+
+/* layers */
+.layers{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:0 18px;align-items:stretch;margin:36px 0 0}
+.layer{border-top:4px solid var(--ink);padding:14px 0 0}
+.layer h3{font:600 20px/1.3 var(--f-display);margin:0}
+.layer .cnt{font:500 13px var(--f-mono);color:var(--muted)}
+.layer p{margin:8px 0 0;color:var(--ink2);font-size:15px}
+.lar{align-self:center;color:var(--muted);font:500 22px var(--f-mono)}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px 8px}
+.roles{margin:34px 0 0}
+.tblwrap{margin-top:14px;overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;font-weight:600;color:var(--muted);padding:8px 12px 8px 0;border-bottom:2px solid var(--ink);white-space:nowrap}
+.tbl td{padding:13px 12px 13px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl td.if{font:600 13px var(--f-mono);white-space:nowrap}
+.tbl td.ct{font:500 12.5px var(--f-mono);white-space:nowrap}
+.rl{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.mc{display:inline-block;font:500 12px var(--f-mono);margin:0 10px 2px 0;color:var(--ink2)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:0 48px;margin-top:14px}
+.ctl div{border-top:1px solid var(--line);padding:14px 0 16px}
+.ctl h4{font:600 14px var(--f-mono);margin:0 0 2px}
+.ctl p{margin:0 0 6px;color:var(--ink2);font-size:14px}
+.sub-h{font:600 22px/1.3 var(--f-display);margin:72px 0 6px}
+
+/* flow */
+.flow{list-style:none;margin:40px 0 0;padding:0;counter-reset:s}
+.flow li{position:relative;padding:0 0 38px 58px}
+.flow li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:36px;height:36px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font:600 15px var(--f-display)}
+.flow li::after{content:"";position:absolute;left:17px;top:42px;bottom:6px;width:2px;background:var(--line)}
+.flow li:last-child::after{display:none}
+.flow h3{font:600 19px/1.4 var(--f-display);margin:3px 0 10px}
+.flow dl{display:grid;grid-template-columns:118px minmax(0,1fr);gap:6px 18px;margin:0;font-size:14.5px}
+.flow dt{color:var(--muted)}
+.flow dd{margin:0}
+.branch{margin:6px 0 0 58px;padding:14px 18px;border-left:3px solid var(--risk);background:color-mix(in srgb,var(--risk) 7%,transparent);font-size:14.5px}
+.branch b{font-family:var(--f-display)}
+.fn{font-size:13.5px;color:var(--muted);margin:24px 0 0;max-width:70ch}
+
+/* states */
+.sms{margin-top:34px}
+.sm{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 24px;padding:20px 0;border-top:1px solid var(--line);align-items:center}
+.sm:last-child{border-bottom:1px solid var(--line)}
+.sm h3{font:600 15px/1.35 var(--f-display);margin:0}
+.sm h3 small{display:block;font:400 12px var(--f-body);color:var(--muted)}
+.fr{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.pill{display:inline-block;font:500 12.5px var(--f-mono);padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+.pill em{font:400 11.5px var(--f-body);color:var(--muted);margin-left:6px;font-style:normal}
+.fork{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.arr{color:var(--muted);font:500 15px var(--f-mono)}
+
+/* chargeback */
+.cbgrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:0 64px;margin-top:40px;align-items:start}
+.cbgrid h3{font:600 20px/1.3 var(--f-display);margin:0 0 8px}
+.cbgrid p{margin:0 0 14px;color:var(--ink2)}
+.cbsteps{list-style:none;margin:8px 0 0;padding:0;counter-reset:c}
+.cbsteps li{position:relative;padding:8px 0 8px 36px;border-top:1px solid var(--line);color:var(--ink2);font-size:15px}
+.cbsteps li::before{counter-increment:c;content:counter(c);position:absolute;left:0;top:8px;width:24px;height:24px;border-radius:50%;background:var(--booking);color:var(--bi);display:grid;place-items:center;font:600 12px var(--f-display)}
+.cbmini .er-grid{padding:0;row-gap:0;column-gap:60px}
+.limits{margin:0;padding-left:18px;color:var(--ink2);font-size:15px}
+.limits li{margin-bottom:8px}
+
+/* notes */
+details{border-top:2px solid var(--ink);margin-top:36px}
+summary{cursor:pointer;padding:14px 0;font:600 17px var(--f-display);list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font:500 22px var(--f-mono);color:var(--muted)}
+details[open] summary::after{content:"−"}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:0 56px;padding-bottom:12px}
+.notes div{padding:12px 0 16px;border-top:1px solid var(--line)}
+.notes b{display:block;font:600 15px/1.4 var(--f-display);margin-bottom:2px}
+.notes span{color:var(--ink2);font-size:14.5px}
+.foot{margin-top:96px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px}
+
+/* full-diagram overview */
+.diagram-jump{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:34px 0 8px}
+.jump-card{display:block;position:relative;overflow:hidden;padding:22px 24px;border:1px solid var(--line);border-radius:10px;background:var(--panel);text-decoration:none;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.jump-card::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--gc)}
+.jump-card:hover{transform:translateY(-3px);border-color:var(--gc);box-shadow:0 12px 28px rgba(24,27,67,.09)}
+.jump-card b{display:block;font:600 19px/1.3 var(--f-display);margin-bottom:4px}
+.jump-card span{display:block;max-width:58ch;color:var(--ink2);font-size:14px;line-height:1.55}
+.jump-card em{display:inline-block;margin-top:10px;color:var(--gc);font:600 12px var(--f-mono);font-style:normal}
+.diagram-note{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:18px 0 0;color:var(--muted);font-size:13px}
+.diagram-note span{display:inline-flex;align-items:center;gap:6px}
+.diagram-note i{width:8px;height:8px;border-radius:50%;background:var(--gc)}
+.zoom-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;margin:24px 0 -10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.zoom-bar p{margin:0;color:var(--ink2);font-size:13px}
+.zoom-controls{display:flex;align-items:center;gap:7px}
+.zoom-button{width:31px;height:31px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--ink);font:600 18px/1 var(--f-mono);cursor:pointer}
+.zoom-button:hover{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 8%,transparent)}
+.zoom-reset{width:auto;padding:0 10px;font:500 12px var(--f-body)}
+.zoom-range{width:116px;accent-color:var(--brand);cursor:pointer}
+.zoom-value{min-width:38px;text-align:right;color:var(--muted);font:500 12px var(--f-mono)}
+.full-shell{overflow:auto;margin:30px -8px 0;padding:8px 8px 16px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--panel) 85%,var(--paper))}
+.full-shell::after{content:"เลื่อนแนวนอนเพื่อดูภาพรวมทั้งหมด";display:block;margin:8px 6px 0;color:var(--muted);font-size:12px}
+.grouped-shell{overflow:auto;padding:30px clamp(16px,3vw,34px);margin:30px 0 0}
+.grouped-shell::after{display:none}
+.full-zoom-stage{position:relative;min-width:100%;overflow:hidden}
+.full-collection{display:grid;gap:58px;transform-origin:top left;will-change:transform}
+.full-collection .pane{padding-top:0}
+.full-collection .pane-h{margin:0 0 24px;padding-top:0}
+.full-collection .pane-h h3{font-size:24px}
+.full-collection .pane-h p{max-width:78ch}
+.full-collection .er-grid{padding:4px 0;align-items:start}
+.full-collection .edges{display:block}
+.full-collection .rels{margin-top:32px}
+.full-collection .rels h4{display:flex;align-items:center;gap:9px;margin:0 0 8px;font-size:16px}
+.full-collection .rels h4::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--gc)}
+.full-collection .rel{grid-template-columns:minmax(150px,1fr) 78px minmax(150px,1fr) 2fr;gap:4px 12px;padding:10px 0}
+.full-collection .rel .c{padding:2px 5px;border-radius:999px;background:color-mix(in srgb,var(--gc) 12%,transparent)}
+.mermaid-source{margin-top:22px;border-top:1px solid var(--line)}
+.mermaid-source summary{padding:13px 0;font-size:15px}
+.mermaid-source pre{max-height:560px;overflow:auto;margin:0 0 16px;padding:16px;border:1px solid var(--line);border-radius:8px;background:var(--bi);color:var(--ink);font:500 12px/1.55 var(--f-mono);white-space:pre;tab-size:2}
+.mermaid-tools{display:flex;justify-content:flex-end;margin:0 0 10px}
+.copy-mermaid{border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink2);padding:6px 10px;font:500 12px var(--f-body);cursor:pointer}
+.copy-mermaid:hover{border-color:var(--brand);color:var(--ink)}
+.full-pane{min-width:2080px;padding:18px 16px 12px}
+.full-pane .pane-h{margin:0 0 18px}
+.full-pane .pane-h h3{font-size:18px}
+.full-pane .pane-h p{font-size:13px}
+.full-pane .er-grid{min-width:0;grid-template-columns:repeat(5,minmax(0,1fr));column-gap:42px;row-gap:18px;align-items:start}
+.full-pane .ent{max-width:none;min-height:0;font-size:12px;box-shadow:0 2px 8px rgba(21,23,58,.04)}
+.full-pane .eh{padding:8px 10px 3px}
+.full-pane .eh b{font-size:13px}
+.full-pane .tag{font-size:10px}
+.full-pane .ep{padding:0 10px 7px;font-size:11px;line-height:1.35}
+.full-pane .attrs li{grid-template-columns:56px minmax(0,1fr) auto;gap:3px 5px;padding:3px 10px}
+.full-pane .attrs.cls li{grid-template-columns:minmax(0,1fr) auto}
+.full-pane .attrs .a{font-size:10.5px}.full-pane .attrs .t{font-size:10px}
+.full-pane .b{font-size:8px;padding:2px 3px}
+.full-pane .meths li{padding:4px 10px}.full-pane .meths code{font-size:10px}
+.full-pane .nom,.full-pane .note{padding:5px 10px;font-size:10.5px}
+.full-pane .more{display:block!important;color:var(--muted);font:500 10px var(--f-mono);text-align:right}
+.full-pane .rels{margin-top:26px}.full-pane .rels h4{font-size:14px}.full-pane .rel{font-size:12px;padding:6px 0}
+.full-pane .rel .n,.full-pane .rel .c{font-size:10.5px}
+
+@media (max-width:1180px){
+  .shell{display:block}
+  .rail{position:sticky;top:0;z-index:50;height:auto;flex-direction:row;align-items:center;overflow-x:auto;padding:8px 14px;gap:2px;background:var(--paper);border-right:0;border-bottom:1px solid var(--line)}
+  .rail .brand{display:none}
+  .rail a{white-space:nowrap}
+  section{padding-top:80px;scroll-margin-top:52px}
+  .hero{padding-top:32px}
+}
+@media (max-width:980px){
+  .edges{display:none}
+  .er-grid{display:flex;flex-direction:column;gap:22px;align-items:stretch}
+  .ent{max-width:none;grid-column:auto!important;grid-row:auto!important}
+  .rel{grid-template-columns:1fr 70px 1fr}
+  .rel .m{grid-column:1 / -1}
+  .layers{grid-template-columns:1fr;gap:18px}
+  .lar{display:none}
+  .cbgrid{grid-template-columns:1fr;gap:36px}
+  .diagram-jump{grid-template-columns:1fr}
+  .full-pane .er-grid{display:grid;align-items:start}
+  .full-pane .ent{grid-column:auto!important;grid-row:auto!important}
+  .full-collection .er-grid{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));align-items:start}
+  .full-collection .rel{grid-template-columns:1fr 64px 1fr}
+  .full-collection .rel .m{grid-column:1 / -1}
+}
+@media (max-width:760px){
+  .ticket{grid-template-columns:1fr}
+  .tk-main{padding:36px 26px 32px}
+  .tk-stub{border-left:0;border-top:2px dashed rgba(243,241,255,.4);padding:30px 26px 26px}
+  .tk-stub::before{left:-12px;top:-13px}
+  .tk-stub::after{left:auto;right:-12px;top:-13px;bottom:auto}
+  .sm{grid-template-columns:1fr}
+  .flow dl{grid-template-columns:1fr;gap:0}
+  .flow dt{margin-top:8px}
+  .tbl thead{display:none}
+  .tbl,.tbl tbody,.tbl tr,.tbl td{display:block;width:100%}
+  .tbl tr{padding:12px 0;border-bottom:1px solid var(--line)}
+  .tbl td{border:0;padding:2px 0;white-space:normal!important}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .tk-stub,.ent.flash{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="rail" aria-label="สารบัญ">
+    <p class="brand">Concert Ticketing<small>ER และ Domain Class v2.1.0</small></p>
+    <a href="#map" class="on">ภาพรวมของข้อมูล</a>
+    <a href="#er-full">ER Diagram เต็ม</a>
+    <a href="#er">ER Diagram</a>
+    <a href="#class-full">Class Diagram เต็ม</a>
+    <a href="#class">Domain Class</a>
+    <a href="#flow">ซื้อบัตรหนึ่งใบ</a>
+    <a href="#states">สถานะของข้อมูล</a>
+    <a href="#chargeback">Chargeback</a>
+    <a href="#notes">ข้อสังเกต</a>
+  </nav>
+
+  <main>
+    <header class="hero" id="top">
+      <div class="ticket">
+        <div class="tk-main">
+          <h1>Concert Ticketing System</h1>
+          <p class="th">ER Diagram และ Domain Class</p>
+          <p class="sum">โครงสร้างข้อมูลและโครงสร้างคลาสของระบบจองบัตรคอนเสิร์ต ตั้งแต่ผู้ใช้ ผังที่นั่ง การจอง การจ่ายเงิน ไปจนถึงตั๋วเข้างานและการตรวจจับความผิดปกติ</p>
+        </div>
+        <div class="tk-stub">
+          <dl class="stats">
+            <div><dd>24</dd><dt>ตาราง Entity</dt></div>
+            <div><dd>21</dd><dt>หน้าจอ Interface</dt></div>
+            <div><dd>15</dd><dt>Controller</dt></div>
+            <div><dd>4</dd><dt>บทบาทผู้ใช้</dt></div>
+          </dl>
+          <div>
+            <div class="bars" aria-hidden="true"></div>
+            <p class="ver">เวอร์ชัน 2.1.0</p>
+          </div>
+        </div>
+      </div>
+      <div class="diagram-jump" aria-label="ทางลัดไปยังไดอะแกรมฉบับเต็ม">
+        <a class="jump-card" href="#er-full" style="--gc:var(--booking)">
+          <b>ER Diagram ฉบับเต็ม</b>
+          <span>ดูทั้ง 24 Entity พร้อมเส้นความสัมพันธ์และ Cardinality ในภาพเดียว</span>
+          <em>เปิดภาพรวมข้อมูล →</em>
+        </a>
+        <a class="jump-card" href="#class-full" style="--gc:var(--concert)">
+          <b>Domain Class Diagram ฉบับเต็ม</b>
+          <span>ดู 24 Domain Class พร้อมความสัมพันธ์และการสืบทอดจาก AppUser</span>
+          <em>เปิดภาพรวมคลาส →</em>
+        </a>
+      </div>
+    </header>
+
+    <!-- ภาพรวม -->
+    <section id="map">
+      <h2>ระบบนี้เก็บข้อมูลอะไรบ้าง</h2>
+      <p class="lead">ตาราง 24 ตารางแบ่งเป็น 5 กลุ่มตามหน้าที่ เส้นในภาพคือความสัมพันธ์ระหว่างกลุ่ม ตัวเลขคือจำนวนที่เชื่อมกันได้ (1:N หมายถึงหนึ่งต่อหลายรายการ) คลิกกล่องเพื่อไปดูรายละเอียดของกลุ่มนั้นใน ER Diagram</p>
+
+      <div class="mapwrap">
+      <svg class="map" viewBox="0 0 1000 560" role="group" aria-label="แผนภาพความสัมพันธ์ระหว่างห้ากลุ่มข้อมูล">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--edge)"/></marker></defs>
+        <g class="mp">
+          <path d="M250 215 C295 215 295 85 340 85" marker-end="url(#ar)"/>
+          <path d="M250 270 C295 270 295 290 340 290" marker-end="url(#ar)"/>
+          <path d="M470 150 L470 223" marker-end="url(#ar)"/>
+          <path d="M600 70 C700 70 690 150 788 150" marker-end="url(#ar)"/>
+          <path d="M600 275 C700 275 690 215 788 215" marker-end="url(#ar)"/>
+          <path d="M470 355 L470 413" marker-end="url(#ar)"/>
+          <path d="M130 320 C130 470 250 475 338 475" marker-end="url(#ar)"/>
+        </g>
+        <g class="ml">
+          <text x="295" y="152" text-anchor="middle">จัดงาน 1:N</text>
+          <text x="295" y="262" text-anchor="middle">จอง 1:N</text>
+          <text x="482" y="192">Concert รับ Booking 1:N</text>
+          <text x="694" y="98" text-anchor="middle">Zone, Seat, Concert ออก Ticket</text>
+          <text x="694" y="246" text-anchor="middle">Payment สร้าง Order 1:0..1</text>
+          <text x="482" y="390">Booking ก่อเคส 1:N</text>
+          <text x="180" y="448">Admin ตรวจ, Audit</text>
+        </g>
+
+        <g class="blk" data-g="user" tabindex="0" role="link" aria-label="ไปที่กลุ่มผู้ใช้และองค์กร" style="--gc:var(--user)" transform="translate(10,190)">
+          <rect class="bg" width="240" height="130" rx="8"/><rect class="bar" width="6" height="130" rx="3"/>
+          <text class="t" x="24" y="32">ผู้ใช้และองค์กร</text>
+          <text class="s" x="24" y="51">Users and Organization, 6 ตาราง</text>
+          <text class="n" x="24" y="78">APP_USER, CUSTOMER,</text>
+          <text class="n" x="24" y="94">EVENT_ORGANIZER, STAFF,</text>
+          <text class="n" x="24" y="110">ADMIN, ORGANIZATION</text>
+        </g>
+        <g class="blk" data-g="concert" tabindex="0" role="link" aria-label="ไปที่กลุ่มคอนเสิร์ตและผังที่นั่ง" style="--gc:var(--concert)" transform="translate(340,20)">
+          <rect class="bg" width="260" height="130" rx="8"/><rect class="bar" width="6" height="130" rx="3"/>
+          <text class="t" x="24" y="32">คอนเสิร์ตและผังที่นั่ง</text>
+          <text class="s" x="24" y="51">Concert and Seat Map, 5 ตาราง</text>
+          <text class="n" x="24" y="78">CONCERT, CONCERT_CONTACT,</text>
+          <text class="n" x="24" y="94">ZONE, ZONE_SEAT_PATTERN,</text>
+          <text class="n" x="24" y="110">SEAT</text>
+        </g>
+        <g class="blk" data-g="booking" tabindex="0" role="link" aria-label="ไปที่กลุ่มการจองและการชำระเงิน" style="--gc:var(--booking)" transform="translate(340,225)">
+          <rect class="bg" width="260" height="130" rx="8"/><rect class="bar" width="6" height="130" rx="3"/>
+          <text class="t" x="24" y="32">การจองและการชำระเงิน</text>
+          <text class="s" x="24" y="51">Booking and Payment, 6 ตาราง</text>
+          <text class="n" x="24" y="78">BOOKING, BOOKING_SEAT,</text>
+          <text class="n" x="24" y="94">BOOKING_STANDING_ITEM,</text>
+          <text class="n" x="24" y="110">SEAT_LOCK_LOG, PAYMENT, CHARGEBACK</text>
+        </g>
+        <g class="blk" data-g="ticket" tabindex="0" role="link" aria-label="ไปที่กลุ่ม Order ตั๋ว และการเข้างาน" style="--gc:var(--ticket)" transform="translate(790,110)">
+          <rect class="bg" width="200" height="130" rx="8"/><rect class="bar" width="6" height="130" rx="3"/>
+          <text class="t" x="22" y="32">Order และตั๋ว</text>
+          <text class="s" x="22" y="51">Order, Ticket, Entry, 4 ตาราง</text>
+          <text class="n" x="22" y="78">CUSTOMER_ORDER, TICKET,</text>
+          <text class="n" x="22" y="94">TICKET_VALIDATION_LOG,</text>
+          <text class="n" x="22" y="110">STAFF_CONCERT</text>
+        </g>
+        <g class="blk" data-g="risk" tabindex="0" role="link" aria-label="ไปที่กลุ่มความผิดปกติและ Audit" style="--gc:var(--risk)" transform="translate(340,415)">
+          <rect class="bg" width="260" height="120" rx="8"/><rect class="bar" width="6" height="120" rx="3"/>
+          <text class="t" x="24" y="32">ความผิดปกติและ Audit</text>
+          <text class="s" x="24" y="51">Anomaly and Audit, 3 ตาราง</text>
+          <text class="n" x="24" y="78">SYSTEM_ANOMALY,</text>
+          <text class="n" x="24" y="94">ANOMALY_ATTACHMENT, AUDIT_LOG</text>
+        </g>
+      </svg>
+      </div>
+      <p class="hint">STAFF_CONCERT อยู่ในกลุ่มตั๋วเพราะบอกว่า Staff คนไหนตรวจบัตรงานไหน จึงเชื่อมกับ Staff และ Concert อีกด้วย</p>
+
+      <dl class="concepts">
+        <div><dt>Supertype และ Subtype</dt><dd><code>APP_USER</code> เก็บสิ่งที่ทุกคนมีร่วมกัน คือรหัสผ่านที่ Hash, role และสถานะบัญชี ส่วน Customer, Organizer, Staff, Admin เก็บเฉพาะข้อมูลของตัวเอง โดยใช้ PK ตัวเดียวกับ APP_USER (ความสัมพันธ์ 1 ต่อ 0..1) ในฝั่งคลาสคือ AppUser ที่เป็น abstract และมี 4 คลาสสืบทอด</dd></div>
+        <div><dt>โซนนั่งกับโซนยืน</dt><dd>โซน <code>SEATED</code> มี <code>SEAT</code> ทีละที่นั่งและจองผ่าน <code>BOOKING_SEAT</code> ส่วนโซน <code>STANDING</code> ไม่มีที่นั่ง นับเป็นจำนวนใบผ่าน <code>BOOKING_STANDING_ITEM</code> จึงทำให้ <code>TICKET.seat_id</code> เป็น NULL ได้</dd></div>
+        <div><dt>ตารางเชื่อม (Many to Many)</dt><dd>Booking กับ Seat, Booking กับ Zone และ Staff กับ Concert เป็นแบบหลายต่อหลาย จึงแยกเป็นตารางเชื่อมที่ใช้ Composite PK เช่น (booking_id, seat_id) และตารางเชื่อมบางตารางเก็บข้อมูลเพิ่ม เช่น จำนวนใบและราคา</dd></div>
+        <div><dt>Snapshot ป้องกันข้อมูลเปลี่ยนย้อนหลัง</dt><dd>ชื่อโซน ป้ายที่นั่ง และราคาต่อใบถูกคัดลอกเก็บไว้ตอนจอง ส่วนชื่องาน ศิลปิน สถานที่ และวันเวลาถูกคัดลอกเก็บตอนสร้าง Order ถ้า Organizer แก้ราคาหรือชื่อภายหลัง ยอดของคนที่ซื้อไปแล้วจะไม่เปลี่ยน</dd></div>
+        <div><dt>รหัสภายในกับรหัสที่คนอ่านได้</dt><dd>PK ภายในใช้ ULID 26 ตัวอักษร ส่วนที่แสดงบนหน้าเว็บใช้รหัสอ่านง่าย เช่น <code>C024</code>, <code>BKG-C024-260901-0042</code>, <code>ORD-…</code>, <code>TKT-…</code>, <code>ERR-…</code> ซึ่งเป็น Unique Key และไม่ใช้แทนการตรวจสิทธิ์ ส่วน <code>ticket_code</code> ก็แยกจาก <code>qr_code</code></dd></div>
+        <div><dt>ตารางประวัติ</dt><dd><code>SEAT_LOCK_LOG</code>, <code>TICKET_VALIDATION_LOG</code>, <code>AUDIT_LOG</code> และ <code>CHARGEBACK</code> เก็บเหตุการณ์ที่เกิดขึ้นแล้ว ใช้ตรวจย้อนหลังและเป็นหลักฐานตรวจจับการโกง เช่น จองที่นั่งแล้วไม่จ่ายซ้ำ ๆ หรือสแกนบัตรซ้ำ</dd></div>
+      </dl>
+    </section>
+
+    <!-- Full ER -->
+    <section id="er-full">
+      <h2>ER Diagram ฉบับเต็ม</h2>
+      <p class="lead">แผนภาพฉบับเต็มแสดงครบทุก Entity โดยแบ่งเป็น 5 กลุ่มตามหน้าที่ เส้นในแต่ละกลุ่มแสดงความสัมพันธ์โดยตรง ส่วนความสัมพันธ์ข้ามกลุ่มสรุปเป็นแถวใต้กลุ่มเพื่อไม่ให้เส้นตัดทับกล่องข้อมูล</p>
+      <div class="diagram-note">
+        <span><i style="--gc:var(--user)"></i>ผู้ใช้และองค์กร</span>
+        <span><i style="--gc:var(--concert)"></i>คอนเสิร์ตและผังที่นั่ง</span>
+        <span><i style="--gc:var(--booking)"></i>การจองและการชำระเงิน</span>
+        <span><i style="--gc:var(--ticket)"></i>Order และตั๋ว</span>
+        <span><i style="--gc:var(--risk)"></i>ความผิดปกติและ Audit</span>
+      </div>
+      <div class="zoom-bar" data-zoom-for="erFullDiagram">
+        <p>ปรับขนาดเพื่ออ่านภาพรวม หรือขยายเพื่อดูข้อมูลในกล่อง</p>
+        <div class="zoom-controls">
+          <button class="zoom-button" type="button" data-zoom="minus" aria-label="ย่อ ER Diagram">−</button>
+          <input class="zoom-range" type="range" min="65" max="110" step="5" value="85" aria-label="ขนาด ER Diagram">
+          <output class="zoom-value">85%</output>
+          <button class="zoom-button" type="button" data-zoom="plus" aria-label="ขยาย ER Diagram">+</button>
+          <button class="zoom-button zoom-reset" type="button" data-zoom="reset">100%</button>
+        </div>
+      </div>
+      <div class="full-shell grouped-shell"><div class="full-zoom-stage"><div id="erFullDiagram" aria-label="ER Diagram ฉบับเต็ม"></div></div></div>
+      <details class="mermaid-source">
+        <summary>ดูและคัดลอก Mermaid code สำหรับ ER Diagram</summary>
+        <div class="mermaid-tools"><button class="copy-mermaid" type="button" data-copy="erMermaidCode">คัดลอก Mermaid code</button></div>
+        <pre id="erMermaidCode"><code></code></pre>
+      </details>
+    </section>
+
+    <!-- ER -->
+    <section id="er">
+      <h2>ER Diagram แยกตามกลุ่ม</h2>
+      <p class="lead">ทุกกล่องคือตารางหนึ่งตาราง แถบสีซ้ายบอกกลุ่ม ป้าย <span class="b PK">PK</span> <span class="b FK">FK</span> <span class="b UK">UK</span> <span class="b NULL">NULL</span> คือคีย์หลัก คีย์นอก คีย์ที่ห้ามซ้ำ และค่าที่เว้นว่างได้ วางเมาส์บนตารางเพื่อดูเส้นของตารางนั้น และกดปุ่มชื่อตารางสีเล็ก ๆ ที่ท้ายกล่องเพื่อข้ามไปตารางของกลุ่มอื่น</p>
+      <div class="toolbar">
+        <div class="tabs" role="tablist" data-tabs="er" aria-label="กลุ่ม ER"></div>
+        <label class="sw"><input type="checkbox" id="descEr"> แสดงความหมายของแต่ละ attribute</label>
+      </div>
+      <div id="er-panes"></div>
+    </section>
+
+    <!-- Full Class -->
+    <section id="class-full">
+      <h2>Domain Class Diagram ฉบับเต็ม</h2>
+      <p class="lead">Domain Entity ทั้ง 24 คลาสเรียงครบตาม 5 กลุ่ม พร้อม attribute และ method ในแต่ละกล่อง เส้นภายในกลุ่มแสดงความสัมพันธ์โดยตรง และความสัมพันธ์ข้ามกลุ่มสรุปเป็นแถวด้านล่างเพื่อคงความอ่านง่าย</p>
+      <div class="diagram-note">
+        <span><i style="--gc:var(--user)"></i>เส้นสามเหลี่ยมโปร่ง = extends AppUser</span>
+        <span><i style="--gc:var(--concert)"></i><code>*</code> = หลายรายการ</span>
+        <span><i style="--gc:var(--booking)"></i>กดที่กล่องเพื่อเน้นความสัมพันธ์</span>
+      </div>
+      <div class="zoom-bar" data-zoom-for="classFullDiagram">
+        <p>ย่อเพื่อดูโครงสร้างทั้งหมด หรือขยายเพื่ออ่าน attribute และ method</p>
+        <div class="zoom-controls">
+          <button class="zoom-button" type="button" data-zoom="minus" aria-label="ย่อ Class Diagram">−</button>
+          <input class="zoom-range" type="range" min="65" max="110" step="5" value="85" aria-label="ขนาด Class Diagram">
+          <output class="zoom-value">85%</output>
+          <button class="zoom-button" type="button" data-zoom="plus" aria-label="ขยาย Class Diagram">+</button>
+          <button class="zoom-button zoom-reset" type="button" data-zoom="reset">100%</button>
+        </div>
+      </div>
+      <div class="full-shell grouped-shell"><div class="full-zoom-stage"><div id="classFullDiagram" aria-label="Domain Class Diagram ฉบับเต็ม"></div></div></div>
+      <details class="mermaid-source">
+        <summary>ดูและคัดลอก Mermaid code สำหรับ Domain Class Diagram</summary>
+        <div class="mermaid-tools"><button class="copy-mermaid" type="button" data-copy="classMermaidCode">คัดลอก Mermaid code</button></div>
+        <pre id="classMermaidCode"><code></code></pre>
+      </details>
+    </section>
+
+    <!-- Class -->
+    <section id="class">
+      <h2>Domain Class และการทำงานของแต่ละชั้น</h2>
+      <p class="lead">ER บอกว่าเก็บข้อมูลอะไร ส่วน Class Design บอกว่าใครเป็นคนทำอะไร ระบบแบ่งเป็นสามชั้น ผู้ใช้จะเห็นเฉพาะหน้าจอ หน้าจอส่งงานต่อให้ Controller และ Controller ไปเรียกใช้ Entity</p>
+
+      <div class="layers">
+        <div class="layer"><h3>Interface</h3><span class="cnt">21 คลาส</span><p>หน้าจอและฟอร์ม รับข้อมูลจากผู้ใช้แล้วแสดงผล ไม่มีตรรกะธุรกิจ เช่น <code>SeatSelectionInterface</code></p></div>
+        <div class="lar" aria-hidden="true">→</div>
+        <div class="layer"><h3>Controller</h3><span class="cnt">15 คลาส</span><p>ตรวจสิทธิ์ ประสานงานหลาย Entity ในหนึ่งการกระทำ และคุยกับ Payment Provider เช่น <code>PaymentController</code></p></div>
+        <div class="lar" aria-hidden="true">→</div>
+        <div class="layer"><h3>Entity</h3><span class="cnt">24 คลาส</span><p>ข้อมูลพร้อมกฎของข้อมูลนั้น เช่น <code>Seat.lockSeat()</code> ที่เปลี่ยนสถานะที่นั่ง คลาสที่เป็นแค่ตารางเชื่อมหรือบันทึกจะไม่มี method</p></div>
+      </div>
+
+      <h3 class="sub-h">Domain Class Diagram แยกตามกลุ่ม</h3>
+      <p class="lead">ใช้กลุ่มเดียวกับ ER แต่แสดง attribute แบบคลาสและ method ที่เป็นกฎของข้อมูล เส้นที่มีสามเหลี่ยมโปร่งคือการสืบทอดจาก <code>AppUser</code> ส่วนเครื่องหมาย * คือหลายรายการ</p>
+      <div class="toolbar">
+        <div class="tabs" role="tablist" data-tabs="class" aria-label="กลุ่มคลาส"></div>
+        <label class="sw"><input type="checkbox" id="descCls"> แสดงคำอธิบายของแต่ละ method</label>
+      </div>
+      <div id="class-panes"></div>
+
+      <h3 class="sub-h">หน้าจอแต่ละตัวเรียก Controller ตัวไหน</h3>
+      <p class="lead">เอกสารไม่ได้ระบุว่า Interface แต่ละตัวเป็นของ Role ไหน กลุ่มผู้ใช้ในตารางนี้จัดจากชื่อและเนื้อหาของ method</p>
+      <div class="chips roles" id="roleChips" role="group" aria-label="กรองตามผู้ใช้"></div>
+      <div class="tblwrap">
+        <table class="tbl">
+          <thead><tr><th>Interface</th><th>ผู้ใช้</th><th>หน้าเว็บ</th><th>Method ที่มี</th><th>เรียก</th></tr></thead>
+          <tbody id="ifBody"></tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-h">Controller ทั้ง 15 ตัว</h3>
+      <div class="ctl" id="ctlList"></div>
+    </section>
+
+    <!-- Flow -->
+    <section id="flow">
+      <h2>ซื้อบัตรหนึ่งใบ ข้อมูลไหลผ่านอะไรบ้าง</h2>
+      <p class="lead">ตัวอย่างตั้งแต่ลูกค้ากดจองจนถึงวันสแกนเข้างาน แต่ละขั้นบอกหน้าจอที่ใช้ Controller ที่รับงาน Entity ที่ถูกเรียก และตารางที่ข้อมูลเปลี่ยน</p>
+      <ol class="flow" id="flowList"></ol>
+      <div class="branch"><b>ถ้าลูกค้าจ่ายไม่ทัน</b> เมื่อ <code>Booking.checkExpiry()</code> พบว่าเกิน <code>expiry_time</code> Booking จะเป็น EXPIRED เรียก <code>Seat.unlockSeat()</code> คืนที่นั่งเป็น AVAILABLE และ SEAT_LOCK_LOG เป็น EXPIRED</div>
+      <p class="fn">ลำดับการเรียก method ภายในเป็นการอนุมานจากคำอธิบายในเอกสาร เอกสารไม่ได้แนบ Sequence Diagram ไว้</p>
+    </section>
+
+    <!-- States -->
+    <section id="states">
+      <h2>สถานะของข้อมูลเปลี่ยนอย่างไร</h2>
+      <p class="lead">ค่า Enumeration ในเอกสารมีหลายชุด ด้านล่างเรียงเป็นลำดับที่เป็นไปได้ตามคำอธิบาย method เอกสารไม่ได้เขียน State Diagram ไว้ ลำดับจึงเป็นการอนุมาน</p>
+      <div class="sms" id="smList"></div>
+    </section>
+
+    <!-- Chargeback -->
+    <section id="chargeback">
+      <h2>Chargeback อยู่ตรงไหนของระบบ</h2>
+          <p class="lead">Chargeback คือกรณีที่ลูกค้าแจ้งธนาคารให้ดึงเงินคืนจากร้านค้าโดยไม่ผ่านการขอ Refund กับระบบโดยตรง ระบบบันทึกสถานะข้อโต้แย้งและระงับสิทธิ์ Ticket ที่เกี่ยวข้องทันที เพื่อป้องกันการเข้างานระหว่างตรวจสอบ</p>
+      <div class="cbgrid">
+        <div class="cbmini" id="cbMini"></div>
+        <div>
+          <h3>ตัวอย่างสถานการณ์</h3>
+          <ol class="cbsteps">
+            <li>ลูกค้าจ่ายบัตร VIP 2 ใบ รวม 12,000 บาท ด้วยบัตรเครดิต และเข้างานไปแล้ว</li>
+            <li>สามสัปดาห์ต่อมา ลูกค้าแจ้งธนาคารว่าไม่ได้ทำรายการ</li>
+            <li>Provider แจ้งระบบ และ <code>syncChargebackFromProvider()</code> สร้างแถวใน CHARGEBACK สถานะ <code>PENDING</code> ผูกกับ PAYMENT เดิม</li>
+            <li>ระบบเรียก <code>suspendTicketsByChargeback()</code> เพื่อตั้ง <code>TICKET.is_suspended</code> ก่อนการสแกนเข้างาน</li>
+            <li>Admin เปิดหน้ารายการ Chargeback แล้วดูประวัติสแกนบัตรและประวัติล็อกที่นั่งเป็นหลักฐาน</li>
+            <li>ถ้าเข้าข่ายโกง Admin เปิดเคส <code>CHARGEBACK_ABUSE</code> ใน SYSTEM_ANOMALY และสั่งระงับบัญชีได้</li>
+            <li>เมื่อ Provider สรุปผล ระบบอัปเดต <code>status</code> เป็น <code>WON</code> หรือ <code>LOST</code> และบันทึก <code>resolved_at</code></li>
+          </ol>
+        </div>
+      </div>
+      <div class="cbgrid" style="margin-top:48px">
+        <div>
+          <h3>กฎความปลอดภัยของ v2.2.0</h3>
+          <ul class="limits">
+            <li><code>CHARGEBACK.status</code> ใช้ติดตามผลการโต้แย้ง: <code>PENDING</code>, <code>WON</code>, <code>LOST</code></li>
+            <li>Payment หนึ่งรายการมี Chargeback ได้หลายรายการ เช่น โต้แย้งเป็นหลายก้อนหรือเปิดเรื่องซ้ำ</li>
+            <li><code>provider_chargeback_id</code> เป็น Unique Key ช่วยกันบันทึกซ้ำเมื่อ Provider ยิงข้อมูลมาหลายรอบ</li>
+            <li><code>TICKET.is_suspended</code> ทำให้บัตรที่เกี่ยวกับ Chargeback ไม่ผ่านการสแกนจนกว่าจะอนุมัติอีกครั้ง</li>
+          </ul>
+        </div>
+        <div>
+          <h3>ในฝั่งคลาส</h3>
+          <p><code>Chargeback</code> ยังไม่มี method เพราะเป็นข้อมูลที่รับจากภายนอก แต่ <code>ChargebackController.syncChargebackFromProvider()</code> จะอัปเดตสถานะและเรียก <code>TicketController.suspendTicketsByChargeback()</code> เมื่อจำเป็น</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Notes -->
+    <section id="notes">
+      <h2>ข้อสังเกตในการออกแบบ</h2>
+      <p class="lead">จุดที่พบระหว่างอ่านเอกสารทั้งสองฉบับเทียบกัน อาจใช้เป็นหัวข้อคุยหรือปรับเอกสารในเวอร์ชันถัดไป</p>
+      <details>
+        <summary>ดูทั้ง 10 ข้อ</summary>
+        <div class="notes" id="noteList"></div>
+      </details>
+      <p class="foot">อ้างอิงจาก ER Diagram Specification v2.1.0 และ Class Design Specification v2.1.0 หน้าเว็บนี้สรุปและจัดกลุ่มใหม่เพื่อการอธิบาย ส่วนที่ระบุว่าเป็นการอนุมานไม่ได้อยู่ในเอกสารต้นฉบับโดยตรง</p>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s);};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));};
+var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
+
+/* ---------- groups ---------- */
+var GROUPS=[
+ {id:'user',name:'ผู้ใช้และองค์กร',color:'var(--user)',cols:3,
+  desc:'APP_USER เป็นบัญชีกลาง แล้วแตกเป็น 4 บทบาท คือ Customer, Organizer, Staff และ Admin Organizer กับ Staff สังกัดองค์กร และ Staff ถูกสร้างโดย Organizer เพื่อใช้ตรวจสอบย้อนหลัง',
+  nodes:{APP_USER:[1,1,4],CUSTOMER:[2,1,1],EVENT_ORGANIZER:[2,2,1],STAFF:[2,3,1],ADMIN:[2,4,1],ORGANIZATION:[3,2,2]}},
+ {id:'concert',name:'คอนเสิร์ตและผังที่นั่ง',color:'var(--concert)',cols:3,
+  desc:'Concert หนึ่งงานมีหลายโซน โซนแบบ SEATED สร้างที่นั่งอัตโนมัติจาก Pattern ส่วนโซนแบบ STANDING ไม่มีที่นั่ง ใช้ความจุของโซนนับแทน',
+  nodes:{CONCERT:[1,1,2],CONCERT_CONTACT:[1,3,1],ZONE:[2,1,2],ZONE_SEAT_PATTERN:[3,1,1],SEAT:[3,2,1]}},
+ {id:'booking',name:'การจองและการชำระเงิน',color:'var(--booking)',cols:2,
+  desc:'Booking คือรายการจองที่รอจ่าย ผูกกับที่นั่งผ่าน BOOKING_SEAT และโซนยืนผ่าน BOOKING_STANDING_ITEM มี Payment ได้หนึ่งรายการ และ Chargeback อาจตามมาทีหลัง',
+  nodes:{BOOKING:[1,1,3],BOOKING_SEAT:[2,1,1],BOOKING_STANDING_ITEM:[2,2,1],SEAT_LOCK_LOG:[2,3,1],PAYMENT:[1,4,1],CHARGEBACK:[2,4,1]}},
+ {id:'ticket',name:'Order ตั๋ว และการเข้างาน',color:'var(--ticket)',cols:3,
+  desc:'Order เกิดหลังจ่ายสำเร็จเท่านั้น แล้วออก Ticket ออกมาจาก Order ทุกครั้งที่ Staff สแกนจะถูกบันทึกใน TICKET_VALIDATION_LOG ส่วน STAFF_CONCERT บอกว่า Staff คนไหนดูแลงานไหน',
+  nodes:{CUSTOMER_ORDER:[1,1,1],TICKET:[2,1,1],TICKET_VALIDATION_LOG:[3,1,1],STAFF_CONCERT:[3,2,1]}},
+ {id:'risk',name:'ความผิดปกติและ Audit',color:'var(--risk)',cols:2,
+  desc:'System Anomaly คือเคสที่ Admin ตรวจ ผูกกับ Booking และแนบไฟล์หลักฐานได้ ส่วน Audit Log บันทึกว่าใครทำอะไรเมื่อไรจาก IP ไหน',
+  nodes:{SYSTEM_ANOMALY:[1,1,2],ANOMALY_ATTACHMENT:[2,1,1],AUDIT_LOG:[2,2,1]}}
+];
+var GROUP={},G_OF={};
+GROUPS.forEach(function(g){GROUP[g.id]=g;Object.keys(g.nodes).forEach(function(n){G_OF[n]=g.id;});});
+var SUB=['CUSTOMER','EVENT_ORGANIZER','STAFF','ADMIN'];
+var ALL_NODES={};
+GROUPS.forEach(function(g,column){
+  Object.keys(g.nodes).forEach(function(name,row){ALL_NODES[name]=[column+1,row+1,1];});
+});
+var FULL_GROUP={id:'full',name:'แผนภาพรวมทุกกลุ่ม',color:'var(--brand)',cols:5,nodes:ALL_NODES,
+  desc:'แต่ละคอลัมน์เรียงตามกลุ่มข้อมูล เส้นแสดงความสัมพันธ์จริงระหว่าง Entity; ใช้ภาพนี้เพื่อดูภาพรวม แล้วดูรายละเอียดเต็มในแผนภาพแยกกลุ่ม'};
+
+/* ---------- entities ---------- */
+var E={};
+function def(name,purpose,attrs,note,stereo){
+  E[name]={g:G_OF[name],purpose:purpose,note:note||'',stereo:stereo||'',
+    attrs:attrs.map(function(a){var p=a.split('|');return {n:p[0],t:p[1],k:p[2]?p[2].split(' '):[],d:p[3]||''};})};
+}
+def('ORGANIZATION','องค์กรผู้จัดงาน',['organization_id|string|PK|รหัสองค์กร','name|string||ชื่อองค์กร','initials|string||ชื่อย่อ','description|string||รายละเอียดขององค์กร','created_at|datetime||เวลาที่สร้างข้อมูล']);
+def('APP_USER','บัญชีกลางของทุกคนในระบบ',['user_id|string|PK|รหัสผู้ใช้','password_hash|string||รหัสผ่านที่ Hash ก่อนเก็บ','role|string||CUSTOMER, ORGANIZER, STAFF, ADMIN','account_status|string||ACTIVE หรือ SUSPENDED','cooldown_expiry_time|datetime|NULL|เวลาสิ้นสุดการระงับทำรายการชั่วคราว','created_at|datetime||เวลาที่สร้างบัญชี'],'role บอกว่าแถวนี้มี subtype ตัวไหน; cooldown ใช้ป้องกันพฤติกรรมเสี่ยง','abstract');
+def('CUSTOMER','ผู้ซื้อบัตร',['customer_id|string|PK FK|ใช้ค่าเดียวกับ APP_USER.user_id','email|string|UK|อีเมลสำหรับ Login','phone|string|UK|เบอร์โทรสำหรับ Login และติดต่อ','first_name|string||ชื่อจริง','last_name|string||นามสกุล']);
+def('EVENT_ORGANIZER','ผู้จัดงานที่สร้างและบริหาร Concert',['organizer_id|string|PK FK|ใช้ค่าเดียวกับ APP_USER.user_id','organization_id|string|FK|องค์กรที่สังกัด','email|string|UK|อีเมลสำหรับ Login','username|string|UK|Username สำหรับ Login']);
+def('STAFF','เจ้าหน้าที่หน้างานสแกนบัตร',['staff_id|string|PK FK|ใช้ค่าเดียวกับ APP_USER.user_id','organization_id|string|FK|องค์กรที่สังกัด','created_by_organizer_id|string|FK|Organizer ผู้สร้าง ใช้สำหรับ Audit','username|string|UK|Username สำหรับ Login']);
+def('ADMIN','ผู้ดูแลระบบและผู้ตรวจความผิดปกติ',['admin_id|string|PK FK|ใช้ค่าเดียวกับ APP_USER.user_id','email|string|UK|อีเมลสำหรับ Login','username|string|UK|Username สำหรับ Login']);
+def('CONCERT','ข้อมูลงาน ช่วงขายบัตร และสถานะ',['concert_id|string|PK|รหัสคอนเสิร์ต','organization_id|string|FK|องค์กรผู้จัด','organizer_id|string|FK|Organizer ผู้จัดการงาน','name|string||ชื่อคอนเสิร์ต','artist|string||ศิลปินหรือผู้แสดง','venue|string||สถานที่จัดงาน','event_datetime|datetime||วันและเวลาจัดงาน','description|string||รายละเอียดงาน','poster_path|string||Storage Path ของโปสเตอร์','seat_map_image_path|string||Storage Path ของรูปผังที่นั่งรวม','sale_start_datetime|datetime||เวลาเปิดขายบัตร','sale_end_datetime|datetime||เวลาปิดขายบัตร','max_ticket_per_order|int||จำนวนบัตรสูงสุดต่อหนึ่ง Order','status|string||DRAFT, SCHEDULED, ON_SALE, SALE_CLOSED, SALE_SUSPENDED, COMPLETED','concert_code|string|UK|รหัสสำหรับ UI เช่น C024 สร้างครั้งเดียวและไม่เปลี่ยน']);
+def('CONCERT_CONTACT','ช่องทางติดต่อผู้จัด',['contact_id|string|PK|รหัสช่องทางติดต่อ','concert_id|string|FK|Concert ที่สังกัด','contact_type|string||PHONE, LINE, FACEBOOK, EMAIL','value|string||ค่าของช่องทางติดต่อ'],'Unique (concert_id, contact_type): หนึ่ง Concert มีช่องทางแต่ละประเภทได้ไม่เกินหนึ่งรายการ');
+def('ZONE','โซนบัตร ราคา และความจุ',['zone_id|string|PK|รหัสโซน','concert_id|string|FK|Concert ที่โซนอยู่ภายใต้','name|string||ชื่อโซน เช่น VIP, A, B','zone_type|string||SEATED หรือ STANDING','price|decimal||ราคาบัตรในโซน','capacity|int||จำนวนที่รองรับสูงสุด','color|string||สีประจำโซน เช่น Hex Color']);
+def('ZONE_SEAT_PATTERN','สูตรสร้างที่นั่งอัตโนมัติ',['pattern_id|string|PK|รหัส Pattern','zone_id|string|FK UK|Zone ที่ใช้ Pattern นี้ กำหนดเป็น 1 ต่อ 1','pattern_type|string||เช่น ALPHA_ROW','start_row|string||แถวเริ่มต้น','start_seat_number|int||หมายเลขที่นั่งเริ่มต้น','row_count|int||จำนวนแถวที่ต้องสร้าง','seats_per_row|int||จำนวนที่นั่งต่อแถว'],'ใช้เฉพาะ Zone ที่ zone_type เป็น SEATED');
+def('SEAT','ที่นั่งแต่ละที่ในโซนแบบ SEATED',['seat_id|string|PK|รหัสที่นั่ง','zone_id|string|FK|โซนที่ที่นั่งอยู่','row|string||แถวของที่นั่ง','number|int||หมายเลขที่นั่ง','status|string||AVAILABLE, LOCKED, BOOKED']);
+def('BOOKING','รายการจองของ Customer ใน Concert',['booking_id|string|PK|รหัสรายการจอง','customer_id|string|FK|เจ้าของ Booking','concert_id|string|FK|Concert ที่จอง','booking_date|datetime||เวลาที่สร้างรายการจอง','total_amount|decimal||ยอดรวม','status|string||PENDING_PAYMENT, CONFIRMED, CANCELLED, EXPIRED','expiry_time|datetime||เวลาหมดอายุกรณีรอชำระเงิน','booking_code|string|UK|รหัสสำหรับ UI เช่น BKG-C024-260901-0042']);
+def('BOOKING_SEAT','ตารางเชื่อม Booking กับ Seat',['booking_id|string|PK FK|Booking ที่จอง','seat_id|string|PK FK|Seat ที่ถูกจอง','zone_name_snapshot|string||ชื่อโซน ณ เวลาจอง','seat_label_snapshot|string||ป้ายที่นั่ง เช่น A12 ณ เวลาจอง','unit_price_snapshot|decimal||ราคาต่อใบ ณ เวลาจอง'],'Composite PK ใช้คำนวณยอดจากราคาที่เก็บไว้ ไม่อิงราคาปัจจุบัน','associative');
+def('BOOKING_STANDING_ITEM','ตารางเชื่อม Booking กับโซนยืน',['booking_id|string|PK FK|Booking ที่จอง','zone_id|string|PK FK|Standing Zone ที่จอง','quantity|int||จำนวนบัตรที่จอง','zone_name_snapshot|string||ชื่อโซน ณ เวลาจอง','unit_price_snapshot|decimal||ราคาต่อใบ ณ เวลาจอง'],'Composite PK เก็บเป็นจำนวนใบ ไม่ระบุที่นั่ง','associative');
+def('PAYMENT','การชำระเงินและสัญญาณเสี่ยงโกง',['payment_id|string|PK|รหัสการชำระเงิน','booking_id|string|FK UK|Booking ที่เกี่ยวข้อง','amount|decimal||จำนวนเงินที่ชำระ','method|string||PROMPTPAY หรือ CREDIT_CARD','status|string||PENDING, COMPLETED, FAILED, EXPIRED','payment_date|datetime||เวลาที่ชำระเงิน','provider_transaction_id|string|UK|รหัสธุรกรรมจาก Provider','decline_code|string||รหัสสาเหตุที่ถูกปฏิเสธ','risk_level|string||LOW, MEDIUM, HIGH','card_fingerprint|string||Fingerprint ของบัตร ใช้ตรวจการใช้บัตรซ้ำหรือผิดปกติ','ip_address|string||IP ขณะส่งคำขอ ใช้ตรวจ Rate Limit','device_fingerprint|string||รหัสอุปกรณ์แบบ pseudonymous ใช้ตรวจพฤติกรรมซ้ำ'],'ตรวจ Card Testing จากอัตราล้มเหลวตาม Customer, IP, device และ card fingerprint');
+def('CHARGEBACK','การดึงเงินคืนที่ธนาคารแจ้งมา',['chargeback_id|string|PK|รหัสภายในระบบ','payment_id|string|FK|Payment ที่ถูกโต้แย้ง','provider_chargeback_id|string|UK|รหัสจาก Payment Provider','reason|string||เหตุผลของ Chargeback','amount|decimal||จำนวนเงินที่ถูกดึงคืน','status|string||PENDING, WON, LOST','created_at|datetime||เวลาที่สร้าง','resolved_at|datetime||เวลาที่ปิดหรือสรุปเรื่อง'],'status ติดตามผลการโต้แย้งกับธนาคารหรือ Payment Provider');
+def('SEAT_LOCK_LOG','ประวัติการล็อกที่นั่งชั่วคราว',['lock_id|string|PK|รหัสประวัติการล็อก','booking_id|string|FK|Booking ที่บันทึกการล็อก','seat_id|string|FK|Seat ที่ถูกล็อก','locked_at|datetime||เวลาที่เริ่มล็อก','expired_at|datetime||เวลาที่ล็อกหมดอายุ','released_at|datetime||เวลาที่ปลดล็อก ถ้ามี','status|string||LOCKED, EXPIRED, RELEASED, CONVERTED_TO_BOOKING'],'ใช้เฉพาะ Seat ของโซนแบบ SEATED');
+def('CUSTOMER_ORDER','ใบสั่งซื้อที่ยืนยันแล้ว',['order_id|string|PK|รหัส Order','booking_id|string|FK UK|Booking ต้นทาง','payment_id|string|FK UK|Payment ที่ทำให้เกิด Order','order_date|datetime||เวลาที่สร้าง Order','order_code|string|UK|รหัสสำหรับ UI เช่น ORD-C024-260901-0038','concert_name_snapshot|string||ชื่องาน ณ เวลาสร้าง Order','artist_snapshot|string||ศิลปิน ณ เวลาสร้าง Order','venue_snapshot|string||สถานที่ ณ เวลาสร้าง Order','event_datetime_snapshot|datetime||วันเวลางาน ณ เวลาสร้าง Order'],'สร้างหลังจาก Payment เป็น COMPLETED เท่านั้น');
+def('TICKET','E-Ticket รายใบพร้อม QR',['ticket_id|string|PK|รหัส E-Ticket','order_id|string|FK|Order ที่สร้าง Ticket','concert_id|string|FK|Concert ของ Ticket','zone_id|string|FK|Zone ของ Ticket','seat_id|string|FK UK NULL|Seat ที่กำหนด เป็น NULL ได้สำหรับโซนยืน','qr_code|string|UK|ค่า QR Code เฉพาะของ Ticket','is_used|boolean||ถูกใช้เข้างานแล้วหรือไม่','is_suspended|boolean||ระงับสิทธิ์เข้างานจาก Chargeback หรือความปลอดภัย','ticket_code|string|UK|รหัสสำหรับ UI เช่น TKT-C024-260901-0187','zone_name_snapshot|string||ชื่อโซน ณ เวลาออกตั๋ว','seat_label_snapshot|string||ป้ายที่นั่ง เป็น NULL ได้สำหรับโซนยืน','unit_price_snapshot|decimal||ราคาต่อใบที่ซื้อ'],'ticket_code ใช้แสดงและค้นหาใน UI ไม่ใช้แทน qr_code; ต้องตรวจ is_suspended ก่อนเข้างาน');
+def('STAFF_CONCERT','ตารางเชื่อม Staff กับ Concert ที่ดูแล',['staff_id|string|PK FK|Staff ที่ได้รับมอบหมาย','concert_id|string|PK FK|Concert ที่ Staff ดูแล'],'Composite PK เชื่อมกัน Many to Many','associative');
+def('TICKET_VALIDATION_LOG','ประวัติการสแกนตรวจตั๋ว',['validation_id|string|PK|รหัสประวัติการตรวจ','ticket_id|string|FK|Ticket ที่ถูกตรวจ','staff_id|string|FK|Staff ผู้ตรวจ','validation_time|datetime||เวลาที่ตรวจ','result|boolean||ผ่านหรือไม่ผ่าน']);
+def('SYSTEM_ANOMALY','เคสความผิดปกติหรือการโกง',['anomaly_id|string|PK|รหัสเคส','booking_id|string|FK|Booking ที่เกี่ยวข้อง','reviewed_by_admin_id|string|FK|Admin ผู้ตรวจ','type|string||PAYMENT_FRAUD_CARD_TESTING, SEAT_HOARDING_ABUSE, CHARGEBACK_ABUSE','message|string||รายละเอียดความผิดปกติ','timestamp|datetime||เวลาที่ตรวจพบ','status|string||UNRESOLVED, INVESTIGATING, RESOLVED','resolve_reason|string||เหตุผลในการปิดเคส','anomaly_code|string|UK|รหัสสำหรับ Admin เช่น ERR-C024-260901-0012']);
+def('ANOMALY_ATTACHMENT','ไฟล์หลักฐานของเคส',['attachment_id|string|PK|รหัสไฟล์หลักฐาน','anomaly_id|string|FK|เคสที่ไฟล์เกี่ยวข้อง','file_path|string||ตำแหน่งของไฟล์']);
+def('AUDIT_LOG','ประวัติการกระทำของผู้ใช้',['log_id|string|PK|รหัส Audit Log','user_id|string|FK|ผู้ดำเนินการ','action|string||การกระทำที่เกิดขึ้น','timestamp|datetime||เวลาที่เกิดการกระทำ','ip_address|string||IP Address ขณะดำเนินการ']);
+
+/* ---------- methods ---------- */
+var M={
+ ORGANIZATION:[['getOrganizationInfo(): String','สรุปชื่อ ชื่อย่อ และรายละเอียดขององค์กร'],['listEvents(): List<Concert>','ดึง Concert ทั้งหมดขององค์กร']],
+ APP_USER:[['login(): Boolean','ตรวจข้อมูลเข้าสู่ระบบ สถานะบัญชี และ cooldownExpiryTime'],['logout(): void','ยกเลิก Session หรือ Token']],
+ CUSTOMER:[['register(): void','สมัครบัญชีและบันทึกข้อมูลส่วนตัว'],['searchConcert(keyword): List<Concert>','ค้นหา Concert'],['createBooking(concert, seats, standingItems): Booking','จองทั้งที่นั่งและบัตรโซนยืน'],['viewHistory(): List<Booking>','ดูประวัติการจอง'],['viewTickets(): List<Ticket>','ดู E-Ticket ที่ชำระสำเร็จแล้ว']],
+ EVENT_ORGANIZER:[['createConcert(details): Concert','สร้าง Concert ภายใต้องค์กรที่สังกัด'],['defineSeatMap(concert, mapDetails): void','กำหนด Zone, Seat และ Pattern'],['viewSalesRealTime(concert): Report','ดูยอดขายของ Concert']],
+ STAFF:[['scanTicketQR(qrCode): Boolean','สแกน QR เพื่อตรวจสิทธิ์เข้างาน']],
+ ADMIN:[['manageUser(userID, action): void','ระงับหรือเปิดใช้งานบัญชี'],['viewAnomalies(filters): List<SystemAnomaly>','ดูเคสตามตัวกรอง'],['acknowledgeAnomaly(anomalyID): void','รับเรื่องและเปลี่ยนเป็นกำลังตรวจสอบ'],['resolveAnomaly(anomalyID, reason, files): void','ปิดเคสพร้อมเหตุผลและไฟล์หลักฐาน']],
+ CONCERT:[['getDetails(): ConcertInfo','ดึงรายละเอียดทั้งหมด รวม concertCode']],
+ ZONE:[['getAvailableSeats(): List<Seat>','ที่นั่งที่ยังว่างของโซน SEATED'],['getAvailableCapacity(): Integer','จำนวนที่จองได้อีก ใช้กับโซน STANDING']],
+ ZONE_SEAT_PATTERN:[['generateSeats(): List<Seat>','สร้าง Seat ตามแถวและจำนวนที่นั่งต่อแถว']],
+ SEAT:[['lockSeat(): void','เปลี่ยนเป็น LOCKED ชั่วคราวระหว่างจอง'],['unlockSeat(): void','กลับเป็น AVAILABLE เมื่อยกเลิกหรือล็อกหมดอายุ'],['confirmSeat(): void','เปลี่ยนเป็น BOOKED หลังจองสำเร็จ']],
+ BOOKING:[['calculateTotal(): Double','รวมยอดจาก unitPriceSnapshot'],['confirmBooking(): void','เปลี่ยนเป็น CONFIRMED หลังจ่ายสำเร็จ'],['cancelBooking(): void','เปลี่ยนเป็น CANCELLED'],['checkExpiry(): Boolean','ตรวจว่าเกิน expiryTime หรือยัง']],
+ PAYMENT:[['processPayment(): Boolean','บันทึก IP/device fingerprint ตรวจ rate limit แล้วส่งไป Provider'],['verifyStatus(): Boolean','ตรวจสถานะพร้อม declineCode, riskLevel และสัญญาณ Card Testing']],
+ CUSTOMER_ORDER:[['generateTickets(): List<Ticket>','สร้าง Ticket หลัง Payment เป็น COMPLETED']],
+ TICKET:[['generateQR(): String','สร้าง QR เฉพาะของ Ticket'],['validateTicket(): Boolean','ตรวจว่าถูกต้อง ตรงงาน ยังไม่ใช้ และไม่ถูกระงับ'],['markAsUsed(): void','ตั้ง isUsed เป็น true'],['suspendEntry(): void','ตั้ง isSuspended เป็น true เมื่อ Chargeback หรือกฎความปลอดภัยสั่งระงับ']],
+ SYSTEM_ANOMALY:[['updateStatus(newStatus): void','เปลี่ยนสถานะเคส'],['addAttachment(file): void','แนบไฟล์หลักฐาน']],
+ AUDIT_LOG:[['getDetails(): String','ดึงผู้กระทำ การกระทำ เวลา และ IP']]
+};
+
+/* ---------- relations ---------- */
+var RELS=[
+ ['APP_USER','CUSTOMER','1','0..1','Customer เป็น subtype ของ App User',1],
+ ['APP_USER','EVENT_ORGANIZER','1','0..1','Organizer เป็น subtype ของ App User',1],
+ ['APP_USER','STAFF','1','0..1','Staff เป็น subtype ของ App User',1],
+ ['APP_USER','ADMIN','1','0..1','Admin เป็น subtype ของ App User',1],
+ ['ORGANIZATION','EVENT_ORGANIZER','1','N','องค์กรหนึ่งมี Organizer ได้หลายคน'],
+ ['ORGANIZATION','STAFF','1','N','องค์กรหนึ่งมี Staff ได้หลายคน'],
+ ['ORGANIZATION','CONCERT','1','N','องค์กรหนึ่งจัด Concert ได้หลายรายการ'],
+ ['EVENT_ORGANIZER','STAFF','1','N','Organizer หนึ่งคนสร้าง Staff ได้หลายคน'],
+ ['EVENT_ORGANIZER','CONCERT','1','N','Organizer หนึ่งคนจัดการ Concert ได้หลายรายการ'],
+ ['CONCERT','CONCERT_CONTACT','1','N','Concert หนึ่งมีช่องทางติดต่อได้หลายประเภท'],
+ ['CONCERT','ZONE','1','N','Concert หนึ่งประกอบด้วยหลาย Zone'],
+ ['ZONE','ZONE_SEAT_PATTERN','1','0..1','Zone แบบ SEATED มี Pattern ได้สูงสุดหนึ่งชุด'],
+ ['ZONE','SEAT','1','N','Zone แบบ SEATED ประกอบด้วยหลาย Seat'],
+ ['CUSTOMER','BOOKING','1','N','Customer หนึ่งสร้าง Booking ได้หลายรายการ'],
+ ['CONCERT','BOOKING','1','N','Concert หนึ่งรับ Booking ได้หลายรายการ'],
+ ['BOOKING','BOOKING_SEAT','1','N','Booking หนึ่งจองหลาย Seat (Many to Many ผ่านตารางเชื่อม)'],
+ ['SEAT','BOOKING_SEAT','1','N','Seat หนึ่งปรากฏในประวัติ Booking ได้หลายครั้ง'],
+ ['BOOKING','BOOKING_STANDING_ITEM','1','N','Booking หนึ่งจอง Standing Zone ได้หลายรายการ'],
+ ['ZONE','BOOKING_STANDING_ITEM','1','N','Standing Zone หนึ่งถูกจองจากหลาย Booking'],
+ ['BOOKING','PAYMENT','1','0..1','Booking หนึ่งมี Payment ได้สูงสุดหนึ่งรายการ'],
+ ['BOOKING','CUSTOMER_ORDER','1','0..1','Booking จะมี Order เมื่อ Payment สำเร็จ'],
+ ['PAYMENT','CUSTOMER_ORDER','1','0..1','Payment ที่สำเร็จสร้าง Order ได้หนึ่งรายการ'],
+ ['CUSTOMER_ORDER','TICKET','1','N','Order หนึ่งสร้าง Ticket ได้หลายใบ'],
+ ['CONCERT','TICKET','1','N','Concert หนึ่งมี Ticket ได้หลายใบ'],
+ ['ZONE','TICKET','1','N','Zone หนึ่งมี Ticket ได้หลายใบ'],
+ ['SEAT','TICKET','1','0..1','Seat หนึ่งถูกกำหนดให้ Ticket ได้สูงสุดหนึ่งใบ'],
+ ['BOOKING','SEAT_LOCK_LOG','1','N','Booking หนึ่งมีประวัติ Seat Lock ได้หลายรายการ'],
+ ['SEAT','SEAT_LOCK_LOG','1','N','Seat หนึ่งมีประวัติการล็อกได้หลายครั้ง'],
+ ['PAYMENT','CHARGEBACK','1','N','Payment หนึ่งอาจมี Chargeback หลายรายการ'],
+ ['STAFF','STAFF_CONCERT','1','N','Staff หนึ่งคนดูแลหลาย Concert (Many to Many ผ่านตารางเชื่อม)'],
+ ['CONCERT','STAFF_CONCERT','1','N','Concert หนึ่งมี Staff หลายคน'],
+ ['STAFF','TICKET_VALIDATION_LOG','1','N','Staff หนึ่งคนตรวจ Ticket ได้หลายครั้ง'],
+ ['TICKET','TICKET_VALIDATION_LOG','1','N','Ticket หนึ่งใบอาจถูกตรวจหลายครั้ง'],
+ ['BOOKING','SYSTEM_ANOMALY','1','N','Booking หนึ่งอาจก่อความผิดปกติหลายเคส'],
+ ['ADMIN','SYSTEM_ANOMALY','1','N','Admin หนึ่งคนตรวจสอบได้หลายเคส'],
+ ['SYSTEM_ANOMALY','ANOMALY_ATTACHMENT','1','N','เคสหนึ่งมีไฟล์หลักฐานได้หลายไฟล์'],
+ ['APP_USER','AUDIT_LOG','1','N','User หนึ่งคนสร้าง Audit Log ได้หลายรายการ']
+];
+
+/* ---------- helpers ---------- */
+var TYPE={string:'String',int:'Integer',decimal:'Double',datetime:'DateTime',boolean:'Boolean'};
+function pascal(n){return n.toLowerCase().split('_').map(function(w){return w.charAt(0).toUpperCase()+w.slice(1);}).join('');}
+function camel(s){var p=s.split('_');return p[0]+p.slice(1).map(function(x){return x==='id'?'ID':x.charAt(0).toUpperCase()+x.slice(1);}).join('');}
+function nm(n,mode){return mode==='class'?pascal(n):n;}
+function lab(v,mode){return (mode==='class'&&v==='N')?'*':v;}
+
+function entBox(name,mode,g,mini,compact,hideJumps){
+  var e=E[name],pos=g.nodes[name],isC=mode==='class';
+  var d=document.createElement('div');
+  d.className='ent'+(compact?' compact-card':'');d.dataset.ent=name;d.tabIndex=0;
+  d.style.setProperty('grid-column',String(pos[0]),'important');d.style.setProperty('grid-row',pos[1]+' / span '+pos[2],'important');
+  d.style.setProperty('--gc',GROUP[e.g].color);
+  var tag='';
+  if(isC){
+    if(name==='APP_USER')tag='«abstract»';
+    else if(SUB.indexOf(name)>-1)tag='extends AppUser';
+    else if(e.stereo==='associative')tag='«associative»';
+  }else{
+    if(name==='APP_USER')tag='Supertype';
+    else if(SUB.indexOf(name)>-1)tag='Subtype';
+    else if(e.stereo==='associative')tag='ตารางเชื่อม';
+  }
+  var h='<div class="eh"><b>'+nm(name,mode)+'</b><span class="tag">'+tag+'</span></div>';
+  if(!isC)h+='<p class="ep">'+esc(e.purpose)+'</p>';
+  if(isC){
+    var classAttrs=compact?e.attrs.slice(0,3):e.attrs;
+    h+='<ul class="attrs cls">'+classAttrs.map(function(a){return '<li><span class="a">- '+camel(a.n)+'</span><span class="t">'+TYPE[a.t]+'</span></li>';}).join('')+(compact&&e.attrs.length>3?'<li class="more">+'+(e.attrs.length-3)+' attributes</li>':'')+'</ul>';
+    var ms=M[name]||[];
+    h+=ms.length?'<ul class="meths">'+(compact?'<li class="more">+'+ms.length+' methods</li>':ms.map(function(m){return '<li><code>+ '+esc(m[0])+'</code><small>'+esc(m[1])+'</small></li>';}).join(''))+'</ul>':'<p class="nom">ไม่มี method เฉพาะ ใช้เก็บข้อมูล</p>';
+  }else{
+    var erAttrs=compact?e.attrs.slice(0,3):e.attrs;
+    h+='<ul class="attrs">'+erAttrs.map(function(a){
+      return '<li><span class="ks">'+a.k.map(function(k){return '<i class="b '+k+'">'+k+'</i>';}).join('')+'</span><span class="a">'+a.n+'</span><span class="t">'+a.t+'</span><small>'+esc(a.d)+'</small></li>';
+    }).join('')+(compact&&e.attrs.length>3?'<li class="more">+'+(e.attrs.length-3)+' attributes</li>':'')+'</ul>';
+    if(e.note)h+='<p class="note">'+esc(e.note)+'</p>';
+  }
+  if(!mini&&!hideJumps){
+    var ex=RELS.filter(function(r){return (r[0]===name&&G_OF[r[1]]!==g.id)||(r[1]===name&&G_OF[r[0]]!==g.id);});
+    if(ex.length){
+      h+='<div class="ext"><span>เชื่อมกับกลุ่มอื่น</span>'+ex.map(function(r){
+        var mine=r[0]===name,other=mine?r[1]:r[0];
+        return '<button type="button" class="xc" style="--xc:'+GROUP[G_OF[other]].color+'" data-go="'+other+'" title="ไปที่ '+nm(other,mode)+'">'+nm(other,mode)+'<em>'+lab(mine?r[2]:r[3],mode)+':'+lab(mine?r[3]:r[2],mode)+'</em></button>';
+      }).join('')+'</div>';
+    }
+  }
+  d.innerHTML=h;
+  return d;
+}
+
+function relRow(r,g,mode){
+  var scope=g.sourceId||g.id;
+  var ext=function(n){return G_OF[n]!==scope?' <span class="xt">(กลุ่มอื่น)</span>':'';};
+  var mid=(r[5]&&mode==='class')?'สืบทอด':lab(r[2],mode)+' : '+lab(r[3],mode);
+  return '<div class="rel"><span class="n">'+nm(r[0],mode)+ext(r[0])+'</span><span class="c">'+mid+'</span><span class="n">'+nm(r[1],mode)+ext(r[1])+'</span><span class="m">'+esc(r[4])+'</span></div>';
+}
+
+var panes={};
+
+function buildPane(mode,g,opts){
+  opts=opts||{};
+  var pane=document.createElement('div');
+  pane.className='pane'+(opts.full?' full-pane':'');pane.dataset.key=mode+':'+g.id;
+  pane.style.setProperty('--gc',g.color);
+  var head=opts.mini?'':'<div class="pane-h"><h3>'+g.name+'</h3><p>'+g.desc+'</p></div>';
+  pane.innerHTML=head+'<div class="er-grid" style="--cols:'+g.cols+'"><svg class="edges" aria-hidden="true"></svg></div>'+(opts.mini?'':'<div class="rels"><h4>'+(mode==='class'?'ความสัมพันธ์ระหว่างคลาสที่เกี่ยวข้อง':'ความสัมพันธ์ที่เกี่ยวข้อง')+'</h4></div>');
+  var grid=$('.er-grid',pane);
+  Object.keys(g.nodes).forEach(function(n){grid.appendChild(entBox(n,mode,g,opts.mini,opts.compact,opts.hideJumps));});
+  if(!opts.mini){
+    var rl=$('.rels',pane);
+    var relationGroupID=g.sourceId||g.id;
+    RELS.filter(function(r){return G_OF[r[0]]===relationGroupID||G_OF[r[1]]===relationGroupID;}).forEach(function(r){rl.insertAdjacentHTML('beforeend',relRow(r,g,mode));});
+  }
+  var p={pane:pane,grid:grid,g:g,mode:mode,mini:!!opts.mini};
+  panes[mode+':'+g.id]=p;
+  $$('.ent',grid).forEach(function(b){
+    var on=function(){hi(p,b.dataset.ent);},off=function(){hi(p,null);};
+    b.addEventListener('mouseenter',on);b.addEventListener('mouseleave',off);
+    b.addEventListener('focus',on);b.addEventListener('blur',off);
+  });
+  pane.addEventListener('click',function(ev){
+    var t=ev.target.closest?ev.target.closest('.xc'):null;
+    if(t)goTo(mode,t.dataset.go);
+  });
+  if(window.ResizeObserver){new ResizeObserver(function(){draw(p);}).observe(grid);}
+  return pane;
+}
+
+function hi(p,name){
+  var svg=$('.edges',p.grid);
+  svg.classList.toggle('focus',!!name);
+  $$('.eg',svg).forEach(function(x){x.classList.toggle('hot',!!name&&(x.dataset.a===name||x.dataset.b===name));});
+}
+
+function rectOf(el){return {l:el.offsetLeft,t:el.offsetTop,r:el.offsetLeft+el.offsetWidth,b:el.offsetTop+el.offsetHeight,cx:el.offsetLeft+el.offsetWidth/2,cy:el.offsetTop+el.offsetHeight/2};}
+
+function draw(p){
+  if(!p||p.pane.hidden)return;
+  var grid=p.grid,svg=$('.edges',grid);
+  if(!grid.offsetWidth||getComputedStyle(svg).display==='none')return;
+  var W=grid.offsetWidth,H=grid.offsetHeight,mode=p.mode;
+  svg.setAttribute('width',W);svg.setAttribute('height',H);svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  var mid='tri-'+mode+'-'+p.g.id;
+  var out='<defs><marker id="'+mid+'" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="tri" d="M1 1L11 6L1 11z"/></marker></defs>';
+  RELS.forEach(function(r){
+    var ea=$('[data-ent="'+r[0]+'"]',grid),eb=$('[data-ent="'+r[1]+'"]',grid);
+    if(!ea||!eb)return;
+    var a=rectOf(ea),b=rectOf(eb),pa,pb,horiz=false;
+    if(a.r+24<=b.l){pa={x:a.r,y:a.cy,s:'r'};pb={x:b.l,y:b.cy,s:'l'};horiz=true;}
+    else if(b.r+24<=a.l){pa={x:a.l,y:a.cy,s:'l'};pb={x:b.r,y:b.cy,s:'r'};horiz=true;}
+    else{
+      var x=(Math.max(a.l,b.l)+Math.min(a.r,b.r))/2;
+      if(a.b<=b.t){pa={x:x,y:a.b,s:'b'};pb={x:x,y:b.t,s:'t'};}
+      else{pa={x:x,y:a.t,s:'t'};pb={x:x,y:b.b,s:'b'};}
+    }
+    var d;
+    if(horiz){var mx=(pa.x+pb.x)/2;d='M'+pa.x+' '+pa.y+' C'+mx+' '+pa.y+' '+mx+' '+pb.y+' '+pb.x+' '+pb.y;}
+    else d='M'+pa.x+' '+pa.y+' L'+pb.x+' '+pb.y;
+    var gen=r[5]&&mode==='class';
+    var lb='';
+    if(!gen){
+      var put=function(pt,txt){
+        var x,y,an='start';
+        if(pt.s==='r'){x=pt.x+8;y=pt.y-7;}
+        else if(pt.s==='l'){x=pt.x-8;y=pt.y-7;an='end';}
+        else if(pt.s==='b'){x=pt.x+8;y=pt.y+17;}
+        else{x=pt.x+8;y=pt.y-8;}
+        return '<text x="'+x+'" y="'+y+'" text-anchor="'+an+'">'+txt+'</text>';
+      };
+      lb=put(pa,lab(r[2],mode))+put(pb,lab(r[3],mode));
+    }
+    out+='<g class="eg" data-a="'+r[0]+'" data-b="'+r[1]+'"><path d="'+d+'"'+(gen?' marker-start="url(#'+mid+')"':'')+'/>'+lb+'</g>';
+  });
+  svg.innerHTML=out;
+}
+
+function activate(mode,gid){
+  $$('[data-tabs="'+mode+'"] .tab').forEach(function(t){t.setAttribute('aria-selected',String(t.dataset.g===gid));});
+  Object.keys(panes).forEach(function(k){
+    var p=panes[k];
+    if(p.mode===mode&&!p.mini)p.pane.hidden=(p.g.id!==gid);
+  });
+  requestAnimationFrame(function(){draw(panes[mode+':'+gid]);});
+}
+function goTo(mode,name){
+  var gid=G_OF[name];
+  activate(mode,gid);
+  setTimeout(function(){
+    var el=$('[data-key="'+mode+':'+gid+'"] [data-ent="'+name+'"]');
+    if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');}
+  },80);
+}
+
+/* ---------- build ER and Class panes ---------- */
+['er','class'].forEach(function(mode){
+  var tabs=$('[data-tabs="'+mode+'"]'),host=$('#'+mode+'-panes');
+  GROUPS.forEach(function(g){
+    var b=document.createElement('button');
+    b.type='button';b.className='tab';b.setAttribute('role','tab');b.dataset.g=g.id;
+    b.style.setProperty('--gc',g.color);b.innerHTML='<i></i>'+g.name;
+    b.addEventListener('click',function(){activate(mode,g.id);});
+    tabs.appendChild(b);
+    var pane=buildPane(mode,g);pane.hidden=true;host.appendChild(pane);
+  });
+  activate(mode,'user');
+});
+
+/* ---------- full diagrams, divided into readable relationship groups ---------- */
+function addFullDiagram(mode,hostID){
+  var host=$('#'+hostID);
+  host.className='full-collection';
+  GROUPS.forEach(function(group){
+    var copy={id:'full-'+group.id,sourceId:group.id,name:group.name,desc:group.desc,color:group.color,cols:group.cols,nodes:group.nodes};
+    var pane=buildPane(mode,copy,{hideJumps:true});
+    host.appendChild(pane);
+  });
+  requestAnimationFrame(function(){
+    GROUPS.forEach(function(group){draw(panes[mode+':full-'+group.id]);});
+  });
+}
+addFullDiagram('er','erFullDiagram');
+addFullDiagram('class','classFullDiagram');
+
+/* ---------- reliable transform zoom for the complete diagrams ---------- */
+function redrawFullDiagram(mode){
+  GROUPS.forEach(function(group){draw(panes[mode+':full-'+group.id]);});
+}
+$$('.zoom-bar').forEach(function(bar){
+  var target=$('#'+bar.dataset.zoomFor);
+  var stage=target.parentElement;
+  var mode=bar.dataset.zoomFor==='erFullDiagram'?'er':'class';
+  var range=$('.zoom-range',bar),value=$('.zoom-value',bar);
+  function apply(percent){
+    percent=Math.max(Number(range.min),Math.min(Number(range.max),percent));
+    range.value=String(percent);
+    value.textContent=percent+'%';
+    var scale=percent/100;
+    target.style.width=(100/scale)+'%';
+    target.style.transform='scale('+scale+')';
+    target.dataset.zoomScale=String(scale);
+    requestAnimationFrame(function(){
+      stage.style.height=Math.ceil(target.offsetHeight*scale)+'px';
+      redrawFullDiagram(mode);
+    });
+  }
+  $('[data-zoom="minus"]',bar).addEventListener('click',function(){apply(Number(range.value)-Number(range.step));});
+  $('[data-zoom="plus"]',bar).addEventListener('click',function(){apply(Number(range.value)+Number(range.step));});
+  $('[data-zoom="reset"]',bar).addEventListener('click',function(){apply(100);});
+  range.addEventListener('input',function(){apply(Number(range.value));});
+  apply(Number(range.value));
+});
+
+/* ---------- copyable Mermaid source for both full diagrams ---------- */
+function mermaidName(name){return pascal(name);}
+function mermaidERCardinality(value){
+  if(value==='1')return '||';
+  if(value==='0..1')return 'o|';
+  return 'o{';
+}
+function mermaidClassCardinality(value){return value==='N'?'*':value;}
+function mermaidMethod(method){return method.replace(/\):\s*/,') ');}
+function buildERMermaid(){
+  var lines=['erDiagram'];
+  Object.keys(E).forEach(function(name){
+    lines.push('  '+mermaidName(name)+' {');
+    E[name].attrs.forEach(function(attribute){
+      var keys=attribute.k.length?' '+attribute.k.join('_'):'';
+      lines.push('    '+attribute.t+' '+attribute.n+keys);
+    });
+    lines.push('  }');
+  });
+  RELS.forEach(function(relation){
+    lines.push('  '+mermaidName(relation[0])+' '+mermaidERCardinality(relation[2])+'--'+mermaidERCardinality(relation[3])+' '+mermaidName(relation[1])+' : relates');
+  });
+  return lines.join('\n');
+}
+function buildClassMermaid(){
+  var lines=['classDiagram'];
+  Object.keys(E).forEach(function(name){
+    lines.push('  class '+mermaidName(name)+' {');
+    E[name].attrs.forEach(function(attribute){lines.push('    +'+TYPE[attribute.t]+' '+camel(attribute.n));});
+    (M[name]||[]).forEach(function(method){lines.push('    +'+mermaidMethod(method[0]));});
+    lines.push('  }');
+  });
+  RELS.forEach(function(relation){
+    var left=mermaidName(relation[0]),right=mermaidName(relation[1]);
+    if(relation[5])lines.push('  '+left+' <|-- '+right);
+    else lines.push('  '+left+' "'+mermaidClassCardinality(relation[2])+'" --> "'+mermaidClassCardinality(relation[3])+'" '+right+' : relates');
+  });
+  return lines.join('\n');
+}
+$('#erMermaidCode code').textContent=buildERMermaid();
+$('#classMermaidCode code').textContent=buildClassMermaid();
+$$('.copy-mermaid').forEach(function(button){
+  button.addEventListener('click',function(){
+    var source=$('#'+button.dataset.copy+' code').textContent;
+    var done=function(){var original=button.textContent;button.textContent='คัดลอกแล้ว';setTimeout(function(){button.textContent=original;},1200);};
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(source).then(done);}
+    else{var area=document.createElement('textarea');area.value=source;document.body.appendChild(area);area.select();document.execCommand('copy');area.remove();done();}
+  });
+});
+
+$('#descEr').addEventListener('change',function(e){$('#er').classList.toggle('show-desc',e.target.checked);Object.keys(panes).forEach(function(k){draw(panes[k]);});});
+$('#descCls').addEventListener('change',function(e){$('#class').classList.toggle('show-desc',e.target.checked);Object.keys(panes).forEach(function(k){draw(panes[k]);});});
+
+/* mini chargeback diagram */
+(function(){
+  var g={id:'cb',name:'',desc:'',color:'var(--booking)',cols:2,nodes:{PAYMENT:[1,1,1],CHARGEBACK:[2,1,1]}};
+  var pane=buildPane('er',g,{mini:true});
+  $('#cbMini').appendChild(pane);
+  requestAnimationFrame(function(){draw(panes['er:cb']);});
+})();
+
+/* map blocks */
+$$('.map .blk').forEach(function(b){
+  var go=function(){activate('er',b.dataset.g);$('#er').scrollIntoView({behavior:'smooth'});};
+  b.addEventListener('click',go);
+  b.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+});
+
+/* ---------- interfaces / controllers ---------- */
+var ROLE={customer:'Customer',organizer:'Organizer',staff:'Staff',admin:'Admin',all:'ทุก Role'};
+var IFS=[
+ ['RegisterInterface','customer','หน้าสมัครสมาชิก','submitRegistration','AuthController'],
+ ['ConcertSearchInterface','customer','ช่องค้นหาคอนเสิร์ต','searchConcert','ConcertController'],
+ ['ConcertListInterface','customer','หน้า Home แสดงรายการคอนเสิร์ต','displayConcertList','ConcertController'],
+ ['ConcertDetailInterface','customer','หน้ารายละเอียด Concert พร้อมช่องทางติดต่อและโซน','displayConcertDetail','ConcertController'],
+ ['SeatSelectionInterface','customer','หน้าผังที่นั่งและเลือกจำนวนบัตรโซนยืน พร้อมตรวจ CAPTCHA','selectZone, selectSeat, selectStandingQuantity, submitBooking','BookingController'],
+ ['PaymentInterface','customer','หน้า Checkout และผลการชำระเงิน พร้อมตรวจ Rate Limit','selectPaymentMethod, submitPayment, displayPaymentResult','PaymentController'],
+ ['ETicketInterface','customer','หน้าบัตรของฉัน แสดง QR','displayTickets','TicketController'],
+ ['BookingHistoryInterface','customer','หน้าประวัติการจอง','displayBookingHistory','BookingController'],
+ ['ProfileInterface','all','หน้าโปรไฟล์ที่ทุก Role ใช้ร่วมกัน','displayProfile, submitProfileUpdate, submitPasswordChange','UserController'],
+ ['ConcertManagementInterface','organizer','ฟอร์มสร้างและแก้ไข Concert','submitConcert, submitConcertUpdate, submitConcertContact','ConcertController'],
+ ['SeatMapManagementInterface','organizer','หน้าตั้งค่าโซน Pattern และสร้างที่นั่ง','submitZone, submitZoneUpdate, submitSeatPattern, submitSeatMap, submitSeatUpdate','SeatMapController'],
+ ['SalesReportInterface','organizer','Dashboard ยอดขายรายเดือนและรายปี','displayMonthlySales, displayYearlySales','ReportController'],
+ ['CustomerContactInterface','organizer','รายชื่อและช่องทางติดต่อผู้ซื้อของงาน','displayCustomerContacts','BookingController'],
+ ['StaffManagementInterface','organizer','สร้างบัญชี Staff และมอบหมายงาน','submitStaff, displayAssignedConcerts, submitStaffAssignment, submitStaffUnassignment','StaffController'],
+ ['TicketScannerInterface','staff','หน้าสแกนบัตรที่ประตูงาน','scanQR, checkTicketCode, displayValidationResult, displayValidationHistory','TicketValidationController'],
+ ['UserManagementInterface','admin','หน้าจัดการผู้ใช้','displayUsers, searchUser, submitSuspend, submitActivate, submitOrganizationChange','UserManagementController'],
+ ['AccountManagementInterface','admin','ฟอร์มสร้างบัญชี Organizer และ Admin','submitOrganizer, submitAdmin','UserManagementController'],
+ ['BookingManagementInterface','admin','ค้นหา Booking และดูประวัติล็อกที่นั่ง','displayBookings, searchBooking, displaySeatLockHistory','BookingManagementController'],
+ ['AuditLogInterface','admin','หน้า Audit Log','displayLogs, searchLogs','AuditLogController'],
+ ['SystemAnomalyInterface','admin','คิวเคสความผิดปกติ','displayAnomalies, displayAnomalyDetail, submitAnomalyStatus, submitAnomalyAction','AnomalyController'],
+ ['ChargebackManagementInterface','admin','หน้ารายการ Chargeback','displayChargebacks','ChargebackController']
+];
+$('#ifBody').innerHTML=IFS.map(function(r){
+  return '<tr data-role="'+r[1]+'"><td class="if">'+r[0]+'</td><td class="rl">'+ROLE[r[1]]+'</td><td>'+esc(r[2])+'</td><td>'+r[3].split(', ').map(function(m){return '<span class="mc">'+m+'()</span>';}).join('')+'</td><td class="ct">'+r[4]+'</td></tr>';
+}).join('');
+var chipsEl=$('#roleChips');
+[['','ทั้งหมด'],['customer','Customer'],['organizer','Organizer'],['staff','Staff'],['admin','Admin']].forEach(function(r,i){
+  var b=document.createElement('button');b.type='button';b.className='tab';b.dataset.r=r[0];b.textContent=r[1];
+  b.setAttribute('aria-selected',String(i===0));
+  b.addEventListener('click',function(){
+    $$('button',chipsEl).forEach(function(x){x.setAttribute('aria-selected',String(x===b));});
+    $$('#ifBody tr').forEach(function(tr){tr.hidden=!!r[0]&&tr.dataset.role!==r[0]&&tr.dataset.role!=='all';});
+  });
+  chipsEl.appendChild(b);
+});
+var CTL=[
+ ['AuthController','สมัคร เข้าสู่ระบบ ตรวจ passwordHash, accountStatus และ role','registerCustomer, login, logout'],
+ ['ConcertController','ค้นหา ดูรายละเอียด สร้างและแก้ Concert พร้อมสร้าง concertCode','searchConcert, getConcertList, getConcertDetail, createConcert, updateConcert, upsertConcertContact'],
+ ['BookingController','ตรวจ CAPTCHA/device fingerprint และ cooldown ก่อนสร้าง Booking พร้อม snapshot','validateBookingSecurity, createBooking, getBookingHistory, getCustomerContact'],
+ ['PaymentController','ตรวจ Rate Limit จาก Customer, IP และ device ก่อนส่ง Provider แล้วตรวจผลและยืนยัน Booking','checkRateLimit, processPayment, verifyPayment, completePayment'],
+ ['TicketController','ออก Ticket ดึงให้ลูกค้าดู และระงับสิทธิ์เมื่อ Chargeback','generateTickets, getTickets, suspendTicketsByChargeback'],
+ ['UserController','โปรไฟล์และเปลี่ยนรหัสผ่านของผู้ใช้เอง','getProfile, updateProfile, changePassword'],
+ ['SeatMapController','สร้างโซน กำหนด Pattern และสร้างที่นั่ง','createZone, updateZone, defineSeatPattern, generateSeats, updateSeat'],
+ ['ReportController','สรุปยอดขายจาก Order และ Payment ที่สำเร็จ','getMonthlySales, getYearlySales'],
+ ['StaffController','สร้าง Staff พร้อมผู้สร้าง และมอบหมายงาน','createStaff, assignStaffToConcert, unassignStaffFromConcert, getAssignedConcerts'],
+ ['TicketValidationController','ตรวจ Ticket และบันทึก TICKET_VALIDATION_LOG ทุกครั้ง','scanTicketQR, validateTicketCode, getValidationHistory'],
+ ['UserManagementController','ระงับ เปิดใช้ ย้ายองค์กร และสร้างบัญชี Organizer หรือ Admin','getUsers, searchUser, suspendUser, activateUser, changeOrganizerOrganization, createOrganizer, createAdmin'],
+ ['BookingManagementController','ค้นหา Booking และดูประวัติ Seat Lock','getBookings, searchBooking, getSeatLockHistory'],
+ ['AuditLogController','อ่านและค้นหา Audit Log','getLogs, searchLogs'],
+ ['AnomalyController','จัดการเคสความผิดปกติและสั่งการกับบัญชี','getAnomalies, getAnomalyDetail, updateAnomalyStatus, executeAction'],
+ ['ChargebackController','ดึงและซิงก์ Chargeback พร้อมสถานะข้อโต้แย้ง และสั่งระงับ Ticket ที่เกี่ยวข้อง','getChargebacks, syncChargebackFromProvider']
+];
+$('#ctlList').innerHTML=CTL.map(function(c){
+  return '<div><h4>'+c[0]+'</h4><p>'+esc(c[1])+'</p>'+c[2].split(', ').map(function(m){return '<span class="mc">'+m+'()</span>';}).join('')+'</div>';
+}).join('');
+
+/* ---------- flow ---------- */
+var STEPS=[
+ ['ลูกค้าเลือกโซนและที่นั่ง แล้วกดจอง','SeatSelectionInterface: selectZone, selectSeat, selectStandingQuantity, submitBooking','BookingController.validateBookingSecurity(customerID, deviceFingerprint, captchaToken)','AppUser, Seat, Booking','ตรวจ CAPTCHA/device fingerprint และ cooldownExpiryTime; หากผ่านจึงสร้าง BOOKING, snapshot, SEAT_LOCK_LOG และเปลี่ยน SEAT เป็น LOCKED'],
+ ['เลือกวิธีชำระเงินและส่งคำขอ','PaymentInterface: selectPaymentMethod, submitPayment','PaymentController.checkRateLimit(customerID, ipAddress, deviceFingerprint)','Payment','ตรวจอัตราการล้มเหลวตาม Customer, IP, device และ card fingerprint; หากเกินเกณฑ์ให้ปฏิเสธ สร้าง SYSTEM_ANOMALY และกำหนด cooldownExpiryTime'],
+ ['ส่งคำขอไป Payment Provider','PaymentInterface: submitPayment','PaymentController.processPayment(bookingID, method)','Payment.processPayment()','สร้าง PAYMENT (PENDING) พร้อม ip_address และ device_fingerprint แล้วส่งไป Payment Provider'],
+ ['ตรวจผลธุรกรรมจาก Provider','ทำงานเบื้องหลังหลังกดจ่าย','PaymentController.verifyPayment(paymentID)','Payment.verifyStatus()','รับสถานะพร้อม risk_level, decline_code, card_fingerprint, IP/device signal; สร้าง SYSTEM_ANOMALY เมื่อเข้าข่าย Card Testing'],
+ ['จ่ายสำเร็จ ยืนยันการจองและสร้าง Order','PaymentInterface.displayPaymentResult() แสดง Order และ Ticket','PaymentController.completePayment(paymentID)','Booking.confirmBooking(), Seat.confirmSeat()','PAYMENT เป็น COMPLETED, BOOKING เป็น CONFIRMED, SEAT เป็น BOOKED, SEAT_LOCK_LOG เป็น CONVERTED_TO_BOOKING, สร้าง CUSTOMER_ORDER พร้อม order_code และ snapshot ชื่องาน'],
+ ['ออกตั๋วให้ทุกที่นั่งหรือทุกใบ','ทำงานเบื้องหลังต่อจากขั้นก่อน','TicketController.generateTickets(orderID)','CustomerOrder.generateTickets(), Ticket.generateQR()','สร้าง TICKET พร้อม qr_code และ ticket_code โซนนั่งมี seat_id ส่วนโซนยืนให้ seat_id เป็น NULL'],
+ ['ลูกค้าเปิดดูตั๋ว','ETicketInterface.displayTickets()','TicketController.getTickets(customerID)','Customer.viewTickets()','อ่าน TICKET ผ่าน CUSTOMER_ORDER และ BOOKING แล้วแสดง QR'],
+ ['วันงาน Staff สแกนตั๋ว','TicketScannerInterface: scanQR, checkTicketCode','TicketValidationController.scanTicketQR(qrCode)','Ticket.validateTicket(), Ticket.markAsUsed()','เขียน TICKET_VALIDATION_LOG ทุกครั้งไม่ว่าผลจะผ่านหรือไม่ และตั้ง is_used เป็น true เมื่อผ่าน'],
+ ['Provider แจ้ง Chargeback','ChargebackManagementInterface.displayChargebacks()','ChargebackController.syncChargebackFromProvider(providerChargebackID)','Chargeback, Ticket','สร้าง CHARGEBACK (PENDING) ผูกกับ PAYMENT เดิม แล้ว TicketController.suspendTicketsByChargeback() ตั้ง is_suspended เป็น true; Admin เปิด SYSTEM_ANOMALY ถ้าเข้าข่ายโกง']
+];
+$('#flowList').innerHTML=STEPS.map(function(s){
+  return '<li><h3>'+esc(s[0])+'</h3><dl><dt>หน้าจอ</dt><dd><code>'+esc(s[1])+'</code></dd><dt>Controller</dt><dd><code>'+esc(s[2])+'</code></dd><dt>Entity</dt><dd><code>'+esc(s[3])+'</code></dd><dt>ข้อมูลที่เปลี่ยน</dt><dd>'+esc(s[4])+'</dd></dl></li>';
+}).join('');
+
+/* ---------- state machines ---------- */
+var SM=[
+ ['Concert','ConcertStatus',['DRAFT','SCHEDULED','ON_SALE',[['SALE_CLOSED','ปิดขาย'],['SALE_SUSPENDED','ระงับการขาย']],'COMPLETED']],
+ ['Seat','SeatStatus',['AVAILABLE','LOCKED',[['BOOKED','confirmSeat'],['AVAILABLE','unlockSeat: ยกเลิกหรือหมดเวลา']]]],
+ ['SeatLockLog','SeatLockStatus',['LOCKED',[['CONVERTED_TO_BOOKING','จองสำเร็จ'],['EXPIRED','หมดเวลา'],['RELEASED','ปลดล็อก']]]],
+ ['Booking','BookingStatus',['PENDING_PAYMENT',[['CONFIRMED','จ่ายสำเร็จ'],['EXPIRED','เกิน expiry_time'],['CANCELLED','cancelBooking']]]],
+ ['Payment','PaymentStatus',['PENDING',[['COMPLETED','สำเร็จ'],['FAILED','ไม่ผ่าน; ตรวจ Rate Limit'],['EXPIRED','หมดเวลา']]]],
+ ['Chargeback','ChargebackStatus',['PENDING',[['WON','ชนะข้อโต้แย้ง'],['LOST','แพ้ข้อโต้แย้ง']]]],
+ ['SystemAnomaly','AnomalyStatus',['UNRESOLVED','INVESTIGATING','RESOLVED']]
+];
+$('#smList').innerHTML=SM.map(function(m){
+  var parts=m[2].map(function(s){
+    if(Array.isArray(s))return '<span class="fork">'+s.map(function(x){return '<span class="pill">'+x[0]+'<em>'+esc(x[1])+'</em></span>';}).join('')+'</span>';
+    return '<span class="pill">'+s+'</span>';
+  });
+  return '<div class="sm"><h3>'+m[0]+'<small>'+m[1]+'</small></h3><div class="fr">'+parts.join('<span class="arr" aria-hidden="true">→</span>')+'</div></div>';
+}).join('');
+
+/* ---------- notes ---------- */
+var NOTES=[
+ ['สถานะ Chargeback','เพิ่ม ChargebackStatus เป็น PENDING, WON และ LOST เพื่อใช้ติดตามผลการโต้แย้งและรายงานการเงิน'],
+ ['ขอบเขตรายการ Chargeback','displayChargebacks() แสดงรายการรวม แต่ getChargebacks(paymentID) ยังเป็นการค้นหาราย Payment; การใช้งานจริงควรกำหนด filter/pagination สำหรับหน้ารวมของ Admin'],
+ ['ไม่มี method สร้าง SystemAnomaly','AnomalyController มีแค่อ่านและอัปเดต ไม่ระบุว่าเคสถูกสร้างโดยระบบอัตโนมัติหรือ Admin สร้างเอง'],
+ ['Ticket ระงับสิทธิ์จาก Chargeback','เพิ่ม isSuspended และ suspendTicketsByChargeback() แล้ว; ต้องกำหนดนโยบายว่าจะปลดสิทธิ์อัตโนมัติเมื่อ Chargeback เป็น WON หรือให้ Admin อนุมัติ'],
+ ['เกณฑ์ Rate Limit','สเปกระบุให้ตรวจตาม Customer, IP, device และ card fingerprint แต่ยังไม่กำหนดจำนวนครั้งหรือช่วงเวลา ควรกำหนดค่า threshold แยกตาม Payment Method ก่อนพัฒนา'],
+ ['anomalyID กับ anomalyCode','Admin.acknowledgeAnomaly(anomalyID) ใช้ ID ภายใน แต่ Interface และ Controller ใช้ anomalyCode'],
+ ['ไม่มี LoginInterface','AuthController มี login และ logout แต่ฝั่งหน้าจอไม่มีหน้าล็อกอินรองรับ'],
+ ['ไม่มี method สร้าง Organization','มีแค่ submitOrganizationChange สำหรับย้ายองค์กรของ Organizer ยังไม่มีขั้นตอนสร้างองค์กรใหม่'],
+ ['Payment 1 ต่อ 1 กับ Booking','ถ้าจ่ายไม่ผ่านแล้วลองใหม่ ต้องกำหนดว่าจะอัปเดต Payment เดิมหรือสร้าง Booking ใหม่'],
+ ['ไม่ระบุการตรวจสิทธิ์ Staff','ตอนสแกนยังไม่บอกว่าต้องตรวจว่า Staff อยู่ใน STAFF_CONCERT ของงานนั้นหรือไม่'],
+ ['createBooking อยู่สองที่','Customer.createBooking() ซ้ำกับ BookingController.createBooking() ควรระบุชัดว่า Entity เป็นแค่ตัวแทน และตรรกะจริงอยู่ที่ Controller']
+];
+$('#noteList').innerHTML=NOTES.map(function(n){return '<div><b>'+esc(n[0])+'</b><span>'+esc(n[1])+'</span></div>';}).join('');
+
+/* ---------- nav spy ---------- */
+var links=$$('.rail a');
+if(window.IntersectionObserver){
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){if(e.isIntersecting){links.forEach(function(l){l.classList.toggle('on',l.getAttribute('href')==='#'+e.target.id);});}});
+  },{rootMargin:'-25% 0px -65% 0px'});
+  links.forEach(function(l){var s=$(l.getAttribute('href'));if(s)io.observe(s);});
+}
+
+/* ---------- redraw ---------- */
+var rt;
+window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){
+  Object.keys(panes).forEach(function(k){draw(panes[k]);});
+  $$('.full-collection').forEach(function(target){
+    var scale=Number(target.dataset.zoomScale||1);
+    target.parentElement.style.height=Math.ceil(target.offsetHeight*scale)+'px';
+  });
+},80);});
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){Object.keys(panes).forEach(function(k){draw(panes[k]);});});}
+})();
+</script>
+</body>
+</html>

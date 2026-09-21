@@ -1,0 +1,457 @@
+classDiagram
+
+    %% ==============================
+    %% ENTITIES
+    %% ==============================
+
+    class Organization {
+        +String organizationID
+        +String name
+        +String initials
+        +String description
+        +DateTime createdAt
+        +getOrganizationInfo() String
+        +listEvents() List~Concert~
+    }
+
+    class AppUser {
+        <<abstract>>
+        +String userID
+        +String passwordHash
+        +Role role
+        +AccountStatus accountStatus
+        +DateTime createdAt
+        +login() Boolean
+        +logout() void
+    }
+
+    class Customer {
+        +String customerID
+        +String email
+        +String phone
+        +String firstName
+        +String lastName
+        +register() void
+        +searchConcert(keyword) List~Concert~
+        +createBooking(concert, seats, standingItems) Booking
+        +viewHistory() List~Booking~
+        +viewTickets() List~Ticket~
+    }
+
+    class EventOrganizer {
+        +String organizerID
+        +String organizationID
+        +String email
+        +String username
+        +createConcert(details) Concert
+        +defineSeatMap(concert, mapDetails) void
+        +viewSalesRealTime(concert) Report
+    }
+
+    class Staff {
+        +String staffID
+        +String organizationID
+        +String createdByOrganizerID
+        +String username
+        +scanTicketQR(qrCode) Boolean
+    }
+
+    class Admin {
+        +String adminID
+        +String email
+        +String username
+        +manageUser(userID, action) void
+        +viewAnomalies(filters) List~SystemAnomaly~
+        +acknowledgeAnomaly(anomalyID) void
+        +resolveAnomaly(anomalyID, reason, files) void
+    }
+
+    class Concert {
+        +String concertID
+        +String organizationID
+        +String organizerID
+        +String name
+        +String artist
+        +String venue
+        +DateTime eventDatetime
+        +String description
+        +String posterPath
+        +String seatMapImagePath
+        +DateTime saleStartDatetime
+        +DateTime saleEndDatetime
+        +Integer maxTicketPerOrder
+        +ConcertStatus status
+        +String concertCode
+        +getDetails() ConcertInfo
+    }
+
+    class ConcertContact {
+        +String contactID
+        +String concertID
+        +ContactType contactType
+        +String value
+    }
+
+    class Zone {
+        +String zoneID
+        +String concertID
+        +String name
+        +ZoneType zoneType
+        +Double price
+        +Integer capacity
+        +String color
+        +getAvailableSeats() List~Seat~
+        +getAvailableCapacity() Integer
+    }
+
+    class ZoneSeatPattern {
+        +String patternID
+        +String zoneID
+        +String patternType
+        +String startRow
+        +Integer startSeatNumber
+        +Integer rowCount
+        +Integer seatsPerRow
+        +generateSeats() List~Seat~
+    }
+
+    class Seat {
+        +String seatID
+        +String zoneID
+        +String row
+        +Integer number
+        +SeatStatus status
+        +lockSeat() void
+        +unlockSeat() void
+        +confirmSeat() void
+    }
+
+    class Booking {
+        +String bookingID
+        +String customerID
+        +String concertID
+        +DateTime bookingDate
+        +Double totalAmount
+        +BookingStatus status
+        +DateTime expiryTime
+        +String bookingCode
+        +calculateTotal() Double
+        +confirmBooking() void
+        +cancelBooking() void
+        +checkExpiry() Boolean
+    }
+
+    class BookingSeat {
+        +String bookingID
+        +String seatID
+        +String zoneNameSnapshot
+        +String seatLabelSnapshot
+        +Double unitPriceSnapshot
+    }
+
+    class BookingStandingItem {
+        +String bookingID
+        +String zoneID
+        +Integer quantity
+        +String zoneNameSnapshot
+        +Double unitPriceSnapshot
+    }
+
+    class Payment {
+        +String paymentID
+        +String bookingID
+        +Double amount
+        +PaymentMethod method
+        +PaymentStatus status
+        +DateTime paymentDate
+        +String providerTransactionID
+        +String declineCode
+        +RiskLevel riskLevel
+        +String cardFingerprint
+        +processPayment() Boolean
+        +verifyStatus() Boolean
+    }
+
+    class Chargeback {
+        +String chargebackID
+        +String paymentID
+        +String providerChargebackID
+        +String reason
+        +Double amount
+        +DateTime createdAt
+        +DateTime resolvedAt
+    }
+
+    class CustomerOrder {
+        +String orderID
+        +String bookingID
+        +String paymentID
+        +DateTime orderDate
+        +String orderCode
+        +String concertNameSnapshot
+        +String artistSnapshot
+        +String venueSnapshot
+        +DateTime eventDatetimeSnapshot
+        +generateTickets() List~Ticket~
+    }
+
+    class Ticket {
+        +String ticketID
+        +String orderID
+        +String concertID
+        +String zoneID
+        +String seatID
+        +String qrCode
+        +Boolean isUsed
+        +String ticketCode
+        +String zoneNameSnapshot
+        +String seatLabelSnapshot
+        +Double unitPriceSnapshot
+        +generateQR() String
+        +validateTicket() Boolean
+        +markAsUsed() void
+    }
+
+    class SeatLockLog {
+        +String lockID
+        +String bookingID
+        +String seatID
+        +DateTime lockedAt
+        +DateTime expiredAt
+        +DateTime releasedAt
+        +SeatLockStatus status
+    }
+
+    class StaffConcert {
+        +String staffID
+        +String concertID
+    }
+
+    class TicketValidationLog {
+        +String validationID
+        +String ticketID
+        +String staffID
+        +DateTime validationTime
+        +Boolean result
+    }
+
+    class SystemAnomaly {
+        +String anomalyID
+        +String bookingID
+        +String reviewedByAdminID
+        +AnomalyType type
+        +String message
+        +DateTime timestamp
+        +AnomalyStatus status
+        +String resolveReason
+        +String anomalyCode
+        +updateStatus(newStatus) void
+        +addAttachment(file) void
+    }
+
+    class AnomalyAttachment {
+        +String attachmentID
+        +String anomalyID
+        +String filePath
+    }
+
+    class AuditLog {
+        +String logID
+        +String userID
+        +String action
+        +DateTime timestamp
+        +String ipAddress
+        +getDetails() String
+    }
+
+
+    %% ==============================
+    %% ENUMERATIONS
+    %% ==============================
+
+    class Role {
+        <<enumeration>>
+        CUSTOMER
+        ORGANIZER
+        STAFF
+        ADMIN
+    }
+
+    class AccountStatus {
+        <<enumeration>>
+        ACTIVE
+        SUSPENDED
+    }
+
+    class ConcertStatus {
+        <<enumeration>>
+        DRAFT
+        SCHEDULED
+        ON_SALE
+        SALE_CLOSED
+        SALE_SUSPENDED
+        COMPLETED
+    }
+
+    class ContactType {
+        <<enumeration>>
+        PHONE
+        LINE
+        FACEBOOK
+        EMAIL
+    }
+
+    class ZoneType {
+        <<enumeration>>
+        SEATED
+        STANDING
+    }
+
+    class SeatStatus {
+        <<enumeration>>
+        AVAILABLE
+        LOCKED
+        BOOKED
+    }
+
+    class BookingStatus {
+        <<enumeration>>
+        PENDING_PAYMENT
+        CONFIRMED
+        CANCELLED
+        EXPIRED
+    }
+
+    class PaymentMethod {
+        <<enumeration>>
+        PROMPTPAY
+        CREDIT_CARD
+    }
+
+    class PaymentStatus {
+        <<enumeration>>
+        PENDING
+        COMPLETED
+        FAILED
+        EXPIRED
+    }
+
+    class RiskLevel {
+        <<enumeration>>
+        LOW
+        MEDIUM
+        HIGH
+    }
+
+    class SeatLockStatus {
+        <<enumeration>>
+        LOCKED
+        EXPIRED
+        RELEASED
+        CONVERTED_TO_BOOKING
+    }
+
+    class AnomalyStatus {
+        <<enumeration>>
+        UNRESOLVED
+        INVESTIGATING
+        RESOLVED
+    }
+
+    class AnomalyType {
+        <<enumeration>>
+        PAYMENT_FRAUD_CARD_TESTING
+        SEAT_HOARDING_ABUSE
+        CHARGEBACK_ABUSE
+    }
+
+
+    %% ==============================
+    %% RELATIONSHIPS - INHERITANCE
+    %% ==============================
+
+    AppUser <|-- Customer
+    AppUser <|-- EventOrganizer
+    AppUser <|-- Staff
+    AppUser <|-- Admin
+
+
+    %% ==============================
+    %% ORGANIZATION
+    %% ==============================
+
+    Organization "1" --> "*" EventOrganizer
+    Organization "1" --> "*" Staff
+    Organization "1" --> "*" Concert
+    EventOrganizer "1" --> "*" Staff : creates
+    EventOrganizer "1" --> "*" Concert : manages
+
+
+    %% ==============================
+    %% CONCERT
+    %% ==============================
+
+    Concert "1" --> "*" ConcertContact
+    Concert "1" --> "*" Zone
+    Zone "1" --> "0..1" ZoneSeatPattern
+    Zone "1" --> "*" Seat
+
+
+    %% ==============================
+    %% BOOKING
+    %% ==============================
+
+    Customer "1" --> "*" Booking
+    Concert "1" --> "*" Booking
+    Booking "1" --> "*" BookingSeat
+    Seat "1" --> "*" BookingSeat
+    Booking "1" --> "*" BookingStandingItem
+    Zone "1" --> "*" BookingStandingItem
+    Booking "1" --> "0..1" Payment
+    Booking "1" --> "0..1" CustomerOrder
+    Payment "1" --> "0..1" CustomerOrder
+    Payment "1" --> "*" Chargeback
+
+
+    %% ==============================
+    %% TICKET
+    %% ==============================
+
+    CustomerOrder "1" --> "*" Ticket
+    Concert "1" --> "*" Ticket
+    Zone "1" --> "*" Ticket
+    Seat "1" --> "0..1" Ticket
+
+
+    %% ==============================
+    %% SEAT LOCK
+    %% ==============================
+
+    Booking "1" --> "*" SeatLockLog
+    Seat "1" --> "*" SeatLockLog
+
+
+    %% ==============================
+    %% STAFF / TICKET VALIDATION
+    %% ==============================
+
+    Staff "1" --> "*" StaffConcert
+    Concert "1" --> "*" StaffConcert
+    Staff "1" --> "*" TicketValidationLog
+    Ticket "1" --> "*" TicketValidationLog
+
+
+    %% ==============================
+    %% SYSTEM ANOMALY
+    %% ==============================
+
+    Booking "1" --> "*" SystemAnomaly
+    Admin "1" --> "*" SystemAnomaly
+    SystemAnomaly "1" --> "*" AnomalyAttachment
+
+
+    %% ==============================
+    %% AUDIT LOG
+    %% ==============================
+
+    AppUser "1" --> "*" AuditLog
