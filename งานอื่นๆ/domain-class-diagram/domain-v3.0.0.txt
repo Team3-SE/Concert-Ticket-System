@@ -1,0 +1,349 @@
+%%{init: {'themeVariables': {'fontFamily': 'Angsana New', 'fontSize': '16px'}}}%%
+classDiagram
+    direction LR
+
+    class AppUser {
+        <<abstract>>
+        +userID
+        +email
+        +passwordHash
+        +role
+        +accountStatus
+        +firstName
+        +lastName
+        +phone
+        +username
+        +organizationID
+        +createdByOrganizerID
+        +createdByAdminID
+        +createdAt
+        +updatedAt
+        +login() Boolean
+        +logout() void
+    }
+
+    class Customer {
+        +register() void
+        +searchConcert(keyword) List~Concert~
+        +createBooking(concert, seats, standingItems) Booking
+        +viewHistory() List~Booking~
+        +viewTickets() List~Ticket~
+    }
+
+    class EventOrganizer {
+        +createConcert(details) Concert
+        +defineSeatMap(concert, mapDetails) void
+        +viewSalesRealTime(concert) Report
+    }
+
+    class Staff {
+        +scanTicketQR(qrCode) Boolean
+    }
+
+    class Admin {
+        +manageUser(userID, action) void
+        +viewAnomalies(filters) List~SystemAnomaly~
+        +acknowledgeAnomaly(anomalyID) void
+        +resolveAnomaly(anomalyID, reason, files) void
+    }
+
+    AppUser <|-- Customer : เป็น role CUSTOMER
+    AppUser <|-- EventOrganizer : เป็น role ORGANIZER
+    AppUser <|-- Staff : เป็น role STAFF
+    AppUser <|-- Admin : เป็น role ADMIN
+
+    class Organization {
+        +organizationID
+        +name
+        +initials
+        +description
+        +phone
+        +email
+        +facebook
+        +line
+        +createdAt
+        +updatedAt
+        +getOrganizationInfo() String
+        +listEvents() List~Concert~
+    }
+
+    Organization "1" --> "1..*" EventOrganizer : มี Organizer สังกัด
+    Organization "1" --> "1..*" Staff : มี Staff สังกัด
+    Organization "1" --> "1..*" Concert : จัด
+    EventOrganizer "1" --> "0..*" Staff : สร้างบัญชี (createdByOrganizerID)
+    Admin "1" --> "0..*" AppUser : สร้างบัญชี (createdByAdminID)
+    AppUser "1" --> "0..*" SystemAnomaly : เป็นต้นเหตุของ (causedByUserID)
+    Admin "1" --> "0..*" SystemAnomaly : ตรวจสอบ/จัดการ (managedByAdminID)
+    AppUser "1" --> "0..*" AuditLog : สร้าง log การกระทำ
+
+    class NamingTemplate {
+        +templateID
+        +organizerID
+        +templateName
+        +patternType
+        +startValue
+        +prefix
+        +createdAt
+    }
+
+    class NamingTemplateCustomItem {
+        +itemID
+        +templateID
+        +lineOrder
+        +customName
+    }
+
+    EventOrganizer "1" --> "0..*" NamingTemplate : เป็นเจ้าของ
+    NamingTemplate "1" --> "0..*" NamingTemplateCustomItem : กำหนดชื่อแถวแบบกำหนดเอง
+    NamingTemplate "1" --> "0..*" ZoneSeatPattern : เป็นต้นแบบให้ (sourceTemplateID)
+
+    class Concert {
+        +concertID
+        +organizationID
+        +name
+        +artist
+        +venue
+        +address
+        +eventDatetime
+        +description
+        +posterPath
+        +seatMapImagePath
+        +saleStartDatetime
+        +saleEndDatetime
+        +maxTicketPerOrder
+        +status
+        +concertCode
+        +isDeleted
+        +createdAt
+        +updatedAt
+        +getDetails() ConcertInfo
+    }
+
+    class Zone {
+        +zoneID
+        +concertID
+        +name
+        +zoneType
+        +price
+        +capacity
+        +totalRows
+        +seatsPerRow
+        +seatStartNumber
+        +color
+        +createdAt
+        +updatedAt
+        +getAvailableSeats() List~Seat~
+        +getAvailableCapacity() Integer
+    }
+
+    class ZoneSeatPattern {
+        +patternID
+        +zoneID
+        +patternType
+        +rowStart
+        +rowEnd
+        +startValue
+        +prefix
+        +sourceTemplateID
+        +generateSeats() List~Seat~
+    }
+
+    class ZoneSeatPatternCustomItem {
+        +itemID
+        +patternID
+        +lineOrder
+        +customName
+    }
+
+    class Seat {
+        +seatID
+        +zoneID
+        +row
+        +number
+        +seatType
+        +bookingStatus
+        +zoneSeatPatternID
+        +createdAt
+        +updatedAt
+        +lockSeat() void
+        +unlockSeat() void
+        +confirmSeat() void
+    }
+
+    Concert "1" --> "1..*" Zone : ประกอบด้วย
+    Zone "1" --> "0..*" ZoneSeatPattern : กำหนด pattern ที่นั่ง
+    ZoneSeatPattern "1" --> "0..*" ZoneSeatPatternCustomItem : กำหนดชื่อแถวแบบกำหนดเอง
+    ZoneSeatPattern "1" --> "0..*" Seat : generate ที่นั่งจาก pattern
+    Zone "1" --> "0..*" Seat : มีที่นั่ง
+
+    class Booking {
+        +bookingID
+        +customerID
+        +concertID
+        +bookingCode
+        +bookingDate
+        +totalAmount
+        +status
+        +expiryTime
+        +updatedAt
+        +calculateTotal() Double
+        +confirmBooking() void
+        +cancelBooking() void
+        +checkExpiry() Boolean
+    }
+
+    class BookingSeat {
+        +bookingID
+        +seatID
+        +zoneNameSnapshot
+        +seatLabelSnapshot
+        +unitPriceSnapshot
+    }
+
+    class Payment {
+        +paymentID
+        +bookingID
+        +amount
+        +method
+        +status
+        +providerTransactionID
+        +paymentMetadata
+        +createdAt
+        +updatedAt
+        +processPayment() Boolean
+        +verifyStatus() Boolean
+    }
+
+    class CustomerOrder {
+        +orderID
+        +bookingID
+        +paymentID
+        +orderDate
+        +orderCode
+        +concertNameSnapshot
+        +artistSnapshot
+        +venueSnapshot
+        +eventDatetimeSnapshot
+        +organizationNameSnapshot
+        +customerFirstNameSnapshot
+        +customerLastNameSnapshot
+        +customerPhoneSnapshot
+    }
+
+    class BookingStandingTicket {
+        +ticketID
+        +zoneID
+        +orderID
+        +ticketCode
+        +quantity
+        +zoneNameSnapshot
+        +unitPriceSnapshot
+        +qrCode
+        +isUsed
+    }
+
+    class Ticket {
+        +ticketID
+        +orderID
+        +zoneID
+        +seatID
+        +qrCode
+        +isUsed
+        +ticketCode
+        +zoneNameSnapshot
+        +seatLabelSnapshot
+        +unitPriceSnapshot
+        +createdAt
+        +updatedAt
+        +generateQR() String
+        +validateTicket() Boolean
+        +markAsUsed() void
+    }
+
+    Customer "1" --> "0..*" Booking : สร้างการจอง
+    Concert "1" --> "0..*" Booking : ถูกจองใน
+    Booking "0..*" --> "0..*" Seat : จอง (ผ่าน BookingSeat)
+    Booking "1" --> "0..*" BookingSeat : บันทึกที่นั่งที่จอง
+    Seat "1" --> "0..*" BookingSeat : ถูกจองอยู่ใน
+    Booking "1" --> "0..*" Payment : ชำระเงินผ่าน
+    Booking "1" --> "0..1" CustomerOrder : generate order เมื่อชำระสำเร็จ
+    Payment "1" --> "0..1" CustomerOrder : generate order เมื่อสำเร็จ
+    CustomerOrder "1" --> "0..*" Ticket : generate ตั๋ว SEATED
+    CustomerOrder "1" --> "0..*" BookingStandingTicket : generate ตั๋ว STANDING
+    Zone "1" --> "0..*" Ticket : ออกตั๋วภายใต้
+    Zone "1" --> "0..*" BookingStandingTicket : ออกตั๋วภายใต้
+    Seat "1" --> "0..*" Ticket : ถูกอ้างอิงโดย
+
+    class SeatLockLog {
+        +lockID
+        +bookingID
+        +seatID
+        +lockedAt
+        +expiredAt
+        +releasedAt
+        +status
+    }
+
+    class StaffConcert {
+        +staffID
+        +concertID
+        +assignedAt
+        +status
+        +revokedAt
+    }
+
+    class TicketValidationLog {
+        +validationID
+        +ticketID
+        +bookingStandingTicketID
+        +staffID
+        +validationTime
+        +result
+    }
+
+    Booking "1" --> "0..*" SeatLockLog : บันทึกประวัติการล็อก
+    Seat "1" --> "0..*" SeatLockLog : ถูกบันทึกการล็อกใน
+    Staff "0..*" --> "0..*" Concert : ถูกมอบหมายดูแล (ผ่าน StaffConcert)
+    Staff "1" --> "0..*" TicketValidationLog : ตรวจสอบตั๋วและบันทึกผล
+    Ticket "1" --> "0..1" TicketValidationLog : ถูกตรวจสอบและบันทึกผลใน
+    BookingStandingTicket "1" --> "0..1" TicketValidationLog : ถูกตรวจสอบและบันทึกผลใน
+
+    class SystemAnomaly {
+        +anomalyID
+        +bookingID
+        +causedByUserID
+        +managedByAdminID
+        +type
+        +message
+        +status
+        +detectedAt
+        +ackedAt
+        +resolvedAt
+        +resolveReason
+        +anomalyCode
+        +updateStatus(newStatus) void
+        +addAttachment(file) void
+    }
+
+    class AnomalyAttachment {
+        +attachmentID
+        +anomalyID
+        +filePath
+        +createdAt
+        +updatedAt
+    }
+
+    class AuditLog {
+        +logID
+        +userID
+        +action
+        +createdAt
+        +ipAddress
+        +metadataDetails
+        +getDetails() String
+    }
+
+    Booking "1" --> "0..*" SystemAnomaly : อาจก่อให้เกิดเคสผิดปกติ
+    SystemAnomaly "1" --> "0..*" AnomalyAttachment : แนบไฟล์หลักฐาน
+
+    classDef default fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000

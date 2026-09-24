@@ -121,12 +121,14 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`booking` (
   `booking_id` INT NOT NULL AUTO_INCREMENT,
   `customer_id` INT NOT NULL,
   `concert_id` INT NOT NULL,
+  `booking_code` VARCHAR(100) NOT NULL,                              -- [ADDED]
   `booking_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- [DEFAULT ADDED]
   `total_amount` DECIMAL(12,2) NOT NULL,
   `status` VARCHAR(50) NOT NULL DEFAULT 'PENDING_PAYMENT',           -- [DEFAULT ADDED]
   `expiry_time` DATETIME NULL DEFAULT NULL,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`booking_id`),
+  UNIQUE INDEX `booking_code_UNIQUE` (`booking_code` ASC) VISIBLE,
   INDEX `fk_booking_customer` (`customer_id` ASC) VISIBLE,
   INDEX `fk_booking_concert` (`concert_id` ASC) VISIBLE,
   CONSTRAINT `fk_booking_concert`
