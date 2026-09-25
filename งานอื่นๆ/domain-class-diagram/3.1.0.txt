@@ -14,8 +14,7 @@ classDiagram
         +phone
         +username
         +organizationID
-        +createdByOrganizerID
-        +createdByAdminID
+        +createdByUserID
         +createdAt
         +updatedAt
         +login() Boolean
@@ -30,7 +29,7 @@ classDiagram
         +viewTickets() List~Ticket~
     }
 
-    class EventOrganizer {
+    class Organizer {
         +createConcert(details) Concert
         +defineSeatMap(concert, mapDetails) void
         +viewSalesRealTime(concert) Report
@@ -48,7 +47,7 @@ classDiagram
     }
 
     AppUser <|-- Customer : เป็น role CUSTOMER
-    AppUser <|-- EventOrganizer : เป็น role ORGANIZER
+    AppUser <|-- Organizer : เป็น role ORGANIZER
     AppUser <|-- Staff : เป็น role STAFF
     AppUser <|-- Admin : เป็น role ADMIN
 
@@ -67,10 +66,10 @@ classDiagram
         +listEvents() List~Concert~
     }
 
-    Organization "1" --> "1..*" EventOrganizer : มี Organizer สังกัด
+    Organization "1" --> "1..*" Organizer : มี Organizer สังกัด
     Organization "1" --> "1..*" Staff : มี Staff สังกัด
     Organization "1" --> "1..*" Concert : จัด
-    EventOrganizer "1" --> "0..*" Staff : สร้างบัญชี (createdByOrganizerID)
+    Organizer "1" --> "0..*" Staff : สร้างบัญชี (createdByOrganizerID)
     Admin "1" --> "0..*" AppUser : สร้างบัญชี (createdByAdminID)
     AppUser "1" --> "0..*" SystemAnomaly : เป็นต้นเหตุของ (causedByUserID)
     Admin "1" --> "0..*" SystemAnomaly : ตรวจสอบ/จัดการ (managedByAdminID)
@@ -93,7 +92,7 @@ classDiagram
         +customName
     }
 
-    EventOrganizer "1" --> "0..*" NamingTemplate : เป็นเจ้าของ
+    Organizer "1" --> "0..*" NamingTemplate : เป็นเจ้าของ
     NamingTemplate "1" --> "0..*" NamingTemplateCustomItem : กำหนดชื่อแถวแบบกำหนดเอง
     NamingTemplate "1" --> "0..*" ZoneSeatPattern : เป็นต้นแบบให้ (sourceTemplateID)
 
@@ -161,7 +160,6 @@ classDiagram
         +row
         +number
         +seatType
-        +seatStatus
         +bookingStatus
         +zoneSeatPatternID
         +createdAt

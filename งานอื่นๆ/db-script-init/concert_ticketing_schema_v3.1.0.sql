@@ -11,13 +11,7 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,N
 -- Schema concert_ticketing
 -- -----------------------------------------------------
 
--- -----------------------------------------------------
--- Schema concert_ticketing
--- -----------------------------------------------------
 CREATE SCHEMA IF NOT EXISTS `concert_ticketing` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci ;
--- -----------------------------------------------------
--- Schema mydb
--- -----------------------------------------------------
 USE `concert_ticketing` ;
 
 -- -----------------------------------------------------
@@ -28,7 +22,7 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`organization` (
   `name` VARCHAR(255) NOT NULL,
   `initials` VARCHAR(50) NULL DEFAULT NULL,
   `description` TEXT NULL DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- [DEFAULT ADDED]
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          
   `phone` VARCHAR(45) NULL DEFAULT NULL,
   `email` VARCHAR(255) NULL DEFAULT NULL,
   `facebook` VARCHAR(255) NULL DEFAULT NULL,
@@ -47,35 +41,30 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`app_user` (
   `user_id` INT NOT NULL AUTO_INCREMENT,
   `email` VARCHAR(255) NULL,
   `password_hash` VARCHAR(255) NOT NULL,
-  `role` VARCHAR(50) NOT NULL DEFAULT 'CUSTOMER',                    -- [DEFAULT ADDED]
-  `account_status` TINYINT NOT NULL DEFAULT 1 COMMENT 'สถานะบัญชีผู้ใช้: 1 = ACTIVE, 0 = BANNED',  -- [DEFAULT ADDED]
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- [DEFAULT ADDED]
+  `role` VARCHAR(50) NOT NULL DEFAULT 'CUSTOMER',                    
+  `account_status` TINYINT NOT NULL DEFAULT 1 COMMENT 'สถานะบัญชีผู้ใช้: 1 = ACTIVE, 0 = BANNED',  
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `first_name` VARCHAR(100) NULL DEFAULT NULL,
   `last_name` VARCHAR(100) NULL DEFAULT NULL,
   `phone` VARCHAR(50) NULL DEFAULT NULL,
   `username` VARCHAR(45) NULL DEFAULT NULL,
-  `created_by_organizer_id` INT NULL DEFAULT NULL,
-  `created_by_admin_id` INT NULL DEFAULT NULL,
+  `created_by_user_id` INT NULL DEFAULT NULL,                        -- [MERGED COLUMN]
   `organization_id` INT NULL DEFAULT NULL,
   PRIMARY KEY (`user_id`),
   UNIQUE INDEX `email_UNIQUE` (`email` ASC) VISIBLE,
   UNIQUE INDEX `app_usercol_UNIQUE` (`phone` ASC) VISIBLE,
   UNIQUE INDEX `username_UNIQUE` (`username` ASC) VISIBLE,
-  INDEX `fk_app_user_app_user1_idx` (`created_by_organizer_id` ASC) VISIBLE,
+  INDEX `fk_app_user_creator_idx` (`created_by_user_id` ASC) VISIBLE,  -- [INDEX UPDATED]
   INDEX `fk_app_user_organization1_idx` (`organization_id` ASC) VISIBLE,
-  INDEX `fk_app_user_app_user2_idx` (`created_by_admin_id` ASC) VISIBLE,
-  CONSTRAINT `fk_app_user_app_user1`
-    FOREIGN KEY (`created_by_organizer_id`)
-    REFERENCES `concert_ticketing`.`app_user` (`user_id`),
-  CONSTRAINT `fk_app_user_organization1`
-    FOREIGN KEY (`organization_id`)
-    REFERENCES `concert_ticketing`.`organization` (`organization_id`),
-  CONSTRAINT `fk_app_user_app_user2`
-    FOREIGN KEY (`created_by_admin_id`)
+  CONSTRAINT `fk_app_user_creator`                                     -- [FK UPDATED]
+    FOREIGN KEY (`created_by_user_id`)
     REFERENCES `concert_ticketing`.`app_user` (`user_id`)
     ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_app_user_organization1`
+    FOREIGN KEY (`organization_id`)
+    REFERENCES `concert_ticketing`.`organization` (`organization_id`))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_0900_ai_ci;
@@ -97,12 +86,12 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`concert` (
   `sale_start_datetime` DATETIME NULL DEFAULT NULL,
   `sale_end_datetime` DATETIME NULL DEFAULT NULL,
   `max_ticket_per_order` INT NULL DEFAULT NULL,
-  `status` VARCHAR(50) NOT NULL DEFAULT 'DRAFT',                     -- [DEFAULT ADDED]
+  `status` VARCHAR(50) NOT NULL DEFAULT 'DRAFT',                     
   `concert_code` VARCHAR(100) NOT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `address` VARCHAR(500) NULL,
-  `is_deleted` TINYINT NOT NULL DEFAULT 0,                           -- [DEFAULT ADDED]
+  `is_deleted` TINYINT NOT NULL DEFAULT 0,                           
   PRIMARY KEY (`concert_id`),
   UNIQUE INDEX `concert_code` (`concert_code` ASC) VISIBLE,
   INDEX `fk_concert_organization` (`organization_id` ASC) VISIBLE,
@@ -121,9 +110,9 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`booking` (
   `booking_id` INT NOT NULL AUTO_INCREMENT,
   `customer_id` INT NOT NULL,
   `concert_id` INT NOT NULL,
-  `booking_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- [DEFAULT ADDED]
+  `booking_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        
   `total_amount` DECIMAL(12,2) NOT NULL,
-  `status` VARCHAR(50) NOT NULL DEFAULT 'PENDING_PAYMENT',           -- [DEFAULT ADDED]
+  `status` VARCHAR(50) NOT NULL DEFAULT 'PENDING_PAYMENT',           
   `expiry_time` DATETIME NULL DEFAULT NULL,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `booking_code` VARCHAR(100) NOT NULL,
@@ -151,12 +140,12 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`system_anomaly` (
   `managed_by_admin_id` INT NULL DEFAULT NULL,
   `type` VARCHAR(100) NOT NULL,
   `message` TEXT NULL DEFAULT NULL,
-  `status` VARCHAR(50) NOT NULL DEFAULT 'UNRESOLVED',                -- [DEFAULT ADDED]
+  `status` VARCHAR(50) NOT NULL DEFAULT 'UNRESOLVED',                
   `resolved_at` DATETIME NULL DEFAULT NULL,
   `acked_at` DATETIME NULL DEFAULT NULL,
   `resolve_reason` TEXT NULL DEFAULT NULL,
   `anomaly_code` VARCHAR(100) NOT NULL,
-  `detected_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,         -- [DEFAULT ADDED]
+  `detected_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,         
   `caused_by_user_id` INT NOT NULL,
   PRIMARY KEY (`anomaly_id`),
   UNIQUE INDEX `anomaly_code` (`anomaly_code` ASC) VISIBLE,
@@ -186,8 +175,8 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`anomaly_attachment` (
   `attachment_id` INT NOT NULL AUTO_INCREMENT,
   `anomaly_id` INT NOT NULL,
   `file_path` VARCHAR(500) NOT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- [DEFAULT ADDED]
-  `updated_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  -- [DEFAULT ADDED]
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          
+  `updated_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  
   PRIMARY KEY (`attachment_id`),
   INDEX `fk_attachment_anomaly` (`anomaly_id` ASC) VISIBLE,
   CONSTRAINT `fk_attachment_anomaly`
@@ -205,7 +194,7 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`audit_log` (
   `log_id` INT NOT NULL AUTO_INCREMENT,
   `user_id` INT NULL,
   `action` INT NOT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- [DEFAULT ADDED]
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          
   `ip_address` VARCHAR(100) NULL DEFAULT NULL,
   `metadata_details` JSON NULL DEFAULT NULL,
   PRIMARY KEY (`log_id`),
@@ -303,12 +292,12 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`seat` (
   `zone_id` INT NOT NULL,
   `row` VARCHAR(50) NULL,
   `number` INT NULL,
-  `seat_booking_status` VARCHAR(50) NOT NULL DEFAULT 'AVAILABLE' COMMENT 'สถานะการจองที่นั่ง: AVAILABLE | LOCKED | RESERVED | SOLD — ต้องสอดคล้องกับ SEAT_LOCK_LOG / BOOKING_SEAT / TICKET',  -- [DEFAULT UPDATED]
-  `seat_type` VARCHAR(50) NOT NULL DEFAULT 'SEATED' COMMENT 'ประเภทที่นั่งตามรูปแบบการใช้งาน: SEATED (แบบนั่ง) | STANDING (แบบยืน)',  -- [REDEFINED + DEFAULT ADDED]
-  `seat_status` VARCHAR(50) NOT NULL DEFAULT 'NORMAL' COMMENT 'ลักษณะทางกายภาพของที่นั่ง: NORMAL | WHEELCHAIR | GAP | DISABLED',  -- [DEFAULT ADDED]
+  `seat_booking_status` VARCHAR(50) NOT NULL DEFAULT 'AVAILABLE' COMMENT 'สถานะการจองที่นั่ง: AVAILABLE | LOCKED | RESERVED | SOLD — ต้องสอดคล้องกับ SEAT_LOCK_LOG / BOOKING_SEAT / TICKET',  
+  `seat_type` VARCHAR(50) NOT NULL DEFAULT 'SEATED' COMMENT 'ประเภทที่นั่งตามรูปแบบการใช้งาน: SEATED (แบบนั่ง) | STANDING (แบบยืน)',  
+  `seat_status` VARCHAR(50) NOT NULL DEFAULT 'NORMAL' COMMENT 'ลักษณะทางกายภาพของที่นั่ง: NORMAL | WHEELCHAIR | GAP | DISABLED',  
   `zone_seat_pattern_pattern_id` INT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- [DEFAULT ADDED]
-  `updated_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  -- [DEFAULT ADDED]
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          
+  `updated_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  
   PRIMARY KEY (`seat_id`),
   UNIQUE INDEX `uq_seat_zone_row_number` (`zone_id` ASC, `row` ASC, `number` ASC) VISIBLE,
   INDEX `fk_seat_zone` (`zone_id` ASC) VISIBLE,
@@ -356,9 +345,9 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`payment` (
   `booking_id` INT NOT NULL,
   `amount` DECIMAL(12,2) NOT NULL,
   `method` VARCHAR(50) NOT NULL,
-  `status` VARCHAR(50) NOT NULL DEFAULT 'PENDING',                   -- [DEFAULT ADDED]
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- [DEFAULT ADDED]
-  `updated_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  -- [DEFAULT ADDED]
+  `status` VARCHAR(50) NOT NULL DEFAULT 'PENDING',                   
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          
+  `updated_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  
   `provider_transaction_id` VARCHAR(255) NULL DEFAULT NULL,
   `payment_metadata` JSON NULL DEFAULT NULL,
   PRIMARY KEY (`payment_id`),
@@ -379,7 +368,7 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`customer_order` (
   `order_id` INT NOT NULL AUTO_INCREMENT,
   `booking_id` INT NOT NULL,
   `payment_id` INT NOT NULL,
-  `order_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- [DEFAULT ADDED]
+  `order_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          
   `order_code` VARCHAR(100) NOT NULL,
   `concert_name_snapshot` VARCHAR(255) NOT NULL,
   `artist_snapshot` VARCHAR(255) NULL DEFAULT NULL,
@@ -411,10 +400,10 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`seat_lock_log` (
   `lock_id` INT NOT NULL AUTO_INCREMENT,
   `booking_id` INT NOT NULL,
   `seat_id` INT NOT NULL,
-  `locked_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,           -- [DEFAULT ADDED]
+  `locked_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,           
   `expired_at` DATETIME NULL DEFAULT NULL,
   `released_at` DATETIME NULL DEFAULT NULL,
-  `status` VARCHAR(50) NOT NULL DEFAULT 'LOCKED',                    -- [DEFAULT ADDED]
+  `status` VARCHAR(50) NOT NULL DEFAULT 'LOCKED',                    
   PRIMARY KEY (`lock_id`),
   INDEX `fk_lock_booking` (`booking_id` ASC) VISIBLE,
   INDEX `fk_lock_seat` (`seat_id` ASC) VISIBLE,
@@ -435,8 +424,8 @@ COLLATE = utf8mb4_0900_ai_ci;
 CREATE TABLE IF NOT EXISTS `concert_ticketing`.`staff_concert` (
   `staff_id` INT NOT NULL,
   `concert_id` INT NOT NULL,
-  `assigned_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,         -- [DEFAULT ADDED]
-  `status` TINYINT NOT NULL DEFAULT 1,                               -- [DEFAULT ADDED]
+  `assigned_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,         
+  `status` TINYINT NOT NULL DEFAULT 1,                               
   `revoked_at` DATETIME NULL DEFAULT NULL,
   PRIMARY KEY (`staff_id`, `concert_id`),
   INDEX `fk_staff_concert_concert` (`concert_id` ASC) VISIBLE,
@@ -466,8 +455,8 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`ticket` (
   `zone_name_snapshot` VARCHAR(255) NULL DEFAULT NULL,
   `seat_label_snapshot` VARCHAR(100) NULL DEFAULT NULL,
   `unit_price_snapshot` DECIMAL(12,2) NOT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- [DEFAULT ADDED]
-  `updated_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  -- [DEFAULT ADDED]
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          
+  `updated_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  
   PRIMARY KEY (`ticket_id`),
   UNIQUE INDEX `qr_code` (`qr_code` ASC) VISIBLE,
   UNIQUE INDEX `ticket_code` (`ticket_code` ASC) VISIBLE,
@@ -494,7 +483,7 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`ticket_validation_log` (
   `validation_id` INT NOT NULL AUTO_INCREMENT,
   `ticket_id` INT NULL,
   `staff_id` INT NOT NULL,
-  `validation_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,     -- [DEFAULT ADDED]
+  `validation_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,     
   `result` TINYINT NOT NULL,
   `booking_standing_ticket_ticket_id` INT NULL,
   PRIMARY KEY (`validation_id`),
