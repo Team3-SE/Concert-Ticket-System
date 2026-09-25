@@ -1,5 +1,7 @@
 %%{init: {'themeVariables': {'fontFamily': 'Angsana New', 'fontSize': '16px'}}}%%
+
 classDiagram
+
     direction LR
 
     class AppUser {
@@ -69,32 +71,30 @@ classDiagram
     Organization "1" --> "1..*" Organizer : มี Organizer สังกัด
     Organization "1" --> "1..*" Staff : มี Staff สังกัด
     Organization "1" --> "1..*" Concert : จัด
+
     Organizer "1" --> "0..*" Staff : สร้างบัญชี (createdByOrganizerID)
     Admin "1" --> "0..*" AppUser : สร้างบัญชี (createdByAdminID)
+
     AppUser "1" --> "0..*" SystemAnomaly : เป็นต้นเหตุของ (causedByUserID)
     Admin "1" --> "0..*" SystemAnomaly : ตรวจสอบ/จัดการ (managedByAdminID)
+
     AppUser "1" --> "0..*" AuditLog : สร้าง log การกระทำ
+
 
     class NamingTemplate {
         +templateID
         +organizerID
         +templateName
         +patternType
-        +startValue
         +prefix
+        +customItems
         +createdAt
     }
 
-    class NamingTemplateCustomItem {
-        +itemID
-        +templateID
-        +lineOrder
-        +customName
-    }
-
     Organizer "1" --> "0..*" NamingTemplate : เป็นเจ้าของ
-    NamingTemplate "1" --> "0..*" NamingTemplateCustomItem : กำหนดชื่อแถวแบบกำหนดเอง
+
     NamingTemplate "1" --> "0..*" ZoneSeatPattern : เป็นต้นแบบให้ (sourceTemplateID)
+
 
     class Concert {
         +concertID
@@ -118,6 +118,7 @@ classDiagram
         +getDetails() ConcertInfo
     }
 
+
     class Zone {
         +zoneID
         +concertID
@@ -135,32 +136,27 @@ classDiagram
         +getAvailableCapacity() Integer
     }
 
+
     class ZoneSeatPattern {
         +patternID
         +zoneID
         +patternType
         +rowStart
         +rowEnd
-        +startValue
         +prefix
         +sourceTemplateID
+        +customItems
         +generateSeats() List~Seat~
     }
 
-    class ZoneSeatPatternCustomItem {
-        +itemID
-        +patternID
-        +lineOrder
-        +customName
-    }
 
     class Seat {
         +seatID
         +zoneID
         +row
         +number
-        +seatType
         +bookingStatus
+        +seatStatus
         +zoneSeatPatternID
         +createdAt
         +updatedAt
@@ -169,11 +165,15 @@ classDiagram
         +confirmSeat() void
     }
 
+
     Concert "1" --> "1..*" Zone : ประกอบด้วย
+
     Zone "1" --> "0..*" ZoneSeatPattern : กำหนด pattern ที่นั่ง
-    ZoneSeatPattern "1" --> "0..*" ZoneSeatPatternCustomItem : กำหนดชื่อแถวแบบกำหนดเอง
+
     ZoneSeatPattern "1" --> "0..*" Seat : generate ที่นั่งจาก pattern
+
     Zone "1" --> "0..*" Seat : มีที่นั่ง
+
 
     class Booking {
         +bookingID
@@ -191,6 +191,7 @@ classDiagram
         +checkExpiry() Boolean
     }
 
+
     class BookingSeat {
         +bookingID
         +seatID
@@ -198,6 +199,7 @@ classDiagram
         +seatLabelSnapshot
         +unitPriceSnapshot
     }
+
 
     class Payment {
         +paymentID
@@ -212,6 +214,7 @@ classDiagram
         +processPayment() Boolean
         +verifyStatus() Boolean
     }
+
 
     class CustomerOrder {
         +orderID
@@ -229,6 +232,7 @@ classDiagram
         +customerPhoneSnapshot
     }
 
+
     class BookingStandingTicket {
         +ticketID
         +zoneID
@@ -240,6 +244,7 @@ classDiagram
         +qrCode
         +isUsed
     }
+
 
     class Ticket {
         +ticketID
@@ -259,19 +264,28 @@ classDiagram
         +markAsUsed() void
     }
 
+
     Customer "1" --> "0..*" Booking : สร้างการจอง
     Concert "1" --> "0..*" Booking : ถูกจองใน
+
     Booking "0..*" --> "0..*" Seat : จอง (ผ่าน BookingSeat)
+
     Booking "1" --> "0..*" BookingSeat : บันทึกที่นั่งที่จอง
     Seat "1" --> "0..*" BookingSeat : ถูกจองอยู่ใน
+
     Booking "1" --> "0..*" Payment : ชำระเงินผ่าน
+
     Booking "1" --> "0..1" CustomerOrder : generate order เมื่อชำระสำเร็จ
     Payment "1" --> "0..1" CustomerOrder : generate order เมื่อสำเร็จ
+
     CustomerOrder "1" --> "0..*" Ticket : generate ตั๋ว SEATED
     CustomerOrder "1" --> "0..*" BookingStandingTicket : generate ตั๋ว STANDING
+
     Zone "1" --> "0..*" Ticket : ออกตั๋วภายใต้
     Zone "1" --> "0..*" BookingStandingTicket : ออกตั๋วภายใต้
+
     Seat "1" --> "0..*" Ticket : ถูกอ้างอิงโดย
+
 
     class SeatLockLog {
         +lockID
@@ -283,6 +297,7 @@ classDiagram
         +status
     }
 
+
     class StaffConcert {
         +staffID
         +concertID
@@ -290,6 +305,7 @@ classDiagram
         +status
         +revokedAt
     }
+
 
     class TicketValidationLog {
         +validationID
@@ -300,12 +316,18 @@ classDiagram
         +result
     }
 
+
     Booking "1" --> "0..*" SeatLockLog : บันทึกประวัติการล็อก
     Seat "1" --> "0..*" SeatLockLog : ถูกบันทึกการล็อกใน
+
     Staff "0..*" --> "0..*" Concert : ถูกมอบหมายดูแล (ผ่าน StaffConcert)
+
     Staff "1" --> "0..*" TicketValidationLog : ตรวจสอบตั๋วและบันทึกผล
+
     Ticket "1" --> "0..1" TicketValidationLog : ถูกตรวจสอบและบันทึกผลใน
+
     BookingStandingTicket "1" --> "0..1" TicketValidationLog : ถูกตรวจสอบและบันทึกผลใน
+
 
     class SystemAnomaly {
         +anomalyID
@@ -324,6 +346,7 @@ classDiagram
         +addAttachment(file) void
     }
 
+
     class AnomalyAttachment {
         +attachmentID
         +anomalyID
@@ -331,6 +354,7 @@ classDiagram
         +createdAt
         +updatedAt
     }
+
 
     class AuditLog {
         +logID
@@ -342,7 +366,10 @@ classDiagram
         +getDetails() String
     }
 
+
     Booking "1" --> "0..*" SystemAnomaly : อาจก่อให้เกิดเคสผิดปกติ
+
     SystemAnomaly "1" --> "0..*" AnomalyAttachment : แนบไฟล์หลักฐาน
+
 
     classDef default fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
