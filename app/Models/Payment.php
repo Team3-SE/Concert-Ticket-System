@@ -16,23 +16,22 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  */
 class Payment extends Model
 {
-    use HasUlids;
-
     protected $table = 'payment';
     protected $primaryKey = 'payment_id';
-    public $incrementing = false;
-    protected $keyType = 'string';
     public $timestamps = false;
 
     protected $fillable = [
         'payment_id', 'booking_id', 'amount', 'method', 'status',
         'payment_date', 'provider_transaction_id', 'decline_code',
-        'risk_level', 'card_fingerprint',
+        'risk_level', 'card_fingerprint', 'payment_metadata', 'created_at', 'updated_at'
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'payment_date' => 'datetime',
+        'payment_metadata' => 'array',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function booking(): BelongsTo
@@ -50,15 +49,5 @@ class Payment extends Model
         return $this->hasOne(CustomerOrder::class, 'payment_id', 'payment_id');
     }
 
-    public function processPayment(): bool
-    {
-        $this->status = 'PENDING';
-        return $this->save();
-    }
-
-    public function verifyStatus(): bool
-    {
-        return $this->status === 'COMPLETED';
-    }
-
+    // TODO: Create methods processPayment, verifyStatus
 }

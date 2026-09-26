@@ -26,23 +26,7 @@ class Organizer extends AppUser
     // ==========================================
     // Methods from Specification
     // ==========================================
-
-    public function createConcert($details): Concert
-    {
-        // To be implemented
-        return new Concert();
-    }
-
-    public function defineSeatMap($concert, $mapDetails): void
-    {
-        // To be implemented
-    }
-
-    public function viewSalesRealTime($concert)
-    {
-        // To be implemented
-        return [];
-    }
+    // TODO: Create methods createConcert, defineSeatMap, viewSalesRealTime
     
     // ==========================================
     // Relationships

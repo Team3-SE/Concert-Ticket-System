@@ -14,9 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class BookingSeat extends Model
 {
     protected $table = 'booking_seat';
-    protected $primaryKey = null;
     public $incrementing = false;
-    protected $keyType = 'string';
     public $timestamps = false;
 
     protected $fillable = [

@@ -25,10 +25,5 @@ class Staff extends AppUser
     // ==========================================
     // Methods from Specification
     // ==========================================
-
-    public function scanTicketQR($qrCode): bool
-    {
-        // To be implemented
-        return true;
-    }
+    // TODO: Create method scanTicketQR
 }

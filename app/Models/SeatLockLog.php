@@ -14,12 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class SeatLockLog extends Model
 {
-    use HasUlids;
-
     protected $table = 'seat_lock_log';
     protected $primaryKey = 'lock_id';
-    public $incrementing = false;
-    protected $keyType = 'string';
     public $timestamps = false;
 
     protected $fillable = [

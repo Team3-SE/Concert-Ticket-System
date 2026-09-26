@@ -14,9 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class StaffConcert extends Model
 {
     protected $table = 'staff_concert';
-    protected $primaryKey = null;
     public $incrementing = false;
-    protected $keyType = 'string';
     public $timestamps = false;
 
     protected $fillable = ['staff_id', 'concert_id'];

@@ -14,12 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class TicketValidationLog extends Model
 {
-    use HasUlids;
-
     protected $table = 'ticket_validation_log';
     protected $primaryKey = 'validation_id';
-    public $incrementing = false;
-    protected $keyType = 'string';
     public $timestamps = false;
 
     protected $fillable = ['validation_id', 'ticket_id', 'staff_id', 'validation_time', 'result'];
