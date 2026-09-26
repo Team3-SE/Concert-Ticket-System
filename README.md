@@ -30,6 +30,7 @@ cd concert-ticketing-system
 **2. Copy ไฟล์ environment**
 ```bash
 cp .env.example .env
+หรือเปลี่ยนไฟล์ชื่อ .env.example เป็น .env
 ```
 
 **3. รัน Docker**

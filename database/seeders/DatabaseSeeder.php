@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
@@ -17,189 +16,155 @@ class DatabaseSeeder extends Seeder
         $this->truncateNewSchema();
 
         $now = now();
-        $ids = [
-            'company_gmm' => (string) Str::ulid(),
-            'company_bec' => (string) Str::ulid(),
-            'admin' => (string) Str::ulid(),
-            'organizer_gmm' => (string) Str::ulid(),
-            'organizer_bec' => (string) Str::ulid(),
-            'staff_gmm_1' => (string) Str::ulid(),
-            'staff_gmm_2' => (string) Str::ulid(),
-            'staff_bec_1' => (string) Str::ulid(),
-            'customer_1' => (string) Str::ulid(),
-            'customer_2' => (string) Str::ulid(),
-            'customer_3' => (string) Str::ulid(),
-            'concert_rock' => (string) Str::ulid(),
-            'concert_pop' => (string) Str::ulid(),
-        ];
 
-        DB::table('company')->insert([
-            [
-                'company_id' => $ids['company_gmm'],
-                'name' => 'GMM Grammy',
-                'initials' => 'GMM',
-                'description' => 'Thai entertainment company and concert promoter.',
-                'created_at' => $now,
-            ],
-            [
-                'company_id' => $ids['company_bec'],
-                'name' => 'BEC-Tero Entertainment',
-                'initials' => 'BEC',
-                'description' => 'Live event and concert promoter.',
-                'created_at' => $now,
-            ],
+        // Organizations (formerly company)
+        $orgGmmId = DB::table('organization')->insertGetId([
+            'name' => 'GMM Grammy',
+            'initials' => 'GMM',
+            'description' => 'Thai entertainment company and concert promoter.',
+            'created_at' => $now,
         ]);
 
-        DB::table('app_user')->insert([
-            $this->appUser($ids['admin'], 'admin'),
-            $this->appUser($ids['organizer_gmm'], 'organizer'),
-            $this->appUser($ids['organizer_bec'], 'organizer'),
-            $this->appUser($ids['staff_gmm_1'], 'staff'),
-            $this->appUser($ids['staff_gmm_2'], 'staff'),
-            $this->appUser($ids['staff_bec_1'], 'staff'),
-            $this->appUser($ids['customer_1'], 'customer'),
-            $this->appUser($ids['customer_2'], 'customer'),
-            $this->appUser($ids['customer_3'], 'customer'),
+        $orgBecId = DB::table('organization')->insertGetId([
+            'name' => 'BEC-Tero Entertainment',
+            'initials' => 'BEC',
+            'description' => 'Live event and concert promoter.',
+            'created_at' => $now,
         ]);
 
-        DB::table('admin')->insert([
-            'admin_id' => $ids['admin'],
+        // Users
+        $adminId = DB::table('app_user')->insertGetId([
             'email' => 'admin@concert.local',
+            'password_hash' => Hash::make('Password123!'),
+            'role' => 'ADMIN',
+            'account_status' => 1,
             'username' => 'admin',
+            'created_at' => $now,
         ]);
 
-        DB::table('event_organizer')->insert([
-            [
-                'organizer_id' => $ids['organizer_gmm'],
-                'company_id' => $ids['company_gmm'],
-                'email' => 'organizer@gmm.local',
-                'username' => 'gmm-organizer',
-            ],
-            [
-                'organizer_id' => $ids['organizer_bec'],
-                'company_id' => $ids['company_bec'],
-                'email' => 'organizer@bec.local',
-                'username' => 'bec-organizer',
-            ],
+        $orgGmmUserId = DB::table('app_user')->insertGetId([
+            'email' => 'organizer@gmm.local',
+            'password_hash' => Hash::make('Password123!'),
+            'role' => 'ORGANIZER',
+            'account_status' => 1,
+            'username' => 'gmm-organizer',
+            'organization_id' => $orgGmmId,
+            'created_at' => $now,
         ]);
 
-        DB::table('staff')->insert([
-            [
-                'staff_id' => $ids['staff_gmm_1'],
-                'company_id' => $ids['company_gmm'],
-                'created_by_organizer_id' => $ids['organizer_gmm'],
-                'username' => 'gmm-gate-1',
-            ],
-            [
-                'staff_id' => $ids['staff_gmm_2'],
-                'company_id' => $ids['company_gmm'],
-                'created_by_organizer_id' => $ids['organizer_gmm'],
-                'username' => 'gmm-gate-2',
-            ],
-            [
-                'staff_id' => $ids['staff_bec_1'],
-                'company_id' => $ids['company_bec'],
-                'created_by_organizer_id' => $ids['organizer_bec'],
-                'username' => 'bec-gate-1',
-            ],
+        $orgBecUserId = DB::table('app_user')->insertGetId([
+            'email' => 'organizer@bec.local',
+            'password_hash' => Hash::make('Password123!'),
+            'role' => 'ORGANIZER',
+            'account_status' => 1,
+            'username' => 'bec-organizer',
+            'organization_id' => $orgBecId,
+            'created_at' => $now,
         ]);
 
-        DB::table('customer')->insert([
-            [
-                'customer_id' => $ids['customer_1'],
-                'email' => 'customer1@example.com',
-                'phone' => '0812345001',
-                'first_name' => 'Suda',
-                'last_name' => 'Saengdao',
-            ],
-            [
-                'customer_id' => $ids['customer_2'],
-                'email' => 'customer2@example.com',
-                'phone' => '0812345002',
-                'first_name' => 'Wichai',
-                'last_name' => 'Rungrueang',
-            ],
-            [
-                'customer_id' => $ids['customer_3'],
-                'email' => 'customer3@example.com',
-                'phone' => '0812345003',
-                'first_name' => 'Napa',
-                'last_name' => 'Thongdee',
-            ],
+        $staffGmm1Id = DB::table('app_user')->insertGetId([
+            'password_hash' => Hash::make('Password123!'),
+            'role' => 'STAFF',
+            'account_status' => 1,
+            'username' => 'gmm-gate-1',
+            'organization_id' => $orgGmmId,
+            'created_by_user_id' => $orgGmmUserId,
+            'created_at' => $now,
         ]);
 
-        DB::table('concert')->insert([
-            [
-                'concert_id' => $ids['concert_rock'],
-                'company_id' => $ids['company_gmm'],
-                'organizer_id' => $ids['organizer_gmm'],
-                'name' => 'Rock Night 2026',
-                'artist' => 'Bodyslam',
-                'venue' => 'BCC Hall, Bangkok',
-                'event_datetime' => '2026-11-01 18:00:00',
-                'description' => 'A high-energy rock concert in Bangkok.',
-                'poster_path' => 'posters/rock-night-2026.jpg',
-                'seat_map_image_path' => 'seat-maps/rock-night-2026.png',
-                'sale_start_datetime' => '2026-09-15 10:00:00',
-                'sale_end_datetime' => '2026-10-31 23:59:59',
-                'max_ticket_per_order' => 4,
-                'status' => 'ON_SALE',
-                'concert_code' => 'C0024',
-            ],
-            [
-                'concert_id' => $ids['concert_pop'],
-                'company_id' => $ids['company_bec'],
-                'organizer_id' => $ids['organizer_bec'],
-                'name' => 'Pop Star Live 2026',
-                'artist' => 'Bird Thongchai',
-                'venue' => 'Impact Arena, Muang Thong Thani',
-                'event_datetime' => '2026-12-15 19:00:00',
-                'description' => 'A pop concert with reserved and standing zones.',
-                'poster_path' => 'posters/pop-star-live-2026.jpg',
-                'seat_map_image_path' => 'seat-maps/pop-star-live-2026.png',
-                'sale_start_datetime' => '2026-10-01 10:00:00',
-                'sale_end_datetime' => '2026-12-14 23:59:59',
-                'max_ticket_per_order' => 6,
-                'status' => 'SCHEDULED',
-                'concert_code' => 'C0025',
-            ],
+        $staffGmm2Id = DB::table('app_user')->insertGetId([
+            'password_hash' => Hash::make('Password123!'),
+            'role' => 'STAFF',
+            'account_status' => 1,
+            'username' => 'gmm-gate-2',
+            'organization_id' => $orgGmmId,
+            'created_by_user_id' => $orgGmmUserId,
+            'created_at' => $now,
         ]);
 
-        DB::table('concert_contact')->insert([
-            [
-                'contact_id' => (string) Str::ulid(),
-                'concert_id' => $ids['concert_rock'],
-                'contact_type' => 'EMAIL',
-                'value' => 'support@gmm.local',
-            ],
-            [
-                'contact_id' => (string) Str::ulid(),
-                'concert_id' => $ids['concert_pop'],
-                'contact_type' => 'PHONE',
-                'value' => '021234567',
-            ],
+        $staffBec1Id = DB::table('app_user')->insertGetId([
+            'password_hash' => Hash::make('Password123!'),
+            'role' => 'STAFF',
+            'account_status' => 1,
+            'username' => 'bec-gate-1',
+            'organization_id' => $orgBecId,
+            'created_by_user_id' => $orgBecUserId,
+            'created_at' => $now,
         ]);
 
-        $rockVipZone = $this->seedZoneWithSeats($ids['concert_rock'], 'VIP', 'SEATED', 3000, 15, '#F59E0B', 'A', 1, 3, 5);
-        $rockZoneA = $this->seedZoneWithSeats($ids['concert_rock'], 'Zone A', 'SEATED', 1500, 24, '#3B82F6', 'D', 1, 4, 6);
-        $popStandingZone = $this->seedStandingZone($ids['concert_pop'], 'Standing', 1200, 500, '#10B981');
+        $customer1Id = DB::table('app_user')->insertGetId([
+            'email' => 'customer1@example.com',
+            'password_hash' => Hash::make('Password123!'),
+            'role' => 'CUSTOMER',
+            'account_status' => 1,
+            'first_name' => 'Suda',
+            'last_name' => 'Saengdao',
+            'phone' => '0812345001',
+            'created_at' => $now,
+        ]);
+
+        $customer2Id = DB::table('app_user')->insertGetId([
+            'email' => 'customer2@example.com',
+            'password_hash' => Hash::make('Password123!'),
+            'role' => 'CUSTOMER',
+            'account_status' => 1,
+            'first_name' => 'Wichai',
+            'last_name' => 'Rungrueang',
+            'phone' => '0812345002',
+            'created_at' => $now,
+        ]);
+
+        // Concerts
+        $concertRockId = DB::table('concert')->insertGetId([
+            'organization_id' => $orgGmmId,
+            'name' => 'Rock Night 2026',
+            'artist' => 'Bodyslam',
+            'venue' => 'BCC Hall, Bangkok',
+            'event_datetime' => '2026-11-01 18:00:00',
+            'description' => 'A high-energy rock concert in Bangkok.',
+            'poster_path' => 'posters/rock-night-2026.jpg',
+            'seat_map_image_path' => 'seat-maps/rock-night-2026.png',
+            'sale_start_datetime' => '2026-09-15 10:00:00',
+            'sale_end_datetime' => '2026-10-31 23:59:59',
+            'max_ticket_per_order' => 4,
+            'status' => 'ON_SALE',
+            'concert_code' => 'C0024',
+            'created_at' => $now,
+        ]);
+
+        $concertPopId = DB::table('concert')->insertGetId([
+            'organization_id' => $orgBecId,
+            'name' => 'Pop Star Live 2026',
+            'artist' => 'Bird Thongchai',
+            'venue' => 'Impact Arena, Muang Thong Thani',
+            'event_datetime' => '2026-12-15 19:00:00',
+            'description' => 'A pop concert with reserved and standing zones.',
+            'poster_path' => 'posters/pop-star-live-2026.jpg',
+            'seat_map_image_path' => 'seat-maps/pop-star-live-2026.png',
+            'sale_start_datetime' => '2026-10-01 10:00:00',
+            'sale_end_datetime' => '2026-12-14 23:59:59',
+            'max_ticket_per_order' => 6,
+            'status' => 'SCHEDULED',
+            'concert_code' => 'C0025',
+            'created_at' => $now,
+        ]);
+
+        $rockVipZoneId = $this->seedZoneWithSeats($concertRockId, 'VIP', 'SEATED', 3000, 15, '#F59E0B', 'A', 1, 3, 5);
+        $rockZoneAId = $this->seedZoneWithSeats($concertRockId, 'Zone A', 'SEATED', 1500, 24, '#3B82F6', 'D', 1, 4, 6);
+        $popStandingZoneId = $this->seedStandingZone($concertPopId, 'Standing', 1200, 500, '#10B981');
 
         DB::table('staff_concert')->insert([
-            ['staff_id' => $ids['staff_gmm_1'], 'concert_id' => $ids['concert_rock']],
-            ['staff_id' => $ids['staff_gmm_2'], 'concert_id' => $ids['concert_rock']],
-            ['staff_id' => $ids['staff_bec_1'], 'concert_id' => $ids['concert_pop']],
+            ['staff_id' => $staffGmm1Id, 'concert_id' => $concertRockId],
+            ['staff_id' => $staffGmm2Id, 'concert_id' => $concertRockId],
+            ['staff_id' => $staffBec1Id, 'concert_id' => $concertPopId],
         ]);
 
-        $vipSeats = DB::table('seat')->where('zone_id', $rockVipZone)->orderBy('row')->orderBy('number')->take(2)->get();
-        $seatBookingId = (string) Str::ulid();
-        $seatPaymentId = (string) Str::ulid();
-        $seatOrderId = (string) Str::ulid();
-
-        DB::table('booking')->insert([
-            'booking_id' => $seatBookingId,
+        $vipSeats = DB::table('seat')->where('zone_id', $rockVipZoneId)->orderBy('row')->orderBy('number')->take(2)->get();
+        
+        $seatBookingId = DB::table('booking')->insertGetId([
             'booking_code' => $this->makeCode('BKG', 'C024'),
-            'customer_id' => $ids['customer_1'],
-            'concert_id' => $ids['concert_rock'],
+            'customer_id' => $customer1Id,
+            'concert_id' => $concertRockId,
             'booking_date' => $now->copy()->subMinutes(30),
             'total_amount' => 6000,
             'status' => 'CONFIRMED',
@@ -214,208 +179,63 @@ class DatabaseSeeder extends Seeder
                 'seat_label_snapshot' => $seat->row . $seat->number,
                 'unit_price_snapshot' => 3000,
             ]);
-            DB::table('seat')->where('seat_id', $seat->seat_id)->update(['status' => 'BOOKED']);
+            DB::table('seat')->where('seat_id', $seat->seat_id)->update(['seat_booking_status' => 'SOLD']);
         }
 
         $this->seedPaymentOrderAndTickets(
-            $seatPaymentId,
-            $seatOrderId,
             $seatBookingId,
-            $ids['concert_rock'],
-            $rockVipZone,
+            $concertRockId,
+            $rockVipZoneId,
             $vipSeats->pluck('seat_id')->all(),
             6000,
-            'C024',
+            'C024'
         );
 
-        $standingBookingId = (string) Str::ulid();
-        $standingPaymentId = (string) Str::ulid();
-        $standingOrderId = (string) Str::ulid();
-
-        DB::table('booking')->insert([
-            'booking_id' => $standingBookingId,
-            'booking_code' => $this->makeCode('BKG', 'C025'),
-            'customer_id' => $ids['customer_2'],
-            'concert_id' => $ids['concert_pop'],
-            'booking_date' => $now->copy()->subMinutes(45),
-            'total_amount' => 3600,
-            'status' => 'CONFIRMED',
-            'expiry_time' => $now->copy()->subMinutes(35),
-        ]);
-
-        DB::table('booking_standing_item')->insert([
-            'booking_id' => $standingBookingId,
-            'zone_id' => $popStandingZone,
-            'quantity' => 3,
-            'zone_name_snapshot' => 'Standing',
-            'unit_price_snapshot' => 1200,
-        ]);
-
-        $this->seedPaymentOrderAndTickets(
-            $standingPaymentId,
-            $standingOrderId,
-            $standingBookingId,
-            $ids['concert_pop'],
-            $popStandingZone,
-            [null, null, null],
-            3600,
-            'C025',
-        );
-
-        DB::table('seat_lock_log')->insert([
-            'lock_id' => (string) Str::ulid(),
-            'booking_id' => $seatBookingId,
-            'seat_id' => $vipSeats[0]->seat_id,
-            'locked_at' => $now->copy()->subMinutes(40),
-            'expired_at' => $now->copy()->subMinutes(30),
-            'released_at' => $now->copy()->subMinutes(29),
-            'status' => 'RELEASED',
-        ]);
-
-        DB::table('ticket_validation_log')->insert([
-            'validation_id' => (string) Str::ulid(),
-            'ticket_id' => DB::table('ticket')->where('order_id', $seatOrderId)->value('ticket_id'),
-            'staff_id' => $ids['staff_gmm_1'],
-            'validation_time' => $now->copy()->subMinutes(5),
-            'result' => true,
-        ]);
-
-        $anomalyId = (string) Str::ulid();
-        DB::table('system_anomaly')->insert([
-            'anomaly_id' => $anomalyId,
-            'anomaly_code' => $this->makeCode('ERR', 'C025'),
-            'booking_id' => $standingBookingId,
-            'reviewed_by_admin_id' => $ids['admin'],
-            'type' => 'PAYMENT_FRAUD_CARD_TESTING',
-            'message' => 'Multiple standing tickets purchased from a watched payment fingerprint.',
-            'timestamp' => $now->copy()->subMinutes(10),
-            'status' => 'INVESTIGATING',
-            'resolve_reason' => null,
-        ]);
-
-        DB::table('anomaly_attachment')->insert([
-            'attachment_id' => (string) Str::ulid(),
-            'anomaly_id' => $anomalyId,
-            'file_path' => 'anomaly-attachments/payment-risk-sample.json',
-        ]);
-
-        DB::table('audit_log')->insert([
-            [
-                'log_id' => (string) Str::ulid(),
-                'user_id' => $ids['customer_1'],
-                'action' => 'booking_confirmed',
-                'timestamp' => $now->copy()->subMinutes(25),
-                'ip_address' => '127.0.0.1',
-            ],
-            [
-                'log_id' => (string) Str::ulid(),
-                'user_id' => $ids['admin'],
-                'action' => 'anomaly_review_started',
-                'timestamp' => $now->copy()->subMinutes(8),
-                'ip_address' => '127.0.0.1',
-            ],
-        ]);
-
-        $this->command->info('Seeded the new ERD schema.');
+        $this->command->info('Seeded the v3.1.0 SQL schema successfully.');
     }
 
     private function truncateNewSchema(): void
     {
-        $driver = DB::getDriverName();
-
-        if ($driver === 'mysql') {
-            DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        } elseif ($driver === 'sqlite') {
-            DB::statement('PRAGMA foreign_keys = OFF');
-        }
-
-        foreach ([
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        $tables = [
+            'ticket_validation_log',
+            'ticket',
+            'staff_concert',
+            'seat_lock_log',
+            'customer_order',
+            'payment',
+            'booking_seat',
+            'seat',
+            'zone_seat_pattern',
+            'naming_template',
+            'zone',
             'audit_log',
             'anomaly_attachment',
             'system_anomaly',
-            'seat_lock_log',
-            'ticket_validation_log',
-            'staff_concert',
-            'ticket',
-            'customer_order',
-            'chargeback',
-            'payment',
-            'booking_standing_item',
-            'booking_seat',
             'booking',
-            'seat',
-            'zone_seat_pattern',
-            'zone',
-            'concert_contact',
             'concert',
-            'admin',
-            'staff',
-            'event_organizer',
-            'customer',
             'app_user',
-            'company',
-        ] as $table) {
-            if (! Schema::hasTable($table)) {
-                continue;
-            }
+            'organization',
+        ];
 
-            if ($driver === 'sqlite') {
-                DB::table($table)->delete();
-            } else {
+        foreach ($tables as $table) {
+            if (Schema::hasTable($table)) {
                 DB::table($table)->truncate();
             }
         }
-
-        if ($driver === 'mysql') {
-            DB::statement('SET FOREIGN_KEY_CHECKS=1');
-        } elseif ($driver === 'sqlite') {
-            DB::statement('PRAGMA foreign_keys = ON');
-        }
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
 
-    private function appUser(string $userId, string $role): array
+    private function seedZoneWithSeats(int $concertId, string $name, string $zoneType, float $price, int $capacity, string $color, string $startRow, int $startSeatNumber, int $rowCount, int $seatsPerRow): int
     {
-        return [
-            'user_id' => $userId,
-            'password_hash' => Hash::make('Password123!'),
-            'role' => strtoupper($role),
-            'account_status' => 'ACTIVE',
-            'created_at' => now(),
-        ];
-    }
-
-    private function seedZoneWithSeats(
-        string $concertId,
-        string $name,
-        string $zoneType,
-        float $price,
-        int $capacity,
-        string $color,
-        string $startRow,
-        int $startSeatNumber,
-        int $rowCount,
-        int $seatsPerRow
-    ): string {
-        $zoneId = (string) Str::ulid();
-
-        DB::table('zone')->insert([
-            'zone_id' => $zoneId,
+        $zoneId = DB::table('zone')->insertGetId([
             'concert_id' => $concertId,
             'name' => $name,
             'zone_type' => $zoneType,
             'price' => $price,
             'capacity' => $capacity,
             'color' => $color,
-        ]);
-
-        DB::table('zone_seat_pattern')->insert([
-            'pattern_id' => (string) Str::ulid(),
-            'zone_id' => $zoneId,
-            'pattern_type' => 'grid',
-            'start_row' => $startRow,
-            'start_seat_number' => $startSeatNumber,
-            'row_count' => $rowCount,
-            'seats_per_row' => $seatsPerRow,
+            'created_at' => now(),
         ]);
 
         $seats = [];
@@ -423,11 +243,11 @@ class DatabaseSeeder extends Seeder
             $row = chr(ord($startRow) + $rowOffset);
             for ($seatNumber = $startSeatNumber; $seatNumber < $startSeatNumber + $seatsPerRow; $seatNumber++) {
                 $seats[] = [
-                    'seat_id' => (string) Str::ulid(),
                     'zone_id' => $zoneId,
                     'row' => $row,
                     'number' => $seatNumber,
-                    'status' => 'AVAILABLE',
+                    'seat_booking_status' => 'AVAILABLE',
+                    'seat_status' => 'NORMAL',
                 ];
             }
         }
@@ -437,75 +257,60 @@ class DatabaseSeeder extends Seeder
         return $zoneId;
     }
 
-    private function seedStandingZone(string $concertId, string $name, float $price, int $capacity, string $color): string
+    private function seedStandingZone(int $concertId, string $name, float $price, int $capacity, string $color): int
     {
-        $zoneId = (string) Str::ulid();
-
-        DB::table('zone')->insert([
-            'zone_id' => $zoneId,
+        return DB::table('zone')->insertGetId([
             'concert_id' => $concertId,
             'name' => $name,
             'zone_type' => 'STANDING',
             'price' => $price,
             'capacity' => $capacity,
             'color' => $color,
+            'created_at' => now(),
         ]);
-
-        return $zoneId;
     }
 
-    private function seedPaymentOrderAndTickets(
-        string $paymentId,
-        string $orderId,
-        string $bookingId,
-        string $concertId,
-        string $zoneId,
-        array $seatIds,
-        float $amount,
-        string $concertCode
-    ): void {
+    private function seedPaymentOrderAndTickets(int $bookingId, int $concertId, int $zoneId, array $seatIds, float $amount, string $concertCode): void
+    {
         $concert = DB::table('concert')->where('concert_id', $concertId)->first();
+        $org = DB::table('organization')->where('organization_id', $concert->organization_id)->first();
         $zone = DB::table('zone')->where('zone_id', $zoneId)->first();
+        $booking = DB::table('booking')->where('booking_id', $bookingId)->first();
+        $customer = DB::table('app_user')->where('user_id', $booking->customer_id)->first();
         $unitPrice = $zone ? (float) $zone->price : 0;
 
-        DB::table('payment')->insert([
-            'payment_id' => $paymentId,
+        $paymentId = DB::table('payment')->insertGetId([
             'booking_id' => $bookingId,
             'amount' => $amount,
             'method' => 'CREDIT_CARD',
             'status' => 'COMPLETED',
-            'payment_date' => now()->subMinutes(20),
             'provider_transaction_id' => 'ch_' . strtolower(Str::random(24)),
-            'decline_code' => null,
-            'risk_level' => 'LOW',
-            'card_fingerprint' => strtolower(Str::random(32)),
         ]);
 
-        DB::table('customer_order')->insert([
-            'order_id' => $orderId,
+        $orderId = DB::table('customer_order')->insertGetId([
             'order_code' => $this->makeCode('ORD', $concertCode),
             'booking_id' => $bookingId,
             'payment_id' => $paymentId,
-            'order_date' => now()->subMinutes(18),
             'concert_name_snapshot' => $concert->name,
             'artist_snapshot' => $concert->artist,
             'venue_snapshot' => $concert->venue,
             'event_datetime_snapshot' => $concert->event_datetime,
+            'organization_name_snapshot' => $org->name,
+            'customer_fiestname_snapshot' => $customer->first_name,
+            'customer_lastname_snapshot' => $customer->last_name,
+            'customer_phone_snapshot' => $customer->phone,
         ]);
 
         foreach ($seatIds as $seatId) {
-            $ticketId = (string) Str::ulid();
             $seat = $seatId ? DB::table('seat')->where('seat_id', $seatId)->first() : null;
 
             DB::table('ticket')->insert([
-                'ticket_id' => $ticketId,
                 'ticket_code' => $this->makeCode('TKT', $concertCode),
                 'order_id' => $orderId,
-                'concert_id' => $concertId,
                 'zone_id' => $zoneId,
                 'seat_id' => $seatId,
-                'qr_code' => hash('sha256', $ticketId . $orderId . config('app.key', 'dev-key')),
-                'is_used' => false,
+                'qr_code' => hash('sha256', uniqid() . $orderId . config('app.key', 'dev-key')),
+                'is_used' => 0,
                 'zone_name_snapshot' => $zone->name,
                 'seat_label_snapshot' => $seat ? $seat->row . $seat->number : null,
                 'unit_price_snapshot' => $unitPrice,

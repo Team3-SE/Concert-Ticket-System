@@ -2,64 +2,70 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Customer
- * manage Customer entity and its relationships
- * Author : AI Agent
- * Created : 28/08/2026
+ * Customer Entity (Subtype of AppUser)
  */
-class Customer extends Model
+class Customer extends AppUser
 {
-    // ไม่ใช้ HasUlids เพราะ customer_id = app_user.user_id (รับมาจากภายนอก ไม่ auto-generate)
-
-    protected $table = 'customer';
-    protected $primaryKey = 'customer_id';
-    public $incrementing = false;
-    protected $keyType = 'string';
-    public $timestamps = false;
-
-    protected $fillable = [
-        'customer_id',
-        'email',
-        'phone',
-        'first_name',
-        'last_name',
-    ];
-
-    public function searchConcert(string $keyword): Builder
+    protected static function boot()
     {
-        return Concert::query()
-            ->where('name', 'like', "%{$keyword}%")
-            ->orWhere('artist', 'like', "%{$keyword}%")
-            ->orWhere('venue', 'like', "%{$keyword}%");
+        parent::boot();
+
+        // Global scope to only fetch CUSTOMER roles
+        static::addGlobalScope('role', function (Builder $builder) {
+            $builder->where('role', self::ROLE_CUSTOMER);
+        });
+
+        // Auto-assign role when creating a new Customer
+        static::creating(function ($model) {
+            $model->role = self::ROLE_CUSTOMER;
+        });
     }
+
+    // ==========================================
+    // Methods from Specification
+    // ==========================================
 
     public function register(): void
     {
         $this->save();
     }
 
-    // ─── Relationships ───────────────────────────────────────
-
-    /**
-     * Customer belongs to AppUser (supertype)
-     * customer_id references app_user.user_id
-     */
-    public function appUser(): BelongsTo
+    public function searchConcert(string $keyword)
     {
-        return $this->belongsTo(AppUser::class, 'customer_id', 'user_id');
+        return Concert::query()
+            ->where('name', 'like', "%{$keyword}%")
+            ->orWhere('artist', 'like', "%{$keyword}%")
+            ->orWhere('venue', 'like', "%{$keyword}%")
+            ->get();
     }
 
-    /**
-     * Customer has many Bookings
-     */
+    public function createBooking($concert, $seats, $standingItems): Booking
+    {
+        // To be implemented in controller/service
+        return new Booking();
+    }
+
+    public function viewHistory()
+    {
+        return $this->bookings()->get();
+    }
+
+    public function viewTickets()
+    {
+        // To be implemented via CustomerOrder -> Ticket
+        return [];
+    }
+
+    // ==========================================
+    // Relationships
+    // ==========================================
+
     public function bookings(): HasMany
     {
-        return $this->hasMany(Booking::class, 'customer_id', 'customer_id');
+        return $this->hasMany(Booking::class, 'customer_id', 'user_id');
     }
 }

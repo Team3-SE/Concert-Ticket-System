@@ -1,0 +1,18 @@
+Class Design Specification
+Concert Ticketing System
+Interface - Controller - Entity Specification
+ฉบับ v3.1.0
+1. Interface / Boundary - Methods
+2. Controller - Methods
+3. Entity - Methods
+4. Enumerations
+ 
+ 
+5. Class Relationship Specification
+หมายเหตุ: ฉบับ v2.2.0 ปรับ Class ให้สอดคล้องกับ SQL Schema concert_ticketing (MySQL Workbench Forward Engineering, 24 ก.ย. 2026) โดยรวมข้อมูลตาม Role ไว้ใน APP_USER เดียวกัน, ย้ายช่องทางติดต่อไปอยู่ใน Organization, เพิ่ม address/isDeleted ใน Concert, เปลี่ยน BookingStandingItem เป็น BookingStandingTicket ที่ผูกกับ CustomerOrder, เพิ่ม NamingTemplate/customItems/customItems, ปรับ Seat เป็น seatType/bookingStatus, ปรับ Payment ให้เก็บข้อมูลความเสี่ยงใน paymentMetadata, และยกเลิก Chargeback, ConcertContact, cooldownExpiryTime, bookingCode และ isSuspended เนื่องจาก SQL ไม่มีตาราง/คอลัมน์ดังกล่าว
+หมายเหตุการแก้ไขล่าสุด: เปลี่ยน Enumeration SeatStatus เป็น SeatBookingStatus ให้ตรงกับ Seat.bookingStatus (seat.booking_status), เพิ่ม AuditAction สำหรับ AuditLog.action (audit_log.action เป็น INT), เพิ่มคอลัมน์ระบุ Entity.Attribute ที่ใช้ Enumeration แต่ละตัว, ลบ generateTickets() ออกจาก CustomerOrder ให้ TicketController.generateTickets() เป็นจุดควบคุมเดียว, เปลี่ยน TicketScannerInterface.checkTicketCode() เป็น validateTicketCode() ให้ตรงกับ TicketValidationController, และตัด RiskLevel/riskLevel ออกจาก Payment (paymentMetadata) รวมถึงคำอธิบาย Method ที่เกี่ยวข้อง. ข้อสังเกตเกี่ยวกับ SQL: คอลัมน์ customer_order.customer_fiestname_snapshot สะกดผิด เอกสารนี้ใช้ customerFirstNameSnapshot (ถูกต้อง) จึงควรแก้ชื่อคอลัมน์ใน SQL เป็น customer_firstname_snapshot ก่อนนำไป Map กับ Entity
+ 
+ 
+ 
+ 
+

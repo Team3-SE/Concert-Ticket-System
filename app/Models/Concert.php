@@ -91,7 +91,7 @@ class Concert extends Model
 
     public function organizer(): BelongsTo
     {
-        return $this->belongsTo(EventOrganizer::class, 'organizer_id', 'organizer_id');
+        return $this->belongsTo(Organizer::class, 'organizer_id', 'user_id');
     }
 
     public function contacts(): HasMany

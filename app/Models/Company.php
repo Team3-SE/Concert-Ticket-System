@@ -28,7 +28,7 @@ class Company extends Model
 
     public function organizers(): HasMany
     {
-        return $this->hasMany(EventOrganizer::class, 'company_id', 'company_id');
+        return $this->hasMany(Organizer::class, 'company_id', 'company_id');
     }
 
     public function staff(): HasMany
