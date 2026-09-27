@@ -7,41 +7,37 @@ use Illuminate\Http\Request;
 
 /**
  * HomeController
- * handle rendering of the public home page
+ * ใช้ ConcertController เป็น dependency แทนการ query ตรง
  * Author : AI Agent
- * Created : 31/08/2026
+ * Updated : 27/09/2026 – fixed to use organization relationship instead of company
  */
 class HomeController extends Controller
 {
+    protected ConcertController $concertController;
+
+    public function __construct(ConcertController $concertController)
+    {
+        $this->concertController = $concertController;
+    }
+
     /**
      * index()
-     * display the home page with concerts from the database.
-     * param : none
-     * return : \Illuminate\View\View
+     * แสดงหน้า Home พร้อมรายการ Concert (ใช้ ConcertController.getConcertList / searchConcert)
      */
     public function index(Request $request)
     {
         $search = trim((string) $request->query('search', ''));
 
-        // ค้นหาจากชื่อคอนเสิร์ต ศิลปิน หรือองค์กรเจ้าของคอนเสิร์ต
-        $concertQuery = Concert::query()
-            ->with('company')
-            ->orderBy('sale_start_datetime', 'asc');
-
         if ($search !== '') {
-            $concertQuery->where(function ($query) use ($search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('artist', 'like', "%{$search}%")
-                    ->orWhereHas('company', function ($companyQuery) use ($search) {
-                        $companyQuery->where('name', 'like', "%{$search}%");
-                    });
-            });
+            $concerts = $this->concertController->searchConcert($search)->take(12);
+        } else {
+            $concerts = $this->concertController->getConcertList()->take(12);
         }
 
-        $concerts = $concertQuery->limit(12)->get();
-
-        // ดึงคอนเสิร์ต highlight สำหรับ hero banner (ล่าสุด 3 รายการ)
-        $highlights = Concert::orderBy('name', 'desc')->limit(5)->get();
+        $highlights = Concert::where('is_deleted', 0)
+            ->orderBy('event_datetime', 'asc')
+            ->limit(5)
+            ->get();
 
         return view('home', compact('concerts', 'highlights', 'search'));
     }

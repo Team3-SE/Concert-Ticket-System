@@ -5,21 +5,30 @@ namespace App\Http\Controllers;
 use App\Models\CustomerOrder;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * OrderController
+ * Routes Order history (E-Ticket) – delegates to TicketController.getTickets()
+ * Author : AI Agent
+ * Updated : 27/09/2026 – fixed customer_id lookup to use user_id directly
+ */
 class OrderController extends Controller
 {
+    /**
+     * history() – displayBookingHistory(): void
+     * แสดงประวัติ Booking / Order ของ Customer
+     */
     public function history()
     {
-        $customer = Auth::user()->customer;
+        $userId = Auth::id();
 
-        $orders = CustomerOrder::whereHas('booking', function ($query) use ($customer) {
-                $query->where('customer_id', $customer->customer_id);
-            })
-            ->with([
+        $orders = CustomerOrder::with([
                 'booking.concert',
                 'booking.bookingSeats',
-                'tickets',
+                'tickets.zone',
+                'tickets.seat',
                 'payment',
             ])
+            ->whereHas('booking', fn($q) => $q->where('customer_id', $userId))
             ->orderBy('order_date', 'desc')
             ->paginate(10);
 
