@@ -21,48 +21,49 @@
 
 ### ขั้นตอน Setup (ทำครั้งแรกครั้งเดียว)
 
-**1. Clone repo (ถ้ายังไม่ได้ clone)**
-```bash
-git clone <repo-url>
-cd concert-ticketing-system
-```
 
-**2. Copy ไฟล์ environment**
+**1. Copy ไฟล์ environment**
 ```bash
 cp .env.example .env
 หรือเปลี่ยนไฟล์ชื่อ .env.example เป็น .env
 ```
 
-**3. รัน Docker**
+**2. รัน Docker**
 ```bash
 docker-compose up -d
 ```
 > รอซักครู่ให้ MySQL และ Redis ขึ้นก่อน (healthcheck จะดูแลให้อัตโนมัติ)
 
-**4. ติดตั้ง PHP dependencies**
+**3. ติดตั้ง PHP dependencies**
 ```bash
 docker exec concert_app composer install
 ```
 
-**5. Generate App Key**
+**4. Generate App Key**
 ```bash
 docker exec concert_app php artisan key:generate
 ```
 
-**6. Run Migrations + Seeders**
+**5. Run Migrations + Seeders**
 ```bash
 docker exec concert_app php artisan migrate --seed
 ```
 
-**7. Fix storage permissions**
+**6. Fix storage permissions**
 ```bash
 docker exec concert_app php artisan storage:link
 docker exec concert_app chmod -R 775 storage bootstrap/cache
 ```
 
 **เสร็จแล้ว!** เปิดเบราว์เซอร์ไปที่ http://localhost:8080
-
+**สำหรับคนทำmodel** เปิดเบราว์เซอร์ไปที่ http://localhost:8080/dev/models
 ---
+### (ด้านล่างลงไปเป็นข้อมูลเพิ่มเติม ไม่เกี่ยวกับsetup ไปโค้ดกันได้เลยจ่ะ)
+
+
+
+
+
 
 ### คำสั่งที่ใช้บ่อย
 

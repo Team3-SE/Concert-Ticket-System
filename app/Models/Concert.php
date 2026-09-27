@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -12,23 +11,23 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * manage Concert entity and its relationships
  * Author : AI Agent
  * Created : 30/08/2026
+ * Updated : 27/09/2026 – fixed organization FK, renamed getDetails()
  */
 class Concert extends Model
 {
-    use HasUlids;
-
     protected $table = 'concert';
     protected $primaryKey = 'concert_id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing = true;
+    protected $keyType = 'int';
     public $timestamps = false;
 
     protected $fillable = [
-        'company_id',
-        'organizer_id',
+        'organization_id',
         'concert_code',
         'name',
         'artist',
+        'venue',
+        'address',
         'event_datetime',
         'description',
         'poster_path',
@@ -38,65 +37,40 @@ class Concert extends Model
         'sale_end_datetime',
         'max_ticket_per_order',
         'status',
-        'venue',
+        'is_deleted',
+        'created_at',
+        'updated_at',
     ];
 
     protected $casts = [
-        'event_datetime' => 'datetime',
+        'event_datetime'      => 'datetime',
         'sale_start_datetime' => 'datetime',
-        'sale_end_datetime' => 'datetime',
-        'max_ticket_per_order' => 'integer',
+        'sale_end_datetime'   => 'datetime',
+        'max_ticket_per_order'=> 'integer',
+        'is_deleted'          => 'boolean',
     ];
 
-    /**
-     * getMockConcerts()
-     * Return mock data for testing the model tester UI.
-     * param : none
-     * return : Array
-     */
-    public static function getMockConcerts()
-    {
-        return [
-            [
-                'concert_id' => 'c1-123',
-                'name' => 'Mock Concert 2026',
-                'artist' => 'The Mockers',
-                'event_datetime' => '2026-12-31 20:00:00',
-                'venue' => 'Mock Arena'
-            ],
-            [
-                'concert_id' => 'c1-124',
-                'name' => 'Symphony of Mocks',
-                'artist' => 'Orchestra',
-                'event_datetime' => '2027-01-15 19:00:00',
-                'venue' => 'Grand Hall'
-            ]
-        ];
-    }
+    // ==========================================
+    // Methods from Specification
+    // ==========================================
 
     /**
-     * getConcertInfo()
-     * Return formatted info for a specific instance.
-     * param : none
-     * return : String
+     * getDetails(): ConcertInfo
+     * ดึงรายละเอียดของ Concert รวม concertCode, ศิลปิน, สถานที่, วันเวลา,
+     * ช่วงเวลาขายบัตร, สถานะ และข้อมูลสื่อ
      */
-    public function getConcertInfo()
+    public function getDetails(): string
     {
-        return "{$this->name} by {$this->artist} at {$this->venue} on {$this->event_datetime}";
-    }
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class, 'company_id', 'company_id');
+        return "{$this->name} (code: {$this->concert_code}) by {$this->artist} at {$this->venue}, {$this->address} on {$this->event_datetime} | status: {$this->status}";
     }
 
-    public function organizer(): BelongsTo
-    {
-        return $this->belongsTo(Organizer::class, 'organizer_id', 'user_id');
-    }
+    // ==========================================
+    // Relationships
+    // ==========================================
 
-    public function contacts(): HasMany
+    public function organization(): BelongsTo
     {
-        return $this->hasMany(ConcertContact::class, 'concert_id', 'concert_id');
+        return $this->belongsTo(Organization::class, 'organization_id', 'organization_id');
     }
 
     public function zones(): HasMany
@@ -111,7 +85,7 @@ class Concert extends Model
 
     public function tickets(): HasMany
     {
-        return $this->hasMany(Ticket::class, 'concert_id', 'concert_id');
+        return $this->hasMany(Ticket::class, 'zone_id', 'concert_id');
     }
 
     public function staffConcerts(): HasMany

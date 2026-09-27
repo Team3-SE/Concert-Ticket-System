@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Hash;
 /**
  * AppUser
  * manage AppUser entity and its relationships (Supertype)
+ * Updated : 27/09/2026 – STATUS_SUSPENDED renamed to STATUS_BANNED per spec v3.2.0,
+ *                        organization relationship points to Organization model
  */
 class AppUser extends Authenticatable
 {
@@ -23,14 +25,14 @@ class AppUser extends Authenticatable
     public $timestamps = false;
 
     // Role Enumerations
-    public const ROLE_CUSTOMER = 'CUSTOMER';
+    public const ROLE_CUSTOMER  = 'CUSTOMER';
     public const ROLE_ORGANIZER = 'ORGANIZER';
-    public const ROLE_STAFF = 'STAFF';
-    public const ROLE_ADMIN = 'ADMIN';
+    public const ROLE_STAFF     = 'STAFF';
+    public const ROLE_ADMIN     = 'ADMIN';
 
-    // Account Status Enumerations
+    // Account Status Enumerations (v3.2.0: BANNED instead of SUSPENDED)
     public const STATUS_ACTIVE = 'ACTIVE';
-    public const STATUS_SUSPENDED = 'SUSPENDED';
+    public const STATUS_BANNED = 'BANNED';
 
     protected $fillable = [
         'email',
@@ -81,6 +83,14 @@ class AppUser extends Authenticatable
         return 'password_hash';
     }
 
+    // ==========================================
+    // Methods from Specification
+    // ==========================================
+
+    /**
+     * login(): Boolean
+     * ตรวจสอบข้อมูลเข้าสู่ระบบและ accountStatus ก่อนอนุญาตให้เข้าใช้งาน
+     */
     public function login(?string $password = null): bool
     {
         if (!$this->isActive()) {
@@ -95,6 +105,10 @@ class AppUser extends Authenticatable
         return true;
     }
 
+    /**
+     * logout(): void
+     * ออกจากระบบและยกเลิก Session หรือ Token ที่ใช้งานอยู่
+     */
     public function logout(): void
     {
         Auth::logout();
@@ -108,14 +122,19 @@ class AppUser extends Authenticatable
     // Relationships
     // ==========================================
 
-    public function auditLogs(): HasMany
-    {
-        return $this->hasMany(AuditLog::class, 'user_id', 'user_id');
-    }
-
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class, 'organization_id', 'organization_id');
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(AppUser::class, 'created_by_user_id', 'user_id');
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(AuditLog::class, 'user_id', 'user_id');
     }
 
     // ==========================================
@@ -127,9 +146,15 @@ class AppUser extends Authenticatable
         return strtoupper((string) $this->account_status) === self::STATUS_ACTIVE;
     }
 
+    /** @deprecated use isBanned() – renamed per spec v3.2.0 */
     public function isSuspended(): bool
     {
-        return strtoupper((string) $this->account_status) === self::STATUS_SUSPENDED;
+        return $this->isBanned();
+    }
+
+    public function isBanned(): bool
+    {
+        return strtoupper((string) $this->account_status) === self::STATUS_BANNED;
     }
 
     public function isCustomer(): bool

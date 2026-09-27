@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -13,31 +12,83 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * manage Booking entity and its relationships
  * Author : AI Agent
  * Created : 28/08/2026
+ * Updated : 27/09/2026 – fixed customer FK, removed deprecated BookingStandingItem
  */
 class Booking extends Model
 {
-    use HasUlids;
-
     protected $table = 'booking';
     protected $primaryKey = 'booking_id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing = true;
+    protected $keyType = 'int';
     public $timestamps = false;
 
     protected $fillable = [
-        'booking_id', 'booking_code', 'customer_id', 'concert_id',
-        'booking_date', 'total_amount', 'status', 'expiry_time',
+        'booking_code',
+        'customer_id',
+        'concert_id',
+        'booking_date',
+        'total_amount',
+        'status',
+        'expiry_time',
+        'updated_at',
     ];
 
     protected $casts = [
         'booking_date' => 'datetime',
-        'expiry_time' => 'datetime',
+        'expiry_time'  => 'datetime',
+        'updated_at'   => 'datetime',
         'total_amount' => 'decimal:2',
     ];
 
+    // ==========================================
+    // Methods from Specification
+    // ==========================================
+
+    /**
+     * calculateTotal(): Double
+     * คำนวณยอดรวมของ Booking จาก unit_price_snapshot ของ BookingSeat
+     */
+    public function calculateTotal(): float
+    {
+        return (float) $this->bookingSeats()->sum('unit_price_snapshot');
+    }
+
+    /**
+     * confirmBooking(): void
+     * ยืนยัน Booking หลังการชำระเงินสำเร็จและเปลี่ยนสถานะเป็น CONFIRMED
+     */
+    public function confirmBooking(): void
+    {
+        $this->update(['status' => 'CONFIRMED']);
+    }
+
+    /**
+     * cancelBooking(): void
+     * ยกเลิก Booking และเปลี่ยนสถานะเป็น CANCELLED
+     */
+    public function cancelBooking(): void
+    {
+        $this->update(['status' => 'CANCELLED']);
+    }
+
+    /**
+     * checkExpiry(): Boolean
+     * ตรวจสอบว่า Booking ที่รอชำระเงินเกิน expiryTime และหมดอายุแล้วหรือไม่
+     */
+    public function checkExpiry(): bool
+    {
+        return $this->status === 'PENDING_PAYMENT'
+            && $this->expiry_time !== null
+            && $this->expiry_time->isPast();
+    }
+
+    // ==========================================
+    // Relationships
+    // ==========================================
+
     public function customer(): BelongsTo
     {
-        return $this->belongsTo(Customer::class, 'customer_id', 'customer_id');
+        return $this->belongsTo(AppUser::class, 'customer_id', 'user_id');
     }
 
     public function concert(): BelongsTo
@@ -50,14 +101,9 @@ class Booking extends Model
         return $this->hasMany(BookingSeat::class, 'booking_id', 'booking_id');
     }
 
-    public function standingItems(): HasMany
+    public function payments(): HasMany
     {
-        return $this->hasMany(BookingStandingItem::class, 'booking_id', 'booking_id');
-    }
-
-    public function payment(): HasOne
-    {
-        return $this->hasOne(Payment::class, 'booking_id', 'booking_id');
+        return $this->hasMany(Payment::class, 'booking_id', 'booking_id');
     }
 
     public function customerOrder(): HasOne
@@ -74,29 +120,4 @@ class Booking extends Model
     {
         return $this->hasMany(SystemAnomaly::class, 'booking_id', 'booking_id');
     }
-
-    public function calculateTotal(): float
-    {
-        return (float) $this->bookingSeats->sum('unit_price_snapshot')
-            + (float) $this->standingItems->sum(function (BookingStandingItem $item) {
-                return $item->quantity * $item->unit_price_snapshot;
-            });
-    }
-
-    public function confirmBooking(): void
-    {
-        $this->update(['status' => 'CONFIRMED']);
-    }
-
-    public function cancelBooking(): void
-    {
-        $this->update(['status' => 'CANCELLED']);
-    }
-
-    public function checkExpiry(): bool
-    {
-        return $this->status === 'PENDING_PAYMENT' && $this->expiry_time !== null
-            && $this->expiry_time->isPast();
-    }
-
 }

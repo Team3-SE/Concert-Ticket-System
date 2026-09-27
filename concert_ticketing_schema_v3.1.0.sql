@@ -265,7 +265,7 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`zone_seat_pattern` (
   `row_start` INT NOT NULL DEFAULT '1',
   `row_end` INT NOT NULL DEFAULT '1',
   `prefix` VARCHAR(50) NULL DEFAULT NULL COMMENT 'used by prefix_auto_alpha only',
-  `source_template_id` INT NOT NULL,
+  `source_template_id` INT NULL,
   `custom_items` JSON NULL,
   PRIMARY KEY (`pattern_id`),
   INDEX `idx_pattern_zone` (`zone_id` ASC) VISIBLE,

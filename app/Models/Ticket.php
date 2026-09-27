@@ -3,7 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 /**
@@ -11,69 +12,95 @@ use Illuminate\Support\Str;
  * manage Ticket entity and its relationships
  * Author : AI Agent
  * Created : 28/08/2026
+ * Updated : 27/09/2026 – fixed incrementing/keyType, fixed validateTicket, added relationships
  */
 class Ticket extends Model
 {
-    use HasUlids;
-
     protected $table = 'ticket';
     protected $primaryKey = 'ticket_id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing = true;
+    protected $keyType = 'int';
     public $timestamps = false;
 
     protected $fillable = [
         'order_id',
-        'concert_id',
         'zone_id',
         'seat_id',
         'qr_code',
         'is_used',
         'ticket_code',
+        'quantity',
         'zone_name_snapshot',
         'seat_label_snapshot',
         'unit_price_snapshot',
+        'created_at',
+        'updated_at',
     ];
 
+    protected $casts = [
+        'is_used'            => 'boolean',
+        'quantity'           => 'integer',
+        'unit_price_snapshot'=> 'decimal:2',
+        'created_at'         => 'datetime',
+        'updated_at'         => 'datetime',
+    ];
+
+    // ==========================================
+    // Methods from Specification
+    // ==========================================
+
     /**
-     * generateQR()
-     * Generate a unique QR code value for this Ticket and persist it.
-     * param : none
-     * return : String
+     * generateQR(): String
+     * สร้าง QR Code เฉพาะสำหรับ Ticket
+     * ticketCode ใช้แสดง/ค้นหาใน UI แยกจาก qrCode
      */
-    public function generateQR()
+    public function generateQR(): string
     {
-        $this->qr_code = (string) Str::uuid();
+        $this->qr_code = hash('sha256', $this->ticket_id . $this->ticket_code . now()->timestamp);
         $this->save();
 
         return $this->qr_code;
     }
 
     /**
-     * validateTicket()
-     * Check that the Ticket is valid, matches its Concert, and can still be used to enter the event.
-     * param : none
-     * return : Boolean
+     * validateTicket(): Boolean
+     * ตรวจสอบว่า Ticket ถูกต้อง ตรงกับ Concert (ผ่าน Zone) และยังไม่ถูกใช้
      */
-    public function validateTicket()
+    public function validateTicket(): bool
     {
-        return !$this->is_used && $this->concert !== null;
+        return !$this->is_used && $this->zone !== null;
     }
 
     /**
-     * markAsUsed()
-     * Mark the Ticket as used to enter the event.
-     * param : none
-     * return : void
+     * markAsUsed(): void
+     * บันทึก Ticket ว่าถูกใช้เข้างานแล้ว โดยเปลี่ยน isUsed เป็น true
      */
     public function markAsUsed(): void
     {
-        $this->is_used = true;
-        $this->save();
+        $this->update(['is_used' => true]);
     }
 
-    public function concert()
+    // ==========================================
+    // Relationships
+    // ==========================================
+
+    public function order(): BelongsTo
     {
-        return $this->belongsTo(Concert::class, 'concert_id', 'concert_id');
+        return $this->belongsTo(CustomerOrder::class, 'order_id', 'order_id');
+    }
+
+    public function zone(): BelongsTo
+    {
+        return $this->belongsTo(Zone::class, 'zone_id', 'zone_id');
+    }
+
+    public function seat(): BelongsTo
+    {
+        return $this->belongsTo(Seat::class, 'seat_id', 'seat_id');
+    }
+
+    public function validationLog(): HasOne
+    {
+        return $this->hasOne(TicketValidationLog::class, 'ticket_id', 'ticket_id');
     }
 }
