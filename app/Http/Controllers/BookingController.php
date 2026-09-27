@@ -14,8 +14,8 @@ use Illuminate\Support\Str;
  * BookingController  (Customer only)
  * Methods: index(), validateBookingSecurity(), createBooking(), getBookingHistory()
  *
- * NOTE – Organizer-only methods ที่ถูกย้ายออก:
- *   getCustomerContact() → OrganizerBookingController (สร้างใหม่ภายหลัง)
+ * TODO – Organizer methods จะเพิ่มทีหลัง:
+ *   getCustomerContact()
  *
  * Author : AI Agent | Updated : 27/09/2026
  */

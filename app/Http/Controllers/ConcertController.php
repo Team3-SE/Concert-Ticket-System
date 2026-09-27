@@ -9,9 +9,8 @@ use Illuminate\Http\Request;
  * ConcertController  (Customer / Public — read-only)
  * Methods: getConcertList(), searchConcert(), getConcertDetail()
  *
- * NOTE – Organizer-only methods ที่ถูกย้ายออกไปแล้ว:
- *   createConcert()  → OrganizerConcertController
- *   updateConcert()  → OrganizerConcertController
+ * TODO – Organizer methods จะเพิ่มทีหลัง:
+ *   createConcert(), updateConcert()
  *
  * Author : AI Agent | Updated : 27/09/2026
  */
