@@ -93,10 +93,10 @@ class DatabaseSeeder extends Seeder
             'created_at' => $now,
         ]);
 
-        $customer1Id = DB::table('app_user')->insertGetId([
-            'email' => 'customer1@example.com',
+        $user1Id = DB::table('app_user')->insertGetId([
+            'email' => 'user1@example.com',
             'password_hash' => Hash::make('Password123!'),
-            'role' => 'CUSTOMER',
+            'role' => 'USER',
             'account_status' => 1,
             'first_name' => 'Suda',
             'last_name' => 'Saengdao',
@@ -104,10 +104,10 @@ class DatabaseSeeder extends Seeder
             'created_at' => $now,
         ]);
 
-        $customer2Id = DB::table('app_user')->insertGetId([
-            'email' => 'customer2@example.com',
+        $user2Id = DB::table('app_user')->insertGetId([
+            'email' => 'user2@example.com',
             'password_hash' => Hash::make('Password123!'),
-            'role' => 'CUSTOMER',
+            'role' => 'USER',
             'account_status' => 1,
             'first_name' => 'Wichai',
             'last_name' => 'Rungrueang',
@@ -164,7 +164,7 @@ class DatabaseSeeder extends Seeder
         
         $seatBookingId = DB::table('booking')->insertGetId([
             'booking_code' => $this->makeCode('BKG', 'C024'),
-            'customer_id' => $customer1Id,
+            'user_id' => $user1Id,
             'concert_id' => $concertRockId,
             'booking_date' => $now->copy()->subMinutes(30),
             'total_amount' => 6000,
@@ -203,7 +203,7 @@ class DatabaseSeeder extends Seeder
             'ticket',
             'staff_concert',
             'seat_lock_log',
-            'customer_order',
+            'user_order',
             'payment',
             'booking_seat',
             'seat',
@@ -277,7 +277,7 @@ class DatabaseSeeder extends Seeder
         $org = DB::table('organization')->where('organization_id', $concert->organization_id)->first();
         $zone = DB::table('zone')->where('zone_id', $zoneId)->first();
         $booking = DB::table('booking')->where('booking_id', $bookingId)->first();
-        $customer = DB::table('app_user')->where('user_id', $booking->customer_id)->first();
+        $user = DB::table('app_user')->where('user_id', $booking->user_id)->first();
         $unitPrice = $zone ? (float) $zone->price : 0;
 
         $paymentId = DB::table('payment')->insertGetId([
@@ -288,7 +288,7 @@ class DatabaseSeeder extends Seeder
             'provider_transaction_id' => 'ch_' . strtolower(Str::random(24)),
         ]);
 
-        $orderId = DB::table('customer_order')->insertGetId([
+        $orderId = DB::table('user_order')->insertGetId([
             'order_code' => $this->makeCode('ORD', $concertCode),
             'booking_id' => $bookingId,
             'payment_id' => $paymentId,
@@ -297,9 +297,9 @@ class DatabaseSeeder extends Seeder
             'venue_snapshot' => $concert->venue,
             'event_datetime_snapshot' => $concert->event_datetime,
             'organization_name_snapshot' => $org->name,
-            'customer_fiestname_snapshot' => $customer->first_name,
-            'customer_lastname_snapshot' => $customer->last_name,
-            'customer_phone_snapshot' => $customer->phone,
+            'user_fiestname_snapshot' => $user->first_name,
+            'user_lastname_snapshot' => $user->last_name,
+            'user_phone_snapshot' => $user->phone,
         ]);
 
         foreach ($seatIds as $seatId) {
@@ -336,3 +336,4 @@ class DatabaseSeeder extends Seeder
         return $prefix . '-' . strtoupper(Str::random(10));
     }
 }
+

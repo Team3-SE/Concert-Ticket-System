@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`app_user` (
   `user_id` INT NOT NULL AUTO_INCREMENT,
   `email` VARCHAR(255) NULL,
   `password_hash` VARCHAR(255) NOT NULL,
-  `role` VARCHAR(50) NOT NULL DEFAULT 'CUSTOMER',                    
+  `role` VARCHAR(50) NOT NULL DEFAULT 'USER',                    
   `account_status` TINYINT NOT NULL DEFAULT 1 COMMENT 'สถานะบัญชีผู้ใช้: 1 = ACTIVE, 0 = BANNED',  
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -108,7 +108,7 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `concert_ticketing`.`booking` (
   `booking_id` INT NOT NULL AUTO_INCREMENT,
-  `customer_id` INT NOT NULL,
+  `user_id` INT NOT NULL,
   `concert_id` INT NOT NULL,
   `booking_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        
   `total_amount` DECIMAL(12,2) NOT NULL,
@@ -118,13 +118,13 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`booking` (
   `booking_code` VARCHAR(100) NOT NULL,
   PRIMARY KEY (`booking_id`),
   UNIQUE INDEX `booking_code_UNIQUE` (`booking_code` ASC) VISIBLE,
-  INDEX `fk_booking_customer` (`customer_id` ASC) VISIBLE,
+  INDEX `fk_booking_user` (`user_id` ASC) VISIBLE,
   INDEX `fk_booking_concert` (`concert_id` ASC) VISIBLE,
   CONSTRAINT `fk_booking_concert`
     FOREIGN KEY (`concert_id`)
     REFERENCES `concert_ticketing`.`concert` (`concert_id`),
-  CONSTRAINT `fk_booking_customer`
-    FOREIGN KEY (`customer_id`)
+  CONSTRAINT `fk_booking_user`
+    FOREIGN KEY (`user_id`)
     REFERENCES `concert_ticketing`.`app_user` (`user_id`))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4
@@ -359,9 +359,9 @@ COLLATE = utf8mb4_0900_ai_ci;
 
 
 -- -----------------------------------------------------
--- Table `concert_ticketing`.`customer_order`
+-- Table `concert_ticketing`.`user_order`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `concert_ticketing`.`customer_order` (
+CREATE TABLE IF NOT EXISTS `concert_ticketing`.`user_order` (
   `order_id` INT NOT NULL AUTO_INCREMENT,
   `booking_id` INT NOT NULL,
   `payment_id` INT NOT NULL,
@@ -372,9 +372,9 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`customer_order` (
   `venue_snapshot` VARCHAR(255) NULL DEFAULT NULL,
   `event_datetime_snapshot` DATETIME NULL,
   `organization_name_snapshot` VARCHAR(255) NOT NULL,
-  `customer_fiestname_snapshot` VARCHAR(100) NOT NULL,
-  `customer_lastname_snapshot` VARCHAR(100) NOT NULL,
-  `customer_phone_snapshot` VARCHAR(50) NULL,
+  `user_fiestname_snapshot` VARCHAR(100) NOT NULL,
+  `user_lastname_snapshot` VARCHAR(100) NOT NULL,
+  `user_phone_snapshot` VARCHAR(50) NULL,
   PRIMARY KEY (`order_id`),
   UNIQUE INDEX `booking_id` (`booking_id` ASC) VISIBLE,
   UNIQUE INDEX `order_code` (`order_code` ASC) VISIBLE,
@@ -461,7 +461,7 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`ticket` (
   INDEX `fk_ticket_zone` (`zone_id` ASC) VISIBLE,
   CONSTRAINT `fk_ticket_order`
     FOREIGN KEY (`order_id`)
-    REFERENCES `concert_ticketing`.`customer_order` (`order_id`),
+    REFERENCES `concert_ticketing`.`user_order` (`order_id`),
   CONSTRAINT `fk_ticket_seat`
     FOREIGN KEY (`seat_id`)
     REFERENCES `concert_ticketing`.`seat` (`seat_id`),

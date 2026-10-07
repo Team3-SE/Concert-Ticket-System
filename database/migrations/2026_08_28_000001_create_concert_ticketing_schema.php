@@ -26,7 +26,7 @@ return new class extends Migration
             'ticket',
             'staff_concert',
             'seat_lock_log',
-            'customer_order',
+            'user_order',
             'payment',
             'booking_seat',
             'seat',
@@ -48,3 +48,4 @@ return new class extends Migration
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
 };
+
