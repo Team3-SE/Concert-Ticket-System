@@ -1,3 +1,11 @@
+/*
+ * resources/css/app.css
+ * หน้าที่ : Tailwind ของหน้า welcome (ไม่เกี่ยวกับหน้าอื่น)
+ * ใช้กับ : welcome.blade.php
+ * Author :
+ * Created :
+ */
+
 @import 'tailwindcss';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';

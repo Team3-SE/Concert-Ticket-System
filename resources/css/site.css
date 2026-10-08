@@ -1,0 +1,27 @@
+/*
+ * resources/css/site.css
+ * หน้าที่ : ไฟล์รวม CSS ของทั้งเว็บ: Vite รวมทุกไฟล์ที่ @import ด้านล่างเป็นไฟล์เดียว (เพิ่มไฟล์ใหม่ต้องเพิ่ม @import ที่นี่)
+ * ใช้กับ : layouts/main.blade.php (@vite)
+ * Author : ธีรเมธ พลสาย
+ * Created : 09/10/2569
+ */
+
+/* shared/   ใช้ทุกหน้า หรือ partial ที่หลายโฟลเดอร์ใช้ร่วมกัน */
+@import './shared/base.css';
+@import './shared/navbar.css';
+@import './shared/sidebar.css';
+@import './shared/pagination.css';
+
+/* concerts/ views/concerts/* */
+@import './concerts/home.css';
+@import './concerts/index.css';
+@import './concerts/search.css';
+@import './concerts/manage-images.css';
+
+/* booking/  views/booking/* */
+@import './booking/booking.css';
+@import './booking/payment.css';
+@import './booking/qr-modal.css';
+
+/* account/  layouts/app + views/account/* */
+@import './account/account.css';

@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * BookingController
+ * จัดการการจองบัตรของลูกค้า: หน้าเลือกที่นั่ง ตรวจความปลอดภัย สร้างการจอง และประวัติการจอง
+ * Author :
+ * Created :
+ */
+
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
@@ -10,19 +17,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-/**
- * BookingController  (Customer only)
- * Methods: index(), validateBookingSecurity(), createBooking(), getBookingHistory()
- *
- * TODO – Organizer methods จะเพิ่มทีหลัง:
- *   getCustomerContact()
- *
- * Author : AI Agent | Updated : 27/09/2026
- */
 class BookingController extends Controller
 {
+    /* เวลาที่ล็อกที่นั่งไว้ให้ชำระเงิน (นาที) */
+    private const SEAT_LOCK_MINUTES = 15;
+
     /**
-     * index() – แสดงหน้า Booking (UI)
+     * index(request)
+     * แสดงหน้าเลือกโซน/ที่นั่งของคอนเสิร์ต พร้อมจำนวนที่ว่างและที่นั่งที่ถูกจองแล้ว
+     * param : request
+     * return : View booking.booking
      */
     public function index(Request $request)
     {
@@ -38,7 +42,7 @@ class BookingController extends Controller
                 ->first();
 
         if (!$concert) {
-            return view('booking', [
+            return view('booking.booking', [
                 'concert'       => null,
                 'zones'         => collect(),
                 'occupiedSeats' => [],
@@ -73,13 +77,14 @@ class BookingController extends Controller
             }
         }
 
-        return view('booking', compact('concert', 'zones', 'occupiedSeats'));
+        return view('booking.booking', compact('concert', 'zones', 'occupiedSeats'));
     }
 
     /**
-     * validateBookingSecurity(customerID, deviceFingerprint, captchaToken): Boolean
-     * ตรวจ device fingerprint และ CAPTCHA ก่อนสร้าง Booking
-     * ปฏิเสธคำขอเมื่อบัญชีมี accountStatus เป็น BANNED หรือมีพฤติกรรมเสี่ยง
+     * validateBookingSecurity(customerId, deviceFingerprint, captchaToken)
+     * ตรวจความปลอดภัยก่อนสร้างการจอง (บัญชีถูกระงับ, CAPTCHA, device fingerprint)
+     * param : customerId, deviceFingerprint, captchaToken
+     * return : bool – true ถ้าอนุญาตให้จองได้
      */
     public function validateBookingSecurity(int $customerId, ?string $deviceFingerprint, ?string $captchaToken): bool
     {
@@ -95,8 +100,10 @@ class BookingController extends Controller
     }
 
     /**
-     * createBooking(customerID, concertID, seats, standingItems): Booking
-     * ตรวจ security → สร้าง Booking → ล็อก Seat → บันทึก BookingSeat พร้อม Snapshot
+     * createBooking(customerId, concertId, seatIds, standingItems)
+     * สร้างการจอง ล็อกที่นั่ง และบันทึก BookingSeat / SeatLockLog พร้อม snapshot ชื่อโซนและราคา
+     * param : customerId, concertId, seatIds, standingItems
+     * return : Booking ที่สร้างขึ้น
      */
     public function createBooking(int $customerId, int $concertId, array $seatIds = [], array $standingItems = []): Booking
     {
@@ -126,41 +133,41 @@ class BookingController extends Controller
             // ── คำนวณยอดรวม STANDING ──
             foreach ($standingItems as $item) {
                 $zone = \App\Models\Zone::findOrFail($item['zone_id']);
-                $qty  = (int) ($item['quantity'] ?? 1);
-                if ($zone->getAvailableCapacity() < $qty) {
+                $quantity = (int) ($item['quantity'] ?? 1);
+                if ($zone->getAvailableCapacity() < $quantity) {
                     abort(409, "Zone {$zone->name} capacity ไม่เพียงพอ");
                 }
-                $totalAmount += (float) $zone->price * $qty;
+                $totalAmount += (float) $zone->price * $quantity;
             }
 
             // ── สร้าง Booking ──
             $booking = Booking::create([
                 'booking_code'  => 'BKG-' . strtoupper(Str::random(10)),
-                'customer_id'   => $customerId,
+                'user_id'       => $customerId,
                 'concert_id'    => $concertId,
                 'booking_date'  => now(),
                 'total_amount'  => $totalAmount,
                 'status'        => 'PENDING_PAYMENT',
-                'expiry_time'   => now()->addMinutes(15),
+                'expiry_time'   => now()->addMinutes(self::SEAT_LOCK_MINUTES),
             ]);
 
             // ── ล็อก Seat + บันทึก BookingSeat + SeatLockLog ──
-            foreach ($seatsData as $sd) {
-                $sd['seat']->lockSeat();
+            foreach ($seatsData as $seatData) {
+                $seatData['seat']->lockSeat();
 
                 BookingSeat::create([
                     'booking_id'           => $booking->booking_id,
-                    'seat_id'              => $sd['seat']->seat_id,
-                    'zone_name_snapshot'   => $sd['zone']->name,
-                    'seat_label_snapshot'  => $sd['seat']->row . $sd['seat']->number,
-                    'unit_price_snapshot'  => $sd['unit_price'],
+                    'seat_id'              => $seatData['seat']->seat_id,
+                    'zone_name_snapshot'   => $seatData['zone']->name,
+                    'seat_label_snapshot'  => $seatData['seat']->row . $seatData['seat']->number,
+                    'unit_price_snapshot'  => $seatData['unit_price'],
                 ]);
 
                 SeatLockLog::create([
                     'booking_id' => $booking->booking_id,
-                    'seat_id'    => $sd['seat']->seat_id,
+                    'seat_id'    => $seatData['seat']->seat_id,
                     'locked_at'  => now(),
-                    'expired_at' => now()->addMinutes(15),
+                    'expired_at' => now()->addMinutes(self::SEAT_LOCK_MINUTES),
                     'status'     => 'LOCKED',
                 ]);
             }
@@ -170,14 +177,15 @@ class BookingController extends Controller
     }
 
     /**
-     * getBookingHistory(customerID): List<Booking>
-     * ดึงประวัติ Booking ของ Customer
-     * ใช้: Customer (BookingHistoryInterface)
+     * getBookingHistory(customerId)
+     * ดึงประวัติการจองของลูกค้า เรียงจากล่าสุด
+     * param : customerId
+     * return : Collection ของ Booking
      */
     public function getBookingHistory(int $customerId)
     {
         return Booking::with(['concert', 'bookingSeats', 'customerOrder'])
-            ->where('customer_id', $customerId)
+            ->where('user_id', $customerId)
             ->orderBy('booking_date', 'desc')
             ->get();
     }

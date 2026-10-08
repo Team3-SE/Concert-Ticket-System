@@ -1,18 +1,18 @@
 <?php
 
+/**
+ * Payment
+ * การชำระเงิน (ตาราง payment)
+ * Author :
+ * Created :
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-/**
- * Payment
- * manage Payment entity and its relationships
- * Author : AI Agent
- * Updated : 27/09/2026 – removed deprecated columns (decline_code, risk_level, card_fingerprint),
- *                        those fields now live inside paymentMetadata JSON per spec v3.2.0
- */
 class Payment extends Model
 {
     protected $table = 'payment';
@@ -44,9 +44,10 @@ class Payment extends Model
     // ==========================================
 
     /**
-     * processPayment(): Boolean
-     * เริ่มการชำระเงินด้วย PROMPTPAY หรือ CREDIT_CARD
-     * บันทึก ipAddress/deviceFingerprint ลงใน paymentMetadata
+     * processPayment()
+     * เริ่มการชำระเงิน (PROMPTPAY หรือ CREDIT_CARD)
+     * param : -
+     * return : bool – true ถ้ารายการยังรอชำระ (PENDING)
      */
     public function processPayment(): bool
     {
@@ -56,9 +57,10 @@ class Payment extends Model
     }
 
     /**
-     * verifyStatus(): Boolean
-     * ตรวจสอบสถานะธุรกรรมจาก Payment Provider
-     * รวมถึง declineCode, cardFingerprint ใน paymentMetadata
+     * verifyStatus()
+     * ตรวจสอบสถานะธุรกรรมการชำระเงิน
+     * param : -
+     * return : bool – true ถ้าชำระเงินสำเร็จ (COMPLETED)
      */
     public function verifyStatus(): bool
     {
@@ -70,11 +72,23 @@ class Payment extends Model
     // Relationships
     // ==========================================
 
+    /**
+     * booking()
+     * ความสัมพันธ์กับการจอง
+     * param : -
+     * return : BelongsTo Booking
+     */
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class, 'booking_id', 'booking_id');
     }
 
+    /**
+     * customerOrder()
+     * ความสัมพันธ์กับคำสั่งซื้อ
+     * param : -
+     * return : HasOne CustomerOrder
+     */
     public function customerOrder(): HasOne
     {
         return $this->hasOne(CustomerOrder::class, 'payment_id', 'payment_id');

@@ -1,26 +1,31 @@
 <?php
 
+/**
+ * ConcertImageController
+ * จัดการอัปโหลดและลบรูปภาพของคอนเสิร์ต (โปสเตอร์ แบนเนอร์ ผังที่นั่ง)
+ * Author :
+ * Created :
+ */
+
 namespace App\Http\Controllers;
 
 use App\Models\Concert;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
-/**
- * ConcertImageController
- * จัดการอัปโหลด/ลบรูปภาพของคอนเสิร์ต (โปสเตอร์, แบนเนอร์, ผังที่นั่ง)
- * Author : AI Agent
- * Created : 17/09/2026
- */
 class ConcertImageController extends Controller
 {
-    /**
-     * ขนาดรูปที่แนะนำ — แก้ค่าตรงนี้แล้ว View จะอัปเดตตาม
-     */
+    /* คอลัมน์ในตาราง concert ของรูปแต่ละประเภท */
+    private const IMAGE_COLUMNS = [
+        'poster'   => 'poster_path',
+        'banner'   => 'banner_path',
+        'seat_map' => 'seat_map_image_path',
+    ];
+
+    /* ขนาดรูปที่แนะนำ — แก้ค่าตรงนี้แล้ว View จะอัปเดตตาม */
     const IMAGE_SIZES = [
         'poster' => [
             'w' => 500,
-            'h' => 700,
             'h' => 750,
             'maxKB' => 2048,   // 2 MB
         ],
@@ -38,41 +43,35 @@ class ConcertImageController extends Controller
 
     /**
      * index()
-     * แสดงหน้าจัดการรูปภาพ พร้อมข้อมูล concerts ทั้งหมดและขนาดรูปที่แนะนำ
-     * param : none
-     * return : View
+     * แสดงหน้าจัดการรูปภาพ พร้อมรายการคอนเสิร์ตและขนาดรูปที่แนะนำ
+     * param : -
+     * return : View concerts.manage-images
      */
     public function index()
     {
         $concerts = Concert::orderBy('event_datetime', 'desc')->get();
 
-        return view('manage-images', [
+        return view('concerts.manage-images', [
             'concerts'   => $concerts,
             'imageSizes' => self::IMAGE_SIZES,
         ]);
     }
 
     /**
-     * upload()
-     * อัปโหลด/เปลี่ยนรูปภาพของคอนเสิร์ตตามประเภท (poster, banner, seat_map)
-     * param : Request $request, string $concertId, string $type
-     * return : Redirect
+     * upload(request, concertId, type)
+     * อัปโหลดหรือเปลี่ยนรูปภาพของคอนเสิร์ตตามประเภท (poster, banner, seat_map)
+     * param : request, concertId, type
+     * return : RedirectResponse กลับหน้าเดิมพร้อมข้อความผลลัพธ์
      */
     public function upload(Request $request, string $concertId, string $type)
     {
         $concert = Concert::findOrFail($concertId);
 
-        $columnMap = [
-            'poster'   => 'poster_path',
-            'banner'   => 'banner_path',
-            'seat_map' => 'seat_map_image_path',
-        ];
-
-        if (!isset($columnMap[$type])) {
+        if (!isset(self::IMAGE_COLUMNS[$type])) {
             return back()->with('error', 'ประเภทรูปไม่ถูกต้อง');
         }
 
-        $column = $columnMap[$type];
+        $column = self::IMAGE_COLUMNS[$type];
         $maxKB  = self::IMAGE_SIZES[$type]['maxKB'];
 
         $request->validate([
@@ -98,26 +97,20 @@ class ConcertImageController extends Controller
     }
 
     /**
-     * destroy()
-     * ลบรูปภาพของคอนเสิร์ตตามประเภท
-     * param : string $concertId, string $type
-     * return : Redirect
+     * destroy(concertId, type)
+     * ลบรูปภาพของคอนเสิร์ตตามประเภท (poster, banner, seat_map)
+     * param : concertId, type
+     * return : RedirectResponse กลับหน้าเดิมพร้อมข้อความผลลัพธ์
      */
     public function destroy(string $concertId, string $type)
     {
         $concert = Concert::findOrFail($concertId);
 
-        $columnMap = [
-            'poster'   => 'poster_path',
-            'banner'   => 'banner_path',
-            'seat_map' => 'seat_map_image_path',
-        ];
-
-        if (!isset($columnMap[$type])) {
+        if (!isset(self::IMAGE_COLUMNS[$type])) {
             return back()->with('error', 'ประเภทรูปไม่ถูกต้อง');
         }
 
-        $column = $columnMap[$type];
+        $column = self::IMAGE_COLUMNS[$type];
 
         if ($concert->{$column}) {
             Storage::disk('public')->delete($concert->{$column});

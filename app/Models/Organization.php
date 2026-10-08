@@ -1,17 +1,17 @@
 <?php
 
+/**
+ * Organization
+ * องค์กรผู้จัดคอนเสิร์ต (ตาราง organization)
+ * Author :
+ * Created :
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/**
- * Organization
- * manage Organization entity and its relationships
- * Author : AI Agent
- * Created : 28/08/2026
- * Updated : 27/09/2026 – renamed from Company to Organization to match DB schema
- */
 class Organization extends Model
 {
     protected $table = 'organization';
@@ -43,8 +43,10 @@ class Organization extends Model
     // ==========================================
 
     /**
-     * getOrganizationInfo(): String
-     * ดึงและสรุปข้อมูลของบริษัท เช่น ชื่อ ชื่อย่อ รายละเอียดบริษัท และช่องทางติดต่อ
+     * getOrganizationInfo()
+     * สรุปข้อมูลองค์กร (ชื่อ ชื่อย่อ รายละเอียด และช่องทางติดต่อ)
+     * param : -
+     * return : string
      */
     public function getOrganizationInfo(): string
     {
@@ -52,8 +54,10 @@ class Organization extends Model
     }
 
     /**
-     * listEvents(): List<Concert>
-     * ดึงรายการ Concert ทั้งหมดที่อยู่ภายใต้บริษัทนี้
+     * listEvents()
+     * ดึงคอนเสิร์ตขององค์กร
+     * param : -
+     * return : HasMany Concert
      */
     public function listEvents(): HasMany
     {
@@ -64,18 +68,36 @@ class Organization extends Model
     // Relationships
     // ==========================================
 
+    /**
+     * organizers()
+     * ความสัมพันธ์กับผู้จัด (role ORGANIZER) ในองค์กร
+     * param : -
+     * return : HasMany AppUser
+     */
     public function organizers(): HasMany
     {
         return $this->hasMany(AppUser::class, 'organization_id', 'organization_id')
             ->where('role', AppUser::ROLE_ORGANIZER);
     }
 
+    /**
+     * staff()
+     * ความสัมพันธ์กับพนักงาน (role STAFF) ในองค์กร
+     * param : -
+     * return : HasMany AppUser
+     */
     public function staff(): HasMany
     {
         return $this->hasMany(AppUser::class, 'organization_id', 'organization_id')
             ->where('role', AppUser::ROLE_STAFF);
     }
 
+    /**
+     * concerts()
+     * ความสัมพันธ์กับคอนเสิร์ตขององค์กร
+     * param : -
+     * return : HasMany Concert
+     */
     public function concerts(): HasMany
     {
         return $this->hasMany(Concert::class, 'organization_id', 'organization_id');

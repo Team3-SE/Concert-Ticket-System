@@ -26,6 +26,12 @@ Route::delete('/manage/images/{concertId}/{type}', [\App\Http\Controllers\Concer
 // Main home page (using team3-ticket mockup)
 Route::get('/', [\App\Http\Controllers\HomeController::class, 'index']);
 
+// หน้า "คอนเสิร์ตทั้งหมด" (ปุ่ม Show All)
+Route::get('/concerts', [\App\Http\Controllers\ConcertController::class, 'index'])->name('concerts.index');
+
+// ค้นหาคอนเสิร์ตแบบแนะนำขณะพิมพ์ (JSON) – ใช้กับช่องค้นหาหน้า Home / คอนเสิร์ตทั้งหมด
+Route::get('/concerts/suggest', [\App\Http\Controllers\ConcertController::class, 'suggest'])->name('concerts.suggest');
+
 // ===== DEV TOOLS (Model Tester) =====
 Route::get('/dev/models', function () {
     return view('dev.model-tester');

@@ -1,0 +1,240 @@
+/*
+ * resources/css/account/account.css
+ * หน้าที่ : โครงหน้าแบบมี sidebar, ประวัติการสั่งซื้อ และแก้ไขข้อมูลส่วนตัว (<body class="page-account">)
+ * ใช้กับ : layouts/app.blade.php, account/order-history.blade.php, account/edit-profile.blade.php
+ * Author : ธีรเมธ พลสาย
+ * Created : 07/10/2569
+ */
+
+/* layouts/app (sidebar) + views/account/*: order-history, edit-profile. Scoped to <body class="page-account"> */
+.page-account{
+  --navy:#0d1b4b;
+  --navy-mid:#122070;
+  --bg:#eef0f5;
+  --white:#ffffff;
+  --gray-border:#e2e4ec;
+  --gray-label:#6b7280;
+  --gray-placeholder:#b0b5c8;
+  --gray-light:#f5f6fa;
+  --text-muted:#9097b0;
+  --danger:#f25c5c;
+  --navy-btn:#1e3a8a;
+  background:var(--bg);
+  color:var(--text);
+
+  /* Variables */
+  /* Shell */
+  .shell{display:flex;min-height:100vh;}
+  /*
+   * TOPBAR
+   */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;}
+  header.topbar{display:none;}
+  .user-chip{display:flex;align-items:center;gap:10px;color:#fff;font-size:13px;font-weight:500;}
+  .avatar{
+    width:34px;height:34px;border-radius:50%;
+    background:#9097b0;               /* gray avatar like mockup */
+    flex-shrink:0;
+  }
+  /*
+   * MAIN CONTENT
+   */
+  main.content{padding:46px 40px 60px;background:#eef2fb;flex:1;}
+  .team-header{background:#0b2f61;border-bottom:2px solid #f47b1f;min-height:68px;padding:0 40px;}
+  .page-title{
+    font-size:15px;font-weight:700;color:var(--text);
+    border-left:4px solid var(--orange);padding-left:10px;
+    margin-bottom:20px;
+  }
+  .status-msg{
+    margin:0 0 16px;padding:10px 16px;
+    background:#e9f8ef;border:1px solid #b5e6c8;color:#166534;
+    border-radius:8px;font-size:12px;
+  }
+  /*
+   * GRID & CARDS (profile page)
+   */
+  .grid-2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+    max-width:none;
+  }
+  .card{
+    background:var(--white);
+    border-radius:10px;
+    border:1px solid var(--gray-border);
+    padding:24px 24px 28px;
+  }
+  /* Card heading with orange bar */
+  .card-title{
+    display:flex;align-items:center;gap:8px;
+    font-size:14px;font-weight:700;color:var(--text);
+    margin-bottom:20px;
+  }
+  .card-title::before{
+    content:'';display:inline-block;
+    width:4px;height:16px;border-radius:2px;
+    background:var(--orange);flex-shrink:0;
+  }
+  /*
+   * FORM FIELDS
+   */
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;font-size:11px;font-weight:600;
+    color:var(--gray-label);margin-bottom:5px;letter-spacing:.2px;
+  }
+  .field input{
+    width:100%;padding:9px 11px;
+    border:1px solid var(--gray-border);
+    border-radius:6px;font-size:13px;
+    font-family:inherit;color:var(--text);
+    background:var(--white);
+    outline:none;transition:border-color .15s,box-shadow .15s;
+  }
+  .field input:focus{
+    border-color:#6b8cda;
+    box-shadow:0 0 0 3px rgba(107,140,218,.12);
+  }
+  .field input::placeholder{color:var(--gray-placeholder);}
+  .field input:disabled{
+    background:var(--gray-light);color:#9ba8cc;cursor:not-allowed;
+  }
+  /* Two-column row */
+  .row-2{display:flex;gap:12px;}
+  .row-2 .field{flex:1;}
+  /* Phone with flag prefix */
+  .phone-field{
+    display:flex;align-items:stretch;
+    border:1px solid var(--gray-border);border-radius:6px;overflow:hidden;
+  }
+  .phone-field:focus-within{
+    border-color:#6b8cda;
+    box-shadow:0 0 0 3px rgba(107,140,218,.12);
+  }
+  .phone-prefix{
+    background:var(--gray-light);
+    display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:1px;
+    padding:0 10px;min-width:52px;
+    font-size:10px;font-weight:600;color:var(--gray-label);
+    border-right:1px solid var(--gray-border);
+    line-height:1.2;
+  }
+  .phone-prefix .flag{font-size:16px;}
+  .phone-field input{border:none;border-radius:0;box-shadow:none !important;}
+  .phone-field input:focus{border:none;box-shadow:none !important;}
+  /* Error states */
+  .is-error{border-color:#e8503c !important;}
+  .phone-field.is-error{border-color:#e8503c !important;}
+  .field-error{font-size:11px;color:#e8503c;margin-top:4px;}
+  /*
+   * BUTTONS
+   */
+  .actions{display:flex;justify-content:center;margin-top:22px;}
+  .btn{
+    display:inline-block;
+    border:none;font-family:inherit;font-size:13px;font-weight:600;
+    padding:10px 28px;border-radius:20px;cursor:pointer;
+    transition:background .15s,transform .1s;
+    white-space:nowrap;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn-orange{background:var(--orange);color:#fff;}
+  .btn-orange:hover{background:var(--orange-dark);}
+  .btn-navy{background:var(--navy-btn);color:#fff;}
+  .btn-navy:hover{background:#1a3170;}
+  /*
+   * RESPONSIVE
+   */
+  @media(max-width:900px){.grid-2{grid-template-columns:1fr;}}
+  /* Table card */
+  .table-card{
+    background:#fff;
+    border-radius:8px;
+    border:1px solid var(--gray-border);
+    overflow:hidden;
+    max-width:1100px;
+  }
+  /* Table */
+  table.orders{
+    width:100%;border-collapse:collapse;font-size:12.5px;
+  }
+  table.orders thead th{
+    text-align:left;
+    font-size:11.5px;font-weight:600;color:#8b95b0;
+    padding:13px 20px;
+    border-bottom:1px solid var(--gray-border);
+    white-space:nowrap;
+    background:#fff;
+  }
+  table.orders tbody td{
+    padding:14px 20px;
+    border-bottom:1px solid #f0f1f7;
+    vertical-align:middle;
+    color:var(--text);
+  }
+  table.orders tbody tr:last-child td{border-bottom:none;}
+  table.orders tbody tr:hover{background:#fafbff;}
+  /* Cell variants */
+  .order-id{color:#122070;font-weight:700;font-size:12.5px;}
+  .concert-name{font-weight:700;color:var(--text);margin-bottom:2px;font-size:12.5px;}
+  .concert-venue{font-size:11px;color:#8b95b0;}
+  .qty-badge{
+    display:inline-block;
+    background:#e8eaf6;color:#3a50b0;
+    font-size:11.5px;font-weight:700;
+    padding:3px 12px;border-radius:20px;
+    white-space:nowrap;
+  }
+  .amount{font-weight:700;color:var(--text);white-space:nowrap;font-size:13px;}
+  /* Footer / Pagination */
+  .table-footer{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 20px;font-size:11.5px;color:#8b95b0;
+    background:#F8F9FC;border-top:1px solid #E9ECF2;
+  }
+  .table-footer b{color:var(--text);}
+  /* Empty state */
+  .empty-state{
+    text-align:center;padding:60px 24px;color:#8b95b0;
+  }
+  .empty-state .icon{font-size:48px;margin-bottom:12px;}
+  .empty-state p{font-size:13px;line-height:1.8;}
+  .empty-state a{
+    display:inline-block;margin-top:18px;
+    background:var(--orange);color:#fff;font-weight:600;font-size:13px;
+    padding:10px 26px;border-radius:20px;text-decoration:none;
+    transition:background .15s;
+  }
+  .empty-state a:hover{background:var(--orange-dark);}
+  /* Profile edit page */
+  *,*::before,*::after{box-sizing:border-box;}
+  .profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
+  .profile-section-title{display:flex;align-items:center;gap:10px;font-size:24px;font-weight:700;color:#111827;line-height:1.2;margin:0 0 16px;}
+  .profile-section-title::before{content:'';display:block;width:6px;height:30px;background:#f47b1f;border-radius:3px;flex-shrink:0;}
+  .profile-panel{background:#fff;border:1px solid #e3e8f2;border-radius:10px;padding:30px 32px 32px;min-height:427px;box-shadow:0 1px 3px rgba(15,32,65,.04);}
+  .profile-panel .field{margin-bottom:24px;}
+  .profile-panel .field label{line-height:1.4;font-size:13px;font-weight:500;color:#5b6475;letter-spacing:0;margin-bottom:8px;}
+  .profile-panel--info .field label{font-size:15px;}
+  .profile-panel .field input{height:50px;padding:0 14px;border:1px solid #e3e8f2;border-radius:8px;font-size:15px;}
+  .profile-panel--password .field{margin-bottom:26px;}
+  .profile-panel--password .field input{height:52px;}
+  .profile-panel .field input::placeholder{color:#b9bfce;}
+  .profile-panel .row-2{gap:24px;}
+  .profile-panel .phone-field{min-height:76px;border-color:#e3e8f2;border-radius:8px;}
+  .profile-panel .phone-field input{height:auto;align-self:stretch;border:none;}
+  .profile-panel .phone-prefix{flex-direction:row;gap:8px;min-width:96px;padding:0 16px;font-size:15px;font-weight:500;color:#1c2138;background:#f4f5f8;border-right:1px solid #e3e8f2;}
+  .profile-panel .phone-prefix .flag{font-size:15px;}
+  .profile-panel .actions{margin-top:0;}
+  .profile-panel .btn{height:48px;padding:0 48px;border-radius:8px;font-size:15px;}
+  .profile-panel .btn-orange{background:#f47b1f;}
+  .profile-panel .btn-orange:hover{background:#e46a0e;}
+  .profile-panel .btn-navy{background:#123a7a;}
+  .profile-panel .btn-navy:hover{background:#0e2f64;}
+  @media(max-width:900px){.profile-grid{grid-template-columns:1fr;}}
+  .is-error{ border-color: #e8503c !important; }
+  .phone-field.is-error{ border-color: #e8503c !important; }
+  .field-error{ font-size: 11px; color: #e8503c; margin-top: 5px; }
+}

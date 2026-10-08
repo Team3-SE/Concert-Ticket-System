@@ -4,14 +4,14 @@ echo "  Concert Ticketing System - Local Setup Script"
 echo "==================================================="
 
 if [ ! -f .env ]; then
-    echo "[1/5] Copying .env.example to .env..."
+    echo "[1/6] Copying .env.example to .env..."
     cp .env.example .env
 else
-    echo "[1/5] .env already exists, skipping..."
+    echo "[1/6] .env already exists, skipping..."
 fi
 
 echo ""
-echo "[2/5] Starting Docker containers..."
+echo "[2/6] Starting Docker containers..."
 docker-compose up -d
 
 echo ""
@@ -19,15 +19,20 @@ echo "Waiting for containers to initialize (15 seconds)..."
 sleep 15
 
 echo ""
-echo "[3/5] Installing Composer dependencies (This may take a few minutes)..."
+echo "[3/6] Building CSS/JS with Vite (waiting for concert_node to finish)..."
+docker wait concert_node
+docker logs --tail 5 concert_node
+
+echo ""
+echo "[4/6] Installing Composer dependencies (This may take a few minutes)..."
 docker exec concert_app composer install
 
 echo ""
-echo "[4/5] Generating Application Key..."
+echo "[5/6] Generating Application Key..."
 docker exec concert_app php artisan key:generate
 
 echo ""
-echo "[5/5] Running Database Migrations and Seeders..."
+echo "[6/6] Running Database Migrations and Seeders..."
 docker exec concert_app php artisan migrate --seed
 
 echo ""

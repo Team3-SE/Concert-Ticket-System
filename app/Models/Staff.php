@@ -1,14 +1,24 @@
 <?php
 
+/**
+ * Staff
+ * พนักงานตรวจบัตร (AppUser ที่ role = STAFF)
+ * Author :
+ * Created :
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 
-/**
- * Staff Entity (Subtype of AppUser)
- */
 class Staff extends AppUser
 {
+    /**
+     * boot()
+     * กำหนดให้ query เฉพาะผู้ใช้ role STAFF และตั้ง role ให้อัตโนมัติเมื่อสร้าง
+     * param : -
+     * return : void
+     */
     protected static function boot()
     {
         parent::boot();

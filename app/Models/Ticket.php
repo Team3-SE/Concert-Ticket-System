@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Ticket
+ * บัตรเข้างาน (ตาราง ticket)
+ * Author :
+ * Created :
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -7,13 +14,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
-/**
- * Ticket
- * manage Ticket entity and its relationships
- * Author : AI Agent
- * Created : 28/08/2026
- * Updated : 27/09/2026 – fixed incrementing/keyType, fixed validateTicket, added relationships
- */
 class Ticket extends Model
 {
     protected $table = 'ticket';
@@ -50,9 +50,10 @@ class Ticket extends Model
     // ==========================================
 
     /**
-     * generateQR(): String
-     * สร้าง QR Code เฉพาะสำหรับ Ticket
-     * ticketCode ใช้แสดง/ค้นหาใน UI แยกจาก qrCode
+     * generateQR()
+     * สร้าง QR code ของบัตรแล้วบันทึก
+     * param : -
+     * return : string QR code
      */
     public function generateQR(): string
     {
@@ -63,8 +64,10 @@ class Ticket extends Model
     }
 
     /**
-     * validateTicket(): Boolean
-     * ตรวจสอบว่า Ticket ถูกต้อง ตรงกับ Concert (ผ่าน Zone) และยังไม่ถูกใช้
+     * validateTicket()
+     * ตรวจว่าบัตรถูกต้อง (มีโซน) และยังไม่ถูกใช้
+     * param : -
+     * return : bool
      */
     public function validateTicket(): bool
     {
@@ -72,8 +75,10 @@ class Ticket extends Model
     }
 
     /**
-     * markAsUsed(): void
-     * บันทึก Ticket ว่าถูกใช้เข้างานแล้ว โดยเปลี่ยน isUsed เป็น true
+     * markAsUsed()
+     * บันทึกว่าบัตรถูกใช้แล้ว
+     * param : -
+     * return : void
      */
     public function markAsUsed(): void
     {
@@ -84,21 +89,45 @@ class Ticket extends Model
     // Relationships
     // ==========================================
 
+    /**
+     * order()
+     * ความสัมพันธ์กับคำสั่งซื้อ
+     * param : -
+     * return : BelongsTo CustomerOrder
+     */
     public function order(): BelongsTo
     {
         return $this->belongsTo(CustomerOrder::class, 'order_id', 'order_id');
     }
 
+    /**
+     * zone()
+     * ความสัมพันธ์กับโซน
+     * param : -
+     * return : BelongsTo Zone
+     */
     public function zone(): BelongsTo
     {
         return $this->belongsTo(Zone::class, 'zone_id', 'zone_id');
     }
 
+    /**
+     * seat()
+     * ความสัมพันธ์กับที่นั่ง (บัตรยืนจะเป็น null)
+     * param : -
+     * return : BelongsTo Seat
+     */
     public function seat(): BelongsTo
     {
         return $this->belongsTo(Seat::class, 'seat_id', 'seat_id');
     }
 
+    /**
+     * validationLog()
+     * ความสัมพันธ์กับประวัติการตรวจบัตร
+     * param : -
+     * return : HasOne TicketValidationLog
+     */
     public function validationLog(): HasOne
     {
         return $this->hasOne(TicketValidationLog::class, 'ticket_id', 'ticket_id');

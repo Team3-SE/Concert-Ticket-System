@@ -1,15 +1,25 @@
 <?php
 
+/**
+ * Organizer
+ * ผู้จัดคอนเสิร์ต (AppUser ที่ role = ORGANIZER)
+ * Author :
+ * Created :
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/**
- * Organizer Entity (Subtype of AppUser)
- */
 class Organizer extends AppUser
 {
+    /**
+     * boot()
+     * กำหนดให้ query เฉพาะผู้ใช้ role ORGANIZER และตั้ง role ให้อัตโนมัติเมื่อสร้าง
+     * param : -
+     * return : void
+     */
     protected static function boot()
     {
         parent::boot();
@@ -32,11 +42,23 @@ class Organizer extends AppUser
     // Relationships
     // ==========================================
 
+    /**
+     * concerts()
+     * ความสัมพันธ์กับคอนเสิร์ตของผู้จัด
+     * param : -
+     * return : HasMany Concert
+     */
     public function concerts(): HasMany
     {
         return $this->hasMany(Concert::class, 'organizer_id', 'user_id');
     }
 
+    /**
+     * staff()
+     * ความสัมพันธ์กับพนักงานที่ผู้จัดสร้าง
+     * param : -
+     * return : HasMany Staff
+     */
     public function staff(): HasMany
     {
         return $this->hasMany(Staff::class, 'created_by_user_id', 'user_id');

@@ -1,51 +1,39 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TEAM 3 Ticket - Payment</title>
+{{--
+ * payment.blade.php
+ * หน้าชำระเงิน
+ * @Author
+ * @Create Date
+--}}
+@extends('layouts.main')
 
-  <!-- Tailwind CSS & Alpine.js -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+@section('title', 'TEAM 3 Ticket - Payment')
+@section('body_class', 'page-payment min-h-screen flex flex-col bg-[#EBF1F9]')
 
-  <!-- IBM Plex Sans Thai Font -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+@push('body_attrs')x-data="paymentApp()"@endpush
 
-  <!-- External Payment CSS Style & QR Modal CSS -->
-  @vite(['resources/css/payment.css', 'resources/css/qr-modal.css'])
-  <style>[x-cloak] { display: none !important; }</style>
-</head>
-
-<body class="min-h-screen flex flex-col font-['IBM_Plex_Sans_Thai']" x-data="paymentApp()">
-
-  <!-- NAVBAR INCLUDE -->
-  @include('navbar')
-
-  <!-- MAIN BODY CONTENT -->
+@section('content')
+  {{-- MAIN BODY CONTENT --}}
   <main class="flex-1 max-w-6xl mx-auto w-full px-4 md:px-8 py-8 space-y-6">
 
-    <!-- TOP SECTION: RESERVE SUMMARY & PAYMENT SUMMARY SIDE BY SIDE -->
+    {{-- TOP SECTION: RESERVE SUMMARY & PAYMENT SUMMARY SIDE BY SIDE --}}
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-      <!-- LEFT COLUMN: SELECTION CARDS -->
+      {{-- LEFT COLUMN: SELECTION CARDS --}}
       <div class="lg:col-span-7 space-y-6">
         <h2 class="page-title">RESERVE SUMMARY</h2>
 
-        <!-- Protection Selection -->
+        {{-- Protection Selection --}}
         <div class="space-y-2.5">
           <h3 class="section-title">ความคุ้มครอง/Ticket Protection</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-            <!-- Option 1: Show Protection -->
+            {{-- Option 1: Show Protection --}}
             <label class="card-option" :class="{ 'active': protection === 'show' }">
               <input type="radio" name="protection" value="show" x-model="protection" class="radio-btn">
               <span class="radio-label">ซื้อประกันบัตรการแสดง</span>
             </label>
 
-            <!-- Option 2: Travel Protection -->
+            {{-- Option 2: Travel Protection --}}
             <label class="card-option" :class="{ 'active': protection === 'travel' }">
               <input type="radio" name="protection" value="travel" x-model="protection" class="radio-btn">
               <span class="radio-label">ซื้อประกันการเดินทาง</span>
@@ -54,18 +42,18 @@
           </div>
         </div>
 
-        <!-- Payment Method Selection -->
+        {{-- Payment Method Selection --}}
         <div class="space-y-2.5">
           <h3 class="section-title">เลือกช่องทางชำระเงิน / Choose Payment Methods</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-            <!-- PromptPay -->
+            {{-- PromptPay --}}
             <label class="card-option" :class="{ 'active': paymentMethod === 'promptpay' }">
               <input type="radio" name="paymentMethod" value="promptpay" x-model="paymentMethod" class="radio-btn">
               <span class="radio-label">พร้อมเพย์ / Thai QR Payment</span>
             </label>
 
-            <!-- Credit Card -->
+            {{-- Credit Card --}}
             <label class="card-option" :class="{ 'active': paymentMethod === 'credit' }">
               <input type="radio" name="paymentMethod" value="credit" x-model="paymentMethod" class="radio-btn">
               <span class="radio-label">ชำระด้วยบัตรเครดิต / Credit Card</span>
@@ -75,16 +63,16 @@
         </div>
       </div>
 
-      <!-- RIGHT COLUMN: DARK PRICE SUMMARY CARD -->
+      {{-- RIGHT COLUMN: DARK PRICE SUMMARY CARD --}}
       <div class="lg:col-span-5 summary-card">
         <div class="summary-card-body space-y-4">
-          <!-- Table Header -->
+          {{-- Table Header --}}
           <div class="summary-header">
             <span>ประเภท/Type</span>
             <span>ราคา/Price</span>
           </div>
 
-          <!-- Price Breakdowns -->
+          {{-- Price Breakdowns --}}
           <div class="space-y-2.5">
             <div class="summary-row flex justify-between">
               <span x-text="quantity + ' x ' + zoneName"></span>
@@ -104,14 +92,14 @@
             </div>
           </div>
 
-          <!-- Total Price Row -->
+          {{-- Total Price Row --}}
           <div class="summary-total-row">
             <span class="text-[#F47B1F]">ยอดที่ต้องชำระ/Total Amount</span>
             <span class="text-[#F47B1F] text-sm" x-text="calculateTotal() + ' บ.'"></span>
           </div>
         </div>
 
-        <!-- Timer Bar at Bottom -->
+        {{-- Timer Bar at Bottom --}}
         <div class="summary-timer-bar">
           ระยะเวลาที่เหลือในการชำระเงิน <span x-text="formattedTime">10:00</span> นาที
         </div>
@@ -119,7 +107,7 @@
 
     </div>
 
-    <!-- DYNAMIC SECTION: CREDIT CARD DETAILS FORM -->
+    {{-- DYNAMIC SECTION: CREDIT CARD DETAILS FORM --}}
     <div x-show="paymentMethod === 'credit'"
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 transform -translate-y-2"
@@ -128,25 +116,25 @@
       <h3 class="text-xs font-bold text-gray-800">รายละเอียดบัตรเครดิต / เดบิต</h3>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
 
-        <!-- Card Number -->
+        {{-- Card Number --}}
         <div class="space-y-1.5">
           <label class="input-label">หมายเลขบัตร (Card Number)</label>
           <input type="text" placeholder="XXXX XXXX XXXX XXXX" class="input-control">
         </div>
 
-        <!-- Cardholder Name -->
+        {{-- Cardholder Name --}}
         <div class="space-y-1.5">
           <label class="input-label">ชื่อบนบัตร (Cardholder Name)</label>
           <input type="text" placeholder="SOMCHAI JAIDEE" class="input-control">
         </div>
 
-        <!-- Expiry Date -->
+        {{-- Expiry Date --}}
         <div class="space-y-1.5">
           <label class="input-label">วันหมดอายุ (MM/YY)</label>
           <input type="text" placeholder="MM/YY" class="input-control">
         </div>
 
-        <!-- CVC / CVV -->
+        {{-- CVC / CVV --}}
         <div class="space-y-1.5">
           <label class="input-label">CVC / CVV</label>
           <input type="text" placeholder="123" class="input-control">
@@ -155,10 +143,10 @@
       </div>
     </div>
 
-    <!-- BOTTOM SECTION: TICKET DETAILS & BUYER INFO CARD -->
+    {{-- BOTTOM SECTION: TICKET DETAILS & BUYER INFO CARD --}}
     <div class="info-card space-y-6">
 
-      <!-- Event Header -->
+      {{-- Event Header --}}
       <div class="space-y-1 border-b border-gray-100 pb-4">
         <h2 class="text-base font-bold text-gray-900">{{ $concert ? strtoupper($concert->name) : '-' }}</h2>
         <p class="text-[11px] text-gray-400">
@@ -168,10 +156,10 @@
         </p>
       </div>
 
-      <!-- Details Grid -->
+      {{-- Details Grid --}}
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs">
 
-        <!-- Left: Order Details -->
+        {{-- Left: Order Details --}}
         <div class="space-y-3">
           <h3 class="font-bold text-gray-800 text-xs">รายการซื้อ/Order Details</h3>
           <div class="space-y-2.5 divide-y divide-gray-50">
@@ -190,7 +178,7 @@
           </div>
         </div>
 
-        <!-- Right: Buyer Details -->
+        {{-- Right: Buyer Details --}}
         <div class="space-y-3">
           <h3 class="font-bold text-gray-800 text-xs">ข้อมูลผู้ซื้อ/Buyer Details</h3>
           <div class="space-y-2.5 divide-y divide-gray-50">
@@ -211,19 +199,20 @@
 
       </div>
 
-      <!-- Action Footer -->
+      {{-- Action Footer --}}
       <div class="pt-4 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
 
-        <!-- Organizer Support Contact -->
+        {{-- Organizer Support Contact --}}
         <div class="text-[11px] text-gray-400 space-x-2">
           <span class="text-[#F47B1F] font-semibold">มีปัญหา ต้องการติดต่อผู้จัดงาน</span>
-          <span>โทร: {{ $contacts->get('PHONE') ? $contacts->get('PHONE')->value : '-' }}</span>
-          <span>LINE: {{ $contacts->get('LINE') ? $contacts->get('LINE')->value : '-' }}</span>
-          <span>Facebook: {{ $contacts->get('FACEBOOK') ? $contacts->get('FACEBOOK')->value : '-' }}</span>
-          <span>Email: {{ $contacts->get('EMAIL') ? $contacts->get('EMAIL')->value : '-' }}</span>
+          {{-- schema v3.1.0: ช่องทางติดต่ออยู่ในตาราง organization --}}
+          <span>โทร: {{ $organization?->phone ?: '-' }}</span>
+          <span>LINE: {{ $organization?->line ?: '-' }}</span>
+          <span>Facebook: {{ $organization?->facebook ?: '-' }}</span>
+          <span>Email: {{ $organization?->email ?: '-' }}</span>
         </div>
 
-        <!-- Back & Payment Action Buttons -->
+        {{-- Back & Payment Action Buttons --}}
         <div class="flex items-center gap-3 w-full md:w-auto">
           <button @click="goBack()" class="btn-back flex-1 md:flex-initial">
             ย้อนกลับ
@@ -239,14 +228,12 @@
 
   </main>
 
-  <!-- INCLUDE POP-UP FROM DEV FOLDER -->
-  @include('qr-modal')
+  {{-- INCLUDE POP-UP FROM DEV FOLDER --}}
+  @include('booking.qr-modal')
+@endsection
 
-  <!-- FOOTER INCLUDE -->
-  @include('footer')
-
-  <!-- ALPINE LOGIC -->
-  <script>
+@push('scripts')
+<script>
     function paymentApp() {
       return {
         protection: 'show',
@@ -343,6 +330,4 @@
       }
     }
   </script>
-
-</body>
-</html>
+@endpush

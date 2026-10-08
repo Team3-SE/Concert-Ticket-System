@@ -1,3 +1,11 @@
+/*
+ * resources/css/booking/qr-modal.css
+ * หน้าที่ : popup ชำระเงินด้วย QR
+ * ใช้กับ : booking/qr-modal.blade.php
+ * Author :
+ * Created :
+ */
+
 /* THAI QR PAYMENT MODAL STYLES */
 .qr-modal-overlay {
   position: fixed;

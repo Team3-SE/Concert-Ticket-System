@@ -1,17 +1,26 @@
 <?php
 
+/**
+ * Customer
+ * ลูกค้า (AppUser ที่ role = CUSTOMER)
+ * Author :
+ * Created :
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
-/**
- * Customer Entity (Subtype of AppUser)
- * Updated : 27/09/2026 – implemented viewTickets(), fixed searchConcert (excludes isDeleted)
- */
 class Customer extends AppUser
 {
+    /**
+     * boot()
+     * กำหนดให้ query เฉพาะผู้ใช้ role CUSTOMER และตั้ง role ให้อัตโนมัติเมื่อสร้าง
+     * param : -
+     * return : void
+     */
     protected static function boot()
     {
         parent::boot();
@@ -30,8 +39,10 @@ class Customer extends AppUser
     // ==========================================
 
     /**
-     * register(): void
-     * สมัครบัญชี Customer (role = CUSTOMER) และบันทึกข้อมูลส่วนตัว
+     * register()
+     * สมัครบัญชีลูกค้า (บันทึกข้อมูลผู้ใช้)
+     * param : -
+     * return : void
      */
     public function register(): void
     {
@@ -39,8 +50,10 @@ class Customer extends AppUser
     }
 
     /**
-     * searchConcert(keyword): List<Concert>
-     * ค้นหา Concert จากคำค้น ไม่รวม Concert ที่ isDeleted
+     * searchConcert(keyword)
+     * ค้นหาคอนเสิร์ตจากชื่อ ศิลปิน หรือสถานที่
+     * param : keyword
+     * return : Collection ของ Concert
      */
     public function searchConcert(string $keyword)
     {
@@ -55,8 +68,10 @@ class Customer extends AppUser
     }
 
     /**
-     * createBooking(concert, seats, standingItems): Booking
-     * สร้าง Booking (Logic หลักอยู่ที่ BookingController)
+     * createBooking(concert, seats, standingItems)
+     * สร้างการจอง (logic หลักอยู่ที่ BookingController)
+     * param : concert, seats, standingItems
+     * return : Booking
      */
     public function createBooking($concert, $seats, $standingItems): Booking
     {
@@ -65,8 +80,10 @@ class Customer extends AppUser
     }
 
     /**
-     * viewHistory(): List<Booking>
-     * ดึงประวัติ Booking ของ Customer
+     * viewHistory()
+     * ดึงประวัติการจองของลูกค้า
+     * param : -
+     * return : Collection ของ Booking
      */
     public function viewHistory()
     {
@@ -74,14 +91,16 @@ class Customer extends AppUser
     }
 
     /**
-     * viewTickets(): List<Ticket>
-     * ดึง E-Ticket ของ Customer ที่เกิดจาก Order หลังชำระเงินสำเร็จ
+     * viewTickets()
+     * ดึงบัตรทั้งหมดของลูกค้า
+     * param : -
+     * return : Collection ของ Ticket
      */
     public function viewTickets()
     {
         return Ticket::query()
             ->whereHas('order.booking', function ($q) {
-                $q->where('customer_id', $this->user_id);
+                $q->where('user_id', $this->user_id);
             })
             ->get();
     }
@@ -90,8 +109,14 @@ class Customer extends AppUser
     // Relationships
     // ==========================================
 
+    /**
+     * bookings()
+     * ความสัมพันธ์กับการจองของลูกค้า
+     * param : -
+     * return : HasMany Booking
+     */
     public function bookings(): HasMany
     {
-        return $this->hasMany(Booking::class, 'customer_id', 'user_id');
+        return $this->hasMany(Booking::class, 'user_id', 'user_id');
     }
 }

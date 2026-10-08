@@ -33,6 +33,9 @@ cp .env.example .env
 docker-compose up -d
 ```
 > รอซักครู่ให้ MySQL และ Redis ขึ้นก่อน (healthcheck จะดูแลให้อัตโนมัติ)
+>
+> container `concert_node` จะ build CSS/JS ให้อัตโนมัติ (ครั้งแรกใช้เวลา 1–2 นาที) แล้วหยุดเอง
+> ถ้าเปิดเว็บแล้วเจอ **"Vite manifest not found"** แปลว่ายัง build ไม่เสร็จ รอแล้ว refresh ใหม่ (ดูความคืบหน้า: `docker-compose logs -f node`)
 
 **3. ติดตั้ง PHP dependencies**
 ```bash
@@ -80,6 +83,8 @@ docker exec concert_app chmod -R 775 storage bootstrap/cache
 | เข้า MySQL | `docker exec -it concert_db mysql -u concert_user -p concert_db` |
 | เข้า Redis CLI | `docker exec -it concert_redis redis-cli` |
 | Rebuild image (หลังแก้ Dockerfile) | `docker-compose up -d --build` |
+| Build CSS/JS ใหม่ (หลังแก้ไฟล์ใน `resources/css`, `resources/js`) | `docker-compose run --rm node npm run build` |
+| ดูผล build CSS/JS | `docker-compose logs node` |
 
 ---
 
@@ -125,6 +130,14 @@ docker/
 # รอให้ container db healthy ก่อน (ประมาณ 30 วิหลัง docker-compose up)
 docker-compose ps   # ดูว่า db status เป็น healthy หรือยัง
 ```
+
+**Q: แก้ CSS/JS แล้วหน้าเว็บไม่เปลี่ยน**
+> CSS/JS เขียนใน `resources/css`, `resources/js` แล้ว Vite build ไปไว้ที่ `public/build` — ต้องสั่ง build ใหม่หลังแก้
+```bash
+docker-compose run --rm node npm run build
+```
+> ถ้าในเครื่องมี Node.js ใช้ `npm install` ครั้งแรก แล้ว `npm run dev` ระหว่างแก้ได้ (แก้แล้วหน้าเว็บอัปเดตเอง ปิดด้วย Ctrl+C)
+> รายละเอียดว่า CSS ไฟล์ไหนใช้กับหน้าไหน ดู `resources/css/README.md`
 
 **Q: แก้โค้ดแล้วไม่เห็นการเปลี่ยนแปลง**
 ```bash

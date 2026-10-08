@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * BookingStandingItem
+ * รายการบัตรยืนในการจอง (ตาราง booking_standing_item )
+ * Author :
+ * Created :
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -23,11 +30,23 @@ class BookingStandingItem extends Model
         'unit_price_snapshot' => 'decimal:2',
     ];
 
+    /**
+     * booking()
+     * ความสัมพันธ์กับการจอง
+     * param : -
+     * return : BelongsTo Booking
+     */
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class, 'booking_id', 'booking_id');
     }
 
+    /**
+     * zone()
+     * ความสัมพันธ์กับโซนยืน
+     * param : -
+     * return : BelongsTo Zone
+     */
     public function zone(): BelongsTo
     {
         return $this->belongsTo(Zone::class, 'zone_id', 'zone_id');

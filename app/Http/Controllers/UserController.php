@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * UserController
+ * จัดการข้อมูลบัญชีผู้ใช้: ดึงโปรไฟล์ แก้ไขโปรไฟล์ และเปลี่ยนรหัสผ่าน
+ * Author :
+ * Created :
+ */
+
 namespace App\Http\Controllers;
 
 use App\Models\AppUser;
@@ -8,17 +15,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
-/**
- * UserController
- * Spec: getProfile(), updateProfile(), changePassword()
- * Author : AI Agent
- * Created : 27/09/2026
- */
 class UserController extends Controller
 {
     /**
-     * getProfile(userID): AppUser
-     * ดึงข้อมูล APP_USER ซึ่งรวมข้อมูลตาม Role
+     * getProfile(userId)
+     * ดึงข้อมูลบัญชีผู้ใช้พร้อมองค์กรที่สังกัด
+     * param : userId
+     * return : AppUser
      */
     public function getProfile(int $userId): AppUser
     {
@@ -26,8 +29,10 @@ class UserController extends Controller
     }
 
     /**
-     * updateProfile(userID, data): void
-     * แก้ไขข้อมูลโปรไฟล์ใน APP_USER ตาม Role
+     * updateProfile(request, userId)
+     * ตรวจสอบแล้วบันทึกชื่อ นามสกุล และเบอร์โทรศัพท์ของผู้ใช้
+     * param : request, userId
+     * return : void
      */
     public function updateProfile(Request $request, int $userId): void
     {
@@ -51,8 +56,10 @@ class UserController extends Controller
     }
 
     /**
-     * changePassword(userID, password): void
-     * Hash และเปลี่ยน passwordHash ของ APP_USER
+     * changePassword(request, userId)
+     * ตรวจรหัสผ่านปัจจุบัน แล้วเปลี่ยนเป็นรหัสผ่านใหม่ (เก็บแบบ hash)
+     * param : request, userId
+     * return : void
      */
     public function changePassword(Request $request, int $userId): void
     {

@@ -36,6 +36,20 @@
     depends_on:
       - app
 
+  # --- Node (build CSS/JS ด้วย Vite) --------------------------------------------
+  # ตอน docker-compose up จะรัน npm install + npm run build แล้วหยุดเอง
+  # ผลลัพธ์อยู่ที่ public/build/ (ต้องมีไฟล์นี้ ไม่งั้นหน้าเว็บขึ้น "Vite manifest not found")
+  # แก้ CSS/JS ใน resources/ แล้วสั่ง build ใหม่:  docker-compose run --rm node npm run build
+  node:
+    image: node:22-bookworm-slim
+    container_name: concert_node
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+      - concert_node_modules:/var/www/html/node_modules   # แยก node_modules ของ container ออกจากเครื่อง
+    command: sh -c "npm install --no-audit --no-fund && npm run build"
+    restart: "no"
+
   # --- MySQL -------------------------------------------------------------------
   db:
     image: mysql:8.0
@@ -82,6 +96,8 @@ volumes:
   concert_mysql_data7:
     driver: local
   concert_redis_data:
+    driver: local
+  concert_node_modules:
     driver: local
 
 # --- Network -------------------------------------------------------------------

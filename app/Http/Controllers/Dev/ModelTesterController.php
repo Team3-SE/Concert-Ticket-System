@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * ModelTesterController
+ * Controller สำหรับนักพัฒนา ใช้ทดสอบเมธอดของ Model ผ่าน HTTP (หน้า /dev/models)
+ * Author :
+ * Created :
+ */
+
 namespace App\Http\Controllers\Dev;
 
 use App\Http\Controllers\Controller;
@@ -10,12 +17,6 @@ use ReflectionClass;
 use ReflectionMethod;
 use Throwable;
 
-/**
- * ModelTesterController
- * Dev-only controller to test Eloquent model methods via HTTP
- * Author : AI Agent
- * Created : 30/08/2026
- */
 class ModelTesterController extends Controller
 {
     private const MODEL_ALIASES = [
@@ -33,7 +34,7 @@ class ModelTesterController extends Controller
 
     /**
      * corsResponse(data, status)
-     * Return a JSON response with CORS headers.
+     * สร้าง JSON response พร้อม header CORS
      * param : data, status
      * return : JsonResponse
      */
@@ -47,9 +48,9 @@ class ModelTesterController extends Controller
 
     /**
      * getMethods(request)
-     * Return list of public methods on a given Model class.
+     * ส่งรายชื่อเมธอด public ของ Model ที่เลือก
      * param : request
-     * return : JsonResponse
+     * return : JsonResponse รายการเมธอด
      */
     public function getMethods(Request $request)
     {
@@ -117,9 +118,9 @@ class ModelTesterController extends Controller
 
     /**
      * execute(request)
-     * Execute the specified method on the given Model and return result.
+     * เรียกเมธอดที่เลือกของ Model แล้วส่งผลลัพธ์กลับ
      * param : request
-     * return : JsonResponse
+     * return : JsonResponse ผลลัพธ์ หรือข้อความ error
      */
     public function execute(Request $request)
     {
@@ -185,6 +186,12 @@ class ModelTesterController extends Controller
         }
     }
 
+    /**
+     * resolveModelClass(model)
+     * แปลงชื่อ Model ที่รับมาเป็นชื่อคลาสเต็ม (App\Models\...)
+     * param : model
+     * return : string ชื่อคลาส
+     */
     private function resolveModelClass(?string $model): string
     {
         $model = trim((string) $model);

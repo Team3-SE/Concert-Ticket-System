@@ -1,44 +1,59 @@
 <?php
 
+/**
+ * HomeController
+ * แสดงหน้า Home: คอนเสิร์ตแนะนำ ผลการค้นหา และคอนเสิร์ตไฮไลต์
+ * Author :
+ * Created :
+ */
+
 namespace App\Http\Controllers;
 
 use App\Models\Concert;
 use Illuminate\Http\Request;
 
-/**
- * HomeController
- * ใช้ ConcertController เป็น dependency แทนการ query ตรง
- * Author : AI Agent
- * Updated : 27/09/2026 – fixed to use organization relationship instead of company
- */
 class HomeController extends Controller
 {
+    /* จำนวนคอนเสิร์ตที่แสดงในหน้า Home */
+    private const CONCERT_LIMIT = 12;
+
+    /* จำนวนคอนเสิร์ตไฮไลต์ในแบนเนอร์ */
+    private const HIGHLIGHT_LIMIT = 5;
+
     protected ConcertController $concertController;
 
+    /**
+     * __construct(concertController)
+     * รับ ConcertController ผ่าน dependency injection
+     * param : concertController
+     * return : -
+     */
     public function __construct(ConcertController $concertController)
     {
         $this->concertController = $concertController;
     }
 
     /**
-     * index()
-     * แสดงหน้า Home พร้อมรายการ Concert (ใช้ ConcertController.getConcertList / searchConcert)
+     * index(request)
+     * แสดงหน้า Home พร้อมรายการคอนเสิร์ต (หรือผลการค้นหา) และคอนเสิร์ตไฮไลต์
+     * param : request
+     * return : View concerts.home
      */
     public function index(Request $request)
     {
         $search = trim((string) $request->query('search', ''));
 
         if ($search !== '') {
-            $concerts = $this->concertController->searchConcert($search)->take(12);
+            $concerts = $this->concertController->searchConcert($search)->take(self::CONCERT_LIMIT);
         } else {
-            $concerts = $this->concertController->getConcertList()->take(12);
+            $concerts = $this->concertController->getConcertList()->take(self::CONCERT_LIMIT);
         }
 
         $highlights = Concert::where('is_deleted', 0)
             ->orderBy('event_datetime', 'asc')
-            ->limit(5)
+            ->limit(self::HIGHLIGHT_LIMIT)
             ->get();
 
-        return view('home', compact('concerts', 'highlights', 'search'));
+        return view('concerts.home', compact('concerts', 'highlights', 'search'));
     }
 }

@@ -1,21 +1,27 @@
 <?php
 
+/**
+ * OrderController
+ * แสดงประวัติการสั่งซื้อของผู้ใช้ที่เข้าสู่ระบบ
+ * Author :
+ * Created :
+ */
+
 namespace App\Http\Controllers;
 
 use App\Models\CustomerOrder;
 use Illuminate\Support\Facades\Auth;
 
-/**
- * OrderController
- * Routes Order history (E-Ticket) – delegates to TicketController.getTickets()
- * Author : AI Agent
- * Updated : 27/09/2026 – fixed customer_id lookup to use user_id directly
- */
 class OrderController extends Controller
 {
+    /* จำนวนคำสั่งซื้อต่อหน้าในหน้าประวัติการสั่งซื้อ */
+    private const ORDERS_PER_PAGE = 10;
+
     /**
-     * history() – displayBookingHistory(): void
-     * แสดงประวัติ Booking / Order ของ Customer
+     * history()
+     * แสดงประวัติการสั่งซื้อของผู้ใช้ที่เข้าสู่ระบบ แบบแบ่งหน้า
+     * param : -
+     * return : View account.order-history
      */
     public function history()
     {
@@ -28,10 +34,10 @@ class OrderController extends Controller
                 'tickets.seat',
                 'payment',
             ])
-            ->whereHas('booking', fn($q) => $q->where('customer_id', $userId))
+            ->whereHas('booking', fn($q) => $q->where('user_id', $userId))
             ->orderBy('order_date', 'desc')
-            ->paginate(10);
+            ->paginate(self::ORDERS_PER_PAGE);
 
-        return view('orders.history', compact('orders'));
+        return view('account.order-history', compact('orders'));
     }
 }

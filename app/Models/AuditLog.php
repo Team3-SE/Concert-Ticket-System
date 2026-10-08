@@ -1,17 +1,17 @@
 <?php
 
+/**
+ * AuditLog
+ * ประวัติการใช้งานระบบ (ตาราง audit_log)
+ * Author :
+ * Created :
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/**
- * AuditLog
- * manage AuditLog entity and its relationships
- * Author : AI Agent
- * Created : 28/08/2026
- * Updated : 27/09/2026 – fixed column mapping (created_at, metadata_details)
- */
 class AuditLog extends Model
 {
     protected $table = 'audit_log';
@@ -38,8 +38,10 @@ class AuditLog extends Model
     // ==========================================
 
     /**
-     * getDetails(): String
-     * ดึงรายละเอียด Audit Log เช่น ผู้ดำเนินการ Action เวลา IP Address และ metadataDetails
+     * getDetails()
+     * สรุปรายละเอียดของ log (action เวลา IP และ metadata)
+     * param : -
+     * return : string
      */
     public function getDetails(): string
     {
@@ -50,6 +52,12 @@ class AuditLog extends Model
     // Relationships
     // ==========================================
 
+    /**
+     * user()
+     * ความสัมพันธ์กับผู้ใช้ที่ทำรายการ
+     * param : -
+     * return : BelongsTo AppUser
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(AppUser::class, 'user_id', 'user_id');

@@ -1,17 +1,18 @@
 <?php
 
+/**
+ * SeatLockLog
+ * ประวัติการล็อกที่นั่ง (ตาราง seat_lock_log)
+ * Author :
+ * Created :
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/**
- * SeatLockLog
- * manage SeatLockLog entity and its relationships
- * Author : AI Agent
- * Created : 28/08/2026
- */
 class SeatLockLog extends Model
 {
     protected $table = 'seat_lock_log';
@@ -42,7 +43,10 @@ class SeatLockLog extends Model
     // ─── Relationships ───────────────────────────────────────
 
     /**
-     * SeatLockLog belongs to a Booking (nullable)
+     * booking()
+     * ความสัมพันธ์กับการจอง (อาจเป็น null)
+     * param : -
+     * return : BelongsTo Booking
      */
     public function booking(): BelongsTo
     {
@@ -50,7 +54,10 @@ class SeatLockLog extends Model
     }
 
     /**
-     * SeatLockLog belongs to a Seat
+     * seat()
+     * ความสัมพันธ์กับที่นั่ง
+     * param : -
+     * return : BelongsTo Seat
      */
     public function seat(): BelongsTo
     {

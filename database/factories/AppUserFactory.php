@@ -30,7 +30,7 @@ class AppUserFactory extends Factory
             'user_id' => (string) Str::ulid(),
             'password_hash' => static::$password ??= Hash::make('password'),
             'role' => 'customer',
-            'account_status' => 'active',
+            'account_status' => 1,
             'created_at' => now(),
         ];
     }

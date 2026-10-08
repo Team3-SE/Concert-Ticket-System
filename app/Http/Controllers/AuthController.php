@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * AuthController
+ * จัดการการสมัครสมาชิก เข้าสู่ระบบ และออกจากระบบของผู้ใช้
+ * Author :
+ * Created :
+ */
+
 namespace App\Http\Controllers;
 
 use App\Models\AppUser;
@@ -9,17 +16,13 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
-/**
- * AuthController
- * Spec: registerCustomer(), login(), logout()
- * Author : AI Agent
- * Updated : 27/09/2026 – fixed to work with single app_user table (no separate customer table)
- */
 class AuthController extends Controller
 {
     /**
-     * registerCustomer(data): Customer
-     * ตรวจสอบข้อมูลสมัครสมาชิก แล้วสร้าง APP_USER ที่มี role = CUSTOMER
+     * register(request)
+     * ตรวจสอบข้อมูลสมัครสมาชิก สร้างบัญชีผู้ใช้ (role = CUSTOMER) แล้วเข้าสู่ระบบให้ทันที
+     * param : request
+     * return : RedirectResponse ไปหน้าแรก (ถ้าข้อมูลไม่ถูกต้องจะกลับหน้าเดิมพร้อม error)
      */
     public function register(Request $request)
     {
@@ -70,8 +73,10 @@ class AuthController extends Controller
     }
 
     /**
-     * login(identifier, password): Boolean
-     * ตรวจสอบ passwordHash, accountStatus และ role
+     * login(request)
+     * ตรวจสอบอีเมล รหัสผ่าน และสถานะบัญชี (ถูกระงับหรือไม่) แล้วเข้าสู่ระบบ
+     * param : request
+     * return : RedirectResponse ไปหน้าแรก (ถ้าไม่ผ่านจะกลับหน้าเดิมพร้อม error)
      */
     public function login(Request $request)
     {
@@ -114,8 +119,10 @@ class AuthController extends Controller
     }
 
     /**
-     * logout(userID): void
-     * ยกเลิก Session/Token ของผู้ใช้
+     * logout(request)
+     * ออกจากระบบ ยกเลิก session และสร้าง CSRF token ใหม่
+     * param : request
+     * return : RedirectResponse ไปหน้าแรก
      */
     public function logout(Request $request)
     {

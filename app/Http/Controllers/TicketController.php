@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * TicketController
+ * สร้างและดึงข้อมูลบัตร (E-Ticket) ของคำสั่งซื้อ
+ * Author :
+ * Created :
+ */
+
 namespace App\Http\Controllers;
 
 use App\Models\CustomerOrder;
@@ -7,19 +14,16 @@ use App\Models\Ticket;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
-/**
- * TicketController
- * Spec: generateTickets(), getTickets()
- * Author : AI Agent
- * Created : 27/09/2026
- */
 class TicketController extends Controller
 {
+    /* จำนวนคำสั่งซื้อต่อหน้าในหน้าประวัติการสั่งซื้อ */
+    private const ORDERS_PER_PAGE = 10;
+
     /**
-     * generateTickets(orderID): List<Ticket>
-     * สร้างบัตรจาก CustomerOrder พร้อม ticketCode และ Snapshot
-     * SEATED → สร้าง Ticket ที่มี seat_id + seat_label_snapshot
-     * STANDING → สร้าง Ticket ที่ไม่มี seat_id แต่มี quantity
+     * generateTickets(orderId)
+     * สร้างบัตรจากคำสั่งซื้อ พร้อม ticketCode และ snapshot แล้วเปลี่ยนที่นั่งเป็น SOLD
+     * param : orderId
+     * return : Collection ของ Ticket
      */
     public function generateTickets(int $orderId): \Illuminate\Support\Collection
     {
@@ -62,22 +66,26 @@ class TicketController extends Controller
     }
 
     /**
-     * getTickets(customerID): List<Ticket>
-     * ดึง E-Ticket ของ Customer (ทั้งแบบ SEATED ที่มี seat_id และแบบ STANDING ที่มี quantity)
-     * ผ่าน Booking → CustomerOrder → Ticket
+     * getTickets(customerId)
+     * ดึงบัตรทั้งหมดของลูกค้าที่การจองได้รับการยืนยันแล้ว
+     * param : customerId
+     * return : Collection ของ Ticket
      */
     public function getTickets(int $customerId): \Illuminate\Support\Collection
     {
         return Ticket::with(['zone', 'seat', 'order.booking.concert'])
             ->whereHas('order.booking', function ($q) use ($customerId) {
-                $q->where('customer_id', $customerId)
+                $q->where('user_id', $customerId)
                   ->where('status', 'CONFIRMED');
             })
             ->get();
     }
 
     /**
-     * history() – แสดงหน้าประวัติ Order (HTTP endpoint)
+     * history()
+     * แสดงประวัติการสั่งซื้อของผู้ใช้ที่เข้าสู่ระบบ แบบแบ่งหน้า
+     * param : -
+     * return : View account.order-history
      */
     public function history()
     {
@@ -89,10 +97,10 @@ class TicketController extends Controller
                 'tickets',
                 'payment',
             ])
-            ->whereHas('booking', fn($q) => $q->where('customer_id', $userId))
+            ->whereHas('booking', fn($q) => $q->where('user_id', $userId))
             ->orderBy('order_date', 'desc')
-            ->paginate(10);
+            ->paginate(self::ORDERS_PER_PAGE);
 
-        return view('orders.history', compact('orders'));
+        return view('account.order-history', compact('orders'));
     }
 }

@@ -1,44 +1,33 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TEAM 3 Ticket - Concert Booking</title>
+{{--
+ * booking.blade.php
+ * หน้าเลือกโซนและที่นั่งของคอนเสิร์ต
+ * @Author
+ * @Create Date
+--}}
+@extends('layouts.main')
 
-  <!-- Tailwind CSS & Alpine.js -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+@section('title', 'TEAM 3 Ticket - Concert Booking')
+@section('body_class', "min-h-screen flex flex-col bg-[#EBF1F9]")
 
-  <!-- IBM Plex Sans Thai Font -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+@push('body_attrs')x-data="bookingApp()"@endpush
 
-  <!-- External Pure CSS Style -->
-  @vite('resources/css/booking.css')
-  <style>[x-cloak] { display: none !important; }</style>
-</head>
-<body class="min-h-screen flex flex-col bg-[#EBF1F9]" x-data="bookingApp()">
-
-  <!-- NAVBAR INCLUDE -->
-  @include('navbar')
-
+@section('content')
   <div class="flex-1">
-    <!-- HERO BANNER WRAPPER -->
+    {{-- HERO BANNER WRAPPER --}}
     <div class="hero-banner">
       <img src="{{ asset('images/Gradient.png') }}" alt="Background Gradient" class="hero-bg-img">
     </div>
 
-    <!-- MAIN HERO CARD OVERLAY -->
+    {{-- MAIN HERO CARD OVERLAY --}}
     <div class="hero-overlay-wrap">
       <div class="hero-flex-container">
 
-        <!-- Concert Poster -->
+        {{-- Concert Poster --}}
         <div class="poster-card">
           <img src="{{ $concert && $concert->poster_path ? asset($concert->poster_path) : asset('images/poster.png') }}" alt="Concert Poster">
         </div>
 
-        <!-- Main Dark Info Card -->
+        {{-- Main Dark Info Card --}}
         <div class="main-hero-card">
           <div class="hero-content-left">
             <div>
@@ -63,10 +52,12 @@
             <div class="contact-info">
               <p>ติดต่อผู้จัดงาน</p>
               <div class="contact-grid">
-                <div>โทร: <span>{{ $contacts->get('PHONE') ? $contacts->get('PHONE')->value : '-' }}</span></div>
-                <div>Facebook: <span>{{ $contacts->get('FACEBOOK') ? $contacts->get('FACEBOOK')->value : '-' }}</span></div>
-                <div>LINE: <span>{{ $contacts->get('LINE') ? $contacts->get('LINE')->value : '-' }}</span></div>
-                <div>Email: <span>{{ $contacts->get('EMAIL') ? $contacts->get('EMAIL')->value : '-' }}</span></div>
+                {{-- schema v3.1.0: ช่องทางติดต่ออยู่ในตาราง organization (ไม่มีตาราง concert_contact แล้ว) --}}
+                @php $org = $concert?->organization; @endphp
+                <div>โทร: <span>{{ $org?->phone ?: '-' }}</span></div>
+                <div>Facebook: <span>{{ $org?->facebook ?: '-' }}</span></div>
+                <div>LINE: <span>{{ $org?->line ?: '-' }}</span></div>
+                <div>Email: <span>{{ $org?->email ?: '-' }}</span></div>
               </div>
             </div>
           </div>
@@ -87,10 +78,10 @@
       </div>
     </div>
 
-    <!-- MAIN BODY CONTENT -->
+    {{-- MAIN BODY CONTENT --}}
     <main class="main-body space-y-6">
 
-      <!-- DATE SELECTOR -->
+      {{-- DATE SELECTOR --}}
       <div class="space-y-2">
         <h3 class="section-label">วันเวลาการแสดง</h3>
         <div class="date-pill">
@@ -100,7 +91,7 @@
         </div>
       </div>
 
-      <!-- ZONE SELECTOR + MAP -->
+      {{-- ZONE SELECTOR + MAP --}}
       <div class="space-y-2.5">
         <div class="flex flex-wrap items-center gap-2">
           <h3 class="section-label mr-1">เลือกโซนที่นั่ง</h3>
@@ -152,20 +143,18 @@
         </div>
       </div>
 
-      <!-- ========================================================= -->
-      <!-- OPTION 1: SEAT MAP <= 20 SEATS                            -->
-      <!-- ========================================================= -->
+      {{-- OPTION 1: SEAT MAP <= 20 SEATS --}}
       <template x-if="totalSeats <= 20">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
 
-          <!-- ฝั่งซ้าย: ผังที่นั่งขนาดกระชับ -->
+          {{-- ฝั่งซ้าย: ผังที่นั่งขนาดกระชับ --}}
           <div class="seat-map-transparent-box seat-map-box-20 p-1">
             <h3 class="section-label mb-4">แผนผังที่นั่ง</h3>
             <div class="bg-[#061838] text-white text-center py-1.5 text-[10px] tracking-[0.2em] font-bold rounded max-w-[240px] mx-auto mb-4">STAGE</div>
 
             <div class="overflow-x-auto seat-scroll pb-2">
               <div class="flex flex-col gap-1 items-center min-w-fit mx-auto">
-                <!-- Header Numbers -->
+                {{-- Header Numbers --}}
                 <div class="flex gap-1 items-center mb-1">
                   <span class="w-[14px] inline-block"></span>
                   <template x-for="col in totalSeats" :key="'hdr-'+col">
@@ -173,7 +162,7 @@
                   </template>
                   <span class="w-[14px] inline-block"></span>
                 </div>
-                <!-- Rows -->
+                {{-- Rows --}}
                 <template x-for="row in rows" :key="'r20-'+row">
                   <div class="flex gap-1 items-center">
                     <span class="w-[14px] text-[9px] seat-label-text text-center select-none" x-text="row"></span>
@@ -195,7 +184,7 @@
               </div>
             </div>
 
-            <!-- Legend -->
+            {{-- Legend --}}
             <div class="flex justify-center gap-5 mt-4 text-[10px] text-gray-500">
               <div class="flex items-center gap-1.5">
                 <span class="seat-legend-icon" :style="{ backgroundColor: selectedZone ? selectedZone.color : '#4D7EE0' }"></span> ว่าง
@@ -209,7 +198,7 @@
             </div>
           </div>
 
-          <!-- ฝั่งขวา: ข้อมูลบัตร -->
+          {{-- ฝั่งขวา: ข้อมูลบัตร --}}
           <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
             <div>
               <h3 class="section-label mb-4">ข้อมูลบัตร</h3>
@@ -253,22 +242,20 @@
         </div>
       </template>
 
-      <!-- ========================================================= -->
-      <!-- OPTION 2: SEAT MAP > 20 SEATS                             -->
-      <!-- ========================================================= -->
+      {{-- OPTION 2: SEAT MAP > 20 SEATS --}}
       <template x-if="totalSeats > 20">
         <div class="space-y-6">
 
-          <!-- 1. FULL WIDTH SEAT MAP TRANSPARENT SECTION -->
+          {{-- 1. FULL WIDTH SEAT MAP TRANSPARENT SECTION --}}
           <div class="seat-map-transparent-box space-y-4">
             <h3 class="section-label">แผนผังที่นั่ง</h3>
 
             <div class="bg-[#061838] text-white text-center py-1.5 text-[10px] tracking-[0.2em] font-bold rounded max-w-[280px] mx-auto">STAGE</div>
 
-            <!-- Wide Seat Grid Area -->
+            {{-- Wide Seat Grid Area --}}
             <div class="overflow-x-auto seat-scroll py-2">
               <div class="flex flex-col gap-1 items-center min-w-fit mx-auto">
-                <!-- Header Numbers -->
+                {{-- Header Numbers --}}
                 <div class="flex gap-1 items-center mb-1">
                   <span class="w-[14px] inline-block"></span>
                   <template x-for="col in totalSeats" :key="'hdr40-'+col">
@@ -277,7 +264,7 @@
                   <span class="w-[14px] inline-block"></span>
                 </div>
 
-                <!-- Seat Rows -->
+                {{-- Seat Rows --}}
                 <template x-for="row in rows" :key="'r40-'+row">
                   <div class="flex gap-1 items-center">
                     <span class="w-[14px] text-[9px] seat-label-text text-center select-none" x-text="row"></span>
@@ -299,7 +286,7 @@
               </div>
             </div>
 
-            <!-- Seat Legend -->
+            {{-- Seat Legend --}}
             <div class="flex justify-center gap-6 pt-2 text-[10px] text-gray-500">
               <div class="flex items-center gap-1.5">
                 <span class="seat-legend-icon" :style="{ backgroundColor: selectedZone ? selectedZone.color : '#4D7EE0' }"></span> ว่าง
@@ -313,12 +300,12 @@
             </div>
           </div>
 
-          <!-- 2. FULL WIDTH TICKET INFO CARD -->
+          {{-- 2. FULL WIDTH TICKET INFO CARD --}}
           <div class="ticket-info-card-full space-y-6">
             <h3 class="section-label">ข้อมูลบัตร</h3>
 
             <div class="ticket-summary-grid">
-              <!-- Left Column Specs -->
+              {{-- Left Column Specs --}}
               <div class="space-y-3">
                 <div class="ticket-summary-row">
                   <span class="font-semibold text-gray-700">รอบการแสดง</span>
@@ -334,7 +321,7 @@
                 </div>
               </div>
 
-              <!-- Right Column Specs -->
+              {{-- Right Column Specs --}}
               <div class="space-y-3">
                 <div class="ticket-summary-row">
                   <span class="font-semibold text-gray-700">จำนวน</span>
@@ -351,7 +338,7 @@
               </div>
             </div>
 
-            <!-- Action Buttons Centered at Bottom -->
+            {{-- Action Buttons Centered at Bottom --}}
             <div class="action-buttons-center">
               <button class="btn-clean-back" @click="window.location.href='/'">
                 ย้อนกลับ
@@ -369,12 +356,10 @@
 
     </main>
   </div>
+@endsection
 
-  <!-- FOOTER INCLUDE -->
-  @include('footer')
-
-  <!-- ALPINE LOGIC -->
-  <script>
+@push('scripts')
+<script>
     function bookingApp() {
       // ข้อมูลจากฐานข้อมูล (inject โดย PHP/Blade)
       const dbZones = @json($zones);
@@ -452,5 +437,4 @@
       }
     }
   </script>
-</body>
-</html>
+@endpush

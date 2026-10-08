@@ -1,0 +1,78 @@
+/*
+ * resources/css/concerts/index.css
+ * หน้าที่ : หน้าคอนเสิร์ตทั้งหมด (<body class="page-home page-concerts">)
+ * ใช้กับ : concerts/index.blade.php
+ * Author : ธีรเมธ พลสาย
+ * Created : 09/10/2569
+ */
+
+/*
+ * หน้า "คอนเสิร์ตทั้งหมด" (concerts/index)
+ * ใช้คู่กับ .page-home (การ์ด / grid / ตัวแปรสี) — scoped ด้วย <body class="page-concerts">
+ */
+.page-concerts{
+  .concerts-page{max-width:1580px;margin:0 auto;padding:22px 32px 56px;}
+
+  .crumbs{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-500);margin-bottom:14px;}
+  .crumbs a{color:var(--navy-700);font-weight:500;text-decoration:none;}
+  .crumbs a:hover{text-decoration:underline;}
+
+  .concerts-head{margin-bottom:18px;}
+  .concerts-title{font-size:26px;font-weight:700;line-height:1.25;border-left:5px solid var(--orange);padding-left:12px;}
+  .concerts-count{margin-top:6px;padding-left:17px;font-size:14px;color:var(--gray-500);}
+  .concerts-count strong{color:var(--text);font-weight:600;}
+
+  .concerts-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .concerts-toolbar .search-box{flex:1;min-width:0;}
+  .sort-select{
+    display:flex;align-items:center;gap:6px;flex-shrink:0;
+    height:52px;padding:0 10px 0 20px;
+    background:#fff;border:1px solid var(--gray-300);border-radius:26px;
+    font-size:13px;color:var(--gray-500);white-space:nowrap;cursor:pointer;
+  }
+  .sort-select:focus-within{border-color:var(--navy-700);box-shadow:0 0 0 4px rgba(18,41,125,.08);}
+  .sort-select select{
+    height:100%;padding:0 6px;border:0;outline:0;background:transparent;cursor:pointer;
+    font-family:inherit;font-size:14px;font-weight:600;color:var(--text);
+  }
+
+  .status-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;}
+  .status-tab{
+    display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 8px 0 16px;
+    background:#fff;border:1px solid var(--gray-300);border-radius:19px;
+    font-size:14px;font-weight:500;color:var(--gray-700);text-decoration:none;
+    transition:border-color .15s,color .15s,background .15s;
+  }
+  .status-tab:hover{border-color:var(--navy-700);color:var(--navy-700);}
+  .status-tab .count{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:24px;height:24px;padding:0 7px;border-radius:12px;
+    background:var(--gray-100);font-size:12px;font-weight:600;
+  }
+  .status-tab.active{background:var(--navy-800);border-color:var(--navy-800);color:#fff;}
+  .status-tab.active .count{background:rgba(255,255,255,.18);color:#fff;}
+
+  .concerts-grid{gap:20px;}
+
+  .concerts-empty{
+    display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;
+    padding:56px 20px;background:#fff;border:1px solid var(--gray-300);border-radius:14px;
+    font-size:14px;color:var(--gray-500);
+  }
+  .concerts-empty svg{width:48px;height:48px;color:#c3c8d6;margin-bottom:6px;}
+  .concerts-empty-title{font-size:16px;font-weight:600;color:var(--text);}
+  .concerts-reset{
+    margin-top:12px;padding:10px 22px;border-radius:20px;
+    background:var(--orange);color:#fff;font-weight:600;text-decoration:none;
+  }
+  .concerts-reset:hover{background:var(--orange-dark);}
+
+  .concerts-pager{margin-top:32px;}
+
+  @media(max-width:640px){
+    .concerts-page{padding:16px 16px 40px;}
+    .concerts-title{font-size:22px;}
+    .concerts-toolbar{flex-direction:column;align-items:stretch;}
+    .sort-select{height:46px;justify-content:space-between;}
+  }
+}

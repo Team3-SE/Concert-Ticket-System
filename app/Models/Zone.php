@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Zone
+ * โซนที่นั่งของคอนเสิร์ต (ตาราง zone)
+ * Author :
+ * Created :
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -7,13 +14,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-/**
- * Zone
- * manage Zone entity and its relationships
- * Author : AI Agent
- * Created : 28/08/2026
- * Updated : 27/09/2026 – fixed seat_booking_status column, removed deprecated BookingStandingItem
- */
 class Zone extends Model
 {
     protected $table = 'zone';
@@ -51,8 +51,10 @@ class Zone extends Model
     // ==========================================
 
     /**
-     * getAvailableSeats(): List<Seat>
-     * ดึงรายการ Seat ที่มี seat_booking_status เป็น AVAILABLE สำหรับ Zone แบบ SEATED
+     * getAvailableSeats()
+     * ดึงที่นั่งที่ยังว่างในโซน (สำหรับโซน SEATED)
+     * param : -
+     * return : HasMany Seat
      */
     public function getAvailableSeats(): HasMany
     {
@@ -60,10 +62,10 @@ class Zone extends Model
     }
 
     /**
-     * getAvailableCapacity(): Integer
-     * คำนวณหรือดึงจำนวนบัตรที่ยังสามารถจองได้ใน Zone
-     * สำหรับ STANDING: ใช้ capacity ลบด้วยจำนวน Ticket ที่ขายไปแล้วใน Zone นี้
-     * สำหรับ SEATED: นับจำนวน Seat ที่ยัง AVAILABLE
+     * getAvailableCapacity()
+     * คำนวณจำนวนบัตรที่ยังจองได้ในโซน (STANDING ใช้ capacity ลบบัตรที่ขายแล้ว, SEATED นับที่นั่งว่าง)
+     * param : -
+     * return : int
      */
     public function getAvailableCapacity(): int
     {
@@ -84,21 +86,45 @@ class Zone extends Model
     // Relationships
     // ==========================================
 
+    /**
+     * concert()
+     * ความสัมพันธ์กับคอนเสิร์ต
+     * param : -
+     * return : BelongsTo Concert
+     */
     public function concert(): BelongsTo
     {
         return $this->belongsTo(Concert::class, 'concert_id', 'concert_id');
     }
 
+    /**
+     * seatPatterns()
+     * ความสัมพันธ์กับรูปแบบการจัดที่นั่ง
+     * param : -
+     * return : HasMany ZoneSeatPattern
+     */
     public function seatPatterns(): HasMany
     {
         return $this->hasMany(ZoneSeatPattern::class, 'zone_id', 'zone_id');
     }
 
+    /**
+     * seats()
+     * ความสัมพันธ์กับที่นั่งในโซน
+     * param : -
+     * return : HasMany Seat
+     */
     public function seats(): HasMany
     {
         return $this->hasMany(Seat::class, 'zone_id', 'zone_id');
     }
 
+    /**
+     * tickets()
+     * ความสัมพันธ์กับบัตรในโซน
+     * param : -
+     * return : HasMany Ticket
+     */
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class, 'zone_id', 'zone_id');

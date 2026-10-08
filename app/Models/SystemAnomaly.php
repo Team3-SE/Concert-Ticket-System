@@ -1,16 +1,17 @@
 <?php
 
+/**
+ * SystemAnomaly
+ * ความผิดปกติของระบบที่ตรวจพบ (ตาราง system_anomaly)
+ * Author :
+ * Created :
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 
-/**
- * SystemAnomaly
- * manage SystemAnomaly entity and its relationships
- * Author : AI Agent
- * Created : 28/08/2026
- */
 class SystemAnomaly extends Model
 {
     use HasUlids;

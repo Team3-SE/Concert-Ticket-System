@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * ZoneSeatPattern
+ * รูปแบบการจัดที่นั่งของโซน (ตาราง zone_seat_pattern)
+ * Author :
+ * Created :
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -24,11 +31,23 @@ class ZoneSeatPattern extends Model
         'seats_per_row' => 'integer',
     ];
 
+    /**
+     * zone()
+     * ความสัมพันธ์กับโซน
+     * param : -
+     * return : BelongsTo Zone
+     */
     public function zone(): BelongsTo
     {
         return $this->belongsTo(Zone::class, 'zone_id', 'zone_id');
     }
 
+    /**
+     * seats()
+     * ที่นั่งในโซนของรูปแบบนี้
+     * param : -
+     * return : HasMany Seat
+     */
     public function seats(): HasMany
     {
         return $this->zone->seats();

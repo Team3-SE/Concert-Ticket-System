@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * ConcertContact
+ * ช่องทางติดต่อของคอนเสิร์ต (ตาราง concert_contact)
+ * Author :
+ * Created :
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -18,6 +25,12 @@ class ConcertContact extends Model
 
     protected $fillable = ['contact_id', 'concert_id', 'contact_type', 'value'];
 
+    /**
+     * concert()
+     * ความสัมพันธ์กับคอนเสิร์ต
+     * param : -
+     * return : BelongsTo Concert
+     */
     public function concert(): BelongsTo
     {
         return $this->belongsTo(Concert::class, 'concert_id', 'concert_id');

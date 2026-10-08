@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * NamingTemplate
+ * แม่แบบการตั้งชื่อที่นั่ง (ตาราง naming_template)
+ * Author :
+ * Created :
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;

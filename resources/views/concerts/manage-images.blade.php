@@ -1,106 +1,16 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>จัดการรูปภาพคอนเสิร์ต - TEAM 3 Ticket</title>
+{{--
+ * manage-images.blade.php
+ * หน้าจัดการรูปภาพคอนเสิร์ต (โปสเตอร์ แบนเนอร์ ผังที่นั่ง)
+ * @Author
+ * @Create Date
+--}}
+@extends('layouts.main')
 
-  <!-- Tailwind CSS & Alpine.js -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+@section('title', 'จัดการรูปภาพคอนเสิร์ต - TEAM 3 Ticket')
+@section('body_class', 'min-h-screen bg-[#EBF1F9]')
 
-  <!-- IBM Plex Sans Thai Font -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: 'IBM Plex Sans Thai', sans-serif; }
-
-    /*
-    |--------------------------------------------------------------------------
-    | ขนาด Preview ของแต่ละประเภทรูป (ปรับได้ตรงนี้)
-    | - ค่าเหล่านี้เป็นขนาด "กรอบ preview" ในหน้าเว็บ ไม่ใช่ขนาดรูปจริง
-    | - ขนาดรูปที่แนะนำดูได้จาก label ใต้กรอบ (ส่งมาจาก Controller)
-    |--------------------------------------------------------------------------
-    */
-
-    /* โปสเตอร์: preview 180 x 270 px (สัดส่วน 2:3) — ปรับ width/height ตรงนี้ */
-    .preview-poster {
-      width: 180px;    /* ← ปรับความกว้าง preview โปสเตอร์ */
-      height: 270px;   /* ← ปรับความสูง preview โปสเตอร์ */
-    }
-
-    /* แบนเนอร์: preview เต็มความกว้าง สูง 140px (สัดส่วน ~4:1) — ปรับ height ตรงนี้ */
-    .preview-banner {
-      width: 100%;
-      height: 140px;   /* ← ปรับความสูง preview แบนเนอร์ */
-    }
-
-    /* ผังที่นั่ง: preview 320 x 240 px (สัดส่วน 4:3) — ปรับ width/height ตรงนี้ */
-    .preview-seat-map {
-      width: 320px;    /* ← ปรับความกว้าง preview ผังที่นั่ง */
-      height: 240px;   /* ← ปรับความสูง preview ผังที่นั่ง */
-    }
-
-    /* กรอบ placeholder เมื่อยังไม่มีรูป */
-    .img-placeholder {
-      border: 2px dashed #cbd5e1;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 8px;
-      color: #94a3b8;
-      font-size: 12px;
-      background: #f8fafc;
-      overflow: hidden;
-      position: relative;
-      transition: border-color 0.2s, background 0.2s;
-      cursor: pointer;
-    }
-    .img-placeholder:hover { border-color: #93c5fd; }
-
-    /* Drag-over visual feedback */
-    .img-placeholder.drag-over {
-      border-color: #3b82f6;
-      background: #dbeafe;
-      border-style: solid;
-    }
-
-    /* รูป preview */
-    .img-placeholder img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 10px;
-    }
-
-    /* Upload overlay on hover */
-    .upload-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.45);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 10px;
-      opacity: 0;
-      transition: opacity 0.2s;
-      cursor: pointer;
-    }
-    .img-placeholder:hover .upload-overlay { opacity: 1; }
-  </style>
-</head>
-<body class="min-h-screen bg-[#EBF1F9]">
-
-  <!-- NAVBAR -->
-  @include('navbar')
-
-  <!-- HEADER SECTION -->
+@section('content')
+  {{-- HEADER SECTION --}}
   <div class="max-w-7xl mx-auto px-6 pt-8 pb-4">
     <div class="flex items-center justify-between mb-2">
       <div>
@@ -115,7 +25,7 @@
       </a>
     </div>
 
-    <!-- ขนาดแนะนำ (ปรับค่าที่ Controller) -->
+    {{-- ขนาดแนะนำ (ปรับค่าที่ Controller) --}}
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6 text-xs text-blue-700">
       <strong>📐 ขนาดรูปที่แนะนำ:</strong>
       {{-- ค่าเหล่านี้มาจาก Controller (ConcertImageController) — แก้ที่ const ใน Controller --}}
@@ -126,7 +36,7 @@
       ผังที่นั่ง <strong>{{ $imageSizes['seat_map']['w'] }}×{{ $imageSizes['seat_map']['h'] }}px</strong> (สูงสุด {{ round($imageSizes['seat_map']['maxKB']/1024, 1) }}MB)
     </div>
 
-    <!-- FLASH MESSAGES -->
+    {{-- FLASH MESSAGES --}}
     @if(session('success'))
     <div class="bg-green-50 border border-green-300 text-green-700 px-4 py-2 rounded-lg mb-4 text-sm font-medium" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)" x-transition>
       ✅ {{ session('success') }}
@@ -146,7 +56,7 @@
     @endif
   </div>
 
-  <!-- CONCERT LIST -->
+  {{-- CONCERT LIST --}}
   <div class="max-w-7xl mx-auto px-6 pb-12 space-y-8">
 
     @forelse($concerts as $concert)
@@ -154,7 +64,7 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
          x-data="imageManager_{{ $idx }}()">
 
-      <!-- Concert Header -->
+      {{-- Concert Header --}}
       <div class="bg-gradient-to-r from-[#0B2F61] to-[#1B4297] text-white px-6 py-4 flex items-center justify-between">
         <div>
           <h2 class="font-bold text-base">{{ $concert->name }}</h2>
@@ -166,17 +76,17 @@
         </span>
       </div>
 
-      <!-- Image Grid: 3 columns -->
+      {{-- Image Grid: 3 columns --}}
       <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
 
-        {{-- ==================== โปสเตอร์ ==================== --}}
+        {{-- โปสเตอร์ --}}
         <div class="space-y-3">
           <h3 class="text-sm font-bold text-gray-700 border-l-4 border-[#F47B1F] pl-2">🎨 โปสเตอร์</h3>
           <p class="text-[10px] text-gray-400">
             ขนาดแนะนำ: {{ $imageSizes['poster']['w'] }}×{{ $imageSizes['poster']['h'] }}px · สูงสุด {{ round($imageSizes['poster']['maxKB']/1024, 1) }}MB
           </p>
 
-          <!-- Preview + Drag & Drop -->
+          {{-- Preview + Drag & Drop --}}
           <div class="preview-poster img-placeholder mx-auto"
                :class="{ 'drag-over': posterDragOver }"
                @click="$refs.posterInput_{{ $idx }}.click()"
@@ -206,7 +116,7 @@
             @endif
           </div>
 
-          <!-- Upload Form -->
+          {{-- Upload Form --}}
           <form method="POST" action="{{ url('/manage/images/' . $concert->concert_id . '/poster') }}" enctype="multipart/form-data" class="space-y-2"
                 x-ref="posterForm_{{ $idx }}">
             @csrf
@@ -228,7 +138,7 @@
             </div>
           </form>
 
-          <!-- Delete -->
+          {{-- Delete --}}
           @if($concert->poster_path)
           <form method="POST" action="{{ url('/manage/images/' . $concert->concert_id . '/poster') }}" class="text-center">
             @csrf
@@ -240,14 +150,14 @@
           @endif
         </div>
 
-        {{-- ==================== แบนเนอร์ ==================== --}}
+        {{-- แบนเนอร์ --}}
         <div class="space-y-3 md:col-span-2">
           <h3 class="text-sm font-bold text-gray-700 border-l-4 border-[#F47B1F] pl-2">🏞️ แบนเนอร์แนวนอน</h3>
           <p class="text-[10px] text-gray-400">
             ขนาดแนะนำ: {{ $imageSizes['banner']['w'] }}×{{ $imageSizes['banner']['h'] }}px · สูงสุด {{ round($imageSizes['banner']['maxKB']/1024, 1) }}MB
           </p>
 
-          <!-- Preview + Drag & Drop -->
+          {{-- Preview + Drag & Drop --}}
           <div class="preview-banner img-placeholder"
                :class="{ 'drag-over': bannerDragOver }"
                @click="$refs.bannerInput_{{ $idx }}.click()"
@@ -277,7 +187,7 @@
             @endif
           </div>
 
-          <!-- Upload Form -->
+          {{-- Upload Form --}}
           <form method="POST" action="{{ url('/manage/images/' . $concert->concert_id . '/banner') }}" enctype="multipart/form-data" class="space-y-2"
                 x-ref="bannerForm_{{ $idx }}">
             @csrf
@@ -299,7 +209,7 @@
             </div>
           </form>
 
-          <!-- Delete -->
+          {{-- Delete --}}
           @if($concert->banner_path)
           <form method="POST" action="{{ url('/manage/images/' . $concert->concert_id . '/banner') }}">
             @csrf
@@ -312,7 +222,7 @@
         </div>
       </div>
 
-      <!-- Seat Map (Full Width Row) -->
+      {{-- Seat Map (Full Width Row) --}}
       <div class="px-6 pb-6">
         <div class="space-y-3">
           <h3 class="text-sm font-bold text-gray-700 border-l-4 border-[#F47B1F] pl-2">🗺️ ผังที่นั่ง</h3>
@@ -320,7 +230,7 @@
             ขนาดแนะนำ: {{ $imageSizes['seat_map']['w'] }}×{{ $imageSizes['seat_map']['h'] }}px · สูงสุด {{ round($imageSizes['seat_map']['maxKB']/1024, 1) }}MB
           </p>
 
-          <!-- Preview + Drag & Drop -->
+          {{-- Preview + Drag & Drop --}}
           <div class="preview-seat-map img-placeholder"
                :class="{ 'drag-over': seatMapDragOver }"
                @click="$refs.seatMapInput_{{ $idx }}.click()"
@@ -350,7 +260,7 @@
             @endif
           </div>
 
-          <!-- Upload Form -->
+          {{-- Upload Form --}}
           <form method="POST" action="{{ url('/manage/images/' . $concert->concert_id . '/seat_map') }}" enctype="multipart/form-data" class="space-y-2"
                 x-ref="seatMapForm_{{ $idx }}">
             @csrf
@@ -372,7 +282,7 @@
             </div>
           </form>
 
-          <!-- Delete -->
+          {{-- Delete --}}
           @if($concert->seat_map_image_path)
           <form method="POST" action="{{ url('/manage/images/' . $concert->concert_id . '/seat_map') }}">
             @csrf
@@ -387,7 +297,7 @@
 
     </div>
 
-    <!-- Alpine.js state for this concert card -->
+    {{-- Alpine.js state for this concert card --}}
     <script>
       function imageManager_{{ $idx }}() {
         return {
@@ -467,9 +377,4 @@
     </div>
     @endforelse
   </div>
-
-  <!-- FOOTER -->
-  @include('footer')
-
-</body>
-</html>
+@endsection

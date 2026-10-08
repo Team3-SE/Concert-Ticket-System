@@ -1,3 +1,9 @@
+{{--
+ * edit-profile.blade.php
+ * หน้าแก้ไขข้อมูลส่วนตัวและเปลี่ยนรหัสผ่าน
+ * @Author
+ * @Create Date
+--}}
 @extends('layouts.app')
 
 @section('title', 'แก้ไขข้อมูลส่วนตัว - TEAM 3 Ticket')
@@ -6,10 +12,10 @@
 
   <div class="profile-grid">
 
-    <!-- แก้ไขข้อมูลส่วนตัว -->
+    {{-- แก้ไขข้อมูลส่วนตัว --}}
     <section>
       <h1 class="profile-section-title">แก้ไขข้อมูลส่วนตัว</h1>
-      <div class="profile-panel">
+      <div class="profile-panel profile-panel--info">
 
       <form action="{{ route('profile.update') }}" method="POST">
         @csrf
@@ -19,14 +25,14 @@
           <div class="field">
             <label for="first_name">ชื่อ</label>
             <input type="text" id="first_name" name="first_name"
-                   value="{{ old('first_name', $customer->first_name ?? '') }}"
+                   value="{{ old('first_name', $user->first_name ?? '') }}"
                    class="{{ $errors->has('first_name') ? 'is-error' : '' }}">
             @error('first_name')<p class="field-error">{{ $message }}</p>@enderror
           </div>
           <div class="field">
             <label for="last_name">นามสกุล</label>
             <input type="text" id="last_name" name="last_name"
-                   value="{{ old('last_name', $customer->last_name ?? '') }}"
+                   value="{{ old('last_name', $user->last_name ?? '') }}"
                    class="{{ $errors->has('last_name') ? 'is-error' : '' }}">
             @error('last_name')<p class="field-error">{{ $message }}</p>@enderror
           </div>
@@ -40,14 +46,14 @@
               <span>+66</span>
             </div>
             <input type="tel" id="phone" name="phone"
-                   value="{{ old('phone', $customer->phone ?? '') }}"
+                   value="{{ old('phone', $user->phone ?? '') }}"
                    placeholder="081-234-5678">
           </div>
           @error('phone')<p class="field-error">{{ $message }}</p>@enderror
         </div>
 
         <div class="actions">
-          <button type="submit" class="btn btn-orange" style="width:100%;border-radius:8px;padding:12px;">
+          <button type="submit" class="btn btn-orange">
             บันทึกการแก้ไขข้อมูลส่วนตัว
           </button>
         </div>
@@ -55,10 +61,10 @@
       </div>
     </section>
 
-    <!-- เปลี่ยนรหัสผ่าน -->
+    {{-- เปลี่ยนรหัสผ่าน --}}
     <section>
       <h1 class="profile-section-title">เปลี่ยนรหัสผ่าน</h1>
-      <div class="profile-panel">
+      <div class="profile-panel profile-panel--password">
 
       <form action="{{ route('profile.password.update') }}" method="POST">
         @csrf
@@ -87,7 +93,7 @@
         </div>
 
         <div class="actions">
-          <button type="submit" class="btn btn-navy" style="width:100%;border-radius:8px;padding:12px;">
+          <button type="submit" class="btn btn-navy">
             บันทึกรหัสผ่านใหม่
           </button>
         </div>
@@ -97,18 +103,4 @@
 
   </div>
 
-@endsection
-
-@section('styles')
-  .profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:1100px;}
-  .profile-section-title{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;margin:0 0 12px;}
-  .profile-section-title::before{content:'';display:block;width:4px;height:17px;background:var(--orange);border-radius:2px;}
-  .profile-panel{background:#fff;border:1px solid var(--gray-border);border-radius:8px;padding:20px 21px 23px;min-height:297px;}
-  .profile-panel .card-title{display:none;}
-  .profile-panel .actions{margin-top:16px;}
-  .profile-panel .btn{font-size:12px;}
-  @media(max-width:900px){.profile-grid{grid-template-columns:1fr;}}
-  .is-error { border-color: #e8503c !important; }
-  .phone-field.is-error { border-color: #e8503c !important; }
-  .field-error { font-size: 11px; color: #e8503c; margin-top: 5px; }
 @endsection

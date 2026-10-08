@@ -1,18 +1,18 @@
 <?php
 
+/**
+ * Concert
+ * คอนเสิร์ต (ตาราง concert)
+ * Author :
+ * Created :
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/**
- * Concert
- * manage Concert entity and its relationships
- * Author : AI Agent
- * Created : 30/08/2026
- * Updated : 27/09/2026 – fixed organization FK, renamed getDetails()
- */
 class Concert extends Model
 {
     protected $table = 'concert';
@@ -55,9 +55,10 @@ class Concert extends Model
     // ==========================================
 
     /**
-     * getDetails(): ConcertInfo
-     * ดึงรายละเอียดของ Concert รวม concertCode, ศิลปิน, สถานที่, วันเวลา,
-     * ช่วงเวลาขายบัตร, สถานะ และข้อมูลสื่อ
+     * getDetails()
+     * สรุปรายละเอียดคอนเสิร์ต (รหัส ศิลปิน สถานที่ วันเวลา ช่วงขายบัตร สถานะ)
+     * param : -
+     * return : string
      */
     public function getDetails(): string
     {
@@ -68,26 +69,56 @@ class Concert extends Model
     // Relationships
     // ==========================================
 
+    /**
+     * organization()
+     * ความสัมพันธ์กับองค์กรผู้จัด
+     * param : -
+     * return : BelongsTo Organization
+     */
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class, 'organization_id', 'organization_id');
     }
 
+    /**
+     * zones()
+     * ความสัมพันธ์กับโซนของคอนเสิร์ต
+     * param : -
+     * return : HasMany Zone
+     */
     public function zones(): HasMany
     {
         return $this->hasMany(Zone::class, 'concert_id', 'concert_id');
     }
 
+    /**
+     * bookings()
+     * ความสัมพันธ์กับการจองของคอนเสิร์ต
+     * param : -
+     * return : HasMany Booking
+     */
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class, 'concert_id', 'concert_id');
     }
 
+    /**
+     * tickets()
+     * ความสัมพันธ์กับบัตรของคอนเสิร์ต
+     * param : -
+     * return : HasMany Ticket
+     */
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class, 'zone_id', 'concert_id');
     }
 
+    /**
+     * staffConcerts()
+     * ความสัมพันธ์กับพนักงานที่ได้รับมอบหมาย
+     * param : -
+     * return : HasMany StaffConcert
+     */
     public function staffConcerts(): HasMany
     {
         return $this->hasMany(StaffConcert::class, 'concert_id', 'concert_id');
