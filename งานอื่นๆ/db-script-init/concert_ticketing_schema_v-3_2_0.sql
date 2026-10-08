@@ -165,12 +165,17 @@ ENGINE = InnoDB;
 CREATE TABLE IF NOT EXISTS `concert_ticketing`.`audit_log` (
   `al_log_id` INT NOT NULL AUTO_INCREMENT,
   `al_user_id` INT NULL,
-  `al_action` INT NOT NULL,
+  `al_type` VARCHAR(50) NOT NULL, -- [แก้] เปลี่ยนจาก al_action INT เป็น al_type VARCHAR(50)
   `al_created_at` DATETIME NOT NULL,
   `al_ip_address` VARCHAR(100) NULL DEFAULT NULL,
   `al_metadata_details` JSON NULL DEFAULT NULL,
   PRIMARY KEY (`al_log_id`),
-  INDEX `fk_audit_user` (`al_user_id` ASC) VISIBLE,
+  -- [แก้] แทน fk_audit_user เดิม: คอมโพสิตนี้ขึ้นต้นด้วย al_user_id จึงใช้เป็น index ของ FK ได้ และรองรับ "log ของ user คนนี้ เรียงตามเวลา"
+  INDEX `idx_audit_user_created` (`al_user_id` ASC, `al_created_at` ASC) VISIBLE,
+  -- [เพิ่ม] กรองตามประเภท log + ช่วงเวลา (ใช้บ่อยในหน้า audit)
+  INDEX `idx_audit_type_created` (`al_type` ASC, `al_created_at` ASC) VISIBLE,
+  -- [เพิ่ม] ดู log ล่าสุด / ค้นตามช่วงเวลาอย่างเดียว
+  INDEX `idx_audit_created` (`al_created_at` ASC) VISIBLE,
   CONSTRAINT `fk_audit_user`
     FOREIGN KEY (`al_user_id`)
     REFERENCES `concert_ticketing`.`app_user` (`u_user_id`))
@@ -228,7 +233,7 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`zone_seat_pattern` (
   `zsp_row_start` INT NOT NULL DEFAULT '1',
   `zsp_row_end` INT NOT NULL DEFAULT '1',
   `zsp_prefix` VARCHAR(50) NULL DEFAULT NULL,
-  `zsp_source_template_id` INT NOT NULL,
+  `zsp_source_template_id` INT NULL, -- [แก้] ต้องเป็น NULL ได้ เพราะ fk_pattern_template ใช้ ON DELETE SET NULL
   `zsp_custom_items` JSON NULL,
   PRIMARY KEY (`zsp_pattern_id`),
   INDEX `idx_pattern_zone` (`zsp_zone_id` ASC) VISIBLE,
@@ -239,7 +244,8 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`zone_seat_pattern` (
     ON DELETE SET NULL,
   CONSTRAINT `fk_pattern_zone`
     FOREIGN KEY (`zsp_zone_id`)
-    REFERENCES `concert_ticketing`.`zone` (`z_zone_id`))
+    REFERENCES `concert_ticketing`.`zone` (`z_zone_id`)
+    ON DELETE CASCADE) -- [แก้] ลบ zone แล้วลบ pattern ตาม
 ENGINE = InnoDB;
 
 -- -----------------------------------------------------
@@ -262,10 +268,12 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`seat` (
   INDEX `fk_seat_zone_seat_pattern1_idx` (`s_zone_seat_pattern_pattern_id` ASC) VISIBLE,
   CONSTRAINT `fk_seat_zone`
     FOREIGN KEY (`s_zone_id`)
-    REFERENCES `concert_ticketing`.`zone` (`z_zone_id`),
+    REFERENCES `concert_ticketing`.`zone` (`z_zone_id`)
+    ON DELETE CASCADE, -- [แก้] ลบ zone แล้วลบที่นั่งตาม (ถ้ามี booking_seat/seat_lock_log/ticket อ้างถึง seat จะลบไม่ได้)
   CONSTRAINT `fk_seat_zone_seat_pattern1`
     FOREIGN KEY (`s_zone_seat_pattern_pattern_id`)
-    REFERENCES `concert_ticketing`.`zone_seat_pattern` (`zsp_pattern_id`))
+    REFERENCES `concert_ticketing`.`zone_seat_pattern` (`zsp_pattern_id`)
+    ON DELETE SET NULL) -- [แก้] ลบ pattern แล้วเคลียร์ค่าที่ seat เป็น NULL
 ENGINE = InnoDB;
 
 -- -----------------------------------------------------
