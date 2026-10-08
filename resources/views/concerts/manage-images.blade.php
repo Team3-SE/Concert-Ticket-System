@@ -1,5 +1,5 @@
 {{--
- * manage-images.blade.php
+ * manage-images.blade.php เป็นไฟล์จำลอง
  * หน้าจัดการรูปภาพคอนเสิร์ต (โปสเตอร์ แบนเนอร์ ผังที่นั่ง)
  * @Author
  * @Create Date
