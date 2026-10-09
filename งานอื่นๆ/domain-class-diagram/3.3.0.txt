@@ -1,0 +1,404 @@
+
+%%{init: {'themeVariables': {'fontFamily': 'Arial', 'fontSize': '16px'}}}%%
+%% Design Class Diagram (Entity) - revised per review, aligned with SQL schema v3.2.0 (concert_ticketing)
+%% - attributes are private (-), methods are public (+)
+%% - Foreign Keys removed from attributes (associations are used instead; FKs belong in ER / Data Dictionary)
+%% - Subclasses of AppUser do not redeclare attributes
+%% - Controllers/Interfaces are not included in this diagram
+classDiagram
+    direction LR
+
+    %% ===================== Users and Organization =====================
+    class Organization {
+        -organizationID: Integer
+        -name: String
+        -createdAt: DateTime
+        -updatedAt: DateTime
+        +getOrganizationInfo() OrganizationInfo
+    }
+    class AppUser {
+        <<abstract>>
+        -userID: Integer
+        -email: String
+        -passwordHash: String
+        -role: Role
+        -accountStatus: AccountStatus
+        -firstName: String
+        -lastName: String
+        -phone: String
+        -username: String
+        -createdAt: DateTime
+        -updatedAt: DateTime
+        +getProfile() ProfileInfo
+        +setProfile(firstName: String, lastName: String, phone: String) void
+        +setPasswordHash(passwordHash: String) void
+        +ban() void
+        +activate() void
+    }
+    class Customer {
+        +getContactInfo() CustomerContactInfo
+    }
+    class Organizer {
+        +setOrganization(organization: Organization) void
+    }
+    class Staff
+    class Admin
+
+    AppUser <|-- Customer : role = CUSTOMER
+    AppUser <|-- Organizer : role = ORGANIZER
+    AppUser <|-- Staff : role = STAFF
+    AppUser <|-- Admin : role = ADMIN
+
+    Admin "0..1" --> "0..*" Organizer : creates account
+    Admin "0..1" --> "0..*" Staff : creates account
+    Admin "0..1" --> "0..*" Admin : creates account
+    Organizer "0..1" --> "0..*" Staff : creates account
+    Organization "1" --> "0..*" Organizer : has organizer
+    Organization "1" --> "0..*" Staff : has staff
+    Organization "1" --> "0..*" Concert : organizes
+
+    note for Staff "Staff is created by either an Admin or an Organizer (one of the two)<br>Customers self-register and the first Admin is created at system installation, so they have no creator (0..1)<br>In the DB this is stored as a single column u_created_by_app_user_id"
+    note for Admin "Ban/unban is handled by AppUser.ban() / activate()<br>Coordination steps (permission check, AuditLog recording) are handled by the Controller"
+
+    %% ===================== Concert, Zone and Seat =====================
+    class Concert {
+        -concertID: Integer
+        -name: String
+        -artist: String
+        -venue: String
+        -address: String
+        -phone: String
+        -email: String
+        -facebook: String
+        -line: String
+        -eventDatetime: DateTime
+        -description: Text
+        -posterPath: String
+        -seatMapImagePath: String
+        -saleStartDatetime: DateTime
+        -saleEndDatetime: DateTime
+        -maxTicketPerOrder: Integer
+        -status: ConcertStatus
+        -concertCode: String
+        -isDeleted: Boolean
+        -createdAt: DateTime
+        -updatedAt: DateTime
+        +getDetails() ConcertInfo
+        +setDetails(details: ConcertDetails) void
+    }
+    class Zone {
+        -zoneID: Integer
+        -name: String
+        -zoneType: ZoneType
+        -price: Decimal
+        -capacity: Integer
+        -totalRows: Integer
+        -seatsPerRow: Integer
+        -seatStartNumber: Integer
+        -color: String
+        -createdAt: DateTime
+        -updatedAt: DateTime
+        +getZoneInfo() ZoneInfo
+        +setDetails(details: ZoneDetails) void
+    }
+    class NamingTemplate {
+        -templateID: Integer
+        -templateName: String
+        -patternType: PatternType
+        -prefix: String
+        -customItems: JSON
+        -createdAt: DateTime
+    }
+    class ZoneSeatPattern {
+        -patternID: Integer
+        -patternType: PatternType
+        -rowStart: Integer
+        -rowEnd: Integer
+        -prefix: String
+        -customItems: JSON
+        +generateSeats() List~Seat~
+        +getPatternInfo() SeatPatternInfo
+    }
+    class Seat {
+        -seatID: Integer
+        -row: String
+        -number: Integer
+        -seatStatus: String
+        -bookingStatus: SeatBookingStatus
+        -createdAt: DateTime
+        -updatedAt: DateTime
+        +lockSeat() void
+        +unlockSeat() void
+        +confirmSeat() void
+        +getSeatInfo() SeatInfo
+        +setDetails(details: SeatDetails) void
+    }
+
+    Organizer "1" --> "0..*" NamingTemplate : owns
+    NamingTemplate "0..1" --> "0..*" ZoneSeatPattern : is template for
+    Concert "1" --> "1..*" Zone : consists of
+    Zone "1" *-- "0..*" ZoneSeatPattern : defines pattern (cascade delete with Zone)
+    ZoneSeatPattern "0..1" --> "0..*" Seat : generates seats
+    Zone "1" *-- "0..*" Seat : contains seats (cascade delete with Zone)
+
+    note for Zone "A Zone can be deleted only when no BookingSeat / SeatLockLog / Ticket references it<br>Otherwise the DB rejects the deletion (RESTRICT) - checked and deleted via SeatMapController.deleteZone<br>STANDING zone: totalRows, seatsPerRow can be NULL (capacity can be NULL in the DB)<br>seatStartNumber is NOT NULL (default 1)"
+    note for ZoneSeatPattern "Deleting a NamingTemplate keeps the Pattern<br>(relationship to the template is 0..1)"
+    note for Seat "Deleting a ZoneSeatPattern keeps the Seat<br>(relationship to the Pattern is 0..1)"
+
+    %% ===================== Concert Staff Assignment =====================
+    class StaffConcert {
+        -assignedAt: DateTime
+        -status: StaffConcertStatus
+        -revokedAt: DateTime
+    }
+
+    Staff "1" --> "0..*" StaffConcert : is assigned via
+    Concert "1" --> "0..*" StaffConcert : is staffed via
+
+    %% ===================== Booking =====================
+    class Booking {
+        -bookingID: Integer
+        -bookingCode: String
+        -bookingDate: DateTime
+        -totalAmount: Decimal
+        -status: BookingStatus
+        -expiryTime: DateTime
+        -updatedAt: DateTime
+        +calculateTotal() Decimal
+        +confirmBooking() void
+        +cancelBooking() void
+        +checkExpiry() Boolean
+        +getDetails() BookingInfo
+    }
+    class BookingSeat {
+        -zoneNameSnapshot: String
+        -seatLabelSnapshot: String
+        -unitPriceSnapshot: Decimal
+    }
+    class SeatLockLog {
+        -lockID: Integer
+        -lockedAt: DateTime
+        -expiredAt: DateTime
+        -releasedAt: DateTime
+        -status: SeatLockStatus
+    }
+
+    Customer "1" --> "0..*" Booking : makes booking
+    Concert "1" --> "0..*" Booking : is reserved through
+    Booking "1" --> "0..*" BookingSeat : records booked seats
+    Seat "1" --> "0..*" BookingSeat : is reserved in
+    Booking "1" --> "0..*" SeatLockLog : has lock history
+    Seat "1" --> "0..*" SeatLockLog : has lock logged
+
+    %% ===================== Payment and Order =====================
+    class Payment {
+        -paymentID: Integer
+        -amount: Decimal
+        -method: PaymentMethod
+        -status: PaymentStatus
+        -providerTransactionID: String
+        -paymentMetadata: JSON
+        -createdAt: DateTime
+        -updatedAt: DateTime
+        +getPaymentInfo() PaymentInfo
+        +setStatus(status: PaymentStatus) void
+        +setProviderTransactionID(providerTransactionID: String) void
+        +setPaymentMetadata(paymentMetadata: JSON) void
+    }
+    class UserOrder {
+        -orderID: Integer
+        -orderDate: DateTime
+        -orderCode: String
+        -concertNameSnapshot: String
+        -artistSnapshot: String
+        -venueSnapshot: String
+        -eventDatetimeSnapshot: DateTime
+        -organizationNameSnapshot: String
+        -userFirstNameSnapshot: String
+        -userLastNameSnapshot: String
+        -userPhoneSnapshot: String
+        -userEmailSnapshot: String
+        +getOrderInfo() OrderInfo
+    }
+
+    Booking "1" --> "0..*" Payment : is paid via
+    Booking "1" --> "0..1" UserOrder : generates order on successful payment
+    Payment "1" --> "0..1" UserOrder : generates order on success
+
+    %% ===================== Ticket =====================
+    class Ticket {
+        -ticketID: Integer
+        -qrCode: String
+        -isUsed: Boolean
+        -ticketCode: String
+        -quantity: Integer
+        -zoneNameSnapshot: String
+        -seatLabelSnapshot: String
+        -unitPriceSnapshot: Decimal
+        -createdAt: DateTime
+        -updatedAt: DateTime
+        +generateQR() String
+        +validateTicket() Boolean
+        +markAsUsed() void
+        +getTicketInfo() TicketInfo
+    }
+    class TicketValidationLog {
+        -validationID: Integer
+        -validationTime: DateTime
+        -result: Boolean
+    }
+
+    UserOrder "1" --> "0..*" Ticket : issues tickets (SEATED and STANDING)
+    Zone "1" --> "0..*" Ticket : is ticketed under (no cascade)
+    Seat "0..1" --> "0..*" Ticket : is referenced by
+    Staff "1" --> "0..*" TicketValidationLog : validates tickets and logs result
+    Ticket "1" --> "0..*" TicketValidationLog : is validated and logged
+
+    note for Ticket "quantity can be NULL (per DB)<br>STANDING zone has no Seat (relationship to Seat is 0..1); quantity counts the number of tickets<br>A single ticket can be scanned multiple times, hence TicketValidationLog 0..*"
+
+    %% ===================== Anomaly and Audit =====================
+    class SystemAnomaly {
+        -anomalyID: Integer
+        -type: AnomalyType
+        -message: Text
+        -status: AnomalyStatus
+        -detectedAt: DateTime
+        -ackedAt: DateTime
+        -resolvedAt: DateTime
+        -resolveReason: Text
+        -anomalyCode: String
+        +updateStatus(newStatus: AnomalyStatus) void
+        +addAttachment(file: File) void
+        +getDetails() AnomalyInfo
+    }
+    class AnomalyAttachment {
+        -attachmentID: Integer
+        -filePath: String
+        -createdAt: DateTime
+        -updatedAt: DateTime
+    }
+    class AuditLog {
+        -logID: Integer
+        -type: AuditType
+        -createdAt: DateTime
+        -ipAddress: String
+        -metadataDetails: JSON
+        +getDetails() AuditLogInfo
+    }
+
+    Booking "1" --> "0..*" SystemAnomaly : may trigger anomaly
+    AppUser "1" --> "0..*" SystemAnomaly : causes (causedBy)
+    Admin "0..1" --> "0..*" SystemAnomaly : reviews/manages (managedBy)
+    SystemAnomaly "1" --> "0..*" AnomalyAttachment : has evidence attachment
+    AppUser "0..1" --> "0..*" AuditLog : generates audit log
+
+    note for AnomalyAttachment "Evidence files are retained for fraud/audit purposes<br>The DB rejects deleting a SystemAnomaly that still has attachments (RESTRICT, no cascade)"
+
+    %% ===================== Enumerations (no links, to keep the diagram clean; this block can be removed) =====================
+    class Role {
+        <<enumeration>>
+        CUSTOMER
+        ORGANIZER
+        STAFF
+        ADMIN
+    }
+    class AccountStatus {
+        <<enumeration>>
+        ACTIVE
+        BANNED
+    }
+    class ConcertStatus {
+        <<enumeration>>
+        DRAFT
+        SCHEDULED
+        ON_SALE
+        SALE_CLOSED
+        SALE_SUSPENDED
+        COMPLETED
+    }
+    class ZoneType {
+        <<enumeration>>
+        SEATED
+        STANDING
+    }
+    class PatternType {
+        <<enumeration>>
+        NUMERIC_SEQUENCE
+        ALPHA_SEQUENCE
+        PREFIX_AUTO_ALPHA
+        CUSTOM_FULL
+    }
+    class SeatBookingStatus {
+        <<enumeration>>
+        AVAILABLE
+        LOCKED
+        RESERVED
+        SOLD
+    }
+    class BookingStatus {
+        <<enumeration>>
+        PENDING_PAYMENT
+        CONFIRMED
+        CANCELLED
+        EXPIRED
+    }
+    class PaymentMethod {
+        <<enumeration>>
+        PROMPTPAY
+        CREDIT_CARD
+    }
+    class PaymentStatus {
+        <<enumeration>>
+        PENDING
+        COMPLETED
+        FAILED
+        EXPIRED
+    }
+    class SeatLockStatus {
+        <<enumeration>>
+        LOCKED
+        EXPIRED
+        RELEASED
+        CONVERTED_TO_BOOKING
+    }
+    class StaffConcertStatus {
+        <<enumeration>>
+        ACTIVE
+        REVOKED
+    }
+    class AnomalyStatus {
+        <<enumeration>>
+        UNRESOLVED
+        INVESTIGATING
+        RESOLVED
+    }
+    class AnomalyType {
+        <<enumeration>>
+        PAYMENT_FRAUD_CARD_TESTING
+        SEAT_HOARDING_ABUSE
+    }
+    class AuditType {
+        <<enumeration>>
+        LOGIN
+        LOGOUT
+        REGISTER
+        UPDATE_PROFILE
+        CHANGE_PASSWORD
+        CREATE_CONCERT
+        UPDATE_CONCERT
+        CREATE_BOOKING
+        CANCEL_BOOKING
+        PROCESS_PAYMENT
+        COMPLETE_PAYMENT
+        CREATE_ACCOUNT
+        SUSPEND_USER
+        ACTIVATE_USER
+        CHANGE_ORGANIZATION
+        ASSIGN_STAFF
+        UNASSIGN_STAFF
+        VALIDATE_TICKET
+        UPDATE_ANOMALY_STATUS
+        EXECUTE_ANOMALY_ACTION
+    }
+
+    classDef default fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
