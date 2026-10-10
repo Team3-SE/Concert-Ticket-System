@@ -30,7 +30,18 @@
   <div class="hero">
     @if($highlights->isNotEmpty())
       @foreach($highlights as $index => $highlight)
-      <div class="hero-slide {{ $index === 0 ? 'active' : '' }}" data-slide="{{ $index }}">
+      @php
+        // ถ้าคอนเสิร์ตมีแบนเนอร์ (banner_path) ใช้รูปเป็นพื้นหลังสไลด์ ถ้าไม่มีใช้พื้นไล่สีเดิม
+        $bannerUrl = $highlight->banner_path ? asset('storage/' . $highlight->banner_path) : null;
+      @endphp
+      <div class="hero-slide {{ $index === 0 ? 'active' : '' }} {{ $bannerUrl ? 'has-banner' : '' }}" data-slide="{{ $index }}">
+        @if($bannerUrl)
+          {{-- รูปโหลดไม่ได้: ลบรูปแล้วกลับไปแสดงสไลด์แบบข้อความ --}}
+          <a class="hero-banner-link" href="{{ url('/booking?concert_id=' . $highlight->concert_id) }}" aria-label="{{ $highlight->name }}">
+            <img class="hero-banner-img" src="{{ $bannerUrl }}" alt="{{ $highlight->name }}"
+                 onerror="this.closest('.hero-slide').classList.remove('has-banner'); this.closest('a').remove();">
+          </a>
+        @endif
         <span class="hero-badge">HIGHLIGHT LIVE CONCERT</span>
         <h1>{{ $highlight->name }}</h1>
         <p>{{ $highlight->artist }} — {{ $highlight->venue }}</p>

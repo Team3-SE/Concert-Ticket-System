@@ -49,7 +49,9 @@ class HomeController extends Controller
             $concerts = $this->concertController->getConcertList()->take(self::CONCERT_LIMIT);
         }
 
+        // เลือกคอนเสิร์ตที่มีแบนเนอร์ก่อน แล้วเรียงตามวันแสดง
         $highlights = Concert::where('is_deleted', 0)
+            ->orderByRaw('banner_path IS NULL')
             ->orderBy('event_datetime', 'asc')
             ->limit(self::HIGHLIGHT_LIMIT)
             ->get();
