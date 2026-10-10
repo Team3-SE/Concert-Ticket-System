@@ -37,15 +37,6 @@ class ConcertController extends Controller
         'SOLD_OUT'  => 'ขายหมด',
     ];
 
-    /* ตัวเลือกการเรียงลำดับในหน้าคอนเสิร์ตทั้งหมด */
-    private const SORTS = [
-        'date'       => 'วันแสดงใกล้ที่สุด',
-        'date_desc'  => 'วันแสดงไกลที่สุด',
-        'price'      => 'ราคาต่ำ → สูง',
-        'price_desc' => 'ราคาสูง → ต่ำ',
-        'name'       => 'ชื่อ A → Z',
-    ];
-
     /**
      * getConcertList()
      * ดึงรายการคอนเสิร์ตที่ยังไม่ถูกลบ เรียงตามวันเปิดขาย
@@ -62,7 +53,7 @@ class ConcertController extends Controller
 
     /**
      * index(request)
-     * แสดงหน้าคอนเสิร์ตทั้งหมด (ปุ่ม Show All) พร้อมค้นหา กรองสถานะ เรียงลำดับ และแบ่งหน้า
+     * แสดงหน้าคอนเสิร์ตทั้งหมด (ปุ่ม Show All) พร้อมค้นหา กรองสถานะ และแบ่งหน้า (เรียงตามวันแสดงที่ใกล้ที่สุด)
      * param : request
      * return : View concerts.index
      */
@@ -73,9 +64,6 @@ class ConcertController extends Controller
         $status = strtoupper((string) $request->query('status', ''));
         $status = array_key_exists($status, self::STATUS_FILTERS) ? $status : '';
 
-        $sort = (string) $request->query('sort', 'date');
-        $sort = array_key_exists($sort, self::SORTS) ? $sort : 'date';
-
         // ค้นหา: ทุกคำต้องเจอ ถ้าไม่เจอเลยค่อยหาแบบเจอคำใดคำหนึ่ง (เหมือน searchConcert)
         $base = $this->publicConcerts();
         if ($search !== '') {
@@ -85,25 +73,13 @@ class ConcertController extends Controller
             $base = $this->applyKeyword($base, $terms, $matchAll);
         }
 
-        // จำนวนต่อสถานะ (แสดงบนแท็บ)
-        $allCount = (clone $base)->count();
-        $statusCounts = (clone $base)->toBase()
-            ->selectRaw('status, COUNT(*) AS total')
-            ->groupBy('status')
-            ->pluck('total', 'status');
-
-        $query = (clone $base)->withMin('zones', 'price');   // zones_min_price = ราคาเริ่มต้น
+        $query = $base->withMin('zones', 'price');   // zones_min_price = ราคาเริ่มต้น
         if ($status !== '') {
             $query->where('status', $status);
         }
 
-        match ($sort) {
-            'date_desc'  => $query->orderByDesc('event_datetime'),
-            'price'      => $query->orderBy('zones_min_price')->orderBy('event_datetime'),
-            'price_desc' => $query->orderByDesc('zones_min_price')->orderBy('event_datetime'),
-            'name'       => $query->orderBy('name'),
-            default      => $query->orderByRaw('event_datetime < NOW()')->orderBy('event_datetime'),
-        };
+        // คอนเสิร์ตที่ยังไม่จัดขึ้นก่อน แล้วเรียงตามวันแสดงที่ใกล้ที่สุด
+        $query->orderByRaw('event_datetime < NOW()')->orderBy('event_datetime');
 
         $concerts = $query->paginate(self::PER_PAGE)->withQueryString();
 
@@ -111,11 +87,7 @@ class ConcertController extends Controller
             'concerts'      => $concerts,
             'search'        => $search,
             'status'        => $status,
-            'sort'          => $sort,
-            'sorts'         => self::SORTS,
             'statusFilters' => self::STATUS_FILTERS,
-            'statusCounts'  => $statusCounts,
-            'allCount'      => $allCount,
         ]);
     }
 

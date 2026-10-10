@@ -1,6 +1,6 @@
 {{--
  * index.blade.php
- * หน้าคอนเสิร์ตทั้งหมด (Show All): ค้นหา กรองสถานะ เรียงลำดับ และแบ่งหน้า
+ * หน้าคอนเสิร์ตทั้งหมด (Show All): ค้นหา กรองสถานะ และแบ่งหน้า
  * @Author 67160292 ธีรเมธ พลสาย
  * @Create Date 09-10-2569
 --}}
@@ -33,7 +33,7 @@
   </div>
   {{-- page-heading end --}}
 
-  {{-- search-toolbar start: ค้นหา + เรียงลำดับ --}}
+  {{-- search-toolbar start: ค้นหา + กรองสถานะ --}}
   <div class="concerts-toolbar">
     <div class="search-box">
       <form class="search-bar" id="concertFilters" method="GET" action="{{ route('concerts.index') }}" role="search"
@@ -50,34 +50,26 @@
       <div class="search-suggest" id="searchSuggest" role="listbox" aria-label="คอนเสิร์ตที่ใกล้เคียง" hidden></div>
     </div>
 
-    <label class="sort-select">
-      <span>เรียงตาม</span>
-      <select name="sort" form="concertFilters" data-auto-submit>
-        @foreach($sorts as $value => $label)
-          <option value="{{ $value }}" @selected($sort === $value)>{{ $label }}</option>
+    {{-- status-filter start: ตัวกรองสถานะ (เปิด/ปิดด้วย resources/js/dropdown.js) --}}
+    @php
+      $statusOptions = ['' => 'สถานะทั้งหมด'] + $statusFilters;
+    @endphp
+    <div class="status-filter" data-dropdown>
+      <button type="button" class="status-filter-toggle" data-dropdown-toggle
+              aria-haspopup="true" aria-expanded="false" aria-controls="statusFilterMenu">
+        <span>{{ $statusOptions[$status] ?? 'สถานะทั้งหมด' }}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div class="status-filter-menu" id="statusFilterMenu" data-dropdown-menu hidden>
+        @foreach($statusOptions as $value => $label)
+          <a href="{{ route('concerts.index', array_filter(['search' => $search, 'status' => $value])) }}"
+             class="{{ $status === $value ? 'active' : '' }}" @if($status === $value) aria-current="true" @endif>{{ $label }}</a>
         @endforeach
-      </select>
-    </label>
+      </div>
+    </div>
+    {{-- status-filter end --}}
   </div>
   {{-- search-toolbar end --}}
-
-  {{-- status-tabs start: แท็บสถานะ --}}
-  <div class="status-tabs">
-    @foreach(['' => 'ทั้งหมด'] + $statusFilters as $value => $label)
-      @php
-        $tabUrl = route('concerts.index', array_filter([
-            'search' => $search,
-            'status' => $value,
-            'sort'   => $sort !== 'date' ? $sort : null,
-        ]));
-        $tabCount = $value === '' ? $allCount : (int) ($statusCounts[$value] ?? 0);
-      @endphp
-      <a href="{{ $tabUrl }}" class="status-tab {{ $status === $value ? 'active' : '' }}" @if($status === $value) aria-current="true" @endif>
-        {{ $label }} <span class="count">{{ $tabCount }}</span>
-      </a>
-    @endforeach
-  </div>
-  {{-- status-tabs end --}}
 
   {{-- concert-list start --}}
   @if($concerts->isNotEmpty())
@@ -108,12 +100,3 @@
 
 </div>
 @endsection
-
-@push('scripts')
-<script>
-  // เปลี่ยนการเรียงลำดับแล้วโหลดผลใหม่ทันที
-  document.querySelectorAll('[data-auto-submit]').forEach((el) => {
-    el.addEventListener('change', () => el.form.submit());
-  });
-</script>
-@endpush
