@@ -51,6 +51,7 @@
     background:#e9f8ef;border:1px solid #b5e6c8;color:#166534;
     border-radius:8px;font-size:12px;
   }
+  .status-msg--error{background:#fdecea;border-color:#f5c2c0;color:#b42318;}
   /*
    * GRID & CARDS (profile page)
    */
