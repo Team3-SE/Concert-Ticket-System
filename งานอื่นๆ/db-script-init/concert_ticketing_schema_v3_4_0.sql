@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`app_user` (
   `u_email` VARCHAR(255) NULL,
   `u_password_hash` VARCHAR(255) NULL,
   `u_role` VARCHAR(50) NOT NULL,
-  `u_account_status` TINYINT NOT NULL DEFAULT 1,
+  `u_account_status` TINYINT NOT NULL DEFAULT 1 COMMENT 'AccountStatus: 1 = ACTIVE, 0 = BANNED',
   `u_created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `u_updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `u_first_name` VARCHAR(100) NULL DEFAULT NULL,
@@ -259,8 +259,8 @@ CREATE TABLE IF NOT EXISTS `concert_ticketing`.`seat` (
   `s_zone_id` INT NOT NULL,
   `s_row` VARCHAR(50) NULL,
   `s_number` INT NULL,
-  `s_seat_booking_status` VARCHAR(50) NOT NULL DEFAULT 'available' COMMENT 'available | locked | reserved | sold — kept in sync with seat_lock_log / booking_seat / ticket',
-  `s_seat_status` VARCHAR(50) NOT NULL COMMENT 'สถานะตัวที่นั่งเอง เช่น active | disabled | blocked (ไม่เกี่ยวกับการจอง)',
+  `s_seat_booking_status` VARCHAR(50) NOT NULL DEFAULT 'AVAILABLE' COMMENT 'SeatBookingStatus: AVAILABLE | LOCKED | SOLD | CheckedIn | SUSPENDED — kept in sync with seat_lock_log / booking_seat / ticket',
+  `s_seat_status` VARCHAR(50) NOT NULL COMMENT 'SeatStatus (สถานะตัวที่นั่งเอง ไม่เกี่ยวกับการจอง): AVAILABLE | UNAVAILABLE | DAMAGED',
   `s_created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `s_updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`s_seat_id`),
@@ -504,12 +504,18 @@ SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 
 -- =====================================================================
 -- CHECK CONSTRAINTS (MySQL 8.0.16+ บังคับใช้จริง)
--- เลือกเฉพาะกฎที่ชัดเจนจากตัว schema เอง: ค่าไม่ติดลบ, จำนวน > 0,
--- และสถานะที่มีระบุค่าไว้ใน COMMENT ของคอลัมน์
--- (สถานะอื่นที่ schema ไม่ได้ระบุค่า เช่น c_status, b_status, p_status ยังไม่ใส่ เพื่อไม่ให้ชนกับค่าที่แอปใช้)
+-- ส่วนที่ 1: ค่าไม่ติดลบ / จำนวน > 0 / ช่วงเวลา
+-- ส่วนที่ 2: ค่า enum ตาม Class Diagram v3.2 (CD3_2_0)
+--   * ค่า enum เก็บเป็นตัวพิมพ์ใหญ่ตาม diagram (ยกเว้น CheckedIn ที่ diagram ใช้แบบนี้)
+--   * collation เป็น utf8mb4_0900_ai_ci (ไม่สนตัวพิมพ์) ดังนั้น 'sold' กับ 'SOLD' ผ่าน CHECK ทั้งคู่
+--     แต่ให้ฝั่ง PHP ใช้ backed enum ค่าตัวพิมพ์ตาม diagram ให้ตรงกันทุกที่
+--   * u_account_status เป็น TINYINT: 1 = ACTIVE, 0 = BANNED (AccountStatus ใน diagram มี 2 ค่า)
+--   * ไม่ใส่ CHECK ให้ sc_status (diagram ระบุ ACTIVE/REVOKED แต่ยังไม่กำหนดค่าตัวเลข)
+--   * ticket.t_status ใช้ CHECK เดิม valid|void|refunded (diagram ไม่มี enum ของตั๋ว)
 -- =====================================================================
 USE `concert_ticketing`;
 
+-- ---------- ส่วนที่ 1: ค่าตัวเลข / ช่วงเวลา ----------
 ALTER TABLE `concert`
   ADD CONSTRAINT `chk_concert_max_ticket` CHECK (`c_max_ticket_per_order` IS NULL OR `c_max_ticket_per_order` > 0),
   ADD CONSTRAINT `chk_concert_sale_window` CHECK (`c_sale_start_datetime` IS NULL OR `c_sale_end_datetime` IS NULL OR `c_sale_end_datetime` >= `c_sale_start_datetime`);
@@ -524,8 +530,6 @@ ALTER TABLE `booking`
   ADD CONSTRAINT `chk_booking_price`    CHECK (`b_zone_price_snapshot` >= 0),
   ADD CONSTRAINT `chk_booking_standing` CHECK (`b_standing_quantity` IS NULL OR `b_standing_quantity` >= 0);
 
-ALTER TABLE `seat`
-  ADD CONSTRAINT `chk_seat_booking_status` CHECK (`s_seat_booking_status` IN ('available','locked','reserved','sold'));
 
 ALTER TABLE `payment`
   ADD CONSTRAINT `chk_payment_amount` CHECK (`p_amount` >= 0);
@@ -543,3 +547,33 @@ ALTER TABLE `ticket`
 ALTER TABLE `zone_inventory`
   ADD CONSTRAINT `chk_zi_held` CHECK (`zi_held` >= 0),
   ADD CONSTRAINT `chk_zi_sold` CHECK (`zi_sold` >= 0);
+
+-- ---------- ส่วนที่ 2: enum ตาม Class Diagram v3.2 ----------
+ALTER TABLE `app_user`
+  ADD CONSTRAINT `chk_user_role`           CHECK (`u_role` IN ('USER','ORGANIZER','STAFF','ADMIN')),
+  ADD CONSTRAINT `chk_user_account_status` CHECK (`u_account_status` IN (0,1));
+
+ALTER TABLE `audit_log`
+  ADD CONSTRAINT `chk_audit_type` CHECK (`al_type` IN ('Authentication','UserProfileAndAccount','ConcertManagement','OrganizationManagement','UserManagement','BookingAndPaymentTransaction','TicketValidationAndReissue','SystemAnomalyAndFraud'));
+
+ALTER TABLE `concert`
+  ADD CONSTRAINT `chk_concert_status` CHECK (`c_status` IN ('DRAFT','SCHEDULED','ON_SALE','SALE_CLOSED','SALE_SUSPENDED','COMPLETED'));
+
+ALTER TABLE `zone`
+  ADD CONSTRAINT `chk_zone_type`    CHECK (`z_zone_type` IN ('SEATED','STANDING')),
+  ADD CONSTRAINT `chk_zone_pattern` CHECK (`z_pattern_type` IS NULL OR `z_pattern_type` IN ('ALPHA_SEQUENCE','PREFIX_AUTO_ALPHA','CUSTOM_FULL'));
+
+ALTER TABLE `seat`
+  ADD CONSTRAINT `chk_seat_booking_status` CHECK (`s_seat_booking_status` IN ('AVAILABLE','LOCKED','SOLD','CheckedIn','SUSPENDED')),
+  ADD CONSTRAINT `chk_seat_status`         CHECK (`s_seat_status` IN ('AVAILABLE','UNAVAILABLE','DAMAGED'));
+
+ALTER TABLE `booking`
+  ADD CONSTRAINT `chk_booking_status` CHECK (`b_status` IN ('PENDING_PAYMENT','CONFIRMED','CANCELLED','EXPIRED'));
+
+ALTER TABLE `payment`
+  ADD CONSTRAINT `chk_payment_status` CHECK (`p_status` IN ('PENDING','COMPLETED','FAILED','EXPIRED')),
+  ADD CONSTRAINT `chk_payment_method` CHECK (`p_method` IN ('PROMPTPAY','CREDIT_CARD'));
+
+ALTER TABLE `system_anomaly`
+  ADD CONSTRAINT `chk_anomaly_status` CHECK (`sa_status` IN ('UNRESOLVED','INVESTIGATED','RESOLVED')),
+  ADD CONSTRAINT `chk_anomaly_type`   CHECK (`sa_type` IN ('PAYMENT_FRAUD_CARD_TESTING','SEAT_HOARDING_ABUSE'));
