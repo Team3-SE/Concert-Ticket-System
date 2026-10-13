@@ -1,0 +1,249 @@
+{
+  "info": {
+    "name": "PayMock Gateway API Collection",
+    "description": "Complete test suite for PayMock Mock Payment Gateway (Laravel 12)\nSupports all 4 test categories: Magic Cards, PromptPay, Chaos Modes, and Webhook Anomalies.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081", "type": "string" },
+    { "key": "apiKey", "value": "pm_test_key_concert_system_2024", "type": "string" },
+    { "key": "bookingCode", "value": "BOOKING_DEMO_001", "type": "string" },
+    { "key": "paymentId", "value": "txn_test", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{apiKey}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "0. System Health",
+      "item": [
+        {
+          "name": "Health Check (Docker /up)",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/up", "host": ["{{baseUrl}}"], "path": ["up"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Standard Payment Flow",
+      "item": [
+        {
+          "name": "Create Card Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) { pm.collectionVariables.set('paymentId', jsonData.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{bookingCode}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_ref\": \"{{bookingCode}}\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert:80/webhooks/payment\",\n  \"return_url\": \"http://localhost:8080/return\",\n  \"expires_in\": 600\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Create PromptPay Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "PROMPTPAY_DEMO_002" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_ref\": \"PROMPTPAY_DEMO_002\",\n  \"amount\": 2200.00,\n  \"currency\": \"THB\",\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert:80/webhooks/payment\",\n  \"return_url\": \"http://localhost:8080/return\",\n  \"expires_in\": 600\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Idempotency Test (Send duplicate Idempotency-Key)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{bookingCode}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_ref\": \"{{bookingCode}}\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert:80/webhooks/payment\",\n  \"return_url\": \"http://localhost:8080/return\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Get Payment Status (Polling / Reconcile)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/v1/payments/{{paymentId}}", "host": ["{{baseUrl}}"], "path": ["v1", "payments", "{{paymentId}}"] }
+          }
+        },
+        {
+          "name": "Cancel Payment (Before Paid)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/v1/payments/{{paymentId}}/cancel", "host": ["{{baseUrl}}"], "path": ["v1", "payments", "{{paymentId}}", "cancel"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Chaos Modes (via X-Mock-Scenario Header)",
+      "item": [
+        {
+          "name": "Chaos: Gateway Down (503)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Mock-Scenario", "value": "down" },
+              { "key": "Idempotency-Key", "value": "CHAOS_DOWN_001" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"order_ref\":\"CHAOS_DOWN\",\"amount\":500,\"method\":\"card\",\"callback_url\":\"http://concert/cb\"}" },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Chaos: Slow Response 5s (slow:5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Mock-Scenario", "value": "slow:5" },
+              { "key": "Idempotency-Key", "value": "CHAOS_SLOW_001" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"order_ref\":\"CHAOS_SLOW\",\"amount\":500,\"method\":\"card\",\"callback_url\":\"http://concert/cb\"}" },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Chaos: Timeout 30s but created (timeout:30)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Mock-Scenario", "value": "timeout:30" },
+              { "key": "Idempotency-Key", "value": "CHAOS_TIMEOUT_001" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"order_ref\":\"CHAOS_TIMEOUT\",\"amount\":1200,\"method\":\"card\",\"callback_url\":\"http://concert/cb\"}" },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Chaos: Rate Limit 429 (rate_limit)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Mock-Scenario", "value": "rate_limit" },
+              { "key": "Idempotency-Key", "value": "CHAOS_RATELIMIT_001" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"order_ref\":\"CHAOS_RATE\",\"amount\":500,\"method\":\"card\",\"callback_url\":\"http://concert/cb\"}" },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Chaos: Error Rate 50% (error_rate:50)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Mock-Scenario", "value": "error_rate:50" },
+              { "key": "Idempotency-Key", "value": "CHAOS_ERR_001" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"order_ref\":\"CHAOS_ERR\",\"amount\":500,\"method\":\"card\",\"callback_url\":\"http://concert/cb\"}" },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Chaos: Bad JSON HTML 502 (bad_json)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Mock-Scenario", "value": "bad_json" },
+              { "key": "Idempotency-Key", "value": "CHAOS_BADJSON_001" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"order_ref\":\"CHAOS_BADJSON\",\"amount\":500,\"method\":\"card\",\"callback_url\":\"http://concert/cb\"}" },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Webhook Anomalies",
+      "item": [
+        {
+          "name": "Webhook Lost (Do not emit webhook)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Mock-Scenario", "value": "webhook_lost" },
+              { "key": "Idempotency-Key", "value": "WH_LOST_001" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"order_ref\":\"WH_LOST\",\"amount\":800,\"method\":\"promptpay\",\"callback_url\":\"http://concert:80/webhooks/payment\"}" },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Webhook Duplicate 3x (webhook_dup:3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Mock-Scenario", "value": "webhook_dup:3" },
+              { "key": "Idempotency-Key", "value": "WH_DUP_001" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"order_ref\":\"WH_DUP\",\"amount\":800,\"method\":\"promptpay\",\"callback_url\":\"http://concert:80/webhooks/payment\"}" },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Webhook Bad Signature (webhook_bad_sig)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Mock-Scenario", "value": "webhook_bad_sig" },
+              { "key": "Idempotency-Key", "value": "WH_BADSIG_001" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"order_ref\":\"WH_BADSIG\",\"amount\":800,\"method\":\"card\",\"callback_url\":\"http://concert:80/webhooks/payment\"}" },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Webhook Replay Attack (Old timestamp) (webhook_replay)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Mock-Scenario", "value": "webhook_replay" },
+              { "key": "Idempotency-Key", "value": "WH_REPLAY_001" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"order_ref\":\"WH_REPLAY\",\"amount\":800,\"method\":\"card\",\"callback_url\":\"http://concert:80/webhooks/payment\"}" },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        }
+      ]
+    }
+  ]
+}

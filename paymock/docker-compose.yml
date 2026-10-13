@@ -1,0 +1,99 @@
+version: '3.9'
+
+services:
+  # ─────────────────────────────────────────────────────────
+  # PayMock App (port 8081)
+  # ─────────────────────────────────────────────────────────
+  paymock:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paymock
+    restart: unless-stopped
+    environment:
+      APP_ENV: local
+      APP_KEY: base64:riofbBnrhWzPVlj6V/NlMJ8mxzut8cLVYJn9AUhrK5U=
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8081
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /var/www/html/database/paymock.sqlite
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+      PAYMOCK_API_KEY: pm_test_key_concert_system_2024
+      PAYMOCK_WEBHOOK_SECRET: whsec_concert_super_secret_2024
+      PAYMOCK_ADMIN_PASSWORD: admin1234
+      PAYMOCK_DEFAULT_EXPIRES_IN: "600"
+    ports:
+      - "8081:80"
+    volumes:
+      - paymock_db:/var/www/html/database
+      # Bind mount source — แก้โค้ดแล้วเห็นผลทันทีโดยไม่ต้อง rebuild
+      - ./app:/var/www/html/app
+      - ./routes:/var/www/html/routes
+      - ./resources:/var/www/html/resources
+      - ./config:/var/www/html/config
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/up"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  # ─────────────────────────────────────────────────────────
+  # Queue Worker (ส่ง Webhook พร้อม retry)
+  # ─────────────────────────────────────────────────────────
+  paymock_queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paymock_queue
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=6", "--max-time=3600"]
+    environment:
+      APP_ENV: local
+      APP_KEY: base64:riofbBnrhWzPVlj6V/NlMJ8mxzut8cLVYJn9AUhrK5U=
+      APP_DEBUG: "true"
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /var/www/html/database/paymock.sqlite
+      QUEUE_CONNECTION: database
+      PAYMOCK_API_KEY: pm_test_key_concert_system_2024
+      PAYMOCK_WEBHOOK_SECRET: whsec_concert_super_secret_2024
+    volumes:
+      - paymock_db:/var/www/html/database
+      - ./app:/var/www/html/app
+      - ./routes:/var/www/html/routes
+      - ./config:/var/www/html/config
+    depends_on:
+      paymock:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────────────────────
+  # Scheduler (payment expiry)
+  # ─────────────────────────────────────────────────────────
+  paymock_scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paymock_scheduler
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work"]
+    environment:
+      APP_ENV: local
+      APP_KEY: base64:riofbBnrhWzPVlj6V/NlMJ8mxzut8cLVYJn9AUhrK5U=
+      APP_DEBUG: "true"
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /var/www/html/database/paymock.sqlite
+      QUEUE_CONNECTION: database
+      PAYMOCK_API_KEY: pm_test_key_concert_system_2024
+      PAYMOCK_WEBHOOK_SECRET: whsec_concert_super_secret_2024
+    volumes:
+      - paymock_db:/var/www/html/database
+      - ./app:/var/www/html/app
+      - ./routes:/var/www/html/routes
+      - ./config:/var/www/html/config
+    depends_on:
+      paymock:
+        condition: service_healthy
+
+volumes:
+  paymock_db:
