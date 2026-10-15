@@ -105,7 +105,7 @@ class CheckoutController extends Controller
 
     /**
      * POST /checkout/{publicId}/simulate
-     * API สำหรับ auto_pay scenario (e.g. auto_pay:15)
+     * API สำหรับจำลองสถานะการชำระเงิน (COMPLETED / FAILED)
      */
     public function simulate(string $publicId, Request $request): \Illuminate\Http\JsonResponse
     {

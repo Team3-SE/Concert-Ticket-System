@@ -224,9 +224,9 @@ add_heading(doc, '1.2 Flow การทำงาน', 2)
 add_para(doc, 'ลำดับการทำงานระหว่างระบบคอนเสิร์ตและ PayMock:')
 steps = [
     '① ผู้ใช้เลือกที่นั่ง → ระบบคอนเสิร์ตล็อกที่นั่ง 10 นาที + สร้าง booking (PENDING_PAYMENT)',
-    '② ระบบคอนเสิร์ต POST /v1/payments → PayMock คืน payment_id + checkout_url (PENDING)',
-    '③ ระบบคอนเสิร์ต Redirect ผู้ใช้ไปที่ checkout_url (หน้าจ่ายเงินของ PayMock)',
-    '④ ผู้ใช้สแกน PromptPay QR หรือกรอกเลขบัตรที่หน้า Checkout',
+    '② ระบบคอนเสิร์ต POST /v1/payments → PayMock คืน payment_id + (qrcode_url สำหรับ PromptPay / ผลบัตรทันทีสำหรับ Card)',
+    '③ PromptPay: เว็บคอนเสิร์ตแสดง QR Code จาก qrcode_url ใน Native Modal ของตัวเอง | Card: แจ้งผลลัพธ์ทันที (COMPLETED หรือ FAILED)',
+    '④ ผู้ใช้สแกน QR ผ่านแอปธนาคาร หรือคลิก bank_simulator_url เพื่อจำลองการโอนเงิน',
     '⑤ PayMock เปลี่ยนสถานะ → ส่ง Webhook (POST {callback_url}) พร้อม HMAC-SHA256',
     '⑥ ระบบคอนเสิร์ตตรวจ signature → ตรวจ idempotency → อัปเดต booking + seat + ออกตั๋ว',
     '⑦ (สำรอง) Scheduler ของระบบหลักยิง GET /v1/payments/{id} เพื่อ reconcile',
@@ -240,8 +240,8 @@ for s in steps:
 
 doc.add_paragraph()
 add_para(doc,
-    '⚠️ สำคัญ: หน้า return_url ที่ผู้ใช้ถูก redirect กลับมา ห้ามเชื่อ query string '
-    'ต้องอ่านสถานะจาก Database ของระบบหลักที่ Webhook/Polling เป็นผู้อัปเดตเท่านั้น',
+    '⚠️ สำคัญ: ห้ามตัดสินว่าการชำระเงินสำเร็จหรือไม่จากการ Poll ฝั่ง Frontend เท่านั้น '
+    'ต้องรอการยืนยันจาก Webhook หรือ GET /v1/payments/{id} เท่านั้น',
     color='B45309'
 )
 
@@ -289,12 +289,14 @@ add_code(doc, [
     '  "chaos_mode": "normal",',
     '  "recent": [',
     '    {',
-    '      "id":           "01JCXYZ...",',
-    '      "order_ref":    "b_TK2024001",',
-    '      "amount":       1200.00,',
-    '      "status":       "COMPLETED",',
-    '      "checkout_url": "http://localhost:8081/checkout/01JCXYZ...",',
-    '      "paid_at":      "2026-10-13T10:05:32+07:00"',
+    '      "id":                 "01JCXYZ...",',
+    '      "order_ref":          "b_TK2024001",',
+    '      "amount":             1200.00,',
+    '      "method":             "promptpay",',
+    '      "status":             "COMPLETED",',
+    '      "qrcode_url":         "http://localhost:8081/v1/payments/01JCXYZ.../qr.svg",',
+    '      "bank_simulator_url": "http://localhost:8081/bank-simulate/01JCXYZ...",',
+    '      "paid_at":            "2026-10-13T10:05:32+07:00"',
     '    }',
     '  ]',
     '}',
@@ -322,15 +324,27 @@ add_code(doc, [
     'Content-Type: application/json',
     'Idempotency-Key: b_TK2024001',
     '',
+    '// PromptPay:',
     '{',
     '  "order_ref":    "b_TK2024001",',
     '  "amount":       1200.00,',
-    '  "method":       "card",',
+    '  "method":       "promptpay",',
     '  "callback_url": "http://localhost:8080/webhooks/paymock",',
-    '  "return_url":   "http://localhost:8080/payment/return?booking=b_TK2024001",',
     '  "expires_in":   600,',
     '  "currency":     "THB",',
     '  "metadata":     { "booking_id": 42 }',
+    '}',
+    '',
+    '// Credit Card (Direct API):',
+    '{',
+    '  "order_ref":    "b_TK2024002",',
+    '  "amount":       1200.00,',
+    '  "method":       "card",',
+    '  "callback_url": "http://localhost:8080/webhooks/paymock",',
+    '  "card_number":  "4242424242424242",',
+    '  "exp_month":    "12",',
+    '  "exp_year":     "28",',
+    '  "cvc":          "123"',
     '}',
 ])
 
@@ -342,9 +356,12 @@ add_table(doc,
         ['amount',       'number',  'จำเป็น',      'min: 1',                 'ยอดเงิน (บาท, ทศนิยมได้)'],
         ['method',       'string',  'จำเป็น',      '"card" หรือ "promptpay"', 'วิธีชำระเงิน'],
         ['callback_url', 'string',  'จำเป็น',      'URL ที่ถูกต้อง',         'URL รับ Webhook จาก PayMock'],
-        ['return_url',   'string',  'ไม่จำเป็น',   'URL ที่ถูกต้อง',         'URL redirect ผู้ใช้กลับ'],
         ['expires_in',   'integer', 'ไม่จำเป็น',   'min: 60 (วินาที)',        'อายุก่อนหมดเวลา (default: 600)'],
         ['currency',     'string',  'ไม่จำเป็น',   '3 ตัวอักษร',             'สกุลเงิน (default: "THB")'],
+        ['card_number',  'string',  'ไม่จำเป็น',   '16 หลัก',                'หมายเลขบัตรเครดิต (สำหรับ Direct Card Payment)'],
+        ['exp_month',    'string',  'ไม่จำเป็น',   '2 หลัก (01-12)',          'เดือนหมดอายุบัตร'],
+        ['exp_year',     'string',  'ไม่จำเป็น',   '2 หรือ 4 หลัก',           'ปีหมดอายุบัตร'],
+        ['cvc',          'string',  'ไม่จำเป็น',   '3-4 หลัก',               'รหัสตรวจสอบบัตร (CVV/CVC)'],
         ['metadata',     'object',  'ไม่จำเป็น',   'JSON object',            'ข้อมูลเพิ่มเติม (ไม่ส่งใน webhook)'],
     ],
     col_widths=[3, 2, 2.5, 3.5, 5.5]
@@ -357,21 +374,21 @@ add_para(doc, (
     'ถ้าส่ง key เดิมซ้ำ → คืน payment เดิม ไม่สร้างใหม่ (ใช้ตอน retry หลัง timeout)'
 ))
 
-add_heading(doc, 'Response 201 Created', 3, color='374151')
+add_heading(doc, 'Response 201 Created (PromptPay)', 3, color='374151')
 add_code(doc, [
     '{',
-    '  "id":           "01JCXYZ1234567890ABCDEFGH",',
-    '  "order_ref":    "b_TK2024001",',
-    '  "amount":       1200.00,',
-    '  "currency":     "THB",',
-    '  "method":       "card",',
-    '  "status":       "PENDING",',
-    '  "failure_code": null,',
-    '  "checkout_url": "http://localhost:8081/checkout/01JCXYZ1234567890ABCDEFGH",',
-    '  "return_url":   "http://localhost:8080/payment/return?booking=b_TK2024001",',
-    '  "expires_at":   "2026-10-13T10:10:00+07:00",',
-    '  "paid_at":      null,',
-    '  "created_at":   "2026-10-13T10:00:00+07:00"',
+    '  "id":                 "01JCXYZ1234567890ABCDEFGH",',
+    '  "order_ref":          "b_TK2024001",',
+    '  "amount":             1200.00,',
+    '  "currency":           "THB",',
+    '  "method":             "promptpay",',
+    '  "status":             "PENDING",',
+    '  "failure_code":       null,',
+    '  "expires_at":         "2026-10-13T10:10:00+07:00",',
+    '  "paid_at":            null,',
+    '  "created_at":         "2026-10-13T10:00:00+07:00",',
+    '  "qrcode_url":         "http://localhost:8081/v1/payments/01JCXYZ.../qr.svg",',
+    '  "bank_simulator_url": "http://localhost:8081/bank-simulate/01JCXYZ..."',
     '}',
 ])
 
@@ -379,12 +396,13 @@ add_heading(doc, 'Response Fields', 3, color='374151')
 add_table(doc,
     ['Field', 'Type', 'ความหมาย'],
     [
-        ['id',           'string (ULID)',   'Payment ID — ใช้อ้างอิงใน API ทุก call ต่อจากนี้'],
-        ['status',       'string',          'PENDING / COMPLETED / FAILED / EXPIRED'],
-        ['failure_code', 'string | null',   'รหัสเหตุผลเมื่อล้มเหลว (ดูตาราง Failure Codes)'],
-        ['checkout_url', 'string',          'URL ที่ต้อง redirect ผู้ใช้ไป (หน้าจ่ายเงิน)'],
-        ['expires_at',   'ISO 8601 | null', 'เวลาหมดอายุ'],
-        ['paid_at',      'ISO 8601 | null', 'เวลาที่จ่ายสำเร็จ'],
+        ['id',                 'string (ULID)',   'Payment ID — ใช้อ้างอิงใน API ทุก call ต่อจากนี้'],
+        ['status',             'string',          'PENDING / COMPLETED / FAILED / EXPIRED'],
+        ['failure_code',       'string | null',   'รหัสเหตุผลเมื่อล้มเหลว (ดูตาราง Failure Codes)'],
+        ['qrcode_url',         'string | null',   'URL รูปภาพ SVG QR Code สำหรับ PromptPay (ใส่ใน <img src="...">)'],
+        ['bank_simulator_url', 'string | null',   'URL หน้าจำลอง Mobile Banking สำหรับทดสอบ'],
+        ['expires_at',         'ISO 8601 | null', 'เวลาหมดอายุ'],
+        ['paid_at',            'ISO 8601 | null', 'เวลาที่จ่ายสำเร็จ'],
     ],
     col_widths=[3.5, 3.5, 9.5]
 )
@@ -410,7 +428,6 @@ add_table(doc,
         ['expired_card',      'บัตรหมดอายุ',          'บัตรหมดอายุ'],
         ['incorrect_cvc',     'CVC ผิด',              'รหัส CVC ไม่ถูกต้อง'],
         ['processing_error',  'ข้อผิดพลาดจาก gateway','ระบบขัดข้องชั่วคราว ลองอีกครั้ง'],
-        ['3ds_required',      'รอยืนยัน OTP',         'รอ Webhook ห้ามปลดล็อกที่นั่ง'],
         ['fraud_suspected',   'สงสัย fraud',           'บันทึก Anomaly แจ้ง Admin'],
         ['cancelled',         'ยกเลิกโดยผู้ใช้/ระบบ','ยกเลิก booking'],
         ['payment_expired',   'หมดเวลา',              'เหมือน EXPIRED'],
@@ -632,9 +649,20 @@ add_table(doc,
     ],
     col_widths=[4, 12.5]
 )
-add_para(doc,
-    'แนะนำ: endpoint ของคุณควรตอบ 200 OK เร็วที่สุด แล้วค่อย process ใน background queue',
-    color='065F46'
+add_heading(doc, '4.5 การหมดอายุของ QR Code (payment.expired)', 2)
+add_para(doc, (
+    'เมื่อ QR Code หรือรายการที่รอชำระเงินหมดเวลา (เลย expires_at) ระบบ PayMock จะส่ง Webhook '
+    'Event ชื่อ payment.expired ไปยัง callback_url ของคุณทันที เพื่อแจ้งเตือนให้ระบบคอนเสิร์ตทำการปลดล็อกที่นั่ง'
+))
+add_table(doc,
+    ['สิ่งที่ระบบคอนเสิร์ตต้องทำเมื่อได้รับ payment.expired', 'ตารางในฐานข้อมูล', 'การเปลี่ยนแปลง'],
+    [
+        ['1. ยกเลิกการจองตั๋ว', 'booking', 'อัปเดต b_status = "EXPIRED"'],
+        ['2. ปลดล็อกที่นั่ง', 'seat', 'อัปเดต s_seat_booking_status = "AVAILABLE"'],
+        ['3. คืนสต็อกโซนยืน', 'zone_inventory', 'ลด zi_held ลงตามจำนวนตั๋ว'],
+        ['4. บันทึกประวัติการปลดล็อก', 'seat_lock_log', 'บันทึก sll_released_at = NOW()'],
+    ],
+    col_widths=[6, 4, 6.5]
 )
 
 doc.add_page_break()
@@ -656,7 +684,6 @@ add_table(doc,
         ['webhook_dup:N',   'ส่ง webhook N ชุด (duplicate)',       'ทดสอบ idempotency'],
         ['webhook_bad_sig', 'ส่ง webhook signature ผิด',           'ทดสอบ signature validation'],
         ['webhook_replay',  'ส่ง timestamp เก่า 1 ชั่วโมง',       'ทดสอบ replay protection'],
-        ['auto_pay:N',      'PromptPay จ่ายอัตโนมัติใน N วินาที', 'เดโมโดยไม่กดปุ่ม'],
     ],
     col_widths=[3.5, 5.5, 7.5]
 )
@@ -694,7 +721,6 @@ add_table(doc,
         ['4000 0000 0000 0069', '❌ FAILED',           'expired_card',     'แจ้งบัตรหมดอายุ'],
         ['4000 0000 0000 0127', '❌ FAILED',           'incorrect_cvc',    'แจ้ง CVC ผิด'],
         ['4000 0000 0000 0119', '❌ FAILED',           'processing_error', 'แจ้งระบบขัดข้อง ลองใหม่'],
-        ['4000 0000 0000 3220', '🔐 รอ OTP (PENDING)', '3ds_required',     'รอ Webhook ห้ามปลดล็อกที่นั่ง'],
         ['4100 0000 0000 0019', '🚨 FAILED',           'fraud_suspected',  'บันทึก Anomaly แจ้ง Admin'],
         ['4000 0000 0000 0341', '⏳ COMPLETED (ช้า)',  '—',                'Webhook ดีเลย์ 11 นาที ห้าม expire ก่อน'],
     ],
@@ -734,6 +760,53 @@ add_code(doc, [
 
 add_heading(doc, '503 Service Unavailable', 2, color='991B1B')
 add_code(doc, ['{ "error": "service_unavailable", "message": "Gateway is currently down." }'])
+
+add_heading(doc, '7.1 ปรัชญาการออกแบบ HTTP Status Code (ทำไมแต่ละ API ถึงต่างกัน)', 2)
+add_para(doc, (
+    'ตามมาตรฐาน RESTful API และ RFC 9110 HTTP Status Code ทำหน้าที่บอก Client (ระบบคอนเสิร์ต) '
+    'อย่างแม่นยำว่า "ปัญหาเกิดขึ้นจากใคร และควรแก้ไขหรือจัดการต่อไปอย่างไร" โดยแบ่งเป็น 2 กลุ่มใหญ่:'
+))
+add_table(doc,
+    ['กลุ่มรหัส', 'ความหมายหลัก', 'การจัดการของระบบคอนเสิร์ต'],
+    [
+        ['4xx (Client Error)', 'ปัญหาเกิดจากฝั่งผู้เรียก (ระบบคอนเสิร์ต)', 'ห้าม Retry ซ้ำด้วยข้อมูลเดิม ต้องแก้ไขโค้ดหรือพารามิเตอร์'],
+        ['5xx (Server Error)', 'ปัญหาเกิดจากฝั่งผู้ให้บริการ (Gateway)', 'อนุญาตให้ Retry ได้อย่างจำกัดครั้ง (เช่น 1-3 ครั้ง)'],
+    ],
+    col_widths=[4, 6, 6.5]
+)
+
+add_heading(doc, '7.2 ตารางเปรียบเทียบ Error Code ราย Endpoint และวิธีรับมือ', 2)
+add_table(doc,
+    ['Endpoint', 'HTTP Code', 'Error String', 'สาเหตุแท้จริง', 'สิ่งที่ระบบคอนเสิร์ตต้องทำ'],
+    [
+        ['POST /v1/payments', '401', 'unauthorized', 'API Key ผิด/ไม่มี', 'เช็ค config .env ห้าม Retry'],
+        ['POST /v1/payments', '422', 'validation_error', 'amount <= 0 หรือพารามิเตอร์ขาด', 'เช็ค request body ก่อนส่ง'],
+        ['POST /v1/payments', '429', 'rate_limited', 'ยิงถี่เกินไป', 'อ่าน Retry-After แล้วหน่วงเวลาก่อนลองใหม่'],
+        ['POST /v1/payments', '503', 'service_unavailable', 'Gateway อยู่ในโหมด down', 'แจ้งผู้ใช้ระบบขัดข้องชั่วคราว'],
+        ['GET /v1/payments/{id}', '404', 'not_found', 'ไม่พบ Payment ID นี้ในระบบ', 'เช็ค ID ว่าคัดลอกมาถูกต้องหรือไม่'],
+        ['POST /v1/payments/{id}/cancel', '409', 'cannot_cancel', 'รายการจ่ายสำเร็จแล้ว (Settled)', 'ห้ามยกเลิก ปล่อยผ่านเป็น COMPLETED'],
+        ['Webhook (POST callback)', '400', 'expired', 'Timestamp ห่างเกิน 5 นาที', 'ระวัง Replay Attack ปฏิเสธทันที'],
+        ['Webhook (POST callback)', '401', 'unauthorized', 'HMAC Signature ไม่ตรง', 'ข้อมูลถูกดัดแปลง ปฏิเสธทันที'],
+    ],
+    col_widths=[4, 2, 3, 4, 3.5]
+)
+
+add_heading(doc, '7.3 Hierarchy ลำดับชั้นการตรวจสอบในระบบ PayMock', 2)
+add_para(doc, (
+    'ระบบ PayMock มีลำดับชั้นการตัดสินใจ (Execution Hierarchy) แบ่งเป็น 4 ชั้นอย่างเด็ดขาด:'
+))
+steps_hierarchy = [
+    'Layer 1 (ด่าน Network & Chaos): ตรวจสอบ Header X-Mock-Scenario และ Admin Setting ก่อนเพื่อน (ถ้าเจอ down/rate_limit จะตัดจบ 503/429 ทันที)',
+    'Layer 2 (ด่าน Request & Idempotency): ตรวจสอบความถูกต้องของ Body และตรวจ Idempotency-Key (ถ้าซ้ำ คืนรายการเดิมทันที)',
+    'Layer 3 (ด่านการชำระเงิน): ในหน้า Checkout ตรวจสอบตามตาราง Magic Cards (เช่น บัตรผ่าน, บัตรวงเงินไม่พอ, บัตรหมดอายุ)',
+    'Layer 4 (ด่านการส่ง Webhook): เมื่อสถานะเปลี่ยน ส่ง Webhook ตาม Scenario (เช่น ดีเลย์ หรือส่งซ้ำ) พร้อม HMAC-SHA256',
+]
+for s in steps_hierarchy:
+    p = doc.add_paragraph()
+    p.paragraph_format.space_after = Pt(2)
+    p.paragraph_format.left_indent = Cm(0.5)
+    run = p.add_run('• ' + s)
+    run.font.size = Pt(9.5)
 
 doc.add_page_break()
 
@@ -777,7 +850,7 @@ steps_retry = [
     'หมดเวลา (timeout) ไม่ได้ response',
     'ส่ง POST /v1/payments อีกครั้งพร้อม Idempotency-Key เดิม: b_TK2024001',
     'PayMock คืน payment เดิม (ไม่สร้างซ้ำ)',
-    'ใช้ checkout_url ที่ได้ redirect ผู้ใช้ต่อไปได้เลย',
+    'นำ qrcode_url หรือผลลัพธ์เดิมไปแสดงผลต่อได้ทันที',
 ]
 for i, s in enumerate(steps_retry, 1):
     p = doc.add_paragraph()
@@ -793,6 +866,75 @@ add_para(doc, (
     'ถ้า status = EXPIRED → ยกเลิก booking ปลดล็อกที่นั่ง'
 ))
 
+doc.add_page_break()
+
+# ═══════════════════════════════════════════════
+# 9. NATIVE MODAL & DIRECT CARD INTEGRATION
+# ═══════════════════════════════════════════════
+add_heading(doc, '9. การเชื่อมต่อแบบ Native Modal & Direct Payment (Headless Flow)', 1)
+add_para(doc, (
+    'ระบบออกแบบเป็น Direct API / Headless Flow โดยสมบูรณ์ ไม่จำเป็นต้องมี checkout_url หรือ return_url:'
+))
+
+add_heading(doc, '9.1 ข้อดีของ Headless Direct Flow', 2)
+add_table(doc,
+    ['วิธีชำระ', 'การทำงาน', 'ผลลัพธ์ที่ได้'],
+    [
+        ['PromptPay', 'PayMock ส่งคืน qrcode_url (SVG) + bank_simulator_url',
+         'เว็บคอนเสิร์ตนำ QR ใส่ใน Native Modal — ไม่ต้องใช้ iframe'],
+        ['Credit Card', 'เว็บคอนเสิร์ตส่งข้อมูลบัตรผ่าน card_number/exp_month/exp_year/cvc',
+         'ได้ผลทันที: COMPLETED หรือ FAILED'],
+    ],
+    col_widths=[2.5, 7, 7]
+)
+
+add_heading(doc, '9.2 ตัวอย่างโค้ด HTML + JavaScript ฝั่งเว็บคอนเสิร์ต (Native PromptPay Modal)', 2)
+add_code(doc, [
+    '<!-- 1. Native Modal Container — ไม่ใช้ iframe เลย -->',
+    '<div id="paymentModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">',
+    '    <div style="background:white; border-radius:24px; padding:24px; width:95%; max-width:440px; text-align:center;">',
+    '        <h3>📱 สแกน QR เพื่อชำระเงิน</h3>',
+    '',
+    '        <!-- แสดงภาพ QR Code จาก qrcode_url (SVG) -->',
+    '        <img id="qrImage" src="" alt="PromptPay QR" style="width:240px; height:240px; margin:0 auto; display:block;">',
+    '',
+    '        <!-- ปุ่มเปิดหน้าจำลอง Mobile Banking -->',
+    '        <a id="bankSimulateBtn" href="#" target="_blank"',
+    '           style="display:block; margin-top:12px; padding:12px; background:#059669; color:white; border-radius:12px; text-decoration:none; font-weight:bold;">',
+    '            📲 เปิดหน้าจำลอง Mobile Banking ↗',
+    '        </a>',
+    '    </div>',
+    '</div>',
+    '',
+    '<script>',
+    'let pollInterval = null;',
+    '',
+    '// เปิด Modal พร้อม QR และเริ่ม Polling',
+    'function openPromptPayModal(qrUrl, simulateUrl, orderRef) {',
+    '    document.getElementById("qrImage").src = qrUrl;',
+    '    document.getElementById("bankSimulateBtn").href = simulateUrl;',
+    '    document.getElementById("paymentModal").style.display = "flex";',
+    '',
+    '    if (pollInterval) clearInterval(pollInterval);',
+    '    pollInterval = setInterval(async () => {',
+    '        const res = await fetch("/api/booking-status?order_ref=" + orderRef);',
+    '        const data = await res.json();',
+    '        if (data.booking && data.booking.status === "PAID") {',
+    '            clearInterval(pollInterval);',
+    '            closeModal();',
+    '            alert("ชำระเงินสำเร็จ! ออกตั๋วคอนเสิร์ตเรียบร้อย");',
+    '            window.location.reload();',
+    '        }',
+    '    }, 1500);',
+    '}',
+    '',
+    'function closeModal() {',
+    '    document.getElementById("paymentModal").style.display = "none";',
+    '    if (pollInterval) clearInterval(pollInterval);',
+    '}',
+    '</script>',
+])
+
 # ─── Footer ───
 add_para(doc, '')
 p_footer = doc.add_paragraph()
@@ -803,6 +945,7 @@ run.font.size = Pt(9)
 run.font.color.rgb = RGBColor.from_string('6B7280')
 
 # ─── Save ───
-output_path = 'paymock/PayMock_API_Reference.docx'
+output_path = 'PayMock_API_Reference.docx'
 doc.save(output_path)
-print(f"✅ สร้างไฟล์เสร็จ: {output_path}")
+print("SUCCESS: Generated " + output_path)
+

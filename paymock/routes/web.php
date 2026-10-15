@@ -3,6 +3,7 @@
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\LandingController;
+use App\Http\Controllers\DemoController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -49,3 +50,18 @@ Route::get('/up', fn () => response()->json(['status' => 'ok']));
 
 // Landing Page
 Route::get('/', [LandingController::class, 'index'])->name('landing');
+
+// Demo Playground (Concert Ticket Modal Integration)
+Route::get('/demo/modal', [DemoController::class, 'modal'])->name('demo.modal');
+Route::post('/demo/create-payment', [DemoController::class, 'createDemoPayment'])
+    ->name('demo.create.payment')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+
+// Bank App Simulator (หน้าจำลองแอปธนาคารสำหรับ PromptPay QR Code)
+Route::get('/bank-simulate/{publicId}', [\App\Http\Controllers\BankSimulatorController::class, 'show'])->name('bank.simulate.show');
+Route::post('/bank-simulate/{publicId}/pay', [\App\Http\Controllers\BankSimulatorController::class, 'pay'])
+    ->name('bank.simulate.pay')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+
+
+

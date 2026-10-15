@@ -18,6 +18,12 @@
         </div>
     </div>
     <div class="flex items-center gap-4">
+        <a href="http://localhost:5000" target="_blank" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg transition shadow flex items-center gap-1.5">
+            🎫 เว็บคอนเสิร์ต (Port 5000) ↗
+        </a>
+        <a href="{{ route('demo.modal') }}" class="bg-purple-600 hover:bg-purple-700 text-xs text-white font-semibold px-3 py-1.5 rounded-lg transition shadow flex items-center gap-1.5">
+            🎪 Demo Modal
+        </a>
         <a href="{{ asset('PayMock_API_Reference.docx') }}" download class="bg-blue-600 hover:bg-blue-700 text-xs text-white font-semibold px-3 py-1.5 rounded-lg transition shadow">
             📄 เอกสาร Word (.docx)
         </a>
@@ -150,14 +156,14 @@
                     </button>
                 </form>
 
-                <!-- PromptPay Auto Pay -->
+                <!-- PromptPay Standard -->
                 <form action="{{ route('admin.scenarios.run') }}" method="POST">
                     @csrf
                     <input type="hidden" name="method" value="promptpay">
-                    <input type="hidden" name="scenario" value="auto_pay:15">
+                    <input type="hidden" name="scenario" value="normal">
                     <button type="submit" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-green-500 hover:bg-green-50 transition shadow-sm">
-                        <div class="text-xs font-bold text-green-700">📱 PromptPay Auto 15s</div>
-                        <div class="text-[11px] text-gray-500">นับถอยหลังจ่ายอัตโนมัติ</div>
+                        <div class="text-xs font-bold text-green-700">📱 PromptPay Standard</div>
+                        <div class="text-[11px] text-gray-500">สแกน QR หรือกดจำลองด้วยตัวเอง</div>
                     </button>
                 </form>
 
@@ -435,7 +441,7 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div class="md:col-span-2">
                 <label class="block text-xs font-semibold text-gray-600 mb-1">Target Webhook URL</label>
-                <input type="url" x-model="whUrl" placeholder="http://localhost:8080/webhooks/paymock"
+                <input type="url" x-model="whUrl" placeholder="http://concert_backend:5000/api/webhook"
                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono">
             </div>
             <div>
@@ -520,7 +526,7 @@ function adminDashboard() {
                         order_ref: 'DEMO_' + Date.now(),
                         amount: 1500.00,
                         method: 'card',
-                        callback_url: 'http://concert:80/webhooks/payment'
+                        callback_url: 'http://concert_backend:5000/api/webhook'
                     });
                 }
                 const response = await fetch(url, options);
@@ -556,7 +562,7 @@ function adminDashboard() {
 
 function webhookTester() {
     return {
-        whUrl: '',
+        whUrl: 'http://concert_backend:5000/api/webhook',
         whEvent: 'payment.completed',
         whTesting: false,
         whResult: null,

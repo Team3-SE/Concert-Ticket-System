@@ -20,7 +20,6 @@ class Payment extends Model
         'scenario',
         'failure_code',
         'callback_url',
-        'return_url',
         'idempotency_key',
         'expires_at',
         'paid_at',

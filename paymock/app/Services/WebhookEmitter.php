@@ -29,9 +29,11 @@ class WebhookEmitter
             'order_ref'    => $payment->order_ref,
             'amount'       => (float) $payment->amount,
             'currency'     => $payment->currency,
+            'method'       => $payment->method,
             'status'       => $payment->status,
             'failure_code' => $payment->failure_code,
             'paid_at'      => $payment->paid_at?->toIso8601String(),
+            'created_at'   => $payment->created_at?->toIso8601String(),
         ];
 
         for ($i = 0; $i < $copies; $i++) {

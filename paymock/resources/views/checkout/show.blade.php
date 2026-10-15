@@ -6,7 +6,16 @@
     <!-- Header -->
     <div class="bg-indigo-600 text-white px-6 py-4">
         <div class="flex justify-between items-center">
-            <h1 class="text-xl font-bold">💳 PayMock Checkout</h1>
+            <div class="flex items-center gap-3">
+                <h1 class="text-xl font-bold">💳 PayMock Checkout</h1>
+                <button type="button"
+                        id="iframeCloseHeaderBtn"
+                        style="display: none;"
+                        onclick="window.parent.postMessage({ type: 'paymock:close_modal', payment_id: '{{ $payment->public_id }}', status: 'PENDING' }, '*')"
+                        class="bg-indigo-700 hover:bg-rose-600 text-xs text-white px-2.5 py-1 rounded-md transition border border-indigo-400 font-semibold cursor-pointer">
+                    ✕ ปิดหน้าต่าง
+                </button>
+            </div>
             <div class="text-right">
                 <div class="text-sm opacity-80">Amount</div>
                 <div class="text-2xl font-bold">฿{{ number_format($payment->amount, 2) }}</div>
@@ -35,28 +44,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Auto-Pay Scenario Banner (e.g. auto_pay:15) -->
-    @php
-        $autoPaySeconds = null;
-        if ($payment->scenario && str_starts_with($payment->scenario, 'auto_pay:')) {
-            $autoPaySeconds = (int) explode(':', $payment->scenario)[1];
-        }
-    @endphp
-
-    @if($autoPaySeconds)
-    <div class="bg-blue-50 border-b border-blue-200 px-6 py-3 text-sm flex items-center justify-between"
-         x-data="autoPayTimer({{ $autoPaySeconds }}, '{{ route('checkout.simulate', $payment->public_id) }}', '{{ $payment->return_url ? $payment->return_url . '?payment_id=' . $payment->public_id : route('checkout.show', $payment->public_id) }}')"
-         x-init="start()">
-        <div class="flex items-center gap-2 text-blue-800">
-            <span>⚡ <strong>Auto-Pay Demo:</strong> จ่ายเงินอัตโนมัติใน</span>
-            <span class="font-mono font-bold text-blue-900 bg-blue-100 px-2 py-0.5 rounded" x-text="secondsLeft + 's'"></span>
-        </div>
-        <button @click="cancelAutoPay()" x-show="running" class="text-xs text-blue-600 hover:underline">
-            หยุดการทำงาน
-        </button>
-    </div>
-    @endif
 
     <div class="p-6">
         @if($payment->method === 'promptpay')
@@ -259,39 +246,12 @@ function countdownTimer(expiresAt) {
     };
 }
 
-function autoPayTimer(seconds, simulateUrl, redirectUrl) {
-    return {
-        secondsLeft: seconds,
-        running: true,
-        start() {
-            const timer = setInterval(() => {
-                if (!this.running) {
-                    clearInterval(timer);
-                    return;
-                }
-                this.secondsLeft--;
-                if (this.secondsLeft <= 0) {
-                    clearInterval(timer);
-                    this.executeAutoPay(simulateUrl, redirectUrl);
-                }
-            }, 1000);
-        },
-        cancelAutoPay() {
-            this.running = false;
-        },
-        executeAutoPay(url, redirect) {
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({ status: 'COMPLETED' })
-            }).then(() => {
-                window.location.href = redirect;
-            });
-        }
-    };
-}
+// ตรวจจับว่าเปิดอยู่ใน iframe หรือไม่ ถ้าใช่ให้แสดงปุ่มปิดหน้าต่าง
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.parent && window.parent !== window) {
+        var btn = document.getElementById('iframeCloseHeaderBtn');
+        if (btn) btn.style.display = 'inline-block';
+    }
+});
 </script>
 @endsection

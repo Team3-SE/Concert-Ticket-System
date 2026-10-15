@@ -24,3 +24,9 @@ Route::prefix('v1')
         // ยกเลิก
         Route::post('payments/{publicId}/cancel', [PaymentController::class, 'cancel']);
     });
+
+// ไฟล์ภาพ SVG QR Code (ไม่ต้องใช้ Bearer token เพื่อให้แท็ก <img> หน้าเว็บโหลดได้โดยตรง)
+Route::prefix('v1')
+    ->group(function () {
+        Route::get('payments/{publicId}/qr.svg', [PaymentController::class, 'qrSvg'])->name('api.payment.qr');
+    });

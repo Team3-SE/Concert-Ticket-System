@@ -117,7 +117,7 @@ class AdminController extends Controller
             'order_ref'       => $orderRef,
             'amount'          => $amount,
             'method'          => $method,
-            'callback_url'    => 'http://concert:80/webhooks/payment',
+            'callback_url'    => env('DEFAULT_WEBHOOK_URL', 'http://concert_backend:5000/api/webhook'),
             'return_url'      => null,
             'idempotency_key' => $orderRef,
             'expires_in'      => 600,
@@ -151,15 +151,26 @@ class AdminController extends Controller
             'event' => 'required|string',
         ]);
 
+        $event = $request->input('event', 'payment.completed');
+        $status = match($event) {
+            'payment.failed'  => 'FAILED',
+            'payment.expired' => 'EXPIRED',
+            default           => 'COMPLETED',
+        };
+        $failureCode = ($event === 'payment.failed') ? 'card_declined' : null;
+        $paidAt      = ($status === 'COMPLETED') ? now()->toIso8601String() : null;
+
         $body = json_encode([
             'id'           => 'TEST_' . strtoupper(substr(uniqid(), -8)),
-            'event'        => $request->input('event', 'payment.completed'),
+            'event'        => $event,
             'order_ref'    => 'TEST_ORDER_001',
             'amount'       => 1200.00,
             'currency'     => 'THB',
-            'status'       => 'COMPLETED',
-            'failure_code' => null,
-            'paid_at'      => now()->toIso8601String(),
+            'method'       => 'card',
+            'status'       => $status,
+            'failure_code' => $failureCode,
+            'paid_at'      => $paidAt,
+            'created_at'   => now()->toIso8601String(),
         ]);
 
         $t      = time();

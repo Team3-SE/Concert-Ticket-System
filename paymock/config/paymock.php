@@ -44,7 +44,6 @@ return [
         '4000000000000069' => ['FAILED',    'expired_card'],
         '4000000000000127' => ['FAILED',    'incorrect_cvc'],
         '4000000000000119' => ['FAILED',    'processing_error'],
-        '4000000000003220' => ['PENDING',   '3ds_required'],   // stays PENDING until OTP
         '4100000000000019' => ['FAILED',    'fraud_suspected'],
         '4000000000000341' => ['COMPLETED', null, 'webhook_delay:660'],  // success but webhook very late
     ],

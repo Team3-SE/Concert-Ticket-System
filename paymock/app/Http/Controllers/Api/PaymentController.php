@@ -31,6 +31,7 @@ class PaymentController extends Controller
     /**
      * POST /v1/payments
      * สร้างรายการจ่ายเงิน (idempotent ด้วย Idempotency-Key)
+     * รองรับ PromptPay (ส่งกลับ qrcode_url) และ Card โดยตรง (ไม่ต้องผ่าน checkout_url)
      */
     public function store(Request $request): JsonResponse
     {
@@ -39,10 +40,14 @@ class PaymentController extends Controller
             'amount'       => 'required|numeric|min:1',
             'method'       => 'required|in:card,promptpay',
             'callback_url' => 'required|url',
-            'return_url'   => 'nullable|url',
             'expires_in'   => 'nullable|integer|min:60',
             'currency'     => 'nullable|string|size:3',
             'metadata'     => 'nullable|array',
+            'card_number'  => 'nullable|string',
+            'exp_month'    => 'nullable|string',
+            'exp_year'     => 'nullable|string',
+            'cvc'          => 'nullable|string',
+            'scenario'     => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -53,12 +58,23 @@ class PaymentController extends Controller
         }
 
         $idempotencyKey = $request->header('Idempotency-Key') ?? $request->input('order_ref');
-        $scenario       = $request->header('X-Mock-Scenario');
+        $scenario       = $request->header('X-Mock-Scenario') ?? $request->input('scenario');
 
         $payment = $this->service->createOrFind(
             array_merge($validator->validated(), ['idempotency_key' => $idempotencyKey]),
             $scenario
         );
+
+        // ถ้าจ่ายผ่านบัตรเครดิตโดยตรง และส่งเลขบัตรมา ให้ประมวลผลทันที
+        if ($payment->isPending() && $payment->method === 'card' && $request->filled('card_number')) {
+            $cardNumber = preg_replace('/\D/', '', $request->input('card_number', ''));
+            $rules      = config('paymock.card_rules', []);
+            $rule       = $rules[$cardNumber] ?? ['FAILED', 'card_declined'];
+            [$status, $failureCode, $overrideScenario] = array_pad($rule, 3, null);
+
+            $this->service->transition($payment, $status, $failureCode, $overrideScenario);
+            $payment->refresh();
+        }
 
         return response()->json($this->formatPayment($payment), 201);
     }
@@ -71,6 +87,22 @@ class PaymentController extends Controller
     {
         $payment = Payment::where('public_id', $publicId)->firstOrFail();
         return response()->json($this->formatPayment($payment));
+    }
+
+    /**
+     * GET /v1/payments/{publicId}/qr.svg
+     * ส่งคืนไฟล์ภาพ SVG QR Code สำหรับ PromptPay
+     */
+    public function qrSvg(string $publicId): \Symfony\Component\HttpFoundation\Response
+    {
+        $payment = Payment::where('public_id', $publicId)->firstOrFail();
+        $bankSimulateUrl = url("/bank-simulate/{$payment->public_id}");
+        $svg = \App\Services\QrService::generateSvg($bankSimulateUrl, 260);
+
+        return response($svg, 200, [
+            'Content-Type'  => 'image/svg+xml',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        ]);
     }
 
     /**
@@ -92,7 +124,7 @@ class PaymentController extends Controller
 
     private function formatPayment(Payment $payment): array
     {
-        return [
+        $data = [
             'id'           => $payment->public_id,
             'order_ref'    => $payment->order_ref,
             'amount'       => (float) $payment->amount,
@@ -100,11 +132,17 @@ class PaymentController extends Controller
             'method'       => $payment->method,
             'status'       => $payment->status,
             'failure_code' => $payment->failure_code,
-            'checkout_url' => route('checkout.show', $payment->public_id),
-            'return_url'   => $payment->return_url,
             'expires_at'   => $payment->expires_at?->toIso8601String(),
             'paid_at'      => $payment->paid_at?->toIso8601String(),
             'created_at'   => $payment->created_at?->toIso8601String(),
         ];
+
+        // สำหรับ PromptPay ส่งคืน URL แสดงภาพ QR Code และ URL จำลองแอปธนาคาร
+        if ($payment->method === 'promptpay') {
+            $data['qrcode_url']         = url("/v1/payments/{$payment->public_id}/qr.svg");
+            $data['bank_simulator_url'] = url("/bank-simulate/{$payment->public_id}");
+        }
+
+        return $data;
     }
 }

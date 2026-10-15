@@ -94,6 +94,15 @@
 
         <!-- Action Buttons -->
         <div class="mt-6 flex flex-col sm:flex-row gap-3 justify-center items-center">
+            <!-- ปุ่มปิดหน้าต่าง (แสดงเฉพาะเมื่อเปิดใน iframe Modal) -->
+            <div id="iframeCloseBtnWrapper" style="display: none;" class="w-full sm:w-auto">
+                <button type="button"
+                        onclick="window.parent.postMessage({ type: 'paymock:close_modal', payment_id: '{{ $payment->public_id }}', status: '{{ $payment->status }}' }, '*')"
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition shadow cursor-pointer">
+                    ✕ ปิดหน้าต่างนี้
+                </button>
+            </div>
+
             <a href="{{ route('admin.dashboard') }}"
                class="w-full sm:w-auto bg-gray-800 hover:bg-gray-900 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition shadow">
                 ⚙️ กลับหน้า Admin Dashboard
@@ -102,6 +111,7 @@
             @if($payment->return_url)
             <div class="w-full sm:w-auto">
                 <a href="{{ $payment->return_url }}?payment_id={{ $payment->public_id }}"
+                   target="_top"
                    class="w-full sm:w-auto inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition shadow">
                     🔗 กลับไปยังระบบคอนเสิร์ต
                 </a>
@@ -115,4 +125,24 @@
         @endif
     </div>
 </div>
+
+<script>
+// ส่ง event postMessage ไปยัง Parent Window อัตโนมัติเมื่อสถานะเปลี่ยนสำเร็จ
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.parent && window.parent !== window) {
+        // แสดงปุ่มปิด Modal
+        var closeBtn = document.getElementById('iframeCloseBtnWrapper');
+        if (closeBtn) closeBtn.style.display = 'block';
+
+        // แจ้ง Parent Window
+        window.parent.postMessage({
+            type: 'paymock:payment_result',
+            status: @json($payment->status),
+            payment_id: @json($payment->public_id),
+            order_ref: @json($payment->order_ref),
+            amount: {{ (float) $payment->amount }}
+        }, '*');
+    }
+});
+</script>
 @endsection

@@ -106,6 +106,34 @@
         </a>
     </div>
 
+    <!-- Modal Playground Banner -->
+    <div class="bg-gradient-to-r from-indigo-900/90 via-purple-900/80 to-indigo-900/90 border border-indigo-500/50 rounded-2xl p-6 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+            <div class="text-4xl bg-indigo-800/80 p-3 rounded-xl border border-indigo-500/30">🎪</div>
+            <div>
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/30 text-indigo-300 border border-indigo-400/30 mb-1">
+                    ✨ Interactive Playground
+                </div>
+                <h3 class="text-lg font-bold text-white">ทดสอบจ่ายเงินแบบ Modal Popup (ไม่ต้อง Redirect)</h3>
+                <p class="text-sm text-indigo-200 mt-0.5">
+                    จำลองหน้าจองตั๋วคอนเสิร์ต เปิด iframe modal ในหน้าเดิม และดักฟังผลลัพธ์ผ่าน postMessage พร้อมตัวอย่างโค้ดก๊อปไปใช้
+                </p>
+            </div>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-2">
+            <a href="http://localhost:5000" target="_blank"
+               class="whitespace-nowrap bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-4 py-3 rounded-xl shadow-lg transition flex items-center gap-1.5 text-sm">
+                <span>🎫 เว็บคอนเสิร์ต (Port 5000)</span>
+                <span>↗</span>
+            </a>
+            <a href="{{ route('demo.modal') }}"
+               class="whitespace-nowrap bg-indigo-500 hover:bg-indigo-400 text-white font-bold px-4 py-3 rounded-xl shadow-lg transition flex items-center gap-2 text-sm group">
+                <span>ลองเล่น Demo Modal</span>
+                <span class="group-hover:translate-x-1 transition-transform">→</span>
+            </a>
+        </div>
+    </div>
+
     <!-- API Reference -->
     <div class="bg-gray-800 border border-gray-700 rounded-xl p-6">
         <h2 class="text-lg font-bold mb-4 flex items-center gap-2">📡 API Endpoints</h2>

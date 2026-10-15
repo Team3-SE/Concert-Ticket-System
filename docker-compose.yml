@@ -95,5 +95,33 @@ services:
       paymock:
         condition: service_healthy
 
+  # ─────────────────────────────────────────────────────────
+  # Mock Concert App & Backend (port 5000) – PHP Backend จำลองระบบคอนเสิร์ต
+  # ─────────────────────────────────────────────────────────
+  concert_backend:
+    build:
+      context: ./paymock
+      dockerfile: Dockerfile
+    container_name: concert_backend
+    restart: unless-stopped
+    entrypoint: []
+    command: ["php", "-S", "0.0.0.0:5000", "-t", "/var/www/concert"]
+    environment:
+      PAYMOCK_URL: "http://paymock:80/v1/payments"
+      MY_WEBHOOK_URL: "http://concert_backend:5000/api/webhook"
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mock-concert-backend:/var/www/concert
+    networks:
+      default:
+        aliases:
+          - concert
+          - concert_backend
+    depends_on:
+      paymock:
+        condition: service_healthy
+
 volumes:
   paymock_db:
+

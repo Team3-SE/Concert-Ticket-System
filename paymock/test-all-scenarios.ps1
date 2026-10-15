@@ -61,8 +61,11 @@ $body = @{
     amount       = 1500.00
     currency     = "THB"
     method       = "card"
-    callback_url = "http://concert/webhooks/payment"
-    return_url   = "http://localhost:8080/return"
+    card_number  = "4242424242424242"
+    exp_month    = "12"
+    exp_year     = "28"
+    cvc          = "123"
+    callback_url = "http://concert_backend:5000/api/webhook"
     expires_in   = 600
 } | ConvertTo-Json
 
@@ -130,7 +133,7 @@ try {
         order_ref    = "BOOK_SLOW_" + (Get-Random)
         amount       = 500.00
         method       = "promptpay"
-        callback_url = "http://concert/cb"
+        callback_url = "http://concert_backend:5000/api/webhook"
     } | ConvertTo-Json
 
     $resSlow = Invoke-RestMethod -Uri "$BaseUrl/v1/payments" -Method Post `

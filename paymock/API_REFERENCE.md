@@ -73,11 +73,11 @@ Authorization: Bearer pm_test_key_concert_system_2024
       "order_ref": "b_TK2024001",
       "amount": 1200.00,
       "currency": "THB",
-      "method": "card",
+      "method": "promptpay",
       "status": "COMPLETED",
       "failure_code": null,
-      "checkout_url": "http://localhost:8081/checkout/01JCXYZ...",
-      "return_url": "http://localhost:8080/payment/return",
+      "qrcode_url": "http://localhost:8081/v1/payments/01JCXYZ.../qr.svg",
+      "bank_simulator_url": "http://localhost:8081/bank-simulate/01JCXYZ...",
       "expires_at": "2026-10-13T10:10:00+07:00",
       "paid_at": "2026-10-13T10:05:32+07:00",
       "created_at": "2026-10-13T10:00:00+07:00"
@@ -96,7 +96,7 @@ Authorization: Bearer pm_test_key_concert_system_2024
 
 ## 4. POST /v1/payments — สร้างรายการจ่ายเงิน
 
-### Request
+### Request (PromptPay)
 
 ```http
 POST /v1/payments HTTP/1.1
@@ -110,15 +110,29 @@ X-Mock-Scenario: webhook_delay:30
 {
   "order_ref":    "b_TK2024001",
   "amount":       1200.00,
-  "method":       "card",
+  "method":       "promptpay",
   "callback_url": "http://localhost:8080/webhooks/paymock",
-  "return_url":   "http://localhost:8080/payment/return?booking=b_TK2024001",
   "expires_in":   600,
   "currency":     "THB",
   "metadata": {
     "booking_id": 42,
     "user_id": 7
   }
+}
+```
+
+### Request (Credit Card - Direct API)
+
+```json
+{
+  "order_ref":    "b_TK2024002",
+  "amount":       1200.00,
+  "method":       "card",
+  "callback_url": "http://localhost:8080/webhooks/paymock",
+  "card_number":  "4242424242424242",
+  "exp_month":    "12",
+  "exp_year":     "28",
+  "cvc":          "123"
 }
 ```
 
@@ -130,9 +144,12 @@ X-Mock-Scenario: webhook_delay:30
 | `amount` | number | ✅ | min 1 | — | ยอดเงิน (บาท, ทศนิยมได้) |
 | `method` | string | ✅ | `"card"` หรือ `"promptpay"` | — | วิธีชำระ |
 | `callback_url` | string | ✅ | URL ที่ถูกต้อง | — | URL ที่ PayMock จะ POST Webhook มาหา |
-| `return_url` | string | ❌ | URL ที่ถูกต้อง | `null` | URL ที่ redirect ผู้ใช้กลับหลังจ่าย |
 | `expires_in` | integer | ❌ | min 60 (วินาที) | 600 | อายุรายการก่อนหมดเวลา |
-| `currency` | string | ❌ | 3 ตัวอักษร | `"THB"` | สกุลเงิน |
+| `currency` | string | ❌ | 3 ตัวอักษร | `"THB"` | สกุลเงิน (default: `"THB"`) |
+| `card_number` | string | ❌ | 16 หลัก | `null` | หมายเลขบัตรเครดิต (สำหรับ Direct Card Payment) |
+| `exp_month` | string | ❌ | 2 หลัก (01-12) | `null` | เดือนหมดอายุบัตร |
+| `exp_year` | string | ❌ | 2 หรือ 4 หลัก | `null` | ปีหมดอายุบัตร |
+| `cvc` | string | ❌ | 3-4 หลัก | `null` | รหัสตรวจสอบบัตร |
 | `metadata` | object | ❌ | JSON object ใดก็ได้ | `null` | ข้อมูลเพิ่มเติม (ไม่ส่งใน webhook) |
 
 ### Idempotency
@@ -141,22 +158,22 @@ X-Mock-Scenario: webhook_delay:30
 - ถ้าไม่ส่ง → ใช้ `order_ref` เป็น key อัตโนมัติ
 - ถ้าส่ง key เดิมซ้ำ → **คืน payment เดิม** (ไม่สร้างใหม่) ใช้เมื่อ retry หลัง timeout
 
-### Response 201 Created
+### Response 201 Created (PromptPay)
 
 ```json
 {
-  "id":           "01JCXYZ1234567890ABCDEFGH",
-  "order_ref":    "b_TK2024001",
-  "amount":       1200.00,
-  "currency":     "THB",
-  "method":       "card",
-  "status":       "PENDING",
-  "failure_code": null,
-  "checkout_url": "http://localhost:8081/checkout/01JCXYZ1234567890ABCDEFGH",
-  "return_url":   "http://localhost:8080/payment/return?booking=b_TK2024001",
-  "expires_at":   "2026-10-13T10:10:00+07:00",
-  "paid_at":      null,
-  "created_at":   "2026-10-13T10:00:00+07:00"
+  "id":                 "01JCXYZ1234567890ABCDEFGH",
+  "order_ref":          "b_TK2024001",
+  "amount":             1200.00,
+  "currency":           "THB",
+  "method":             "promptpay",
+  "status":             "PENDING",
+  "failure_code":       null,
+  "expires_at":         "2026-10-13T10:10:00+07:00",
+  "paid_at":            null,
+  "created_at":         "2026-10-13T10:00:00+07:00",
+  "qrcode_url":         "http://localhost:8081/v1/payments/01JCXYZ1234567890ABCDEFGH/qr.svg",
+  "bank_simulator_url": "http://localhost:8081/bank-simulate/01JCXYZ1234567890ABCDEFGH"
 }
 ```
 
@@ -171,8 +188,8 @@ X-Mock-Scenario: webhook_delay:30
 | `method` | string | `card` หรือ `promptpay` |
 | `status` | string | สถานะปัจจุบัน ดู [ตารางสถานะ](#สถานะ-payment) |
 | `failure_code` | string\|null | รหัสเหตุผลเมื่อล้มเหลว ดู [ตารางด้านล่าง](#failure-codes) |
-| `checkout_url` | string | **URL ที่ต้อง redirect ผู้ใช้ไป** (หน้าจ่ายเงินของ PayMock) |
-| `return_url` | string\|null | URL ที่ PayMock จะ redirect ผู้ใช้กลับ |
+| `qrcode_url` | string\|null | **URL รูปภาพ SVG QR Code** สำหรับ PromptPay (นำไปใส่แท็ก `<img src="...">` บนเว็บหรือ Native Modal) |
+| `bank_simulator_url` | string\|null | **URL หน้าจำลอง Mobile Banking** สำหรับคลิกทดสอบยืนยันชำระเงิน |
 | `expires_at` | ISO 8601\|null | เวลาหมดอายุ |
 | `paid_at` | ISO 8601\|null | เวลาที่จ่ายสำเร็จ |
 | `created_at` | ISO 8601 | เวลาสร้างรายการ |
@@ -195,7 +212,6 @@ X-Mock-Scenario: webhook_delay:30
 | `expired_card` | บัตรหมดอายุ | "บัตรหมดอายุ" |
 | `incorrect_cvc` | CVC ผิด | "รหัส CVC ไม่ถูกต้อง" |
 | `processing_error` | ข้อผิดพลาดจาก gateway | "ระบบขัดข้องชั่วคราว ลองอีกครั้ง" (ไม่ใช่ความผิดผู้ใช้) |
-| `3ds_required` | ต้องยืนยัน OTP (ยังรอ) | รอ webhook อย่าปลดล็อกที่นั่ง |
 | `fraud_suspected` | สงสัย fraud | บันทึก anomaly แจ้ง Admin |
 | `cancelled` | ผู้ใช้/ระบบยกเลิก | ยกเลิกการจอง |
 | `payment_expired` | หมดเวลา | เหมือน EXPIRED |
@@ -227,18 +243,18 @@ Authorization: Bearer pm_test_key_concert_system_2024
 
 ```json
 {
-  "id":           "01JCXYZ1234567890ABCDEFGH",
-  "order_ref":    "b_TK2024001",
-  "amount":       1200.00,
-  "currency":     "THB",
-  "method":       "card",
-  "status":       "COMPLETED",
-  "failure_code": null,
-  "checkout_url": "http://localhost:8081/checkout/01JCXYZ1234567890ABCDEFGH",
-  "return_url":   "http://localhost:8080/payment/return?booking=b_TK2024001",
-  "expires_at":   "2026-10-13T10:10:00+07:00",
-  "paid_at":      "2026-10-13T10:05:32+07:00",
-  "created_at":   "2026-10-13T10:00:00+07:00"
+  "id":                 "01JCXYZ1234567890ABCDEFGH",
+  "order_ref":          "b_TK2024001",
+  "amount":             1200.00,
+  "currency":           "THB",
+  "method":             "promptpay",
+  "status":             "COMPLETED",
+  "failure_code":       null,
+  "qrcode_url":         "http://localhost:8081/v1/payments/01JCXYZ1234567890ABCDEFGH/qr.svg",
+  "bank_simulator_url": "http://localhost:8081/bank-simulate/01JCXYZ1234567890ABCDEFGH",
+  "expires_at":         "2026-10-13T10:10:00+07:00",
+  "paid_at":            "2026-10-13T10:05:32+07:00",
+  "created_at":         "2026-10-13T10:00:00+07:00"
 }
 ```
 
@@ -457,7 +473,6 @@ X-Mock-Scenario: webhook_delay:30
 | `webhook_dup:N` | ส่ง webhook N ชุด (duplicate) | ทดสอบ idempotency |
 | `webhook_bad_sig` | ส่ง webhook ที่ signature ผิด | ทดสอบ signature validation |
 | `webhook_replay` | ส่ง timestamp เก่า 1 ชั่วโมง | ทดสอบ replay protection |
-| `auto_pay:N` | QR จ่ายอัตโนมัติใน N วินาที | เดโมโดยไม่กดปุ่ม |
 
 ### 8.2 Chaos Mode (ทั้งระบบ — ตั้งจาก Admin Panel)
 
@@ -534,6 +549,35 @@ Content-Type: application/json
 }
 ```
 
+### 9.1 ปรัชญาการออกแบบ HTTP Status Code (ทำไมแต่ละ API ถึงต่างกัน)
+
+ตามมาตรฐาน RESTful API และ RFC 9110 HTTP Status Code ทำหน้าที่บอก Client (ระบบคอนเสิร์ต) อย่างแม่นยำว่า **"ปัญหาเกิดขึ้นจากใคร และควรแก้ไขหรือจัดการต่อไปอย่างไร"** โดยแบ่งเป็น 2 กลุ่มใหญ่:
+
+| กลุ่มรหัส | ความหมายหลัก | การจัดการของระบบคอนเสิร์ต |
+|---|---|---|
+| **4xx (Client Error)** | ปัญหาเกิดจากฝั่งผู้เรียก (ระบบคอนเสิร์ต) | ห้าม Retry ซ้ำด้วยข้อมูลเดิม ต้องแก้ไขโค้ดหรือพารามิเตอร์ |
+| **5xx (Server Error)** | ปัญหาเกิดจากฝั่งผู้ให้บริการ (Gateway) | อนุญาตให้ Retry ได้อย่างจำกัดครั้ง (เช่น 1-3 ครั้ง) |
+
+### 9.2 ตาราง Error Code ราย Endpoint และวิธีรับมือ
+
+| Endpoint | HTTP Code | Error String | สาเหตุแท้จริง | สิ่งที่ระบบคอนเสิร์ตต้องทำ |
+|---|---|---|---|---|
+| `POST /v1/payments` | 401 | `unauthorized` | API Key ผิดหรือไม่มี | เช็ค config `.env` ห้าม Retry ซ้ำ |
+| `POST /v1/payments` | 422 | `validation_error` | ข้อมูลไม่ครบ เช่น amount <= 0 | แก้ไข request body ก่อนส่งใหม่ |
+| `POST /v1/payments` | 429 | `rate_limited` | ยิง API ถี่เกินกำหนด | อ่าน Header `Retry-After` แล้วหน่วงเวลา |
+| `POST /v1/payments` | 503 | `service_unavailable` | Gateway อยู่ในโหมด down | แจ้งผู้ใช้ระบบขัดข้องชั่วคราว |
+| `GET /v1/payments/{id}` | 404 | `not_found` | ไม่พบ Payment ID นี้ | ตรวจสอบ ID ว่าส่งมาถูกต้องหรือไม่ |
+| `POST /v1/payments/{id}/cancel` | 409 | `cannot_cancel` | รายการจ่ายสำเร็จไปแล้ว | ห้ามยกเลิก ปล่อยผ่านเป็น COMPLETED |
+| `Webhook (POST callback)` | 400 | `expired` | Timestamp เก่าเกิน 5 นาที | ระวัง Replay Attack ปฏิเสธทันที |
+| `Webhook (POST callback)` | 401 | `unauthorized` | HMAC Signature ไม่ตรง | ข้อมูลถูกดัดแปลง ปฏิเสธทันที |
+
+### 9.3 Hierarchy ลำดับชั้นการตรวจสอบในระบบ PayMock
+
+1. **Layer 1 (ด่าน Network & Chaos):** ตรวจสอบ Header `X-Mock-Scenario` และ Admin Setting ก่อนเพื่อน (ถ้าเจอ `down` หรือ `rate_limit` จะตัดจบ 503/429 ทันที)
+2. **Layer 2 (ด่าน Request & Idempotency):** ตรวจสอบ Body และตรวจ `Idempotency-Key` (ถ้าซ้ำ คืนรายการเดิมทันที)
+3. **Layer 3 (ด่านการชำระเงิน):** ในหน้า Checkout ตรวจสอบตามตาราง Magic Cards (เช่น บัตรผ่าน, บัตรวงเงินไม่พอ, บัตรหมดอายุ)
+4. **Layer 4 (ด่านการส่ง Webhook):** เมื่อสถานะเปลี่ยน ส่ง Webhook ตาม Scenario (เช่น ดีเลย์ หรือส่งซ้ำ) พร้อม HMAC-SHA256
+
 ---
 
 ## 10. Magic Card Numbers
@@ -548,7 +592,6 @@ Content-Type: application/json
 | `4000 0000 0000 0069` | ❌ FAILED | `expired_card` | แจ้งบัตรหมดอายุ |
 | `4000 0000 0000 0127` | ❌ FAILED | `incorrect_cvc` | แจ้ง CVC ผิด |
 | `4000 0000 0000 0119` | ❌ FAILED | `processing_error` | แจ้งระบบขัดข้อง ลองอีกครั้ง |
-| `4000 0000 0000 3220` | ⏳ รอ OTP | `3ds_required` | รอ webhook ห้ามปลดล็อกที่นั่ง |
 | `4100 0000 0000 0019` | ⚠️ FAILED | `fraud_suspected` | บันทึก anomaly แจ้ง Admin |
 | `4000 0000 0000 0341` | ✅ COMPLETED (webhook ช้า 11 นาที) | `null` | ห้าม expire booking ก่อน poll ยืนยัน |
 
@@ -564,22 +607,25 @@ Content-Type: application/json
 ระบบคอนเสิร์ต                          PayMock
      │                                     │
      │  1. POST /v1/payments               │
-     │     order_ref, amount, method       │
+     │     order_ref, amount, method,      │
      │     callback_url, Idempotency-Key   │
      │ ─────────────────────────────────► │
-     │                                     │  สร้าง payment PENDING
+     │                                     │  สร้าง payment (PENDING หรือประมวลผลบัตร)
      │  ◄───────────────────────────────── │
-     │  201: {id, checkout_url, ...}       │
+     │  201: {id, qrcode_url, status...}   │
      │                                     │
-     │  2. redirect ผู้ใช้ไป checkout_url  │
-     │ ─────────────────────────────────► │
-     │                                     │  ผู้ใช้จ่ายเงิน
-     │                                     │  status → COMPLETED
-     │  3. POST {callback_url} (Webhook)   │
+     │  2. แสดงผลบนเว็บ/Modal คอนเสิร์ต    │
+     │     - PromptPay: แสดง qrcode_url    │
+     │     - Card: แจ้งผลบัตรทันที         │
+     │                                     │
+     │  3. ผู้ใช้สแกน QR หรือกดจ่ายในแอป    │
+     │     สถานะ → COMPLETED               │
+     │                                     │
+     │  4. POST {callback_url} (Webhook)   │
      │  ◄───────────────────────────────── │
      │  {event: payment.completed, ...}    │
      │                                     │
-     │  4. ตรวจ signature + idempotency   │
+     │  5. ตรวจ signature + idempotency   │
      │     อัปเดต booking → CONFIRMED      │
      │     seat → SOLD, ออกตั๋ว            │
      │     ตอบ 200 OK                      │
@@ -605,7 +651,76 @@ Content-Type: application/json
 2. หมดเวลา (timeout) ไม่ได้ response
 3. ส่ง POST /v1/payments อีกครั้ง พร้อม Idempotency-Key เดิม: b_TK2024001
 4. PayMock คืน payment เดิม (ไม่สร้างซ้ำ)
-5. ใช้ checkout_url ที่ได้ redirect ผู้ใช้ต่อไป
+5. นำ qrcode_url หรือผลลัพธ์เดิมไปแสดงผลต่อได้ทันที
+```
+
+---
+
+## 12. การเชื่อมต่อแบบ Native Modal & Direct Payment (Headless Flow)
+
+ระบบออกแบบเป็น **Direct API / Headless Flow** โดยสมบูรณ์ ไม่จำเป็นต้องมี `checkout_url` หรือ `return_url`:
+- **PromptPay**: PayMock ส่งคืน `qrcode_url` (ภาพ SVG) และ `bank_simulator_url` (หน้าจำลองแอปมือถือ) เพื่อให้เว็บคอนเสิร์ตนำรูป QR Code ไปใส่ใน Native Modal ของตัวเองได้ทันที
+- **Credit Card**: เว็บคอนเสิร์ตรับข้อมูลบัตรจากผู้ใช้ แล้วส่งไปยัง `POST /v1/payments` เพื่อประมวลผลและทราบผลทันที (`COMPLETED` หรือ `FAILED`)
+
+### 12.1 ข้อดีของ Headless Direct Flow
+1. **Seamless User Experience**: ผู้ใช้อยู่บนเว็บไซต์คอนเสิร์ตตลอดเวลา ไม่ถูก Redirect ข้ามโดเมน
+2. **ไม่ใช้ iframe**: ปลอดภัยกว่า ไร้ปัญหา iframe sandbox / cross-origin cookie / CSP restrictions
+3. **การอัปเดตสถานะ**: เว็บคอนเสิร์ตใช้ Polling ตรวจสอบสถานะตั๋วจาก Database ตัวเอง ควบคู่ไปกับการรอรับ Webhook จาก PayMock
+
+### 12.2 ตัวอย่างโค้ด HTML + JavaScript ฝั่งเว็บคอนเสิร์ต (PromptPay Modal)
+
+```html
+<!-- 1. Native Modal Container บนหน้าเว็บคอนเสิร์ต -->
+<div id="paymentModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:white; border-radius:24px; overflow:hidden; width:95%; max-width:440px; text-align:center; padding:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="margin:0; font-weight:bold; color:#1e293b;">📱 สแกน QR เพื่อชำระเงิน</h3>
+            <button onclick="closeModal()" style="border:none; background:none; font-size:18px; cursor:pointer;">✕</button>
+        </div>
+
+        <!-- แสดงภาพ QR Code จาก qrcode_url -->
+        <div style="padding:16px; border:1px dashed #cbd5e1; border-radius:16px; margin-bottom:16px;">
+            <img id="qrImage" src="" alt="PromptPay QR Code" style="width:240px; height:240px; margin:0 auto; display:block;">
+        </div>
+
+        <!-- ปุ่มจำลองเปิด Mobile Banking -->
+        <a id="bankSimulateBtn" href="#" target="_blank" style="display:block; padding:12px; background:#059669; color:white; border-radius:12px; text-decoration:none; font-weight:bold; margin-bottom:8px;">
+            📲 เปิดหน้าจำลอง Mobile Banking (โอนเงิน) ↗
+        </a>
+        <p style="font-size:12px; color:#64748b; margin:0;">
+            เมื่อโอนเงินแล้ว PayMock จะยิง Webhook แจ้งระบบคอนเสิร์ต และ Modal จะปิดอัตโนมัติ
+        </p>
+    </div>
+</div>
+
+<!-- 2. JavaScript จัดการเปิด-ปิด และ Polling -->
+<script>
+let pollInterval = null;
+
+function openPromptPayModal(qrUrl, simulateUrl, orderRef) {
+    document.getElementById('qrImage').src = qrUrl;
+    document.getElementById('bankSimulateBtn').href = simulateUrl;
+    document.getElementById('paymentModal').style.display = 'flex';
+
+    // เริ่ม Polling เช็คสถานะจาก Backend ของเว็บคอนเสิร์ต
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(async () => {
+        const res = await fetch('/api/booking-status?order_ref=' + orderRef);
+        const data = await res.json();
+        if (data.booking && data.booking.status === 'PAID') {
+            clearInterval(pollInterval);
+            closeModal();
+            alert('🎉 ชำระเงินสำเร็จ! ออกตั๋วคอนเสิร์ตเรียบร้อย');
+            window.location.reload();
+        }
+    }, 1500);
+}
+
+function closeModal() {
+    document.getElementById('paymentModal').style.display = 'none';
+    if (pollInterval) clearInterval(pollInterval);
+}
+</script>
 ```
 
 ---
