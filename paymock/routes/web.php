@@ -56,6 +56,8 @@ Route::get('/demo/modal', [DemoController::class, 'modal'])->name('demo.modal');
 Route::post('/demo/create-payment', [DemoController::class, 'createDemoPayment'])
     ->name('demo.create.payment')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+Route::post('/api/demo-webhook-sink', fn () => response()->json(['status' => 'received']))
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
 
 // Bank App Simulator (หน้าจำลองแอปธนาคารสำหรับ PromptPay QR Code)
 Route::get('/bank-simulate/{publicId}', [\App\Http\Controllers\BankSimulatorController::class, 'show'])->name('bank.simulate.show');

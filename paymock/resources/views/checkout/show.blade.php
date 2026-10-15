@@ -187,11 +187,6 @@
                         <span class="font-bold text-orange-700">4000 0000 0000 0119</span>
                         <span class="text-orange-800 bg-orange-100 px-2 py-0.5 rounded font-sans text-xs">⚠️ ระบบขัดข้อง (processing_error)</span>
                     </button>
-                    <button type="button" @click="fillCard('4000 0000 0000 3220', '12/28', '123', 'OTP USER')"
-                            class="w-full flex justify-between items-center p-2 rounded hover:bg-blue-50 text-left transition border border-transparent hover:border-blue-200">
-                        <span class="font-bold text-blue-700">4000 0000 0000 3220</span>
-                        <span class="text-blue-800 bg-blue-100 px-2 py-0.5 rounded font-sans text-xs">🔐 ต้องยืนยัน OTP (3DS)</span>
-                    </button>
                     <button type="button" @click="fillCard('4100 0000 0000 0019', '12/28', '123', 'FRAUD BOT')"
                             class="w-full flex justify-between items-center p-2 rounded hover:bg-purple-50 text-left transition border border-transparent hover:border-purple-200">
                         <span class="font-bold text-purple-700">4100 0000 0000 0019</span>
@@ -211,7 +206,7 @@
 <script>
 function checkoutPage() {
     return {
-        cardNumber: '',
+        cardNumber: '{{ request("card") ? implode(" ", str_split(preg_replace("/\D/", "", request("card")), 4)) : "" }}',
         cardExpiry: '12/28',
         cardCvc: '123',
         cardHolder: 'JOHN DOE',

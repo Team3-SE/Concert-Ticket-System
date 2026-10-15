@@ -56,6 +56,11 @@
                     <span class="text-gray-500">Scenario จำลอง:</span>
                     <select x-model="scenario" class="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white font-mono text-xs">
                         <option value="">normal (ชำระตามปกติ)</option>
+                        <option value="webhook_lost">webhook_lost (จำลอง Webhook สูญหาย)</option>
+                        <option value="webhook_delay:10">webhook_delay:10 (จำลอง Webhook ช้า 10 วินาที)</option>
+                        <option value="webhook_dup:3">webhook_dup:3 (จำลอง Webhook ส่งซ้ำ 3 ครั้ง)</option>
+                        <option value="webhook_bad_sig">webhook_bad_sig (จำลองลายเซ็น Signature ไม่ถูกต้อง)</option>
+                        <option value="webhook_replay">webhook_replay (จำลอง Replay Attack Timestamp หมดอายุ)</option>
                     </select>
                 </div>
                 <div class="flex justify-between items-center pt-2 text-base font-black">

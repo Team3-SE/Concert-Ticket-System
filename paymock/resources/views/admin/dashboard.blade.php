@@ -139,77 +139,173 @@
         </div>
 
         <!-- 2. One-Click Scenario Launcher (2 Columns) -->
-        <div class="lg:col-span-2 bg-white rounded-xl shadow p-6 border border-gray-100">
-            <h2 class="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
-                <span>🚀</span> One-Click Scenario Launcher
-            </h2>
-            <p class="text-xs text-gray-500 mb-4">สร้างรายการทดสอบแล้วเปิดหน้า Checkout ทันที (จะอยู่บน PayMock เพื่อดูผลลัพธ์ ไม่เด้งไป 404)</p>
+        <div class="lg:col-span-2 bg-white rounded-xl shadow p-6 border border-gray-100 flex flex-col justify-between">
+            <div>
+                <h2 class="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
+                    <span>🚀</span> One-Click Scenario Launcher
+                </h2>
+                <p class="text-xs text-gray-500 mb-4">จำลองการสร้างรายการและเปิดหน้าชำระเงินทันทีเพื่อทดสอบทั้งกรณีปกติและกรณีจำลองต่าง ๆ</p>
 
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <!-- Card Normal -->
-                <form action="{{ route('admin.scenarios.run') }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="method" value="card">
-                    <button type="submit" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition shadow-sm">
-                        <div class="text-xs font-bold text-gray-800">💳 บัตรเครดิตปกติ</div>
-                        <div class="text-[11px] text-gray-500">เปิดหน้ากรอกบัตรทดสอบ</div>
-                    </button>
-                </form>
+                <!-- ── Section A: กลุ่มวิธีการชำระเงิน & Magic Cards ── -->
+                <div class="mb-5">
+                    <div class="flex items-center gap-2 mb-2 pb-1 border-b border-gray-100">
+                        <span class="text-xs font-bold text-indigo-700 uppercase tracking-wider">💳 กลุ่มที่ 1: Payment Methods & Magic Cards</span>
+                        <span class="text-[10px] text-gray-400 font-normal">(PromptPay & เคสบัตรเครดิตต่าง ๆ)</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                        <!-- PromptPay Standard -->
+                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="method" value="promptpay">
+                            <input type="hidden" name="scenario" value="normal">
+                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-green-500 hover:bg-green-50 transition shadow-xs">
+                                <div class="text-xs font-bold text-green-700 flex items-center justify-between">
+                                    <span>📱 PromptPay QR</span>
+                                    <span class="text-[10px] bg-green-100 text-green-800 px-1 rounded">Standard</span>
+                                </div>
+                                <div class="text-[11px] text-gray-500 mt-0.5">สแกน QR หรือกดจำลองจ่าย</div>
+                            </button>
+                        </form>
 
-                <!-- PromptPay Standard -->
-                <form action="{{ route('admin.scenarios.run') }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="method" value="promptpay">
-                    <input type="hidden" name="scenario" value="normal">
-                    <button type="submit" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-green-500 hover:bg-green-50 transition shadow-sm">
-                        <div class="text-xs font-bold text-green-700">📱 PromptPay Standard</div>
-                        <div class="text-[11px] text-gray-500">สแกน QR หรือกดจำลองด้วยตัวเอง</div>
-                    </button>
-                </form>
+                        <!-- Card Normal (4242) -->
+                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="method" value="card">
+                            <input type="hidden" name="card_number" value="4242424242424242">
+                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition shadow-xs">
+                                <div class="text-xs font-bold text-indigo-700 flex items-center justify-between">
+                                    <span>💳 บัตรสำเร็จ (ผ่านฉลุย)</span>
+                                    <span class="text-[10px] bg-green-100 text-green-800 px-1 rounded font-mono">4242</span>
+                                </div>
+                                <div class="text-[11px] text-gray-500 mt-0.5">สถานะ COMPLETED ทันที</div>
+                            </button>
+                        </form>
 
-                <!-- Webhook Lost -->
-                <form action="{{ route('admin.scenarios.run') }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="method" value="card">
-                    <input type="hidden" name="scenario" value="webhook_lost">
-                    <button type="submit" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-yellow-500 hover:bg-yellow-50 transition shadow-sm">
-                        <div class="text-xs font-bold text-yellow-700">📡 Webhook Lost</div>
-                        <div class="text-[11px] text-gray-500">ไม่ส่ง Webhook (ทดสอบ Reconcile)</div>
-                    </button>
-                </form>
+                        <!-- Card Insufficient Funds (9995) -->
+                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="method" value="card">
+                            <input type="hidden" name="card_number" value="4000000000009995">
+                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-red-400 hover:bg-red-50 transition shadow-xs">
+                                <div class="text-xs font-bold text-red-700 flex items-center justify-between">
+                                    <span>💳 บัตรวงเงินไม่พอ</span>
+                                    <span class="text-[10px] bg-red-100 text-red-800 px-1 rounded font-mono">...9995</span>
+                                </div>
+                                <div class="text-[11px] text-gray-500 mt-0.5">insufficient_funds (FAILED)</div>
+                            </button>
+                        </form>
 
-                <!-- Webhook Dup x3 -->
-                <form action="{{ route('admin.scenarios.run') }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="method" value="promptpay">
-                    <input type="hidden" name="scenario" value="webhook_dup:3">
-                    <button type="submit" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition shadow-sm">
-                        <div class="text-xs font-bold text-purple-700">🔁 Webhook Dup x3</div>
-                        <div class="text-[11px] text-gray-500">ส่งซ้ำ 3 รอบ (ทดสอบ Idempotent)</div>
-                    </button>
-                </form>
+                        <!-- Card Declined (0002) -->
+                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="method" value="card">
+                            <input type="hidden" name="card_number" value="4000000000000002">
+                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-red-400 hover:bg-red-50 transition shadow-xs">
+                                <div class="text-xs font-bold text-red-700 flex items-center justify-between">
+                                    <span>💳 บัตรถูกปฏิเสธ/ระงับ</span>
+                                    <span class="text-[10px] bg-red-100 text-red-800 px-1 rounded font-mono">...0002</span>
+                                </div>
+                                <div class="text-[11px] text-gray-500 mt-0.5">card_declined (FAILED)</div>
+                            </button>
+                        </form>
 
-                <!-- Webhook Bad Sig -->
-                <form action="{{ route('admin.scenarios.run') }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="method" value="card">
-                    <input type="hidden" name="scenario" value="webhook_bad_sig">
-                    <button type="submit" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-red-500 hover:bg-red-50 transition shadow-sm">
-                        <div class="text-xs font-bold text-red-700">🔒 Webhook Bad Sig</div>
-                        <div class="text-[11px] text-gray-500">ลายเซ็นปลอม (ต้องตอบ 401)</div>
-                    </button>
-                </form>
+                        <!-- Card Invalid CVC (0127) -->
+                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="method" value="card">
+                            <input type="hidden" name="card_number" value="4000000000000127">
+                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-amber-400 hover:bg-amber-50 transition shadow-xs">
+                                <div class="text-xs font-bold text-amber-700 flex items-center justify-between">
+                                    <span>💳 บัตร CVC ผิด</span>
+                                    <span class="text-[10px] bg-amber-100 text-amber-800 px-1 rounded font-mono">...0127</span>
+                                </div>
+                                <div class="text-[11px] text-gray-500 mt-0.5">incorrect_cvc (FAILED)</div>
+                            </button>
+                        </form>
 
-                <!-- Webhook Delay 11m -->
-                <form action="{{ route('admin.scenarios.run') }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="method" value="card">
-                    <input type="hidden" name="scenario" value="webhook_delay:660">
-                    <button type="submit" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-orange-500 hover:bg-orange-50 transition shadow-sm">
-                        <div class="text-xs font-bold text-orange-700">⏳ Webhook Late 11m</div>
-                        <div class="text-[11px] text-gray-500">ส่งช้าเกิน 10 นาที (Late payment)</div>
-                    </button>
-                </form>
+                        <!-- Card Fraud Suspected (0019) -->
+                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="method" value="card">
+                            <input type="hidden" name="card_number" value="4100000000000019">
+                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-purple-400 hover:bg-purple-50 transition shadow-xs">
+                                <div class="text-xs font-bold text-purple-700 flex items-center justify-between">
+                                    <span>💳 บัตรเสี่ยง Fraud</span>
+                                    <span class="text-[10px] bg-purple-100 text-purple-800 px-1 rounded font-mono">...0019</span>
+                                </div>
+                                <div class="text-[11px] text-gray-500 mt-0.5">fraud_suspected (FAILED)</div>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ── Section B: กลุ่ม Webhook Scenarios (ครบ 5 Scenarios) ── -->
+                <div class="mt-4">
+                    <div class="flex items-center gap-2 mb-2 pb-1 border-b border-gray-100">
+                        <span class="text-xs font-bold text-purple-700 uppercase tracking-wider">📡 กลุ่มที่ 2: Webhook Scenarios (ครบทั้ง 5 กรณี)</span>
+                        <span class="text-[10px] text-gray-400 font-normal">(ทดสอบความทนทานและการตรวจจับของฝั่ง Merchant)</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+                        <!-- 1. Webhook Lost -->
+                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="method" value="card">
+                            <input type="hidden" name="card_number" value="4242424242424242">
+                            <input type="hidden" name="scenario" value="webhook_lost">
+                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-yellow-500 hover:bg-yellow-50 transition shadow-xs">
+                                <div class="text-xs font-bold text-yellow-700">1. Webhook Lost</div>
+                                <div class="text-[10px] text-gray-500 mt-0.5">ไม่ส่ง Webhook (ทดสอบ Polling/Reconcile)</div>
+                            </button>
+                        </form>
+
+                        <!-- 2. Webhook Delay 10s -->
+                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="method" value="promptpay">
+                            <input type="hidden" name="scenario" value="webhook_delay:10">
+                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-orange-500 hover:bg-orange-50 transition shadow-xs">
+                                <div class="text-xs font-bold text-orange-700">2. Delay 10s</div>
+                                <div class="text-[10px] text-gray-500 mt-0.5">หน่วงเวลาส่ง 10 วิ (ทดสอบ Async callback)</div>
+                            </button>
+                        </form>
+
+                        <!-- 3. Webhook Dup x3 -->
+                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="method" value="card">
+                            <input type="hidden" name="card_number" value="4242424242424242">
+                            <input type="hidden" name="scenario" value="webhook_dup:3">
+                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition shadow-xs">
+                                <div class="text-xs font-bold text-indigo-700">3. Duplicate x3</div>
+                                <div class="text-[10px] text-gray-500 mt-0.5">ยิงซ้ำ 3 ครั้ง (ทดสอบ Idempotent)</div>
+                            </button>
+                        </form>
+
+                        <!-- 4. Webhook Bad Sig -->
+                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="method" value="card">
+                            <input type="hidden" name="card_number" value="4242424242424242">
+                            <input type="hidden" name="scenario" value="webhook_bad_sig">
+                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-red-500 hover:bg-red-50 transition shadow-xs">
+                                <div class="text-xs font-bold text-red-700">4. Bad Signature</div>
+                                <div class="text-[10px] text-gray-500 mt-0.5">ลายเซ็นปลอม (ปลายทางต้อง Reject 401)</div>
+                            </button>
+                        </form>
+
+                        <!-- 5. Webhook Replay Attack -->
+                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="method" value="card">
+                            <input type="hidden" name="card_number" value="4242424242424242">
+                            <input type="hidden" name="scenario" value="webhook_replay">
+                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-rose-500 hover:bg-rose-50 transition shadow-xs">
+                                <div class="text-xs font-bold text-rose-700">5. Replay Attack</div>
+                                <div class="text-[10px] text-gray-500 mt-0.5">Timestamp เก่า 1 ชม. (ต้อง Reject 401)</div>
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
 
             <!-- Credentials Reference -->
@@ -438,7 +534,7 @@
             ใช้ทดสอบว่า webhook endpoint ของระบบคอนเสิร์ต <strong>ตรวจลายเซ็นถูกต้อง</strong> ก่อนเชื่อมต่อจริง
         </p>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div class="md:col-span-2">
                 <label class="block text-xs font-semibold text-gray-600 mb-1">Target Webhook URL</label>
                 <input type="url" x-model="whUrl" placeholder="http://concert_backend:5000/api/webhook"
@@ -450,6 +546,14 @@
                     <option value="payment.completed">payment.completed</option>
                     <option value="payment.failed">payment.failed</option>
                     <option value="payment.expired">payment.expired</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Signature Scenario</label>
+                <select x-model="whScenario" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-xs">
+                    <option value="normal">normal (ลายเซ็นถูกต้อง)</option>
+                    <option value="webhook_bad_sig">webhook_bad_sig (ลายเซ็นปลอม)</option>
+                    <option value="webhook_replay">webhook_replay (เวลาหมดอายุ -1hr)</option>
                 </select>
             </div>
         </div>
@@ -564,6 +668,7 @@ function webhookTester() {
     return {
         whUrl: 'http://concert_backend:5000/api/webhook',
         whEvent: 'payment.completed',
+        whScenario: 'normal',
         whTesting: false,
         whResult: null,
         async sendTest() {
@@ -577,7 +682,7 @@ function webhookTester() {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
                         'Accept': 'application/json',
                     },
-                    body: JSON.stringify({ url: this.whUrl, event: this.whEvent })
+                    body: JSON.stringify({ url: this.whUrl, event: this.whEvent, scenario: this.whScenario })
                 });
                 this.whResult = await response.json();
             } catch (err) {

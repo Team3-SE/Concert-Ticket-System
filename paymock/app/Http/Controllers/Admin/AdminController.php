@@ -108,10 +108,11 @@ class AdminController extends Controller
      */
     public function runScenario(Request $request): RedirectResponse
     {
-        $scenario = $request->input('scenario');
-        $method   = $request->input('method', 'card');
-        $amount   = (float) $request->input('amount', 1200.00);
-        $orderRef = 'DEMO_' . strtoupper(substr(uniqid(), -6));
+        $scenario   = $request->input('scenario');
+        $method     = $request->input('method', 'card');
+        $cardNumber = $request->input('card_number');
+        $amount     = (float) $request->input('amount', 1200.00);
+        $orderRef   = 'DEMO_' . strtoupper(substr(uniqid(), -6));
 
         $payment = $this->paymentService->createOrFind([
             'order_ref'       => $orderRef,
@@ -123,8 +124,13 @@ class AdminController extends Controller
             'expires_in'      => 600,
         ], $scenario);
 
-        return redirect()->route('checkout.show', $payment->public_id)
-            ->with('info', "Created demo payment for scenario: {$scenario}");
+        $routeParams = ['publicId' => $payment->public_id];
+        if ($cardNumber) {
+            $routeParams['card'] = $cardNumber;
+        }
+
+        return redirect()->route('checkout.show', $routeParams)
+            ->with('info', "Created demo payment for scenario: " . ($scenario ?: 'normal'));
     }
 
     /**
@@ -173,9 +179,14 @@ class AdminController extends Controller
             'created_at'   => now()->toIso8601String(),
         ]);
 
-        $t      = time();
-        $secret = config('paymock.webhook_secret');
-        $sig    = hash_hmac('sha256', "$t.$body", $secret);
+        $scenario = $request->input('scenario', 'normal');
+        $t        = ($scenario === 'webhook_replay') ? (time() - 3600) : time();
+        $secret   = config('paymock.webhook_secret');
+        $sig      = hash_hmac('sha256', "$t.$body", $secret);
+
+        if ($scenario === 'webhook_bad_sig') {
+            $sig = str_repeat('0', 64);
+        }
 
         try {
             $response = \Illuminate\Support\Facades\Http::timeout(10)

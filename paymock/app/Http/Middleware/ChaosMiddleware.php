@@ -23,8 +23,9 @@ class ChaosMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // X-Mock-Scenario header มีลำดับความสำคัญสูงสุด
+        // X-Mock-Scenario header หรือ scenario ใน body มีลำดับความสำคัญสูงสุด
         $mode = $request->header('X-Mock-Scenario')
+            ?? $request->input('scenario')
             ?? Setting::get('chaos_mode', 'normal');
 
         [$name, $arg] = array_pad(explode(':', (string) $mode, 2), 2, null);
