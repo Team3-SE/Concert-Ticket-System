@@ -146,13 +146,13 @@
                 </h2>
                 <p class="text-xs text-gray-500 mb-4">จำลองการสร้างรายการและเปิดหน้าชำระเงินทันทีเพื่อทดสอบทั้งกรณีปกติและกรณีจำลองต่าง ๆ</p>
 
-                <!-- ── Section A: กลุ่มวิธีการชำระเงิน & Magic Cards ── -->
+                <!-- ── Section A: กลุ่มวิธีการชำระเงิน ── -->
                 <div class="mb-5">
                     <div class="flex items-center gap-2 mb-2 pb-1 border-b border-gray-100">
-                        <span class="text-xs font-bold text-indigo-700 uppercase tracking-wider">💳 กลุ่มที่ 1: Payment Methods & Magic Cards</span>
-                        <span class="text-[10px] text-gray-400 font-normal">(PromptPay & เคสบัตรเครดิตต่าง ๆ)</span>
+                        <span class="text-xs font-bold text-indigo-700 uppercase tracking-wider">💳 กลุ่มที่ 1: Payment Methods</span>
+                        <span class="text-[10px] text-gray-400 font-normal">(PromptPay หรือบัตรเครดิต — เลขบัตรทดสอบเลือกในหน้าชำระเงิน)</span>
                     </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    <div class="grid grid-cols-2 gap-2.5 max-w-xl">
                         <!-- PromptPay Standard -->
                         <form action="{{ route('admin.scenarios.run') }}" method="POST">
                             @csrf
@@ -167,73 +167,17 @@
                             </button>
                         </form>
 
-                        <!-- Card Normal (4242) -->
+                        <!-- Credit / Debit Card -->
                         <form action="{{ route('admin.scenarios.run') }}" method="POST">
                             @csrf
                             <input type="hidden" name="method" value="card">
-                            <input type="hidden" name="card_number" value="4242424242424242">
+                            <input type="hidden" name="scenario" value="normal">
                             <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition shadow-xs">
                                 <div class="text-xs font-bold text-indigo-700 flex items-center justify-between">
-                                    <span>💳 บัตรสำเร็จ (ผ่านฉลุย)</span>
-                                    <span class="text-[10px] bg-green-100 text-green-800 px-1 rounded font-mono">4242</span>
+                                    <span>💳 บัตรเครดิต / เดบิต</span>
+                                    <span class="text-[10px] bg-indigo-100 text-indigo-800 px-1 rounded">Checkout</span>
                                 </div>
-                                <div class="text-[11px] text-gray-500 mt-0.5">สถานะ COMPLETED ทันที</div>
-                            </button>
-                        </form>
-
-                        <!-- Card Insufficient Funds (9995) -->
-                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
-                            @csrf
-                            <input type="hidden" name="method" value="card">
-                            <input type="hidden" name="card_number" value="4000000000009995">
-                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-red-400 hover:bg-red-50 transition shadow-xs">
-                                <div class="text-xs font-bold text-red-700 flex items-center justify-between">
-                                    <span>💳 บัตรวงเงินไม่พอ</span>
-                                    <span class="text-[10px] bg-red-100 text-red-800 px-1 rounded font-mono">...9995</span>
-                                </div>
-                                <div class="text-[11px] text-gray-500 mt-0.5">insufficient_funds (FAILED)</div>
-                            </button>
-                        </form>
-
-                        <!-- Card Declined (0002) -->
-                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
-                            @csrf
-                            <input type="hidden" name="method" value="card">
-                            <input type="hidden" name="card_number" value="4000000000000002">
-                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-red-400 hover:bg-red-50 transition shadow-xs">
-                                <div class="text-xs font-bold text-red-700 flex items-center justify-between">
-                                    <span>💳 บัตรถูกปฏิเสธ/ระงับ</span>
-                                    <span class="text-[10px] bg-red-100 text-red-800 px-1 rounded font-mono">...0002</span>
-                                </div>
-                                <div class="text-[11px] text-gray-500 mt-0.5">card_declined (FAILED)</div>
-                            </button>
-                        </form>
-
-                        <!-- Card Invalid CVC (0127) -->
-                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
-                            @csrf
-                            <input type="hidden" name="method" value="card">
-                            <input type="hidden" name="card_number" value="4000000000000127">
-                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-amber-400 hover:bg-amber-50 transition shadow-xs">
-                                <div class="text-xs font-bold text-amber-700 flex items-center justify-between">
-                                    <span>💳 บัตร CVC ผิด</span>
-                                    <span class="text-[10px] bg-amber-100 text-amber-800 px-1 rounded font-mono">...0127</span>
-                                </div>
-                                <div class="text-[11px] text-gray-500 mt-0.5">incorrect_cvc (FAILED)</div>
-                            </button>
-                        </form>
-
-                        <!-- Card Fraud Suspected (0019) -->
-                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
-                            @csrf
-                            <input type="hidden" name="method" value="card">
-                            <input type="hidden" name="card_number" value="4100000000000019">
-                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-purple-400 hover:bg-purple-50 transition shadow-xs">
-                                <div class="text-xs font-bold text-purple-700 flex items-center justify-between">
-                                    <span>💳 บัตรเสี่ยง Fraud</span>
-                                    <span class="text-[10px] bg-purple-100 text-purple-800 px-1 rounded font-mono">...0019</span>
-                                </div>
-                                <div class="text-[11px] text-gray-500 mt-0.5">fraud_suspected (FAILED)</div>
+                                <div class="text-[11px] text-gray-500 mt-0.5">กรอกบัตรหรือเลือก Magic Card ในหน้าชำระ</div>
                             </button>
                         </form>
                     </div>

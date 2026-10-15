@@ -1,14 +1,15 @@
 {
   "info": {
     "name": "PayMock Gateway API Collection",
-    "description": "Complete test suite for PayMock Mock Payment Gateway (Laravel 12)\nSupports all 4 test categories: Magic Cards, PromptPay, Chaos Modes, and Webhook Anomalies.",
+    "description": "PayMock Gateway API – ทดสอบครบ Magic Card, PromptPay, Chaos, Webhook\n\nเวลาใน response:\n- created_at = เวลาสร้างรายการ (server clock, timezone APP_TIMEZONE=Asia/Bangkok, ISO 8601)\n- updated_at = มีใน DB อัปเดตทุกครั้งที่เปลี่ยนสถานะ แต่ไม่ส่งใน API JSON\n- paid_at = เวลาจ่ายสำเร็จ (เฉพาะ status COMPLETED) — ไม่มีฟิลด์ completed_at\n- expires_at = created_at + expires_in",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8081", "type": "string" },
     { "key": "apiKey", "value": "pm_test_key_concert_system_2024", "type": "string" },
     { "key": "bookingCode", "value": "BOOKING_DEMO_001", "type": "string" },
-    { "key": "paymentId", "value": "txn_test", "type": "string" }
+    { "key": "paymentId", "value": "txn_test", "type": "string" },
+    { "key": "promptPayId", "value": "txn_test", "type": "string" }
   ],
   "auth": {
     "type": "bearer",
@@ -106,7 +107,346 @@
       ]
     },
     {
-      "name": "2. Chaos Modes (via X-Mock-Scenario Header)",
+      "name": "2. Card Payment – Magic Numbers (POST /v1/payments)",
+      "description": "ส่ง card_number ใน body → ประมวลผลทันทีใน request เดียว (ไม่ต้อง checkout). แต่ละคำขอใช้ Idempotency-Key ไม่ซ้ำกัน",
+      "item": [
+        {
+          "name": "Card: PENDING only (ไม่ส่ง card_number)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "CARD_PENDING_{{$timestamp}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_ref\": \"CARD_PENDING_{{$timestamp}}\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] },
+            "description": "คาดหวัง: status=PENDING, paid_at=null, created_at=เวลาจริงตอนสร้าง"
+          }
+        },
+        {
+          "name": "Card: 4242…4242 → COMPLETED",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "CARD_OK_{{$timestamp}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_ref\": \"CARD_OK_{{$timestamp}}\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"card_number\": \"4242424242424242\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] },
+            "description": "คาดหวัง: status=COMPLETED, paid_at=เวลาจริงตอนจ่ายสำเร็จ (ISO 8601 +07:00)"
+          }
+        },
+        {
+          "name": "Card: 4000…0002 → FAILED (card_declined)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "CARD_DECLINE_{{$timestamp}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_ref\": \"CARD_DECLINE_{{$timestamp}}\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4000000000000002\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Card: 4000…9995 → FAILED (insufficient_funds)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "CARD_NSF_{{$timestamp}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_ref\": \"CARD_NSF_{{$timestamp}}\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4000000000009995\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Card: 4000…0069 → FAILED (expired_card)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "CARD_EXP_{{$timestamp}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_ref\": \"CARD_EXP_{{$timestamp}}\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4000000000000069\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Card: 4000…0127 → FAILED (incorrect_cvc)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "CARD_CVC_{{$timestamp}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_ref\": \"CARD_CVC_{{$timestamp}}\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4000000000000127\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Card: 4000…0119 → FAILED (processing_error)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "CARD_PROC_{{$timestamp}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_ref\": \"CARD_PROC_{{$timestamp}}\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4000000000000119\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Card: 4100…0019 → FAILED (fraud_suspected)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "CARD_FRAUD_{{$timestamp}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_ref\": \"CARD_FRAUD_{{$timestamp}}\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4100000000000019\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+          }
+        },
+        {
+          "name": "Card: 4000…0341 → COMPLETED (webhook ช้า webhook_delay:660)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "CARD_DELAYWH_{{$timestamp}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_ref\": \"CARD_DELAYWH_{{$timestamp}}\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4000000000000341\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] },
+            "description": "จ่ายสำเร็จทันที แต่ webhook อาจมาช้ ~11 นาที"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. PromptPay – All Cases",
+      "description": "สร้างด้วย POST /v1/payments (method=promptpay) → มักได้ PENDING แล้วจบด้วย simulate, bank-simulate หรือ cancel",
+      "item": [
+        {
+          "name": "PromptPay: Create (PENDING + QR URLs)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "  pm.collectionVariables.set('promptPayId', jsonData.id);",
+                  "  pm.collectionVariables.set('paymentId', jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "PP_CREATE_{{$timestamp}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_ref\": \"PP_CREATE_{{$timestamp}}\",\n  \"amount\": 2200.00,\n  \"currency\": \"THB\",\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] },
+            "description": "คาดหวัง: status=PENDING, paid_at=null, qrcode_url, bank_simulator_url, expires_at"
+          }
+        },
+        {
+          "name": "PromptPay: GET QR SVG (no auth)",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/v1/payments/{{promptPayId}}/qr.svg", "host": ["{{baseUrl}}"], "path": ["v1", "payments", "{{promptPayId}}", "qr.svg"] }
+          }
+        },
+        {
+          "name": "PromptPay: Simulate COMPLETED (POST /checkout/.../simulate)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"COMPLETED\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/checkout/{{promptPayId}}/simulate", "host": ["{{baseUrl}}"], "path": ["checkout", "{{promptPayId}}", "simulate"] },
+            "description": "รันหลัง Create — ตั้ง paid_at=now(), ยิง webhook payment.completed"
+          }
+        },
+        {
+          "name": "PromptPay: Create then Simulate FAILED (payment_declined)",
+          "item": [
+            {
+              "name": "Step 1 – Create PENDING",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var j = pm.response.json();",
+                      "if (j.id) pm.collectionVariables.set('promptPayFailId', j.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "PP_FAIL_{{$timestamp}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"order_ref\": \"PP_FAIL_{{$timestamp}}\",\n  \"amount\": 900.00,\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+              }
+            },
+            {
+              "name": "Step 2 – Simulate FAILED",
+              "request": {
+                "method": "POST",
+                "auth": { "type": "noauth" },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"FAILED\",\n  \"failure_code\": \"payment_declined\"\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/checkout/{{promptPayFailId}}/simulate", "host": ["{{baseUrl}}"], "path": ["checkout", "{{promptPayFailId}}", "simulate"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "PromptPay: Bank App Confirm (POST /bank-simulate/.../pay)",
+          "item": [
+            {
+              "name": "Step 1 – Create PENDING",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var j = pm.response.json();",
+                      "if (j.id) pm.collectionVariables.set('promptPayBankId', j.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "PP_BANK_{{$timestamp}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"order_ref\": \"PP_BANK_{{$timestamp}}\",\n  \"amount\": 1800.00,\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+              }
+            },
+            {
+              "name": "Step 2 – Bank simulate pay (redirect 302)",
+              "request": {
+                "method": "POST",
+                "auth": { "type": "noauth" },
+                "url": { "raw": "{{baseUrl}}/bank-simulate/{{promptPayBankId}}/pay", "host": ["{{baseUrl}}"], "path": ["bank-simulate", "{{promptPayBankId}}", "pay"] },
+                "description": "เทียบเท่ากดยืนยันในแอปธนาคาร → COMPLETED + paid_at"
+              }
+            },
+            {
+              "name": "Step 3 – GET status (polling)",
+              "request": {
+                "method": "GET",
+                "url": { "raw": "{{baseUrl}}/v1/payments/{{promptPayBankId}}", "host": ["{{baseUrl}}"], "path": ["v1", "payments", "{{promptPayBankId}}"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "PromptPay: Cancel while PENDING",
+          "item": [
+            {
+              "name": "Step 1 – Create PENDING",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var j = pm.response.json();",
+                      "if (j.id) pm.collectionVariables.set('promptPayCancelId', j.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "PP_CANCEL_{{$timestamp}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"order_ref\": \"PP_CANCEL_{{$timestamp}}\",\n  \"amount\": 500.00,\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+              }
+            },
+            {
+              "name": "Step 2 – POST /v1/payments/{id}/cancel",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/v1/payments/{{promptPayCancelId}}/cancel", "host": ["{{baseUrl}}"], "path": ["v1", "payments", "{{promptPayCancelId}}", "cancel"] },
+                "description": "คาดหวัง: ok=true, status=FAILED, failure_code=cancelled, paid_at ยัง null"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PromptPay: GET status after pay (ใช้ {{promptPayId}})",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/v1/payments/{{promptPayId}}", "host": ["{{baseUrl}}"], "path": ["v1", "payments", "{{promptPayId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Chaos Modes (via X-Mock-Scenario Header)",
       "item": [
         {
           "name": "Chaos: Gateway Down (503)",
@@ -189,7 +529,7 @@
       ]
     },
     {
-      "name": "3. Webhook Anomalies",
+      "name": "5. Webhook Anomalies",
       "item": [
         {
           "name": "Webhook Lost (Do not emit webhook)",
