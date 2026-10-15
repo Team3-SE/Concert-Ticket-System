@@ -326,14 +326,16 @@ X-Event-Id: 01JCABC9876543210ZYXWVUTS
 
 ```json
 {
-  "id":           "01JCXYZ1234567890ABCDEFGH",
+  "id":           "txn_01JCXYZ1234567890ABCDEFGH",
   "event":        "payment.completed",
   "order_ref":    "b_TK2024001",
   "amount":       1200.00,
   "currency":     "THB",
+  "method":       "promptpay",
   "status":       "COMPLETED",
   "failure_code": null,
-  "paid_at":      "2026-10-13T10:05:32+07:00"
+  "paid_at":      "2026-10-13T10:05:32+07:00",
+  "created_at":   "2026-10-13T10:00:00+07:00"
 }
 ```
 
@@ -341,14 +343,16 @@ X-Event-Id: 01JCABC9876543210ZYXWVUTS
 
 | Field | Type | ความหมาย |
 |-------|------|----------|
-| `id` | string (ULID) | Payment ID (ใช้ call `GET /v1/payments/{id}` เพื่อยืนยันได้) |
+| `id` | string (ULID) | Payment ID (ขึ้นต้นด้วย `txn_` ใช้ call `GET /v1/payments/{id}` เพื่อยืนยันได้) |
 | `event` | string | ชื่อ event ดู [ตาราง events](#webhook-events) |
 | `order_ref` | string | รหัสอ้างอิงจากระบบคอนเสิร์ต |
-| `amount` | float | ยอดเงิน |
-| `currency` | string | สกุลเงิน |
+| `amount` | float | ยอดเงินที่ชำระ |
+| `currency` | string | สกุลเงิน (เช่น `THB`) |
+| `method` | string | ช่องทางชำระเงิน: `promptpay` หรือ `card` |
 | `status` | string | สถานะใหม่: `COMPLETED`, `FAILED`, `EXPIRED` |
-| `failure_code` | string\|null | รหัสเหตุผล (ถ้า FAILED) |
+| `failure_code` | string\|null | รหัสเหตุผล (มีเฉพาะกรณี `FAILED`) |
 | `paid_at` | ISO 8601\|null | เวลาจ่ายจริง (มีเฉพาะ `COMPLETED`) |
+| `created_at` | ISO 8601 | เวลาที่สร้างรายการชำระเงิน |
 
 ### Webhook Events
 
@@ -360,7 +364,13 @@ X-Event-Id: 01JCABC9876543210ZYXWVUTS
 
 ### 7.3 การตรวจ Signature (สำคัญมาก!)
 
-**ต้องทำก่อน process webhook ทุกครั้ง**
+**ต้องทำก่อน process webhook ทุกครั้ง** เพื่อป้องกัน Replay Attack และ Forgery
+
+> **ใครเป็นคนตรวจสอบ และใครเป็นคนปฏิเสธกรณี Invalid Signature?**
+> - **Gateway ส่งมา:** PayMock จะส่ง Payload พร้อมแนบ Header `X-Signature: t={timestamp},v1={hmac}` มาเสมอ
+> - **Backend ของคุณเป็นผู้ตรวจ:** Backend ของระบบคอนเสิร์ตมีหน้าที่คำนวณ HMAC-SHA256 ด้วยตัวเองโดยใช้ Webhook Secret ที่เก็บไว้เป็นความลับ
+> - **หาก Signature ปลอม (Invalid Signature):** Gateway หรือ Hacker ไม่ได้ส่งข้อความบอกว่า "ไม่ผ่านนะ" แต่ส่ง Payload แกล้งบอกว่า `status: COMPLETED`! **Backend ของคุณเองมีหน้าที่สั่ง "ไม่ให้ผ่าน"** โดยการ **(1) ตอบกลับ HTTP 401 Unauthorized** และ **(2) ไม่ออกตั๋วเด็ดขาด (ตั๋วต้องไม่เป็น PAID)**
+> - **หาก Replay Attack:** หาก Timestamp ห่างเกิน 5 นาที (300 วินาที) Backend ของคุณต้องปฏิเสธด้วย HTTP 401 เช่นกัน
 
 #### ขั้นตอน:
 
@@ -463,16 +473,42 @@ PayMock จะ retry webhook ถ้าได้รับ response ที่ **�
 X-Mock-Scenario: webhook_delay:30
 ```
 
-### 8.1 Scenarios ที่ใช้กับ POST /v1/payments
+### 8.1 Scenarios ที่ใช้กับ POST /v1/payments (Webhook Scenarios)
 
-| ค่า | พฤติกรรม | ใช้ทดสอบ |
-|-----|---------|---------|
-| `normal` | ปกติ (override chaos ทั้งระบบ) | reset ค่า |
-| `webhook_delay:N` | ส่ง webhook หลัง N วินาที | ทดสอบ polling reconcile |
-| `webhook_lost` | ไม่ส่ง webhook เลย | ทดสอบว่าระบบ poll เอง |
-| `webhook_dup:N` | ส่ง webhook N ชุด (duplicate) | ทดสอบ idempotency |
-| `webhook_bad_sig` | ส่ง webhook ที่ signature ผิด | ทดสอบ signature validation |
-| `webhook_replay` | ส่ง timestamp เก่า 1 ชั่วโมง | ทดสอบ replay protection |
+คุณสามารถส่งค่า Scenario ผ่าน HTTP Header `X-Mock-Scenario` หรือแนบใน JSON Request Body ฟิลด์ `"scenario": "..."` เพื่อทดสอบว่าระบบคอนเสิร์ตของคุณรับมือกับความผิดปกติของ Webhook ได้อย่างถูกต้อง:
+
+| Scenario | สิ่งที่ Gateway ส่งมา | สิ่งที่ Backend ต้องตอบ | ผลต่อตั๋วคอนเสิร์ต | การรับมือ / วัตถุประสงค์ |
+|----------|----------------------|-----------------------|-------------------|--------------------------|
+| `normal` | ส่ง Webhook ทันทีพร้อม Signature ถูกต้อง | `200 OK` | ออกตั๋วสำเร็จ (`PAID`) | กรณีการทำงานตามปกติ |
+| `webhook_lost` | **ไม่ส่ง Webhook เลย** (Packet Drop) | — (ไม่ได้รับ) | ค้าง `PENDING` | ใช้ทดสอบ Fallback: ต้องมีปุ่มหรือ Cron ยิง `GET /v1/payments/{id}` เพื่อ Reconcile สถานะ |
+| `webhook_delay:N` | หน่วงเวลา N วินาทีก่อนส่ง Webhook | `200 OK` (เมื่อมาถึง) | `PENDING` → `PAID` หลัง N วิ | ทดสอบว่าหน้าเว็บรองรับช่วงรอยต่อระหว่างรอ Webhook หรือไม่ |
+| `webhook_dup:N` | ส่ง Webhook ซ้ำกัน N รอบ (Payload เดิม) | `200 OK` ทุกรอบ | ออกตั๋ว 1 ใบเท่านั้น (`PAID`) | ทดสอบ Idempotency: รอบที่ 2-N ต้องตอบ 200 แต่ไม่ออกตั๋วซ้ำเด็ดขาด |
+| `webhook_bad_sig` | ส่ง Body อ้างว่า `COMPLETED` แต่ลายเซ็นปลอม (`0000...`) | **`401 Unauthorized`** | **ปฏิเสธไม่ออกตั๋ว (`REJECTED`)** | ทดสอบ Security: ป้องกัน Hacker ส่ง Webhook ปลอมมาหลอกออกตั๋ว |
+| `webhook_replay` | ส่ง Body ถูกต้อง แต่ Timestamp เก่าเกิน 5 นาที | **`401 Unauthorized`** | **ปฏิเสธไม่ออกตั๋ว (`REJECTED`)** | ทดสอบ Replay Attack: ป้องกันการดักจับ Webhook เก่ามายิงซ้ำ |
+
+#### รายละเอียดเชิงลึกของแต่ละ Webhook Scenario:
+
+1. **`webhook_lost` (Webhook สูญหายระหว่างทาง)**
+   - **พฤติกรรม:** Gateway ตัดเงินสำเร็จจริง (ในฐานข้อมูลของ PayMock เป็น `COMPLETED`) แต่เกิดปัญหาเน็ตหลุด ทำให้ Webhook ไปไม่ถึง Backend ของคุณ
+   - **ผลกระทบ:** ฝั่งคอนเสิร์ตไม่ได้รับ Webhook ทำให้ตั๋วยังคงค้างสถานะ `PENDING`
+   - **วิธีรับมือที่ถูกต้อง:** ระบบคอนเสิร์ตต้องมีปุ่ม *"ตรวจสอบสถานะกับ Gateway"* หรือตั้ง Scheduler คอยเรียก `GET /v1/payments/{payment_id}` เพื่อนำสถานะจริงมา Reconcile
+
+2. **`webhook_bad_sig` (ลายเซ็นปลอม / Security Attack)**
+   - **พฤติกรรม:** Payload ใน Body อ้างว่า `"status": "COMPLETED"` แต่ Header `X-Signature` ถูกส่งเป็น `v1=00000000000000000000...` (จำลอง Hacker แกล้งส่งข้อมูลมาหลอก)
+   - **การตรวจสอบ:** Backend ต้องนำ Secret Key มาคำนวณ HMAC-SHA256 ด้วยตัวเอง เมื่อพบว่าไม่ตรงกัน ต้องสั่ง *"ไม่ให้ผ่าน"*
+   - **สิ่งที่ Backend ต้องทำ:** ตอบกลับ `HTTP 401 Unauthorized` ทันที และห้ามอัปเดตสถานะตั๋วเป็น `PAID` โดยเด็ดขาด!
+
+3. **`webhook_replay` (Replay Attack / ข้อมูลเก่าเกินเวลา)**
+   - **พฤติกรรม:** ข้อมูลใน Body ถูกต้อง และลายเซ็นถูกต้อง แต่ timestamp (`t`) ใน Header เก่ากว่าเวลาปัจจุบันเกิน 5 นาที (300 วินาที)
+   - **สิ่งที่ Backend ต้องทำ:** ตรวจสอบ `abs(time() - $timestamp) > 300` หากเกิน 5 นาที ต้องตอบกลับ `HTTP 401 Unauthorized` และปฏิเสธการออกตั๋ว
+
+4. **`webhook_dup:N` (ส่ง Webhook ซ้ำหลายครั้ง)**
+   - **พฤติกรรม:** PayMock จะยิง Webhook ข้อมูลเดิมเข้ามาติดกัน N ครั้ง (เช่น 3 ครั้ง)
+   - **สิ่งที่ Backend ต้องทำ:** ตรวจสอบ `X-Event-Id` หรือ `order_ref` หากเคยประมวลผลไปแล้วในครั้งแรก ครั้งต่อไปต้องตอบ `HTTP 200 OK` ทันทีโดยไม่รันคำสั่งออกตั๋วซ้ำ
+
+5. **`webhook_delay:N` (หน่วงเวลาส่ง Webhook)**
+   - **พฤติกรรม:** รายการถูกตัดเงินสำเร็จทันที แต่ Gateway จะหน่วงเวลาก่อนส่ง Webhook ออกไปเป็นเวลา N วินาที
+   - **สิ่งที่ Backend ต้องทำ:** ในระหว่างที่ยังไม่ได้รับ Webhook ตั๋วต้องค้าง `PENDING` และเมื่อ Webhook มาถึงจึงเปลี่ยนเป็น `PAID` อย่างราบรื่น
 
 ### 8.2 Chaos Mode (ทั้งระบบ — ตั้งจาก Admin Panel)
 

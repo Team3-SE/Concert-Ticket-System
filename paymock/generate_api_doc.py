@@ -539,14 +539,16 @@ add_table(doc,
 add_heading(doc, '4.2 Webhook Body', 2)
 add_code(doc, [
     '{',
-    '  "id":           "01JCXYZ1234567890ABCDEFGH",',
+    '  "id":           "txn_01JCXYZ1234567890ABCDEFGH",',
     '  "event":        "payment.completed",',
     '  "order_ref":    "b_TK2024001",',
     '  "amount":       1200.00,',
     '  "currency":     "THB",',
+    '  "method":       "promptpay",',
     '  "status":       "COMPLETED",',
     '  "failure_code": null,',
-    '  "paid_at":      "2026-10-13T10:05:32+07:00"',
+    '  "paid_at":      "2026-10-13T10:05:32+07:00",',
+    '  "created_at":   "2026-10-13T10:00:00+07:00"',
     '}',
 ])
 
@@ -554,14 +556,16 @@ add_heading(doc, 'Webhook Body Fields', 3, color='374151')
 add_table(doc,
     ['Field', 'Type', 'ความหมาย'],
     [
-        ['id',           'string (ULID)',   'Payment ID'],
+        ['id',           'string (ULID)',   'Payment ID (ขึ้นต้นด้วย txn_)'],
         ['event',        'string',          'ชื่อ event: payment.completed / payment.failed / payment.expired'],
-        ['order_ref',    'string',          'รหัสอ้างอิงจากระบบคอนเสิร์ต'],
-        ['amount',       'float',           'ยอดเงิน'],
-        ['currency',     'string',          'สกุลเงิน'],
-        ['status',       'string',          'สถานะใหม่: COMPLETED / FAILED / EXPIRED'],
-        ['failure_code', 'string | null',   'รหัสเหตุผล (มีเฉพาะ FAILED)'],
-        ['paid_at',      'ISO 8601 | null', 'เวลาจ่ายจริง (มีเฉพาะ COMPLETED)'],
+        ['order_ref',    'string',          'รหัสอ้างอิงจากระบบคอนเสิร์ต (Order Reference)'],
+        ['amount',       'float',           'ยอดเงินที่ชำระ'],
+        ['currency',     'string',          'สกุลเงิน เช่น THB'],
+        ['method',       'string',          'ช่องทางชำระเงิน: promptpay หรือ card'],
+        ['status',       'string',          'สถานะรายการ: COMPLETED / FAILED / EXPIRED'],
+        ['failure_code', 'string | null',   'รหัสเหตุผลความล้มเหลว (มีเฉพาะสถานะ FAILED เช่น card_declined, insufficient_funds)'],
+        ['paid_at',      'ISO 8601 | null', 'เวลาที่ชำระเงินสำเร็จ (มีเฉพาะสถานะ COMPLETED)'],
+        ['created_at',   'ISO 8601',        'เวลาที่สร้างรายการชำระเงิน'],
     ],
     col_widths=[3.5, 3.5, 9.5]
 )
@@ -578,13 +582,31 @@ add_table(doc,
 )
 
 add_heading(doc, '4.3 การตรวจ Signature (สำคัญมาก)', 2)
-add_para(doc, 'ต้องทำก่อน process webhook ทุกครั้ง เพื่อป้องกัน Replay Attack และ Forgery:')
+add_para(doc, (
+    'ต้องทำก่อน process webhook ทุกครั้ง เพื่อป้องกัน Replay Attack และ Forgery '
+    '(ใครเป็นคนตรวจสอบ และใครเป็นคนปฏิเสธกรณี Invalid Signature?):'
+))
 
+sig_explanations = [
+    'Gateway ส่งข้อมูลและลายเซ็น: PayMock จะส่ง Header X-Signature: t={timestamp},v1={hmac} มาพร้อมกับ Webhook Payload เสมอ',
+    'Backend เป็นผู้ตรวจสอบลายเซ็น: ระบบคอนเสิร์ต (Backend ของคุณ) มีหน้าที่คำนวณ HMAC-SHA256 ด้วยตัวเอง โดยใช้ Webhook Secret ที่เก็บไว้เป็นความลับ',
+    'กรณี Invalid Signature (ลายเซ็นปลอม): Gateway ไม่ได้เป็นคนบอกว่า "ไม่ผ่าน" แต่ผู้ไม่ประสงค์ดีอาจส่ง Body ที่อ้างว่า status: COMPLETED เข้ามาหลอก! ฝั่ง Backend ของคุณเมื่อตรวจพบว่า HMAC ไม่ตรง จึงมีหน้าที่ "ปฏิเสธไม่ออกตั๋ว" และ "ตอบกลับ HTTP 401 Unauthorized" ด้วยตัวเอง!',
+    'กรณี Replay Attack (ส่งซ้ำ/หมดอายุ): หาก timestamp ใน Header ห่างจากเวลาปัจจุบันเกิน 5 นาที (300 วินาที) Backend ของคุณต้องปฏิเสธด้วย HTTP 401 เช่นกัน',
+]
+for exp in sig_explanations:
+    p = doc.add_paragraph()
+    p.paragraph_format.space_after = Pt(2)
+    p.paragraph_format.left_indent = Cm(0.5)
+    run = p.add_run('• ' + exp)
+    run.font.size = Pt(9.5)
+
+add_para(doc, 'ขั้นตอนการตรวจสอบ Signature ในโค้ดของระบบคอนเสิร์ต:')
 steps_sig = [
     'อ่าน X-Signature header แล้วแยก t (timestamp) และ v1 (signature hex)',
     'ตรวจว่า timestamp ไม่เก่าเกิน 5 นาที (300 วินาที)',
-    'คำนวณ HMAC-SHA256 ด้วย raw request body (ก่อน decode JSON)',
-    'เปรียบเทียบด้วย hash_equals() (constant-time comparison)',
+    'คำนวณ HMAC-SHA256 ด้วย raw request body (ก่อน decode JSON) ด้วย secret key ของคุณ',
+    'เปรียบเทียบด้วย hash_equals() (constant-time comparison) เพื่อป้องกัน Timing Attack',
+    'หากลายเซ็นถูกต้อง อัปเดตสถานะตั๋วและตอบ HTTP 200 หากไม่ถูกต้อง ปฏิเสธไม่ออกตั๋วและตอบ HTTP 401',
 ]
 for i, s in enumerate(steps_sig, 1):
     p = doc.add_paragraph()
@@ -674,19 +696,68 @@ add_heading(doc, '5. X-Mock-Scenario — ควบคุมพฤติกรร
 add_para(doc, 'ส่ง header นี้พร้อม POST /v1/payments เพื่อจำลองสถานการณ์เฉพาะรายการ')
 add_code(doc, ['X-Mock-Scenario: webhook_delay:30'])
 
-add_heading(doc, '5.1 Scenarios สำหรับ POST /v1/payments', 2)
+add_heading(doc, '5.1 Scenarios สำหรับ POST /v1/payments (Webhook Scenarios)', 2)
+add_para(doc, (
+    'คุณสามารถส่งค่า Scenario ผ่าน HTTP Header X-Mock-Scenario หรือแนบใน JSON Request Body '
+    'ฟิลด์ "scenario": "..." เพื่อทดสอบว่าระบบคอนเสิร์ตของคุณรับมือกับความผิดปกติของ Webhook ได้อย่างถูกต้อง:'
+))
+
 add_table(doc,
-    ['ค่า', 'พฤติกรรม', 'ใช้ทดสอบ'],
+    ['Scenario', 'สิ่งที่ Gateway ส่งมา', 'สิ่งที่ Backend ต้องตอบ', 'ผลต่อตั๋วคอนเสิร์ต', 'การรับมือ / วัตถุประสงค์'],
     [
-        ['normal',          'ปกติ (override chaos ทั้งระบบ)',     'reset'],
-        ['webhook_delay:N', 'ส่ง webhook หลัง N วินาที',           'ทดสอบ polling reconcile'],
-        ['webhook_lost',    'ไม่ส่ง webhook เลย',                 'ทดสอบ scheduler poll เอง'],
-        ['webhook_dup:N',   'ส่ง webhook N ชุด (duplicate)',       'ทดสอบ idempotency'],
-        ['webhook_bad_sig', 'ส่ง webhook signature ผิด',           'ทดสอบ signature validation'],
-        ['webhook_replay',  'ส่ง timestamp เก่า 1 ชั่วโมง',       'ทดสอบ replay protection'],
+        ['normal', 'ส่ง Webhook ทันทีพร้อม Signature ถูกต้อง', '200 OK', 'ออกตั๋วสำเร็จ (PAID)', 'กรณีการทำงานตามปกติ'],
+        ['webhook_lost', 'ไม่ส่ง Webhook เลย (Packet Drop)', '— (ไม่ได้รับ)', 'ค้าง PENDING', 'ใช้ทดสอบ Fallback: ต้องมีปุ่มหรือ Cron ยิง GET /v1/payments/{id} เพื่อ Reconcile สถานะ'],
+        ['webhook_delay:N', 'หน่วงเวลา N วินาทีก่อนส่ง Webhook', '200 OK (เมื่อมาถึง)', 'PENDING → PAID หลัง N วิ', 'ทดสอบว่าหน้าเว็บรองรับช่วงรอยต่อระหว่างรอ Webhook หรือไม่'],
+        ['webhook_dup:N', 'ส่ง Webhook ซ้ำกัน N รอบ (Payload เดิม)', '200 OK ทุกรอบ', 'ออกตั๋ว 1 ใบเท่านั้น (PAID)', 'ทดสอบ Idempotency: รอบที่ 2-N ต้องตอบ 200 แต่ไม่ออกตั๋วซ้ำเด็ดขาด'],
+        ['webhook_bad_sig', 'ส่ง Body อ้างว่า COMPLETED แต่ลายเซ็นปลอม (0000...)', '401 Unauthorized', 'ปฏิเสธไม่ออกตั๋ว (REJECTED)', 'ทดสอบ Security: ป้องกัน Hacker ส่ง Webhook ปลอมมาหลอกออกตั๋ว'],
+        ['webhook_replay', 'ส่ง Body ถูกต้อง แต่ Timestamp เก่าเกิน 5 นาที', '401 Unauthorized', 'ปฏิเสธไม่ออกตั๋ว (REJECTED)', 'ทดสอบ Replay Attack: ป้องกันการดักจับ Webhook เก่ามายิงซ้ำ'],
     ],
-    col_widths=[3.5, 5.5, 7.5]
+    col_widths=[3, 4, 3, 3.5, 4.5]
 )
+
+add_heading(doc, 'รายละเอียดเชิงลึกของแต่ละ Webhook Scenario', 3, color='374151')
+
+sc_details = [
+    ('1. webhook_lost (Webhook สูญหายระหว่างทาง)', [
+        'พฤติกรรม: Gateway ตัดเงินสำเร็จจริง (ในฐานข้อมูลของ PayMock เป็น COMPLETED) แต่เกิดปัญหาเน็ตหลุด ทำให้ Webhook ไปไม่ถึง Backend ของคุณ',
+        'ผลกระทบ: ฝั่งคอนเสิร์ตไม่ได้รับ Webhook ทำให้ตั๋วยังคงค้างสถานะ PENDING',
+        'วิธีรับมือที่ถูกต้อง: ระบบคอนเสิร์ตต้องมีปุ่ม "ตรวจสอบสถานะกับ Gateway" หรือตั้ง Scheduler คอยเรียก GET /v1/payments/{payment_id} เพื่อนำสถานะจริงมา Reconcile',
+    ]),
+    ('2. webhook_bad_sig (ลายเซ็นปลอม / Security Attack)', [
+        'พฤติกรรม: Payload ใน Body อ้างว่า "status": "COMPLETED" แต่ Header X-Signature ถูกส่งเป็น v1=00000000000000000000... (จำลอง Hacker แกล้งส่งข้อมูลมาหลอก)',
+        'การตรวจสอบ: Backend ต้องนำ Secret Key มาคำนวณ HMAC-SHA256 ด้วยตัวเอง เมื่อพบว่าไม่ตรงกัน ต้องสั่ง "ไม่ให้ผ่าน"',
+        'สิ่งที่ Backend ต้องทำ: ตอบกลับ HTTP 401 Unauthorized ทันที และห้ามอัปเดตสถานะตั๋วเป็น PAID โดยเด็ดขาด!',
+    ]),
+    ('3. webhook_replay (Replay Attack / ข้อมูลเก่าเกินเวลา)', [
+        'พฤติกรรม: ข้อมูลใน Body ถูกต้อง และลายเซ็นถูกต้อง แต่ timestamp (t) ใน Header เก่ากว่าเวลาปัจจุบันเกิน 5 นาที (300 วินาที)',
+        'สิ่งที่ Backend ต้องทำ: ตรวจสอบ abs(time() - $timestamp) > 300 หากเกิน 5 นาที ต้องตอบกลับ HTTP 401 Unauthorized และปฏิเสธการออกตั๋ว',
+    ]),
+    ('4. webhook_dup:N (ส่ง Webhook ซ้ำหลายครั้ง)', [
+        'พฤติกรรม: PayMock จะยิง Webhook ข้อมูลเดิมเข้ามาติดกัน N ครั้ง (เช่น 3 ครั้ง)',
+        'สิ่งที่ Backend ต้องทำ: ตรวจสอบ X-Event-Id หรือ order_ref หากเคยประมวลผลไปแล้วในครั้งแรก ครั้งต่อไปต้องตอบ HTTP 200 OK ทันทีโดยไม่รันคำสั่งออกตั๋วซ้ำ',
+    ]),
+    ('5. webhook_delay:N (หน่วงเวลาส่ง Webhook)', [
+        'พฤติกรรม: รายการถูกตัดเงินสำเร็จทันที แต่ Gateway จะหน่วงเวลาก่อนส่ง Webhook ออกไปเป็นเวลา N วินาที',
+        'สิ่งที่ Backend ต้องทำ: ในระหว่างที่ยังไม่ได้รับ Webhook ตั๋วต้องค้าง PENDING และเมื่อ Webhook มาถึงจึงเปลี่ยนเป็น PAID อย่างราบรื่น',
+    ]),
+]
+
+for title, points in sc_details:
+    p_t = doc.add_paragraph()
+    p_t.paragraph_format.space_before = Pt(4)
+    p_t.paragraph_format.space_after = Pt(1)
+    run_t = p_t.add_run(title)
+    run_t.bold = True
+    run_t.font.size = Pt(10)
+    run_t.font.color.rgb = RGBColor.from_string('065F46')
+    for pt in points:
+        p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(1)
+        p.paragraph_format.left_indent = Cm(0.5)
+        run = p.add_run('• ' + pt)
+        run.font.size = Pt(9)
+
 
 add_heading(doc, '5.2 Chaos Mode (ทั้งระบบ — ตั้งจาก Admin Panel)', 2)
 add_table(doc,
