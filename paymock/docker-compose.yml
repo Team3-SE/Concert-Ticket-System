@@ -27,12 +27,13 @@ services:
     ports:
       - "8081:80"
     volumes:
-      - paymock_db:/var/www/html/database
+      - paymock_db3:/var/www/html/database
       # Bind mount source — แก้โค้ดแล้วเห็นผลทันทีโดยไม่ต้อง rebuild
       - ./app:/var/www/html/app
       - ./routes:/var/www/html/routes
       - ./resources:/var/www/html/resources
       - ./config:/var/www/html/config
+      - ./database/migrations:/var/www/html/database/migrations
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/up"]
       interval: 15s
@@ -59,10 +60,11 @@ services:
       PAYMOCK_API_KEY: pm_test_key_concert_system_2024
       PAYMOCK_WEBHOOK_SECRET: whsec_concert_super_secret_2024
     volumes:
-      - paymock_db:/var/www/html/database
+      - paymock_db3:/var/www/html/database
       - ./app:/var/www/html/app
       - ./routes:/var/www/html/routes
       - ./config:/var/www/html/config
+      - ./database/migrations:/var/www/html/database/migrations
     depends_on:
       paymock:
         condition: service_healthy
@@ -87,13 +89,14 @@ services:
       PAYMOCK_API_KEY: pm_test_key_concert_system_2024
       PAYMOCK_WEBHOOK_SECRET: whsec_concert_super_secret_2024
     volumes:
-      - paymock_db:/var/www/html/database
+      - paymock_db3:/var/www/html/database
       - ./app:/var/www/html/app
       - ./routes:/var/www/html/routes
       - ./config:/var/www/html/config
+      - ./database/migrations:/var/www/html/database/migrations
     depends_on:
       paymock:
         condition: service_healthy
 
 volumes:
-  paymock_db:
+  paymock_db3:

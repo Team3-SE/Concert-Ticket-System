@@ -23,12 +23,12 @@
         <!-- Transaction Details Box -->
         <div class="mt-6 p-4 bg-gray-50 rounded-xl text-sm text-left space-y-2 border border-gray-100">
             <div class="flex justify-between">
-                <span class="text-gray-500">Transaction ID:</span>
+                <span class="text-gray-500">Provider Txn:</span>
                 <span class="font-mono font-bold text-indigo-700">{{ $payment->public_id }}</span>
             </div>
             <div class="flex justify-between">
-                <span class="text-gray-500">Order Ref (Booking):</span>
-                <span class="font-mono">{{ $payment->order_ref }}</span>
+                <span class="text-gray-500">Payment ID:</span>
+                <span class="font-mono">{{ $payment->payment_id ?? $payment->order_ref }}</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-gray-500">ยอดชำระ:</span>
@@ -44,10 +44,10 @@
                     {{ $payment->status }}
                 </span>
             </div>
-            @if($payment->scenario)
+            @if($payment->webhookScenario())
             <div class="flex justify-between">
                 <span class="text-gray-500">Scenario จำลอง:</span>
-                <span class="font-mono text-xs bg-gray-200 px-1.5 py-0.5 rounded text-gray-800">{{ $payment->scenario }}</span>
+                <span class="font-mono text-xs bg-gray-200 px-1.5 py-0.5 rounded text-gray-800">{{ $payment->webhookScenario() }}</span>
             </div>
             @endif
             @if($payment->paid_at)
@@ -87,7 +87,7 @@
                 </div>
             @empty
                 <p class="text-gray-500 text-[11px] italic">
-                    {{ $payment->scenario === 'webhook_lost' ? '⛔ จำลอง Webhook Lost: ไม่ส่ง Webhook ตาม scenario' : 'ยังไม่มีการส่ง Webhook' }}
+                    {{ $payment->webhookScenario() === 'webhook_lost' ? '⛔ จำลอง Webhook Lost: ไม่ส่ง Webhook ตาม scenario' : 'ยังไม่มีการส่ง Webhook' }}
                 </p>
             @endforelse
         </div>
@@ -138,8 +138,8 @@ document.addEventListener('DOMContentLoaded', function() {
         window.parent.postMessage({
             type: 'paymock:payment_result',
             status: @json($payment->status),
-            payment_id: @json($payment->public_id),
-            order_ref: @json($payment->order_ref),
+            payment_id: @json($payment->payment_id),
+            provider_transaction_id: @json($payment->public_id),
             amount: {{ (float) $payment->amount }}
         }, '*');
     }

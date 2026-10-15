@@ -16,7 +16,7 @@
 5. [GET /v1/payments/{id} — ดูสถานะรายการ](#5-get-v1paymentsid--ดูสถานะรายการ)
 6. [POST /v1/payments/{id}/cancel — ยกเลิกรายการ](#6-post-v1paymentsidcancel--ยกเลิกรายการ)
 7. [Webhook — สิ่งที่ PayMock ส่งมาหาคุณ](#7-webhook--สิ่งที่-paymock-ส่งมาหาคุณ)
-8. [X-Mock-Scenario — ควบคุมพฤติกรรม](#8-x-mock-scenario--ควบคุมพฤติกรรม)
+8. [Chaos และ Webhook Mode (PayMock Admin)](#8-chaos-และ-webhook-mode-paymock-admin)
 9. [Error Response Format](#9-error-response-format)
 10. [Magic Card Numbers](#10-magic-card-numbers)
 11. [Flow ทั้งหมด (Step-by-Step)](#11-flow-ทั้งหมด-step-by-step)
@@ -45,7 +45,6 @@ Authorization: Bearer pm_test_key_concert_system_2024
 | `Authorization` | ✅ ทุก request | `Bearer pm_test_key_concert_system_2024` | API Key |
 | `Content-Type` | ✅ POST | `application/json` | |
 | `Idempotency-Key` | ✅ แนะนำ | string ไม่ซ้ำ เช่น booking code | ป้องกัน duplicate เมื่อ retry |
-| `X-Mock-Scenario` | ❌ optional | ดู [หัวข้อ 8](#8-x-mock-scenario--ควบคุมพฤติกรรม) | จำลองสถานการณ์เฉพาะรายการ |
 
 ---
 
@@ -67,6 +66,7 @@ Authorization: Bearer pm_test_key_concert_system_2024
   "service": "PayMock Gateway API",
   "status": "online",
   "chaos_mode": "normal",
+  "webhook_mode": "normal",
   "recent": [
     {
       "id": "01JCXYZ...",
@@ -89,7 +89,8 @@ Authorization: Bearer pm_test_key_concert_system_2024
 | Field | Type | ความหมาย |
 |-------|------|----------|
 | `status` | string | `"online"` เสมอ (ถ้าตอบได้) |
-| `chaos_mode` | string | mode ปัจจุบัน: `normal`, `down`, `slow:3`, ฯลฯ |
+| `chaos_mode` | string | ชั้น 1: `normal`, `down`, `slow:3`, ฯลฯ (ตั้งที่ Admin) |
+| `webhook_mode` | string | ชั้น 2: `normal`, `webhook_lost`, ฯลฯ (ตั้งที่ Admin) |
 | `recent` | array | 10 รายการล่าสุด (ดู schema ใน [หัวข้อ 4](#response-201-created)) |
 
 ---
@@ -103,7 +104,6 @@ POST /v1/payments HTTP/1.1
 Authorization: Bearer pm_test_key_concert_system_2024
 Content-Type: application/json
 Idempotency-Key: b_TK2024001
-X-Mock-Scenario: webhook_delay:30
 ```
 
 ```json
@@ -181,7 +181,7 @@ X-Mock-Scenario: webhook_delay:30
 
 | Field | Type | ความหมาย |
 |-------|------|----------|
-| `id` | string (ULID) | **Payment ID** — ใช้อ้างอิงใน API ทุก call ต่อจากนี้ |
+| `id` | string (ULID) | **Payment ID** — ใช้กับ GET / cancel / QR / ระบบคอนเสิร์ต ทั้งบัตรและ PromptPay (ไม่ใช้ `order_ref` หลังสร้างแล้ว) |
 | `order_ref` | string | รหัสที่ส่งมา |
 | `amount` | float | ยอดเงิน |
 | `currency` | string | สกุลเงิน |
@@ -190,9 +190,9 @@ X-Mock-Scenario: webhook_delay:30
 | `failure_code` | string\|null | รหัสเหตุผลเมื่อล้มเหลว ดู [ตารางด้านล่าง](#failure-codes) |
 | `qrcode_url` | string\|null | **URL รูปภาพ SVG QR Code** สำหรับ PromptPay (นำไปใส่แท็ก `<img src="...">` บนเว็บหรือ Native Modal) |
 | `bank_simulator_url` | string\|null | **URL หน้าจำลอง Mobile Banking** สำหรับคลิกทดสอบยืนยันชำระเงิน |
-| `expires_at` | ISO 8601\|null | เวลาหมดอายุ |
-| `paid_at` | ISO 8601\|null | เวลาที่จ่ายสำเร็จ |
-| `created_at` | ISO 8601 | เวลาสร้างรายการ |
+| `expires_at` | ISO 8601\|null | เวลาหมดอายุ = `created_at` + `expires_in` (นาฬิกาเซิร์ฟเวอร์) |
+| `paid_at` | ISO 8601\|null | เวลาจ่ายสำเร็จจริง (เฉพาะ `COMPLETED`) — **ไม่มีฟิลด์ `completed_at`** |
+| `created_at` | ISO 8601 | เวลาสร้างรายการจริง (`Asia/Bangkok`) |
 
 ### สถานะ Payment
 
@@ -465,17 +465,21 @@ PayMock จะ retry webhook ถ้าได้รับ response ที่ **�
 
 ---
 
-## 8. X-Mock-Scenario — ควบคุมพฤติกรรม
+## 8. Chaos และ Webhook Mode (PayMock Admin)
 
-ส่ง header นี้พร้อม `POST /v1/payments` เพื่อจำลองสถานการณ์เฉพาะรายการนั้น
+ระบบคอนเสิร์ตเรียกแค่ API จ่ายเงินจริง: **สร้างรายการ**, **ใส่เลขบัตร**, **ยกเลิก**, **GET สถานะ / QR**  
+ความผิดปกติทั้งหมดตั้งที่ `http://localhost:8081/admin` ไม่ส่ง `scenario` / `X-Mock-Scenario` จากฝั่ง merchant
 
-```
-X-Mock-Scenario: webhook_delay:30
-```
+| ชั้น | Setting | เมื่อไหร่มีผล |
+|------|---------|----------------|
+| 1 (ใหญ่สุด) | Chaos Mode | คำขอเข้า `/v1/*` และ `/checkout/*` (ล่ม, ช้า, 429, 500, …) |
+| 2 (รอง) | Webhook Mode | ตอนยิง webhook หลัง settle (lost, delay, dup, bad_sig, replay) |
 
-### 8.1 Scenarios ที่ใช้กับ POST /v1/payments (Webhook Scenarios)
+ลำดับ resolve webhook: **override ต่อรายการ (ปุ่ม Admin launcher)** > **global `webhook_mode`**
 
-คุณสามารถส่งค่า Scenario ผ่าน HTTP Header `X-Mock-Scenario` หรือแนบใน JSON Request Body ฟิลด์ `"scenario": "..."` เพื่อทดสอบว่าระบบคอนเสิร์ตของคุณรับมือกับความผิดปกติของ Webhook ได้อย่างถูกต้อง:
+### 8.1 Webhook Mode
+
+ตั้งค่าที่ Admin (ทั้งระบบ หรือ override ต่อรายการ):
 
 | Scenario | สิ่งที่ Gateway ส่งมา | สิ่งที่ Backend ต้องตอบ | ผลต่อตั๋วคอนเสิร์ต | การรับมือ / วัตถุประสงค์ |
 |----------|----------------------|-----------------------|-------------------|--------------------------|
@@ -525,7 +529,7 @@ X-Mock-Scenario: webhook_delay:30
 | `bad_auth` | ตอบ 401 | แจ้ง Admin (ไม่แจ้งผู้ใช้ด้วยข้อความเทคนิค) |
 | `bad_json` | ตอบ HTML หรือ JSON พัง | ไม่ crash จับเป็น error |
 
-> **ลำดับความสำคัญ:** `X-Mock-Scenario` header > เลขบัตรวิเศษ > Chaos Mode ทั้งระบบ
+> **ลำดับความสำคัญ:** Chaos Mode ทั้งระบบ (inbound) > เลขบัตรวิเศษ (ผลจ่าย) > Webhook Mode (outbound)
 
 ---
 
@@ -609,10 +613,10 @@ Content-Type: application/json
 
 ### 9.3 Hierarchy ลำดับชั้นการตรวจสอบในระบบ PayMock
 
-1. **Layer 1 (ด่าน Network & Chaos):** ตรวจสอบ Header `X-Mock-Scenario` และ Admin Setting ก่อนเพื่อน (ถ้าเจอ `down` หรือ `rate_limit` จะตัดจบ 503/429 ทันที)
-2. **Layer 2 (ด่าน Request & Idempotency):** ตรวจสอบ Body และตรวจ `Idempotency-Key` (ถ้าซ้ำ คืนรายการเดิมทันที)
-3. **Layer 3 (ด่านการชำระเงิน):** ในหน้า Checkout ตรวจสอบตามตาราง Magic Cards (เช่น บัตรผ่าน, บัตรวงเงินไม่พอ, บัตรหมดอายุ)
-4. **Layer 4 (ด่านการส่ง Webhook):** เมื่อสถานะเปลี่ยน ส่ง Webhook ตาม Scenario (เช่น ดีเลย์ หรือส่งซ้ำ) พร้อม HMAC-SHA256
+1. **Layer 1 Chaos (ใหญ่สุด):** Admin `chaos_mode` ครอบคำขอเข้า `/v1/*` และ checkout (503/429/500/ช้า)
+2. **Layer 2 Request & Idempotency:** ตรวจ body และ `Idempotency-Key` (ถ้าซ้ำ คืนรายการเดิม)
+3. **Layer 3 การชำระเงิน:** Magic Card / PromptPay confirm / cancel
+4. **Layer 4 Webhook (รอง):** Admin `webhook_mode` หรือ override ต่อรายการ — lost / delay / dup / bad_sig / replay
 
 ---
 
@@ -733,15 +737,15 @@ Content-Type: application/json
 <script>
 let pollInterval = null;
 
-function openPromptPayModal(qrUrl, simulateUrl, orderRef) {
+function openPromptPayModal(qrUrl, simulateUrl, paymentId) {
     document.getElementById('qrImage').src = qrUrl;
     document.getElementById('bankSimulateBtn').href = simulateUrl;
     document.getElementById('paymentModal').style.display = 'flex';
 
-    // เริ่ม Polling เช็คสถานะจาก Backend ของเว็บคอนเสิร์ต
+    // เริ่ม Polling เช็คสถานะจาก Backend ของเว็บคอนเสิร์ต (ใช้ payment_id)
     if (pollInterval) clearInterval(pollInterval);
     pollInterval = setInterval(async () => {
-        const res = await fetch('/api/booking-status?order_ref=' + orderRef);
+        const res = await fetch('/api/booking-status?payment_id=' + encodeURIComponent(paymentId));
         const data = await res.json();
         if (data.booking && data.booking.status === 'PAID') {
             clearInterval(pollInterval);

@@ -22,10 +22,10 @@
             </div>
         </div>
         <div class="mt-2 text-sm opacity-70">
-            Order: <span class="font-mono font-semibold">{{ $payment->order_ref }}</span> &nbsp;|&nbsp;
-            ID: <span class="font-mono">{{ $payment->public_id }}</span>
-            @if($payment->scenario)
-                &nbsp;|&nbsp; Scenario: <span class="bg-indigo-800 px-2 py-0.5 rounded font-mono text-xs">{{ $payment->scenario }}</span>
+            Payment ID: <span class="font-mono font-semibold">{{ $payment->payment_id ?? $payment->order_ref }}</span> &nbsp;|&nbsp;
+            Provider Txn: <span class="font-mono">{{ $payment->public_id }}</span>
+            @if($payment->webhookScenario())
+                &nbsp;|&nbsp; Webhook: <span class="bg-indigo-800 px-2 py-0.5 rounded font-mono text-xs">{{ $payment->webhookScenario() }}</span>
             @endif
         </div>
     </div>

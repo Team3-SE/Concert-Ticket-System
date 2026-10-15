@@ -23,7 +23,8 @@ class PaymentController extends Controller
         return response()->json([
             'service'    => 'PayMock Gateway API',
             'status'     => 'online',
-            'chaos_mode' => \App\Models\Setting::get('chaos_mode', 'normal'),
+            'chaos_mode'   => \App\Support\MockMode::chaosMode(),
+            'webhook_mode' => \App\Support\MockMode::webhookMode(),
             'recent'     => $recent,
         ]);
     }
@@ -36,7 +37,8 @@ class PaymentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'order_ref'    => 'required|string|max:255',
+            'payment_id'   => 'required_without:order_ref|nullable|string|max:255',
+            'order_ref'    => 'required_without:payment_id|nullable|string|max:255',
             'amount'       => 'required|numeric|min:1',
             'method'       => 'required|in:card,promptpay',
             'callback_url' => 'required|url',
@@ -47,7 +49,6 @@ class PaymentController extends Controller
             'exp_month'    => 'nullable|string',
             'exp_year'     => 'nullable|string',
             'cvc'          => 'nullable|string',
-            'scenario'     => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -57,12 +58,13 @@ class PaymentController extends Controller
             ], 422);
         }
 
-        $idempotencyKey = $request->header('Idempotency-Key') ?? $request->input('order_ref');
-        $scenario       = $request->header('X-Mock-Scenario') ?? $request->input('scenario');
+        $validated = $validator->validated();
+        $merchantPaymentId = (string) ($validated['payment_id'] ?? $validated['order_ref']);
+        $validated['payment_id'] = $merchantPaymentId;
+        $idempotencyKey = $request->header('Idempotency-Key') ?? $merchantPaymentId;
 
         $payment = $this->service->createOrFind(
-            array_merge($validator->validated(), ['idempotency_key' => $idempotencyKey]),
-            $scenario
+            array_merge($validated, ['idempotency_key' => $idempotencyKey])
         );
 
         // ถ้าจ่ายผ่านบัตรเครดิตโดยตรง และส่งเลขบัตรมา ให้ประมวลผลทันที
@@ -125,8 +127,9 @@ class PaymentController extends Controller
     private function formatPayment(Payment $payment): array
     {
         $data = [
-            'id'           => $payment->public_id,
-            'order_ref'    => $payment->order_ref,
+            'id'                       => $payment->public_id,
+            'provider_transaction_id'  => $payment->public_id,
+            'payment_id'               => $payment->merchantPaymentId(),
             'amount'       => (float) $payment->amount,
             'currency'     => $payment->currency,
             'method'       => $payment->method,

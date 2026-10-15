@@ -24,7 +24,7 @@ class ChaosModeTest extends TestCase
             'Authorization'   => 'Bearer ' . $this->apiKey,
             'Idempotency-Key' => 'KEY_' . uniqid(),
         ], $headers))->postJson('/v1/payments', [
-            'order_ref'    => 'ORDER_' . uniqid(),
+            'payment_id'   => (string) random_int(1000, 999999),
             'amount'       => 1000,
             'method'       => 'card',
             'callback_url' => 'http://test/cb',
@@ -76,5 +76,16 @@ class ChaosModeTest extends TestCase
         // normal override
         $res = $this->postPayment(['X-Mock-Scenario' => 'normal']);
         $res->assertStatus(201);
+    }
+
+    /** Merchant ส่ง webhook_* ใน header ไม่มีผล — ต้องตั้งที่ Admin */
+    public function test_webhook_header_does_not_apply_chaos_or_stamp_scenario(): void
+    {
+        $res = $this->postPayment(['X-Mock-Scenario' => 'webhook_lost']);
+        $res->assertStatus(201);
+        $this->assertDatabaseHas('payments', [
+            'public_id' => $res->json('id'),
+            'scenario'  => null,
+        ]);
     }
 }

@@ -15,6 +15,7 @@ class PromptPayTest extends TestCase
     private function createPendingPromptPay(array $overrides = []): Payment
     {
         return Payment::create(array_merge([
+            'payment_id'      => (string) random_int(1000, 999999),
             'order_ref'       => 'PP_BOOK_' . uniqid(),
             'amount'          => 2500.00,
             'method'          => 'promptpay',

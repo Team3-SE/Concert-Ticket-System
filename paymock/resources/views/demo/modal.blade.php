@@ -52,17 +52,9 @@
                         <option value="card">บัตรเครดิต / เดบิต</option>
                     </select>
                 </div>
-                <div class="flex justify-between items-center py-2 border-b border-gray-100 text-sm">
-                    <span class="text-gray-500">Scenario จำลอง:</span>
-                    <select x-model="scenario" class="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white font-mono text-xs">
-                        <option value="">normal (ชำระตามปกติ)</option>
-                        <option value="webhook_lost">webhook_lost (จำลอง Webhook สูญหาย)</option>
-                        <option value="webhook_delay:10">webhook_delay:10 (จำลอง Webhook ช้า 10 วินาที)</option>
-                        <option value="webhook_dup:3">webhook_dup:3 (จำลอง Webhook ส่งซ้ำ 3 ครั้ง)</option>
-                        <option value="webhook_bad_sig">webhook_bad_sig (จำลองลายเซ็น Signature ไม่ถูกต้อง)</option>
-                        <option value="webhook_replay">webhook_replay (จำลอง Replay Attack Timestamp หมดอายุ)</option>
-                    </select>
-                </div>
+                <p class="text-xs text-gray-500 bg-purple-50 border border-purple-100 rounded-lg px-3 py-2">
+                    Chaos / Webhook จำลองที่ <a href="{{ route('admin.dashboard') }}" class="text-purple-700 font-semibold underline">PayMock Admin</a> ไม่ต้องส่ง scenario จากหน้านี้
+                </p>
                 <div class="flex justify-between items-center pt-2 text-base font-black">
                     <span class="text-gray-900">ยอดชำระสุทธิ:</span>
                     <span class="text-2xl text-indigo-600 font-mono">฿1,500.00</span>
@@ -214,7 +206,6 @@ window.addEventListener('message', function(event) {
 function demoModalApp() {
     return {
         method: 'promptpay',
-        scenario: '',
         loading: false,
         modalOpen: false,
         currentCheckoutUrl: '',
@@ -280,8 +271,7 @@ function demoModalApp() {
                     },
                     body: JSON.stringify({
                         amount: 1500.00,
-                        method: this.method,
-                        scenario: this.scenario
+                        method: this.method
                     })
                 });
                 const data = await res.json();

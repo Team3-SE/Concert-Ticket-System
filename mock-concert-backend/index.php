@@ -41,6 +41,7 @@ $db->exec("
 // Migrate: add rejection_reason and response_code if not exist (safe for existing DBs)
 try { $db->exec("ALTER TABLE webhook_logs ADD COLUMN rejection_reason TEXT"); } catch(Exception $e) {}
 try { $db->exec("ALTER TABLE webhook_logs ADD COLUMN response_code INTEGER DEFAULT 200"); } catch(Exception $e) {}
+try { $db->exec("ALTER TABLE webhook_logs ADD COLUMN payment_id TEXT"); } catch(Exception $e) {}
 
 
 // ─────────────────────────────────────────────────────────────
@@ -78,18 +79,19 @@ if (($uri === '/api/webhook' || $uri === '/webhooks/payment') && $method === 'PO
     }
 
     // ดึง payload (parse ก่อน log ทุกกรณี)
-    $payload  = json_decode($rawBody, true) ?? [];
-    $orderRef = $payload['order_ref'] ?? null;
-    $event    = $payload['event'] ?? 'unknown';
-    $status   = $payload['status'] ?? 'PENDING';
+    $payload    = json_decode($rawBody, true) ?? [];
+    $paymentId  = $payload['id'] ?? null;
+    $orderRef   = $payload['order_ref'] ?? null;
+    $event      = $payload['event'] ?? 'unknown';
+    $status     = $payload['status'] ?? 'PENDING';
 
     // บันทึก Log ทุกกรณี (ทั้ง valid และ invalid)
     $stmt = $db->prepare(
-        "INSERT INTO webhook_logs (order_ref, event, signature_valid, rejection_reason, response_code, payload, received_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO webhook_logs (order_ref, payment_id, event, signature_valid, rejection_reason, response_code, payload, received_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     );
     $responseCode = $isValid ? 200 : 401;
-    $stmt->execute([$orderRef, $event, $isValid ? 1 : 0, $rejectionReason, $responseCode, $rawBody, date('Y-m-d H:i:s')]);
+    $stmt->execute([$orderRef, $paymentId, $event, $isValid ? 1 : 0, $rejectionReason, $responseCode, $rawBody, date('Y-m-d H:i:s')]);
 
     if (!$isValid) {
         // ปฏิเสธ webhook → ไม่อัปเดต booking
@@ -99,15 +101,15 @@ if (($uri === '/api/webhook' || $uri === '/webhooks/payment') && $method === 'PO
     }
 
     // ✅ Signature ถูกต้อง → อัปเดตสถานะตั๋ว
-    if ($orderRef) {
+    if ($paymentId) {
         $bookingStatus = match($status) {
             'COMPLETED' => 'PAID',
             'FAILED'    => 'FAILED',
             'EXPIRED'   => 'EXPIRED',
             default     => 'PENDING'
         };
-        $stmtUpdate = $db->prepare("UPDATE bookings SET status = ?, paid_at = ? WHERE order_ref = ?");
-        $stmtUpdate->execute([$bookingStatus, $payload['paid_at'] ?? date('Y-m-d H:i:s'), $orderRef]);
+        $stmtUpdate = $db->prepare("UPDATE bookings SET status = ?, paid_at = ? WHERE payment_id = ?");
+        $stmtUpdate->execute([$bookingStatus, $payload['paid_at'] ?? date('Y-m-d H:i:s'), $paymentId]);
     }
 
     echo json_encode(['ok' => true, 'message' => 'Webhook received and processed']);
@@ -125,13 +127,13 @@ if ($uri === '/api/create-booking' && $method === 'POST') {
     $seat = $input['seat'] ?? 'VIP-01';
     $amount = (float)($input['amount'] ?? 1800.00);
     $methodType = $input['method'] ?? 'promptpay';
-    $scenario = $input['scenario'] ?? null;
 
     $orderRef = 'TK-' . date('ymd') . '-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 5));
 
     // บันทึกลงระบบคอนเสิร์ต สถานะเริ่มต้น PENDING
     $stmt = $db->prepare("INSERT INTO bookings (order_ref, concert_title, seat, amount, status, created_at) VALUES (?, ?, ?, ?, 'PENDING', ?)");
     $stmt->execute([$orderRef, 'Coldplay Live in Bangkok 2026', $seat, $amount, date('Y-m-d H:i:s')]);
+    $merchantPaymentId = (string) $db->lastInsertId();
 
     // ยิง cURL ไปหา PayMock Gateway
     // PayMock รันใน Docker network เดียวกัน หรือบน host
@@ -141,7 +143,7 @@ if ($uri === '/api/create-booking' && $method === 'POST') {
     $callbackUrl = getenv('MY_WEBHOOK_URL') ?: 'http://concert_backend:5000/api/webhook';
 
     $postData = [
-        'order_ref'    => $orderRef,
+        'payment_id'   => $merchantPaymentId,
         'amount'       => $amount,
         'method'       => $methodType,
         'callback_url' => $callbackUrl,
@@ -160,9 +162,6 @@ if ($uri === '/api/create-booking' && $method === 'POST') {
         'Content-Type: application/json',
         'Idempotency-Key: ' . $orderRef,
     ];
-    if ($scenario) {
-        $headers[] = 'X-Mock-Scenario: ' . $scenario;
-    }
 
     $ch = curl_init($paymockApiUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -181,11 +180,7 @@ if ($uri === '/api/create-booking' && $method === 'POST') {
         $initialStatus = $resData['status'] ?? 'PENDING';
         $paidAt = $resData['paid_at'] ?? null;
 
-        // ถ้าเป็นการทดสอบ Webhook Scenario (เช่น webhook_bad_sig, webhook_lost, webhook_replay, webhook_delay)
-        // ให้คงสถานะตั๋วเป็น PENDING ไว้ก่อน เพื่อให้ Webhook เป็นผู้ยืนยันและเห็นการทำงานจริง
-        $isWebhookScenario = !empty($scenario) && str_starts_with($scenario, 'webhook_');
-
-        if ($initialStatus === 'COMPLETED' && !$isWebhookScenario) {
+        if ($initialStatus === 'COMPLETED') {
             $stmt2 = $db->prepare("UPDATE bookings SET payment_id = ?, status = 'PAID', paid_at = ? WHERE order_ref = ?");
             $stmt2->execute([$resData['id'], $paidAt ?: date('Y-m-d H:i:s'), $orderRef]);
         } elseif ($initialStatus === 'FAILED') {
@@ -211,9 +206,8 @@ if ($uri === '/api/create-booking' && $method === 'POST') {
 
         echo json_encode([
             'ok'                 => true,
-            'order_ref'          => $orderRef,
             'payment_id'         => $resData['id'],
-            'status'             => $isWebhookScenario ? 'PENDING' : ($resData['status'] ?? 'PENDING'),
+            'status'             => $resData['status'] ?? 'PENDING',
             'failure_code'       => $resData['failure_code'] ?? null,
             'method'             => $resData['method'] ?? $methodType,
             'qrcode_url'         => $qrcodeUrl,
@@ -237,10 +231,10 @@ if ($uri === '/api/create-booking' && $method === 'POST') {
 if ($uri === '/api/reconcile-booking' && $method === 'POST') {
     header('Content-Type: application/json');
     $input = json_decode(file_get_contents('php://input'), true) ?? [];
-    $orderRef = $input['order_ref'] ?? '';
+    $paymentId = $input['payment_id'] ?? '';
 
-    $stmt = $db->prepare("SELECT * FROM bookings WHERE order_ref = ?");
-    $stmt->execute([$orderRef]);
+    $stmt = $db->prepare("SELECT * FROM bookings WHERE payment_id = ?");
+    $stmt->execute([$paymentId]);
     $booking = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$booking || empty($booking['payment_id'])) {
@@ -250,7 +244,7 @@ if ($uri === '/api/reconcile-booking' && $method === 'POST') {
     }
 
     $paymockBase = getenv('PAYMOCK_URL') ? str_replace('/v1/payments', '', getenv('PAYMOCK_URL')) : 'http://paymock:80';
-    $queryUrl = $paymockBase . '/v1/payments/' . $booking['payment_id'];
+    $queryUrl = $paymockBase . '/v1/payments/' . $paymentId;
 
     $ch = curl_init($queryUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -275,15 +269,15 @@ if ($uri === '/api/reconcile-booking' && $method === 'POST') {
             default     => $booking['status']
         };
 
-        $stmtUp = $db->prepare("UPDATE bookings SET status = ?, paid_at = ? WHERE order_ref = ?");
-        $stmtUp->execute([$newBookingStatus, $paidAt ?: date('Y-m-d H:i:s'), $orderRef]);
+        $stmtUp = $db->prepare("UPDATE bookings SET status = ?, paid_at = ? WHERE payment_id = ?");
+        $stmtUp->execute([$newBookingStatus, $paidAt ?: date('Y-m-d H:i:s'), $paymentId]);
 
         echo json_encode([
             'ok'             => true,
             'reconciled'     => true,
             'gateway_status' => $gwStatus,
             'booking_status' => $newBookingStatus,
-            'order_ref'      => $orderRef,
+            'payment_id'     => $paymentId,
         ]);
     } else {
         echo json_encode([
@@ -297,17 +291,74 @@ if ($uri === '/api/reconcile-booking' && $method === 'POST') {
 }
 
 // ─────────────────────────────────────────────────────────────
+// 2.2 API: ยกเลิกการจอง (เรียก POST /v1/payments/{id}/cancel)
+// ─────────────────────────────────────────────────────────────
+if ($uri === '/api/cancel-booking' && $method === 'POST') {
+    header('Content-Type: application/json');
+    $input = json_decode(file_get_contents('php://input'), true) ?? [];
+    $paymentId = $input['payment_id'] ?? '';
+
+    $stmt = $db->prepare("SELECT * FROM bookings WHERE payment_id = ?");
+    $stmt->execute([$paymentId]);
+    $booking = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$booking || empty($booking['payment_id'])) {
+        http_response_code(404);
+        echo json_encode(['ok' => false, 'error' => 'booking_or_payment_not_found']);
+        exit;
+    }
+
+    $paymockBase = getenv('PAYMOCK_URL') ? str_replace('/v1/payments', '', getenv('PAYMOCK_URL')) : 'http://paymock:80';
+    $cancelUrl = $paymockBase . '/v1/payments/' . $paymentId . '/cancel';
+
+    $ch = curl_init($cancelUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: Bearer pm_test_key_concert_system_2024',
+        'Accept: application/json',
+        'Content-Type: application/json',
+    ]);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+    $gwResponse = curl_exec($ch);
+    $gwCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $gwData = json_decode($gwResponse, true) ?? [];
+
+    if ($gwCode === 200 && ($gwData['ok'] ?? false)) {
+        $stmtUp = $db->prepare("UPDATE bookings SET status = 'FAILED' WHERE payment_id = ?");
+        $stmtUp->execute([$paymentId]);
+        echo json_encode([
+            'ok'             => true,
+            'payment_id'     => $paymentId,
+            'booking_status' => 'FAILED',
+            'failure_code'   => $gwData['failure_code'] ?? 'cancelled',
+        ]);
+    } else {
+        http_response_code($gwCode ?: 409);
+        echo json_encode([
+            'ok'       => false,
+            'error'    => 'cannot_cancel',
+            'httpCode' => $gwCode,
+            'raw'      => $gwData ?: $gwResponse,
+        ]);
+    }
+    exit;
+}
+
+// ─────────────────────────────────────────────────────────────
 // 3. API: ดึงสถานะ Booking ปัจจุบัน & Webhook Logs
 // ─────────────────────────────────────────────────────────────
 if ($uri === '/api/booking-status' && $method === 'GET') {
     header('Content-Type: application/json');
-    $orderRef = $_GET['order_ref'] ?? '';
-    $stmt = $db->prepare("SELECT * FROM bookings WHERE order_ref = ?");
-    $stmt->execute([$orderRef]);
+    $paymentId = $_GET['payment_id'] ?? '';
+    $stmt = $db->prepare("SELECT * FROM bookings WHERE payment_id = ?");
+    $stmt->execute([$paymentId]);
     $booking = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    $stmt2 = $db->prepare("SELECT * FROM webhook_logs WHERE order_ref = ? ORDER BY id DESC LIMIT 5");
-    $stmt2->execute([$orderRef]);
+    $stmt2 = $db->prepare("SELECT * FROM webhook_logs WHERE payment_id = ? ORDER BY id DESC LIMIT 5");
+    $stmt2->execute([$paymentId]);
     $logs = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode([
@@ -390,25 +441,17 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase mb-1">ช่องทางชำระเงิน</label>
-                            <select id="paymentMethod" onchange="toggleCardInputs()" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
-                                <option value="promptpay">📱 PromptPay QR Code (Native Modal)</option>
-                                <option value="card">💳 บัตรเครดิต / เดบิต (Direct API)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase mb-1">จำลอง Scenario (สำหรับทดสอบ)</label>
-                            <select id="mockScenario" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono text-xs">
-                                <option value="">normal (ชำระตามปกติ)</option>
-                                <option value="webhook_lost">webhook_lost (ไม่ส่ง Webhook)</option>
-                                <option value="webhook_delay:10">webhook_delay:10 (หน่วง Webhook 10 วิ)</option>
-                                <option value="webhook_dup:3">webhook_dup:3 (ส่ง Webhook ซ้ำ 3 รอบ)</option>
-                                <option value="webhook_bad_sig">webhook_bad_sig (ส่ง Signature ผิด)</option>
-                                <option value="webhook_replay">webhook_replay (ส่ง Timestamp เก่า 1 ชม.)</option>
-                            </select>
-                        </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">ช่องทางชำระเงิน</label>
+                        <select id="paymentMethod" onchange="toggleCardInputs()" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
+                            <option value="promptpay">📱 PromptPay QR Code (Native Modal)</option>
+                            <option value="card">💳 บัตรเครดิต / เดบิต (Direct API)</option>
+                        </select>
+                        <p class="mt-2 text-[11px] text-slate-500">
+                            Chaos / Webhook ผิดปกติตั้งที่
+                            <a href="http://localhost:8081/admin" target="_blank" class="text-amber-400 hover:underline">PayMock Admin</a>
+                            ไม่ส่ง scenario จากหน้านี้
+                        </p>
                     </div>
 
                     <!-- Direct Card Form (Shown only if method === 'card') -->
@@ -423,9 +466,13 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                         </div>
                         <div class="flex flex-wrap gap-1.5 pt-1">
                             <span class="text-[10px] text-slate-500 self-center mr-1">Magic Test:</span>
-                            <button type="button" onclick="setCard('4242424242424242')" class="text-[10px] px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60 transition cursor-pointer">✅ ผ่านฉลุย</button>
+                            <button type="button" onclick="setCard('4242424242424242')" class="text-[10px] px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60 transition cursor-pointer">✅ ผ่าน</button>
+                            <button type="button" onclick="setCard('4000000000000002')" class="text-[10px] px-2 py-0.5 rounded bg-rose-950/80 border border-rose-500/40 text-rose-300 hover:bg-rose-900/60 transition cursor-pointer">❌ ระงับ</button>
                             <button type="button" onclick="setCard('4000000000009995')" class="text-[10px] px-2 py-0.5 rounded bg-rose-950/80 border border-rose-500/40 text-rose-300 hover:bg-rose-900/60 transition cursor-pointer">❌ วงเงินไม่พอ</button>
-                            <button type="button" onclick="setCard('4000000000000002')" class="text-[10px] px-2 py-0.5 rounded bg-rose-950/80 border border-rose-500/40 text-rose-300 hover:bg-rose-900/60 transition cursor-pointer">❌ บัตรถูกระงับ</button>
+                            <button type="button" onclick="setCard('4000000000000069')" class="text-[10px] px-2 py-0.5 rounded bg-rose-950/80 border border-rose-500/40 text-rose-300 hover:bg-rose-900/60 transition cursor-pointer">❌ หมดอายุ</button>
+                            <button type="button" onclick="setCard('4000000000000127')" class="text-[10px] px-2 py-0.5 rounded bg-rose-950/80 border border-rose-500/40 text-rose-300 hover:bg-rose-900/60 transition cursor-pointer">❌ CVC</button>
+                            <button type="button" onclick="setCard('4000000000000119')" class="text-[10px] px-2 py-0.5 rounded bg-rose-950/80 border border-rose-500/40 text-rose-300 hover:bg-rose-900/60 transition cursor-pointer">❌ ประมวลผล</button>
+                            <button type="button" onclick="setCard('4100000000000019')" class="text-[10px] px-2 py-0.5 rounded bg-rose-950/80 border border-rose-500/40 text-rose-300 hover:bg-rose-900/60 transition cursor-pointer">❌ ทุจริต</button>
                         </div>
                         <div class="grid grid-cols-2 gap-3 pt-1">
                             <div>
@@ -459,8 +506,8 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
             <div id="bookingResultCard" style="display: none;" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
                 <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                     <div class="text-sm font-bold text-white flex items-center gap-2">
-                        <span>🎟️ รายละเอียดการจองล่าสุด:</span>
-                        <span id="cardOrderRef" class="font-mono text-amber-400">--</span>
+                        <span>🎟️ Payment ID:</span>
+                        <span id="cardPaymentId" class="font-mono text-amber-400 text-xs">--</span>
                     </div>
                     <span id="cardStatusBadge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
                         PENDING
@@ -481,14 +528,18 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                     </div>
                 </div>
 
-                <!-- Reconcile Action (สำหรับกรณี Webhook Lost หรือตรวจสอบย้อนหลัง) -->
-                <div id="reconcileSection" class="pt-3 border-t border-slate-800 flex items-center justify-between">
+                <div id="pendingActions" class="pt-3 border-t border-slate-800 flex items-center justify-between gap-3 flex-wrap">
                     <div class="text-[11px] text-slate-400">
-                        💡 หาก Webhook สูญหาย (webhook_lost) สามารถดึงสถานะตรงจาก Gateway ได้:
+                        รอ webhook หรือดึงสถานะจาก Gateway (GET) / ยกเลิกก่อนจ่าย
                     </div>
-                    <button onclick="reconcileBooking()" id="reconcileBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg transition shadow flex items-center gap-1.5 cursor-pointer">
-                        <span>🔄 ดึงสถานะตรง (Reconcile API)</span>
-                    </button>
+                    <div class="flex gap-2">
+                        <button onclick="cancelBooking()" id="cancelBtn" class="bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg transition shadow cursor-pointer">
+                            ✕ ยกเลิกการจอง
+                        </button>
+                        <button onclick="reconcileBooking()" id="reconcileBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg transition shadow cursor-pointer">
+                            🔄 ดึงสถานะตรง (GET)
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -549,8 +600,8 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
             <div class="p-6 text-center space-y-4">
                 <div class="flex items-center justify-between bg-slate-50 border border-slate-200/80 rounded-2xl p-3 px-4">
                     <div class="text-left">
-                        <div class="text-[11px] text-slate-500 font-medium">รหัสรายการ (Order Ref)</div>
-                        <div id="modalOrderRef" class="font-mono font-bold text-slate-800 text-xs mt-0.5">TK-XXXX</div>
+                        <div class="text-[11px] text-slate-500 font-medium">Payment ID</div>
+                        <div id="modalPaymentId" class="font-mono font-bold text-slate-800 text-[11px] mt-0.5 break-all">txn_…</div>
                     </div>
                     <div class="text-right">
                         <div class="text-[11px] text-slate-500 font-medium">ยอดชำระ</div>
@@ -584,7 +635,7 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
     <script>
         let currentSeat = 'VIP-A1';
         let currentAmount = 3500;
-        let currentOrderRef = null;
+        let currentPaymentId = null;
         let pollingTimer = null;
 
         function updatePrice(seat, amount) {
@@ -616,13 +667,11 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
             btn.classList.add('opacity-70');
 
             const method = document.getElementById('paymentMethod').value;
-            const scenario = document.getElementById('mockScenario').value;
 
             const payload = {
                 seat: currentSeat,
                 amount: currentAmount,
-                method: method,
-                scenario: scenario
+                method: method
             };
 
             if (method === 'card') {
@@ -642,25 +691,20 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                 const data = await res.json();
 
                 if (data.ok) {
-                    currentOrderRef = data.order_ref;
-                    showBookingCard(data.order_ref, currentSeat, currentAmount, data.status);
+                    currentPaymentId = data.payment_id;
+                    showBookingCard(data.payment_id, currentSeat, currentAmount, data.status);
 
                     if (method === 'promptpay' && data.qrcode_url) {
-                        openPromptPayModal(data.order_ref, currentAmount, data.qrcode_url, data.bank_simulator_url);
-                        startPollingStatus(data.order_ref);
+                        openPromptPayModal(data.payment_id, currentAmount, data.qrcode_url, data.bank_simulator_url);
+                        startPollingStatus(data.payment_id);
                     } else if (method === 'card') {
-                        // ประมวลผลผลลัพธ์ของบัตรทันที (Direct API)
-                        if (scenario && scenario.startsWith('webhook_')) {
-                            // ถ้าเลือก Webhook Scenario ให้คงสถานะ PENDING ไว้เพื่อดูผลจาก Webhook
-                            updateBadge('PENDING');
-                        } else if (data.status === 'COMPLETED') {
+                        if (data.status === 'COMPLETED') {
                             updateBadge('PAID');
                         } else if (data.status === 'FAILED') {
                             updateBadge('FAILED', data.failure_code);
                             alert('❌ ชำระเงินผ่านบัตรไม่สำเร็จ: ' + (data.failure_code || 'declined'));
                         }
-                        // เริ่ม polling เพื่อรอ Webhook log เข้า inspector
-                        startPollingStatus(data.order_ref);
+                        startPollingStatus(data.payment_id);
                     }
                 } else {
                     alert('เกิดข้อผิดพลาดในการสร้างรายการ: ' + JSON.stringify(data));
@@ -673,8 +717,8 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
             }
         }
 
-        function openPromptPayModal(orderRef, amount, qrUrl, simulateUrl) {
-            document.getElementById('modalOrderRef').innerText = orderRef;
+        function openPromptPayModal(paymentId, amount, qrUrl, simulateUrl) {
+            document.getElementById('modalPaymentId').innerText = paymentId;
             document.getElementById('modalAmount').innerText = '฿' + Number(amount).toLocaleString('th-TH', {minimumFractionDigits: 2});
             document.getElementById('modalQrImg').src = qrUrl;
             document.getElementById('bankSimulateLink').href = simulateUrl || '#';
@@ -685,9 +729,9 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
             document.getElementById('paymentModal').style.display = 'none';
         }
 
-        function showBookingCard(ref, seat, amount, status) {
+        function showBookingCard(paymentId, seat, amount, status) {
             document.getElementById('bookingResultCard').style.display = 'block';
-            document.getElementById('cardOrderRef').innerText = ref;
+            document.getElementById('cardPaymentId').innerText = paymentId;
             document.getElementById('cardSeat').innerText = seat;
             document.getElementById('cardAmount').innerText = '฿' + Number(amount).toLocaleString('th-TH');
             updateBadge(status);
@@ -695,7 +739,7 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
 
         function updateBadge(status, reason) {
             const badge = document.getElementById('cardStatusBadge');
-            const recSection = document.getElementById('reconcileSection');
+            const recSection = document.getElementById('pendingActions');
             if (status === 'PAID' || status === 'COMPLETED') {
                 badge.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
                 badge.innerText = '✅ PAID (ออกตั๋วสำเร็จ)';
@@ -723,7 +767,7 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
 
         async function checkStatus(ref) {
             try {
-                const res = await fetch('/api/booking-status?order_ref=' + ref);
+                const res = await fetch('/api/booking-status?payment_id=' + encodeURIComponent(ref));
                 const data = await res.json();
 
                 if (data.booking) {
@@ -750,8 +794,35 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
             }
         }
 
+        async function cancelBooking() {
+            if (!currentPaymentId) return;
+            const btn = document.getElementById('cancelBtn');
+            btn.disabled = true;
+            btn.innerText = '⏳ กำลังยกเลิก...';
+            try {
+                const res = await fetch('/api/cancel-booking', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ payment_id: currentPaymentId })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    updateBadge('FAILED', data.failure_code || 'cancelled');
+                    closeModal();
+                    if (pollingTimer) clearInterval(pollingTimer);
+                } else {
+                    alert('ยกเลิกไม่สำเร็จ: ' + JSON.stringify(data));
+                }
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการยกเลิก: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = '✕ ยกเลิกการจอง';
+            }
+        }
+
         async function reconcileBooking() {
-            if (!currentOrderRef) return;
+            if (!currentPaymentId) return;
             const btn = document.getElementById('reconcileBtn');
             btn.disabled = true;
             btn.innerText = '⏳ กำลังตรวจสอบกับ Gateway...';
@@ -759,7 +830,7 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                 const res = await fetch('/api/reconcile-booking', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ order_ref: currentOrderRef })
+                    body: JSON.stringify({ payment_id: currentPaymentId })
                 });
                 const data = await res.json();
                 if (data.ok && data.booking_status === 'PAID') {
@@ -829,7 +900,7 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                         </div>
                     </div>
                     <div class="text-[10px] text-slate-400">
-                        Order: <span class="text-slate-300">${l.order_ref || '-'}</span>
+                        Payment: <span class="text-slate-300">${l.payment_id || payloadObj.id || '-'}</span>
                         · Status in payload: <span class="font-bold ${payloadStatus === 'COMPLETED' ? 'text-emerald-400' : payloadStatus === 'FAILED' ? 'text-rose-400' : 'text-yellow-400'}">${payloadStatus}${failureCode ? ' (' + failureCode + ')' : ''}</span>
                     </div>
                     <div class="text-[10px] font-semibold ${valid ? 'text-emerald-400' : 'text-red-400'}">

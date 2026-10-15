@@ -45,7 +45,8 @@
                     </p>
                     <div class="p-3 bg-gray-50 rounded-xl border border-gray-200 text-left text-xs font-mono space-y-1">
                         <div class="text-gray-400 text-[10px]">TRANSACTION SLIP:</div>
-                        <div>Ref: <span class="font-bold text-gray-700">{{ $payment->order_ref }}</span></div>
+                        <div>Payment ID: <span class="font-bold text-gray-700">{{ $payment->payment_id ?? $payment->order_ref }}</span></div>
+                        <div>Txn: <span class="font-bold text-gray-700">{{ $payment->public_id }}</span></div>
                         <div>Time: {{ now()->format('d M Y H:i:s') }}</div>
                         <div class="text-emerald-600 font-bold mt-1">Webhook Status: Sent ✅</div>
                     </div>
@@ -79,8 +80,8 @@
                             <span class="font-bold text-gray-800">บริษัท จำหน่ายตั๋วคอนเสิร์ต จำกัด</span>
                         </div>
                         <div class="flex justify-between py-1 border-b border-gray-100">
-                            <span class="text-gray-500">รหัสการจอง (Order Ref):</span>
-                            <span class="font-mono font-bold text-indigo-700">{{ $payment->order_ref }}</span>
+                            <span class="text-gray-500">Payment ID:</span>
+                            <span class="font-mono font-bold text-indigo-700">{{ $payment->payment_id ?? $payment->order_ref }}</span>
                         </div>
                         <div class="flex justify-between py-1 border-b border-gray-100">
                             <span class="text-gray-500">ช่องทาง:</span>

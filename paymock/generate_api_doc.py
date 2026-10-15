@@ -229,7 +229,7 @@ steps = [
     '④ ผู้ใช้สแกน QR ผ่านแอปธนาคาร หรือคลิก bank_simulator_url เพื่อจำลองการโอนเงิน',
     '⑤ PayMock เปลี่ยนสถานะ → ส่ง Webhook (POST {callback_url}) พร้อม HMAC-SHA256',
     '⑥ ระบบคอนเสิร์ตตรวจ signature → ตรวจ idempotency → อัปเดต booking + seat + ออกตั๋ว',
-    '⑦ (สำรอง) Scheduler ของระบบหลักยิง GET /v1/payments/{id} เพื่อ reconcile',
+    '⑦ (สำรอง) ระบบคอนเสิร์ตยิง GET /v1/payments/{payment_id} เพื่อ reconcile — ใช้ id ไม่ใช้ order_ref',
 ]
 for s in steps:
     p = doc.add_paragraph(style='List Bullet')
@@ -261,7 +261,6 @@ add_table(doc,
         ['Authorization',    'จำเป็น',    'Bearer pm_test_key_concert_system_2024', 'API Key ยืนยันตัวตน'],
         ['Content-Type',     'จำเป็น (POST)', 'application/json', 'ชนิดข้อมูล'],
         ['Idempotency-Key',  'แนะนำ',     'b_TK2024001',        'ป้องกัน duplicate เมื่อ retry'],
-        ['X-Mock-Scenario',  'ไม่จำเป็น', 'webhook_delay:30',   'จำลองสถานการณ์เฉพาะรายการ'],
     ],
     col_widths=[4, 3, 5.5, 4]
 )
@@ -285,8 +284,9 @@ add_heading(doc, 'Response 200 OK', 3, color='374151')
 add_code(doc, [
     '{',
     '  "service":    "PayMock Gateway API",',
-    '  "status":     "online",',
-    '  "chaos_mode": "normal",',
+    '  "status":       "online",',
+    '  "chaos_mode":   "normal",',
+    '  "webhook_mode": "normal",',
     '  "recent": [',
     '    {',
     '      "id":                 "01JCXYZ...",',
@@ -306,16 +306,21 @@ add_heading(doc, 'Response Fields', 3, color='374151')
 add_table(doc,
     ['Field', 'Type', 'ความหมาย'],
     [
-        ['status',     'string', '"online" เสมอ (ถ้าตอบได้)'],
-        ['chaos_mode', 'string', 'mode ปัจจุบัน: normal, down, slow:3 ฯลฯ'],
-        ['recent',     'array',  '10 รายการล่าสุด (schema เดียวกับ POST response)'],
+        ['status',       'string', '"online" เสมอ (ถ้าตอบได้)'],
+        ['chaos_mode',   'string', 'ชั้น 1 — ตั้งที่ Admin: normal, down, slow:3 ฯลฯ'],
+        ['webhook_mode', 'string', 'ชั้น 2 — ตั้งที่ Admin: normal, webhook_lost ฯลฯ'],
+        ['recent',       'array',  '10 รายการล่าสุด (schema เดียวกับ POST response)'],
     ],
     col_widths=[3.5, 2.5, 10.5]
 )
 
 # 3.2 POST /v1/payments
 add_heading(doc, '3.2  POST /v1/payments — สร้างรายการจ่ายเงิน', 2, color='065F46')
-add_para(doc, 'สร้างรายการชำระเงินใหม่ รองรับ Idempotency เพื่อป้องกันการสร้างรายการซ้ำเมื่อ retry')
+add_para(doc, (
+    'สร้างรายการชำระเงินใหม่ รองรับ Idempotency เพื่อป้องกันการสร้างรายการซ้ำเมื่อ retry '
+    'Response คืนฟิลด์ id ซึ่งคือ payment_id ระบบคอนเสิร์ตต้องเก็บค่านี้นำไปใช้กับ GET / cancel / QR / polling ทั้งบัตรและ PromptPay '
+    '(ไม่ใช้ order_ref เป็นคีย์หลังสร้างแล้ว)'
+))
 
 add_heading(doc, 'Request', 3, color='374151')
 add_code(doc, [
@@ -352,7 +357,7 @@ add_heading(doc, 'Request Body Fields', 3, color='374151')
 add_table(doc,
     ['Field', 'Type', 'Required', 'ค่าที่ยอมรับ', 'คำอธิบาย'],
     [
-        ['order_ref',    'string',  'จำเป็น',      'max 255 chars',          'รหัสอ้างอิง (booking code)'],
+        ['order_ref',    'string',  'จำเป็นตอนสร้าง', 'max 255 chars',      'ส่งให้ gateway ตอน POST เท่านั้น หลังจากนั้นใช้ id'],
         ['amount',       'number',  'จำเป็น',      'min: 1',                 'ยอดเงิน (บาท, ทศนิยมได้)'],
         ['method',       'string',  'จำเป็น',      '"card" หรือ "promptpay"', 'วิธีชำระเงิน'],
         ['callback_url', 'string',  'จำเป็น',      'URL ที่ถูกต้อง',         'URL รับ Webhook จาก PayMock'],
@@ -396,13 +401,14 @@ add_heading(doc, 'Response Fields', 3, color='374151')
 add_table(doc,
     ['Field', 'Type', 'ความหมาย'],
     [
-        ['id',                 'string (ULID)',   'Payment ID — ใช้อ้างอิงใน API ทุก call ต่อจากนี้'],
+        ['id',                 'string (ULID)',   'Payment ID — ใช้กับ GET / cancel / QR / ระบบคอนเสิร์ต หลังสร้าง'],
         ['status',             'string',          'PENDING / COMPLETED / FAILED / EXPIRED'],
         ['failure_code',       'string | null',   'รหัสเหตุผลเมื่อล้มเหลว (ดูตาราง Failure Codes)'],
         ['qrcode_url',         'string | null',   'URL รูปภาพ SVG QR Code สำหรับ PromptPay (ใส่ใน <img src="...">)'],
         ['bank_simulator_url', 'string | null',   'URL หน้าจำลอง Mobile Banking สำหรับทดสอบ'],
-        ['expires_at',         'ISO 8601 | null', 'เวลาหมดอายุ'],
-        ['paid_at',            'ISO 8601 | null', 'เวลาที่จ่ายสำเร็จ'],
+        ['expires_at',         'ISO 8601 | null', 'เวลาหมดอายุ = created_at + expires_in (นาฬิกาเซิร์ฟเวอร์)'],
+        ['paid_at',            'ISO 8601 | null', 'เวลาจ่ายสำเร็จจริง (เฉพาะ COMPLETED) — ไม่มีฟิลด์ completed_at'],
+        ['created_at',         'ISO 8601',        'เวลาสร้างรายการจริง (timezone Asia/Bangkok)'],
     ],
     col_widths=[3.5, 3.5, 9.5]
 )
@@ -452,7 +458,7 @@ doc.add_page_break()
 
 # 3.3 GET /v1/payments/{id}
 add_heading(doc, '3.3  GET /v1/payments/{id} — ดูสถานะรายการ', 2, color='065F46')
-add_para(doc, 'ใช้สำหรับ Polling หรือ Reconcile เมื่อ Webhook ไม่มาหรือมาช้า')
+add_para(doc, 'ใช้สำหรับ Polling หรือ Reconcile เมื่อ Webhook ไม่มาหรือมาช้า — {id} คือ payment_id จาก POST ไม่ใช่ order_ref')
 
 add_heading(doc, 'Request', 3, color='374151')
 add_code(doc, [
@@ -505,6 +511,27 @@ add_table(doc,
     ],
     col_widths=[1.5, 4, 11]
 )
+
+# 3.5 Concert backend — ใช้ payment_id
+add_heading(doc, '3.5  API ระบบคอนเสิร์ต — อ้างอิงด้วย payment_id', 2, color='065F46')
+add_para(doc, (
+    'หลัง POST /v1/payments สำเร็จ ให้เก็บ response.id เป็น payment_id '
+    'ทั้ง PromptPay และบัตรใช้คีย์นี้กับ polling / ยกเลิก / reconcile — ไม่ส่ง order_ref'
+))
+add_table(doc,
+    ['Method', 'Path', 'Body / Query', 'หน้าที่'],
+    [
+        ['GET',  '/api/booking-status',    '?payment_id=txn_…',            'สถานะตั๋ว + webhook logs'],
+        ['POST', '/api/reconcile-booking', '{ "payment_id": "txn_…" }',    'GET จาก PayMock แล้วอัปเดตตั๋ว'],
+        ['POST', '/api/cancel-booking',    '{ "payment_id": "txn_…" }',    'เรียก POST /v1/payments/{id}/cancel'],
+        ['POST', '/api/webhook',           'PayMock ส่ง payload.id',       'อัปเดตตั๋วตาม payment_id'],
+    ],
+    col_widths=[2, 5, 5.5, 4]
+)
+add_para(doc, (
+    'order_ref ยังส่งให้ PayMock ตอนสร้างใบเสร็จเท่านั้น (ฟิลด์บังคับของ gateway) '
+    'หลังจากนั้นระบบคอนเสิร์ตทำงานด้วย payment_id อย่างเดียว'
+), color='B45309')
 
 doc.add_page_break()
 
@@ -690,16 +717,27 @@ add_table(doc,
 doc.add_page_break()
 
 # ═══════════════════════════════════════════════
-# 5. X-MOCK-SCENARIO
+# 5. CHAOS + WEBHOOK MODE (Admin)
 # ═══════════════════════════════════════════════
-add_heading(doc, '5. X-Mock-Scenario — ควบคุมพฤติกรรม', 1)
-add_para(doc, 'ส่ง header นี้พร้อม POST /v1/payments เพื่อจำลองสถานการณ์เฉพาะรายการ')
-add_code(doc, ['X-Mock-Scenario: webhook_delay:30'])
-
-add_heading(doc, '5.1 Scenarios สำหรับ POST /v1/payments (Webhook Scenarios)', 2)
+add_heading(doc, '5. Chaos และ Webhook Mode — ตั้งที่ PayMock Admin', 1)
 add_para(doc, (
-    'คุณสามารถส่งค่า Scenario ผ่าน HTTP Header X-Mock-Scenario หรือแนบใน JSON Request Body '
-    'ฟิลด์ "scenario": "..." เพื่อทดสอบว่าระบบคอนเสิร์ตของคุณรับมือกับความผิดปกติของ Webhook ได้อย่างถูกต้อง:'
+    'ระบบคอนเสิร์ตเรียกแค่ API จ่ายเงินจริง: สร้างรายการ, ใส่เลขบัตร, ยกเลิก, GET สถานะด้วย payment_id '
+    'ความผิดปกติทั้งหมดตั้งที่ http://localhost:8081/admin ไม่ส่ง scenario / X-Mock-Scenario จากฝั่ง merchant'
+))
+add_table(doc,
+    ['ชั้น', 'Setting', 'เมื่อไหร่มีผล'],
+    [
+        ['1 (ใหญ่สุด)', 'Chaos Mode', 'คำขอเข้า /v1/* และ /checkout/* (ล่ม, ช้า, 429, 500)'],
+        ['2 (รอง)',     'Webhook Mode', 'ตอนยิง webhook หลัง settle (lost, delay, dup, bad_sig, replay)'],
+    ],
+    col_widths=[3, 4, 9.5]
+)
+add_para(doc, 'ลำดับ resolve webhook: override ต่อรายการ (ปุ่ม Admin launcher) > global webhook_mode', color='B45309')
+
+add_heading(doc, '5.1 Webhook Mode (ชั้น 2 — ตั้งจาก Admin)', 2)
+add_para(doc, (
+    'ตั้งค่าที่ Admin ทั้งระบบ หรือกด launcher เพื่อ override ต่อรายการ '
+    'ระบบคอนเสิร์ตไม่ต้องส่ง header อะไร:'
 ))
 
 add_table(doc,
@@ -734,7 +772,7 @@ sc_details = [
     ]),
     ('4. webhook_dup:N (ส่ง Webhook ซ้ำหลายครั้ง)', [
         'พฤติกรรม: PayMock จะยิง Webhook ข้อมูลเดิมเข้ามาติดกัน N ครั้ง (เช่น 3 ครั้ง)',
-        'สิ่งที่ Backend ต้องทำ: ตรวจสอบ X-Event-Id หรือ order_ref หากเคยประมวลผลไปแล้วในครั้งแรก ครั้งต่อไปต้องตอบ HTTP 200 OK ทันทีโดยไม่รันคำสั่งออกตั๋วซ้ำ',
+        'สิ่งที่ Backend ต้องทำ: ตรวจสอบ X-Event-Id หรือ payment_id (payload.id) หากเคยประมวลผลไปแล้วในครั้งแรก ครั้งต่อไปต้องตอบ HTTP 200 OK ทันทีโดยไม่รันคำสั่งออกตั๋วซ้ำ',
     ]),
     ('5. webhook_delay:N (หน่วงเวลาส่ง Webhook)', [
         'พฤติกรรม: รายการถูกตัดเงินสำเร็จทันที แต่ Gateway จะหน่วงเวลาก่อนส่ง Webhook ออกไปเป็นเวลา N วินาที',
@@ -759,7 +797,7 @@ for title, points in sc_details:
         run.font.size = Pt(9)
 
 
-add_heading(doc, '5.2 Chaos Mode (ทั้งระบบ — ตั้งจาก Admin Panel)', 2)
+add_heading(doc, '5.2 Chaos Mode (ชั้น 1 — ตั้งจาก Admin Panel)', 2)
 add_table(doc,
     ['mode', 'พฤติกรรม', 'ระบบคอนเสิร์ตควรทำ'],
     [
@@ -774,7 +812,7 @@ add_table(doc,
     ],
     col_widths=[3.5, 5, 8]
 )
-add_para(doc, 'ลำดับความสำคัญ: X-Mock-Scenario Header > เลขบัตรวิเศษ > Chaos Mode ทั้งระบบ', color='B45309')
+add_para(doc, 'ลำดับความสำคัญ: Chaos Mode (inbound) > เลขบัตรวิเศษ (ผลจ่าย) > Webhook Mode (outbound)', color='B45309')
 
 doc.add_page_break()
 
@@ -867,10 +905,10 @@ add_para(doc, (
     'ระบบ PayMock มีลำดับชั้นการตัดสินใจ (Execution Hierarchy) แบ่งเป็น 4 ชั้นอย่างเด็ดขาด:'
 ))
 steps_hierarchy = [
-    'Layer 1 (ด่าน Network & Chaos): ตรวจสอบ Header X-Mock-Scenario และ Admin Setting ก่อนเพื่อน (ถ้าเจอ down/rate_limit จะตัดจบ 503/429 ทันที)',
-    'Layer 2 (ด่าน Request & Idempotency): ตรวจสอบความถูกต้องของ Body และตรวจ Idempotency-Key (ถ้าซ้ำ คืนรายการเดิมทันที)',
-    'Layer 3 (ด่านการชำระเงิน): ในหน้า Checkout ตรวจสอบตามตาราง Magic Cards (เช่น บัตรผ่าน, บัตรวงเงินไม่พอ, บัตรหมดอายุ)',
-    'Layer 4 (ด่านการส่ง Webhook): เมื่อสถานะเปลี่ยน ส่ง Webhook ตาม Scenario (เช่น ดีเลย์ หรือส่งซ้ำ) พร้อม HMAC-SHA256',
+    'Layer 1 Chaos (ใหญ่สุด): Admin chaos_mode ครอบคำขอเข้า /v1/* และ checkout (503/429/500/ช้า)',
+    'Layer 2 Request & Idempotency: ตรวจ body และ Idempotency-Key (ถ้าซ้ำ คืนรายการเดิม)',
+    'Layer 3 การชำระเงิน: Magic Card / PromptPay confirm / cancel — ระบบคอนเสิร์ตอ้างอิงด้วย payment_id',
+    'Layer 4 Webhook (รอง): Admin webhook_mode หรือ override ต่อรายการ — lost / delay / dup / bad_sig / replay',
 ]
 for s in steps_hierarchy:
     p = doc.add_paragraph()
@@ -894,9 +932,12 @@ add_table(doc,
         ['POST', '/v1/payments',              'สร้างรายการจ่ายเงิน (Idempotent)'],
         ['GET',  '/v1/payments/{id}',         'ดูสถานะรายการ (Polling)'],
         ['POST', '/v1/payments/{id}/cancel',  'ยกเลิกรายการที่ยัง PENDING'],
+        ['GET',  '/v1/payments/{id}/qr.svg',  'ภาพ QR (PromptPay) — {id} = payment_id'],
         ['GET',  '/checkout/{id}',            'หน้าจ่ายเงินจำลอง (QR + Card)'],
-        ['GET',  '/admin',                    'Admin Dashboard'],
-        ['GET',  '/',                         'Landing Page'],
+        ['GET',  '/admin',                    'Admin Dashboard (Chaos + Webhook Mode)'],
+        ['GET',  '/api/booking-status',       'Concert: ?payment_id=txn_…'],
+        ['POST', '/api/cancel-booking',       'Concert: body { payment_id }'],
+        ['POST', '/api/reconcile-booking',    'Concert: body { payment_id }'],
     ],
     col_widths=[2, 5.5, 9]
 )
@@ -981,14 +1022,14 @@ add_code(doc, [
     'let pollInterval = null;',
     '',
     '// เปิด Modal พร้อม QR และเริ่ม Polling',
-    'function openPromptPayModal(qrUrl, simulateUrl, orderRef) {',
+    'function openPromptPayModal(qrUrl, simulateUrl, paymentId) {',
     '    document.getElementById("qrImage").src = qrUrl;',
     '    document.getElementById("bankSimulateBtn").href = simulateUrl;',
     '    document.getElementById("paymentModal").style.display = "flex";',
     '',
     '    if (pollInterval) clearInterval(pollInterval);',
     '    pollInterval = setInterval(async () => {',
-    '        const res = await fetch("/api/booking-status?order_ref=" + orderRef);',
+    '        const res = await fetch("/api/booking-status?payment_id=" + encodeURIComponent(paymentId));',
     '        const data = await res.json();',
     '        if (data.booking && data.booking.status === "PAID") {',
     '            clearInterval(pollInterval);',
@@ -1016,7 +1057,15 @@ run.font.size = Pt(9)
 run.font.color.rgb = RGBColor.from_string('6B7280')
 
 # ─── Save ───
-output_path = 'PayMock_API_Reference.docx'
-doc.save(output_path)
-print("SUCCESS: Generated " + output_path)
+import os
+here = os.path.dirname(os.path.abspath(__file__))
+paths = [
+    os.path.join(here, 'PayMock_API_Reference.docx'),
+    os.path.join(here, 'public', 'PayMock_API_Reference.docx'),
+    os.path.join(here, '..', 'PayMock_API_Reference.docx'),
+]
+for output_path in paths:
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+    doc.save(output_path)
+    print("SUCCESS: Generated " + os.path.abspath(output_path))
 

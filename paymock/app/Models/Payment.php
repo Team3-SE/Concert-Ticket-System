@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MockMode;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
@@ -12,6 +13,7 @@ class Payment extends Model
 
     protected $fillable = [
         'public_id',
+        'payment_id',
         'order_ref',
         'amount',
         'currency',
@@ -51,9 +53,17 @@ class Payment extends Model
         return $this->status === 'PENDING';
     }
 
-    /** Resolve scenario from payment record OR header override */
-    public function resolvedScenario(?string $headerScenario = null): ?string
+    /** รหัสฝั่งร้านค้า: คอลัมน์ payment_id หรือ fallback เป็น order_ref ของรายการเก่า */
+    public function merchantPaymentId(): string
     {
-        return $headerScenario ?: $this->scenario;
+        $id = $this->attributes['payment_id'] ?? null;
+
+        return (string) ($id !== null && $id !== '' ? $id : ($this->order_ref ?? ''));
+    }
+
+    /** Webhook anomaly ของรายการนี้: override บน payment หรือ global webhook_mode */
+    public function webhookScenario(): ?string
+    {
+        return MockMode::resolveWebhook(null, $this->scenario);
     }
 }

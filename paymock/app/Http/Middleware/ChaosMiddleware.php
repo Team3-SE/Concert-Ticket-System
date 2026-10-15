@@ -2,31 +2,26 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Setting;
+use App\Support\MockMode;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * ChaosMiddleware – ครอบคลุมทั้ง API (/v1/*) และ Checkout UI (/checkout/*)
+ * Chaos ชั้นใหญ่สุด — ครอบคลุม API (/v1/*) และ Checkout UI (/checkout/*)
  *
- * Scenarios (Header X-Mock-Scenario หรือ chaos_mode ใน settings):
- *   down           → 503 Service Unavailable
- *   rate_limit     → 429 Too Many Requests + Retry-After: 30
- *   bad_auth       → 401 Unauthorized
- *   bad_json       → 502 Bad Gateway
- *   error_rate:N   → random 500 ใน N% ของ requests
- *   slow:N         → sleep N วินาที แล้วทำงานต่อ
- *   timeout:N      → sleep N วินาที แล้วทำงานต่อ (payment ถูกสร้างจริง!)
+ * แหล่งที่มา: Admin setting `chaos_mode` เท่านั้น
+ * (header X-Mock-Scenario ยังใช้ได้เฉพาะค่า chaos เพื่อเทสภายใน PayMock ไม่ใช่ API ของ merchant)
  */
 class ChaosMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // X-Mock-Scenario header หรือ scenario ใน body มีลำดับความสำคัญสูงสุด
-        $mode = $request->header('X-Mock-Scenario')
-            ?? $request->input('scenario')
-            ?? Setting::get('chaos_mode', 'normal');
+        $mode = MockMode::chaosMode();
+        $header = $request->header('X-Mock-Scenario');
+        if (MockMode::isChaos($header) && $header !== null && $header !== '') {
+            $mode = $header;
+        }
 
         [$name, $arg] = array_pad(explode(':', (string) $mode, 2), 2, null);
 
@@ -82,7 +77,7 @@ class ChaosMiddleware
             case 'slow':
             case 'timeout':
                 $seconds = max(0, (int) ($arg ?: 5));
-                sleep($seconds); // payment ยังถูกสร้าง เพียงแต่ช้า
+                sleep($seconds);
                 break;
         }
 

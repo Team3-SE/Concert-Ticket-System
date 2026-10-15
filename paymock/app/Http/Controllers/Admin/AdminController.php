@@ -44,7 +44,8 @@ class AdminController extends Controller
     {
         $payments      = Payment::with('webhookDeliveries')
             ->latest()->paginate(20);
-        $chaosMode     = Setting::get('chaos_mode', 'normal');
+        $chaosMode     = \App\Support\MockMode::chaosMode();
+        $webhookMode   = \App\Support\MockMode::webhookMode();
         $deliveries    = WebhookDelivery::with('payment')->latest()->limit(50)->get();
 
         $stats = [
@@ -55,7 +56,7 @@ class AdminController extends Controller
             'expired'   => Payment::where('status', 'EXPIRED')->count(),
         ];
 
-        return view('admin.dashboard', compact('payments', 'chaosMode', 'deliveries', 'stats'));
+        return view('admin.dashboard', compact('payments', 'chaosMode', 'webhookMode', 'deliveries', 'stats'));
     }
 
     /**
@@ -65,8 +66,25 @@ class AdminController extends Controller
     public function setChaos(Request $request): RedirectResponse
     {
         $mode = $request->input('chaos_mode', 'normal');
+        if (! \App\Support\MockMode::isChaos($mode)) {
+            $mode = 'normal';
+        }
         Setting::set('chaos_mode', $mode);
         return back()->with('success', "Chaos mode set to: {$mode}");
+    }
+
+    /**
+     * POST /admin/webhook-mode
+     * ตั้ง Webhook anomaly ทั้งระบบ (ชั้นรองจาก Chaos)
+     */
+    public function setWebhookMode(Request $request): RedirectResponse
+    {
+        $mode = $request->input('webhook_mode', 'normal');
+        if ($mode !== 'normal' && ! \App\Support\MockMode::isWebhook($mode)) {
+            $mode = 'normal';
+        }
+        Setting::set('webhook_mode', $mode);
+        return back()->with('success', "Webhook mode set to: {$mode}");
     }
 
     /**
@@ -108,19 +126,22 @@ class AdminController extends Controller
      */
     public function runScenario(Request $request): RedirectResponse
     {
-        $scenario   = $request->input('scenario');
+        $scenario = $request->input('scenario');
+        if (! \App\Support\MockMode::isWebhook($scenario)) {
+            $scenario = null;
+        }
         $method     = $request->input('method', 'card');
         $cardNumber = $request->input('card_number');
         $amount     = (float) $request->input('amount', 1200.00);
-        $orderRef   = 'DEMO_' . strtoupper(substr(uniqid(), -6));
+        $merchantPaymentId = (string) random_int(100000, 999999);
 
         $payment = $this->paymentService->createOrFind([
-            'order_ref'       => $orderRef,
+            'payment_id'      => $merchantPaymentId,
             'amount'          => $amount,
             'method'          => $method,
             'callback_url'    => env('DEFAULT_WEBHOOK_URL', 'http://concert_backend:5000/api/webhook'),
             'return_url'      => null,
-            'idempotency_key' => $orderRef,
+            'idempotency_key' => 'DEMO_' . $merchantPaymentId,
             'expires_in'      => 600,
         ], $scenario);
 
@@ -166,10 +187,12 @@ class AdminController extends Controller
         $failureCode = ($event === 'payment.failed') ? 'card_declined' : null;
         $paidAt      = ($status === 'COMPLETED') ? now()->toIso8601String() : null;
 
+        $txnId = 'txn_TEST_' . strtoupper(substr(uniqid(), -8));
         $body = json_encode([
-            'id'           => 'TEST_' . strtoupper(substr(uniqid(), -8)),
-            'event'        => $event,
-            'order_ref'    => 'TEST_ORDER_001',
+            'id'                      => $txnId,
+            'provider_transaction_id' => $txnId,
+            'payment_id'              => '42',
+            'event'                   => $event,
             'amount'       => 1200.00,
             'currency'     => 'THB',
             'method'       => 'card',

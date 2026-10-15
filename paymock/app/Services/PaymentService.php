@@ -12,15 +12,18 @@ class PaymentService
     /**
      * สร้าง payment ใหม่ หรือคืนรายการเดิมถ้า idempotency_key ซ้ำ (idempotent)
      */
-    public function createOrFind(array $data, ?string $scenario): Payment
+    public function createOrFind(array $data, ?string $scenario = null): Payment
     {
         $existing = Payment::where('idempotency_key', $data['idempotency_key'])->first();
         if ($existing) {
             return $existing;
         }
 
+        $merchantPaymentId = (string) $data['payment_id'];
+
         return Payment::create([
-            'order_ref'       => $data['order_ref'],
+            'payment_id'      => $merchantPaymentId,
+            'order_ref'       => $data['order_ref'] ?? $merchantPaymentId,
             'amount'          => $data['amount'],
             'currency'        => $data['currency'] ?? 'THB',
             'method'          => $data['method'],

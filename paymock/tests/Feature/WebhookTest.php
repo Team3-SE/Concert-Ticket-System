@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\SendWebhookJob;
 use App\Models\Payment;
+use App\Models\Setting;
 use App\Models\WebhookDelivery;
 use App\Services\WebhookEmitter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,6 +19,7 @@ class WebhookTest extends TestCase
     private function createPayment(string $status = 'COMPLETED', ?string $scenario = null): Payment
     {
         return Payment::create([
+            'payment_id'      => (string) random_int(1000, 999999),
             'order_ref'       => 'BOOK_' . uniqid(),
             'amount'          => 1500,
             'method'          => 'promptpay',
@@ -46,6 +48,28 @@ class WebhookTest extends TestCase
         app(WebhookEmitter::class)->emit($payment, 'payment.completed');
 
         Queue::assertNothingPushed();
+    }
+
+    /** Global webhook_mode ใช้เมื่อ payment ไม่มี override */
+    public function test_global_webhook_mode_lost_dispatches_nothing(): void
+    {
+        Queue::fake();
+        Setting::set('webhook_mode', 'webhook_lost');
+        $payment = $this->createPayment('COMPLETED', null);
+        app(WebhookEmitter::class)->emit($payment, 'payment.completed');
+
+        Queue::assertNothingPushed();
+    }
+
+    /** per-payment override ทับ global webhook_mode */
+    public function test_payment_webhook_override_beats_global_mode(): void
+    {
+        Queue::fake();
+        Setting::set('webhook_mode', 'webhook_lost');
+        $payment = $this->createPayment('COMPLETED', 'webhook_dup:3');
+        app(WebhookEmitter::class)->emit($payment, 'payment.completed');
+
+        Queue::assertPushed(SendWebhookJob::class, 3);
     }
 
     /** Webhook dup:3: dispatch 3 jobs */

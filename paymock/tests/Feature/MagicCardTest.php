@@ -15,6 +15,7 @@ class MagicCardTest extends TestCase
     private function createPendingPayment(): Payment
     {
         return Payment::create([
+            'payment_id'      => (string) random_int(1000, 999999),
             'order_ref'       => 'BOOK_' . uniqid(),
             'amount'          => 1200,
             'method'          => 'card',

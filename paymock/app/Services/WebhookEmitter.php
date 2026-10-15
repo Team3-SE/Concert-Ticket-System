@@ -5,12 +5,13 @@ namespace App\Services;
 use App\Jobs\SendWebhookJob;
 use App\Models\Payment;
 use App\Models\WebhookDelivery;
+use App\Support\MockMode;
 
 class WebhookEmitter
 {
     public function emit(Payment $payment, string $event, ?string $overrideScenario = null): void
     {
-        $scenario = $overrideScenario ?? $payment->scenario;
+        $scenario = MockMode::resolveWebhook($overrideScenario, $payment->scenario);
         [$sc, $arg] = array_pad(explode(':', (string) $scenario, 2), 2, null);
 
         // webhook_lost: ไม่ส่งเลย
@@ -24,10 +25,11 @@ class WebhookEmitter
         $delay  = ($sc === 'webhook_delay') ? (int) ($arg ?: 60) : 0;
 
         $payload = [
-            'id'           => $payment->public_id,
-            'event'        => $event,
-            'order_ref'    => $payment->order_ref,
-            'amount'       => (float) $payment->amount,
+            'id'                      => $payment->public_id,
+            'provider_transaction_id' => $payment->public_id,
+            'payment_id'              => $payment->merchantPaymentId(),
+            'event'                   => $event,
+            'amount'                  => (float) $payment->amount,
             'currency'     => $payment->currency,
             'method'       => $payment->method,
             'status'       => $payment->status,

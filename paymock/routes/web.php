@@ -37,6 +37,7 @@ Route::prefix('admin')
         Route::middleware('admin.auth')->group(function () {
             Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
             Route::post('chaos', [AdminController::class, 'setChaos'])->name('chaos');
+            Route::post('webhook-mode', [AdminController::class, 'setWebhookMode'])->name('webhook.mode');
             Route::post('scenarios/run', [AdminController::class, 'runScenario'])->name('scenarios.run');
             Route::post('payments/{publicId}/transition', [AdminController::class, 'transition'])->name('payments.transition');
             Route::post('payments/{publicId}/resend-webhook', [AdminController::class, 'resendWebhook'])->name('payments.resend');

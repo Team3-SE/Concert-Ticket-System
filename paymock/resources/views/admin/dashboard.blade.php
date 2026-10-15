@@ -78,7 +78,7 @@
                 <div>
                     <div class="font-bold text-sm">CHAOS MODE กำลังเปิดทำงาน: <span class="font-mono bg-red-800 px-2 py-0.5 rounded text-white">{{ strtoupper($chaosMode) }}</span></div>
                     <div class="text-xs opacity-90 mt-0.5">
-                        ทุกคำขอที่ไปยังหน้า Checkout (/checkout/*) และ API (/v1/*) จะถูกจำลองความล้มเหลวตามโหมดนี้
+                        ชั้นใหญ่สุด: ทุกคำขอเข้า Checkout และ API (/v1/*) จะถูกจำลองตามโหมดนี้ก่อนยิง webhook
                     </div>
                 </div>
             </div>
@@ -105,15 +105,36 @@
         </div>
     @endif
 
-    <!-- ═══ GRID: CHAOS MODE + QUICK SCENARIO LAUNCHER ═══ -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    @if($webhookMode !== 'normal')
+        <div class="p-4 bg-purple-700 text-white rounded-xl shadow-lg flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">📡</span>
+                <div>
+                    <div class="font-bold text-sm">WEBHOOK MODE (ชั้นรอง): <span class="font-mono bg-purple-900 px-2 py-0.5 rounded text-white">{{ strtoupper($webhookMode) }}</span></div>
+                    <div class="text-xs opacity-90 mt-0.5">
+                        รายการที่ไม่มี override ต่อ payment จะถูกจำลอง webhook ตามโหมดนี้ (lost / delay / dup / bad_sig / replay)
+                    </div>
+                </div>
+            </div>
+            <form action="{{ route('admin.webhook.mode') }}" method="POST">
+                @csrf
+                <input type="hidden" name="webhook_mode" value="normal">
+                <button type="submit" class="bg-white text-purple-800 hover:bg-gray-100 font-bold px-4 py-2 rounded-lg text-xs shadow transition">
+                    🔄 ปิด Webhook Mode
+                </button>
+            </form>
+        </div>
+    @endif
 
-        <!-- 1. Chaos Mode (Global Setting) -->
+    <!-- ═══ GRID: CHAOS + WEBHOOK GLOBAL + LAUNCHER ═══ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- 1. Chaos Mode (ชั้นใหญ่สุด) -->
         <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
             <h2 class="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
-                <span>⚡</span> Chaos Mode (ทั้งระบบ)
+                <span>⚡</span> ชั้น 1 — Chaos Mode (ทั้งระบบ)
             </h2>
-            <p class="text-xs text-gray-500 mb-4">จำลองความผิดปกติของ Gateway ระดับ Global (มีผลทันทีต่อทั้ง API และ Checkout)</p>
+            <p class="text-xs text-gray-500 mb-4">มีผลกับคำขอเข้า API / Checkout ก่อนเสมอ ระบบคอนเสิร์ตไม่ต้องส่ง header อะไร</p>
             
             <form action="{{ route('admin.chaos') }}" method="POST" class="space-y-3">
                 @csrf
@@ -138,8 +159,37 @@
             </div>
         </div>
 
-        <!-- 2. One-Click Scenario Launcher (2 Columns) -->
-        <div class="lg:col-span-2 bg-white rounded-xl shadow p-6 border border-gray-100 flex flex-col justify-between">
+        <!-- 2. Webhook Mode (ชั้นรอง, global default) -->
+        <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
+            <h2 class="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                <span>📡</span> ชั้น 2 — Webhook Mode (ทั้งระบบ)
+            </h2>
+            <p class="text-xs text-gray-500 mb-4">มีผลตอนยิง webhook หลังจ่ายสำเร็จ / ล้มเหลว รายการที่ Admin สร้างแบบ override จะใช้ค่าบน payment แทน</p>
+
+            <form action="{{ route('admin.webhook.mode') }}" method="POST" class="space-y-3">
+                @csrf
+                <select name="webhook_mode"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                    <option value="normal" {{ $webhookMode === 'normal' ? 'selected' : '' }}>✅ Normal (ส่ง webhook ตามจริง)</option>
+                    <option value="webhook_lost" {{ $webhookMode === 'webhook_lost' ? 'selected' : '' }}>🟡 Lost (ไม่ส่งเลย — ทดสอบ reconcile)</option>
+                    <option value="webhook_delay:10" {{ $webhookMode === 'webhook_delay:10' ? 'selected' : '' }}>🟠 Delay 10s</option>
+                    <option value="webhook_dup:3" {{ $webhookMode === 'webhook_dup:3' ? 'selected' : '' }}>🟣 Duplicate ×3</option>
+                    <option value="webhook_bad_sig" {{ $webhookMode === 'webhook_bad_sig' ? 'selected' : '' }}>🔴 Bad Signature</option>
+                    <option value="webhook_replay" {{ $webhookMode === 'webhook_replay' ? 'selected' : '' }}>🟤 Replay (timestamp เก่า 1 ชม.)</option>
+                </select>
+                <button type="submit"
+                        class="w-full bg-purple-700 hover:bg-purple-800 text-white font-bold py-2 rounded-lg text-sm transition shadow">
+                    Apply Webhook Mode
+                </button>
+            </form>
+            <div class="mt-4 pt-3 border-t text-xs text-gray-500">
+                สถานะปัจจุบัน: <span class="font-mono font-bold text-purple-700">{{ $webhookMode }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. One-Click Scenario Launcher -->
+    <div class="bg-white rounded-xl shadow p-6 border border-gray-100 flex flex-col justify-between">
             <div>
                 <h2 class="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
                     <span>🚀</span> One-Click Scenario Launcher
@@ -186,8 +236,8 @@
                 <!-- ── Section B: กลุ่ม Webhook Scenarios (ครบ 5 Scenarios) ── -->
                 <div class="mt-4">
                     <div class="flex items-center gap-2 mb-2 pb-1 border-b border-gray-100">
-                        <span class="text-xs font-bold text-purple-700 uppercase tracking-wider">📡 กลุ่มที่ 2: Webhook Scenarios (ครบทั้ง 5 กรณี)</span>
-                        <span class="text-[10px] text-gray-400 font-normal">(ทดสอบความทนทานและการตรวจจับของฝั่ง Merchant)</span>
+                        <span class="text-xs font-bold text-purple-700 uppercase tracking-wider">📡 กลุ่มที่ 2: Override ต่อรายการ (ทับ global webhook_mode)</span>
+                        <span class="text-[10px] text-gray-400 font-normal">(สร้าง payment แล้วเปิด checkout — ไม่ต้องให้ระบบคอนเสิร์ตส่ง scenario)</span>
                     </div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
                         <!-- 1. Webhook Lost -->
@@ -259,8 +309,6 @@
             </div>
         </div>
 
-    </div>
-
     <!-- ═══ LIVE IN-BROWSER API TESTER ═══ -->
     <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
         <div class="flex justify-between items-center mb-2">
@@ -316,12 +364,12 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="text-left text-gray-500 border-b text-xs">
-                        <th class="pb-2 pr-4">Transaction ID</th>
-                        <th class="pb-2 pr-4">Order Ref</th>
+                        <th class="pb-2 pr-4">Provider Txn (txn_…)</th>
+                        <th class="pb-2 pr-4">Payment ID</th>
                         <th class="pb-2 pr-4">ยอดเงิน</th>
                         <th class="pb-2 pr-4">ช่องทาง</th>
                         <th class="pb-2 pr-4">สถานะ</th>
-                        <th class="pb-2 pr-4">Scenario</th>
+                        <th class="pb-2 pr-4">Webhook</th>
                         <th class="pb-2 pr-4">เวลาหมดอายุ</th>
                         <th class="pb-2">จัดการ</th>
                     </tr>
@@ -334,7 +382,7 @@
                                 {{ $p->public_id }} ↗
                             </a>
                         </td>
-                        <td class="py-2.5 pr-4">{{ $p->order_ref }}</td>
+                        <td class="py-2.5 pr-4">{{ $p->payment_id ?? $p->order_ref }}</td>
                         <td class="py-2.5 pr-4 font-bold font-sans text-sm text-gray-800">฿{{ number_format($p->amount, 2) }}</td>
                         <td class="py-2.5 pr-4 font-sans">
                             <span class="px-2 py-0.5 rounded text-[11px] font-semibold {{ $p->method === 'promptpay' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700' }}">
@@ -354,7 +402,7 @@
                                 @endif
                             </span>
                         </td>
-                        <td class="py-2.5 pr-4 text-gray-500 font-sans text-xs">{{ $p->scenario ?? '–' }}</td>
+                        <td class="py-2.5 pr-4 text-gray-500 font-sans text-xs">{{ $p->scenario ?: ($webhookMode !== 'normal' ? $webhookMode.' (global)' : '–') }}</td>
                         <td class="py-2.5 pr-4 font-sans text-xs text-gray-500">{{ $p->expires_at?->format('H:i:s') ?? '–' }}</td>
                         <td class="py-2.5 font-sans">
                             <div class="flex gap-1 flex-wrap items-center">
@@ -571,7 +619,7 @@ function adminDashboard() {
                 };
                 if (method === 'POST') {
                     options.body = JSON.stringify({
-                        order_ref: 'DEMO_' + Date.now(),
+                        payment_id: String(Date.now()),
                         amount: 1500.00,
                         method: 'card',
                         callback_url: 'http://concert_backend:5000/api/webhook'

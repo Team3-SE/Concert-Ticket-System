@@ -39,7 +39,7 @@ php artisan schedule:work
 |---|---|---|
 | **API Base** | `http://localhost:8081/v1` | ใช้คุยกับระบบคอนเสิร์ต |
 | **Checkout UI** | `http://localhost:8081/checkout/{payment_id}` | หน้ากรอกบัตร / QR PromptPay |
-| **Admin Panel** | `http://localhost:8081/admin` | Dashboard คุม Chaos Mode, ดูรายการ, ส่ง Webhook ซ้ำ |
+| **Admin Panel** | `http://localhost:8081/admin` | ชั้น 1 Chaos + ชั้น 2 Webhook (global), ดูรายการ, ส่ง Webhook ซ้ำ |
 | **Health Check** | `http://localhost:8081/up` | Docker healthcheck |
 
 *รหัสผ่าน Admin Panel ค่าเริ่มต้น:* `admin1234`
@@ -68,7 +68,6 @@ php artisan schedule:work
 POST /v1/payments
 Authorization: Bearer {API_KEY}
 Idempotency-Key: {BOOKING_CODE}
-X-Mock-Scenario: {SCENARIO}  [Optional]
 Content-Type: application/json
 
 {
@@ -146,21 +145,23 @@ Authorization: Bearer {API_KEY}
 
 ---
 
-### หมวด C: Gateway / Network ผิดปกติ (ผ่าน Header หรือ Admin Panel)
+### หมวด C: Gateway / Network ผิดปกติ (ชั้น 1 — ตั้งที่ PayMock Admin)
 
-| Scenario | รูปแบบ | พฤติกรรม |
-|---|---|---|
-| `down` | Header หรือ Admin | ตอบ 503 ทันที |
-| `rate_limit` | Header หรือ Admin | ตอบ 429 พร้อม header `Retry-After: 30` |
-| `bad_auth` | Header หรือ Admin | ตอบ 401 |
-| `bad_json` | Header หรือ Admin | ตอบ HTML 502 Bad Gateway |
-| `error_rate:N` | `error_rate:30` | สุ่มตอบ 500 ตาม % ที่ระบุ |
-| `slow:N` | `slow:5` | หน่วงเวลา N วินาทีแล้วทำงานต่อ |
-| `timeout:N` | `timeout:30` | หน่วงเวลาเกิน timeout แต่ **รายการถูกสร้างจริง** (จุดทดสอบ Idempotency) |
+ระบบคอนเสิร์ตไม่ส่ง `X-Mock-Scenario` — ตั้ง `chaos_mode` ที่ Admin แล้วทุกคำขอเข้า `/v1/*` และ checkout จะถูกจำลองตามนั้น
+
+| Scenario | พฤติกรรม |
+|---|---|
+| `down` | ตอบ 503 ทันที |
+| `rate_limit` | ตอบ 429 พร้อม header `Retry-After: 30` |
+| `bad_auth` | ตอบ 401 |
+| `bad_json` | ตอบ HTML 502 Bad Gateway |
+| `error_rate:N` | สุ่มตอบ 500 ตาม % ที่ระบุ เช่น `error_rate:30` |
+| `slow:N` | หน่วงเวลา N วินาทีแล้วทำงานต่อ |
+| `timeout:N` | หน่วงแต่ **รายการถูกสร้างจริง** (จุดทดสอบ Idempotency) |
 
 ---
 
-### หมวด D: Webhook ผิดปกติ (ระบุผ่าน Header `X-Mock-Scenario`)
+### หมวด D: Webhook ผิดปกติ (ชั้น 2 — ตั้งที่ PayMock Admin เป็น global หรือ override ต่อรายการ)
 
 | Scenario | ผลลัพธ์ | พฤติกรรมฝั่งระบบหลัก |
 |---|---|---|
@@ -180,7 +181,6 @@ try {
     $response = Http::withToken(config('services.paymock.key'))
         ->withHeaders([
             'Idempotency-Key' => $booking->b_booking_code,
-            'X-Mock-Scenario' => config('services.paymock.scenario'),
         ])
         ->timeout(8)
         ->retry(2, 500, throw: false)
