@@ -9,9 +9,11 @@ use App\Support\MockMode;
 
 class WebhookEmitter
 {
-    public function emit(Payment $payment, string $event, ?string $overrideScenario = null): void
+    public function emit(Payment $payment, string $event): void
     {
-        $scenario = MockMode::resolveWebhook($overrideScenario, $payment->scenario);
+        // Webhook behavior is configured globally in the authenticated Admin panel.
+        // A payment never carries its own webhook override.
+        $scenario = MockMode::webhookMode();
         [$sc, $arg] = array_pad(explode(':', (string) $scenario, 2), 2, null);
 
         // webhook_lost: ไม่ส่งเลย

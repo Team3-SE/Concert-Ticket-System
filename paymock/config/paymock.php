@@ -45,6 +45,6 @@ return [
         '4000000000000127' => ['FAILED',    'incorrect_cvc'],
         '4000000000000119' => ['FAILED',    'processing_error'],
         '4100000000000019' => ['FAILED',    'fraud_suspected'],
-        '4000000000000341' => ['COMPLETED', null, 'webhook_delay:660'],  // success but webhook very late
+        '4000000000000341' => ['COMPLETED', null],
     ],
 ];

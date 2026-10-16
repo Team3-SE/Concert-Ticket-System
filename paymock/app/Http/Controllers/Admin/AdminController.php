@@ -122,14 +122,10 @@ class AdminController extends Controller
 
     /**
      * POST /admin/scenarios/run
-     * สร้าง payment จำลองตาม scenario เพื่อความสะดวกในการเดโม
+     * สร้าง payment จำลองเพื่อความสะดวกในการเดโม
      */
     public function runScenario(Request $request): RedirectResponse
     {
-        $scenario = $request->input('scenario');
-        if (! \App\Support\MockMode::isWebhook($scenario)) {
-            $scenario = null;
-        }
         $method     = $request->input('method', 'card');
         $cardNumber = $request->input('card_number');
         $amount     = (float) $request->input('amount', 1200.00);
@@ -143,7 +139,7 @@ class AdminController extends Controller
             'return_url'      => null,
             'idempotency_key' => 'DEMO_' . $merchantPaymentId,
             'expires_in'      => 600,
-        ], $scenario);
+        ]);
 
         $routeParams = ['publicId' => $payment->public_id];
         if ($cardNumber) {
@@ -151,7 +147,7 @@ class AdminController extends Controller
         }
 
         return redirect()->route('checkout.show', $routeParams)
-            ->with('info', "Created demo payment for scenario: " . ($scenario ?: 'normal'));
+            ->with('info', "Created demo payment. Webhook behavior follows the current Admin Webhook Mode.");
     }
 
     /**

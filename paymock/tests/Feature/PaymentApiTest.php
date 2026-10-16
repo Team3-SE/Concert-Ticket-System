@@ -77,24 +77,20 @@ class PaymentApiTest extends TestCase
         $this->assertNotEmpty($response->json('qrcode_url'));
     }
 
-    /** Test: body เก่าส่ง order_ref อย่างเดียว ยังต้องเติม payment_id ใน response */
-    public function test_create_with_order_ref_alias_fills_payment_id(): void
+    /** Test: payment_id เป็นฟิลด์บังคับ */
+    public function test_create_requires_payment_id(): void
     {
         $response = $this->withHeaders([
             'Authorization'   => 'Bearer ' . $this->apiKey,
-            'Idempotency-Key' => 'LEGACY_ORDER_REF',
+            'Idempotency-Key' => 'MISSING_PAYMENT_ID',
         ])->postJson('/v1/payments', [
-            'order_ref'    => 'TK-261016-ABC12',
             'amount'       => 1800.00,
             'method'       => 'promptpay',
             'callback_url' => 'http://concert/webhooks/payment',
         ]);
 
-        $response->assertStatus(201)
-            ->assertJson([
-                'payment_id' => 'TK-261016-ABC12',
-                'status'     => 'PENDING',
-            ]);
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors('payment_id');
     }
 
     /** Test: Idempotency-Key เดิม คืน payment เดิม ไม่สร้างใหม่ */

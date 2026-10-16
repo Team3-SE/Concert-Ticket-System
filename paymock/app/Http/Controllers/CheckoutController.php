@@ -56,7 +56,7 @@ class CheckoutController extends Controller
         $rules      = config('paymock.card_rules', []);
         $rule       = $rules[$cardNumber] ?? ['FAILED', 'card_declined'];
 
-        [$status, $failureCode, $overrideScenario] = array_pad($rule, 3, null);
+        [$status, $failureCode] = $rule;
 
         // 3-D Secure card: stay PENDING, show OTP page
         if ($failureCode === '3ds_required') {
@@ -64,8 +64,7 @@ class CheckoutController extends Controller
                 ->with('info', '3D Secure verification required. Use OTP: 123456');
         }
 
-        // fraud card: transition but mark scenario for anomaly
-        $this->service->transition($payment, $status, $failureCode, $overrideScenario);
+        $this->service->transition($payment, $status, $failureCode);
 
         // Stay on PayMock receipt page by default to display transaction status & receipt
         if ($request->boolean('redirect_to_return') && $payment->return_url) {

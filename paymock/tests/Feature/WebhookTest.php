@@ -16,7 +16,7 @@ class WebhookTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function createPayment(string $status = 'COMPLETED', ?string $scenario = null): Payment
+    private function createPayment(string $status = 'COMPLETED'): Payment
     {
         return Payment::create([
             'payment_id'      => (string) random_int(1000, 999999),
@@ -24,7 +24,6 @@ class WebhookTest extends TestCase
             'amount'          => 1500,
             'method'          => 'promptpay',
             'status'          => $status,
-            'scenario'        => $scenario,
             'callback_url'    => 'http://concert/webhooks/payment',
             'idempotency_key' => 'ID_' . uniqid(),
         ]);
@@ -44,39 +43,30 @@ class WebhookTest extends TestCase
     public function test_webhook_lost_scenario_dispatches_nothing(): void
     {
         Queue::fake();
-        $payment = $this->createPayment('COMPLETED', 'webhook_lost');
+        Setting::set('webhook_mode', 'webhook_lost');
+        $payment = $this->createPayment();
         app(WebhookEmitter::class)->emit($payment, 'payment.completed');
 
         Queue::assertNothingPushed();
     }
 
-    /** Global webhook_mode ใช้เมื่อ payment ไม่มี override */
+    /** Webhook mode จาก Admin มีผลกับทุกรายการ */
     public function test_global_webhook_mode_lost_dispatches_nothing(): void
     {
         Queue::fake();
         Setting::set('webhook_mode', 'webhook_lost');
-        $payment = $this->createPayment('COMPLETED', null);
+        $payment = $this->createPayment();
         app(WebhookEmitter::class)->emit($payment, 'payment.completed');
 
         Queue::assertNothingPushed();
     }
 
-    /** per-payment override ทับ global webhook_mode */
-    public function test_payment_webhook_override_beats_global_mode(): void
-    {
-        Queue::fake();
-        Setting::set('webhook_mode', 'webhook_lost');
-        $payment = $this->createPayment('COMPLETED', 'webhook_dup:3');
-        app(WebhookEmitter::class)->emit($payment, 'payment.completed');
-
-        Queue::assertPushed(SendWebhookJob::class, 3);
-    }
-
-    /** Webhook dup:3: dispatch 3 jobs */
+    /** Webhook dup:3 จาก Admin: dispatch 3 jobs */
     public function test_webhook_dup_dispatches_multiple_jobs(): void
     {
         Queue::fake();
-        $payment = $this->createPayment('COMPLETED', 'webhook_dup:3');
+        Setting::set('webhook_mode', 'webhook_dup:3');
+        $payment = $this->createPayment();
         app(WebhookEmitter::class)->emit($payment, 'payment.completed');
 
         Queue::assertPushed(SendWebhookJob::class, 3);
@@ -111,7 +101,7 @@ class WebhookTest extends TestCase
     {
         Http::fake(['*' => Http::response(['ok' => true], 200)]);
 
-        $payment  = $this->createPayment('COMPLETED', 'webhook_bad_sig');
+        $payment  = $this->createPayment();
         $delivery = WebhookDelivery::create([
             'payment_id' => $payment->id,
             'event'      => 'payment.completed',

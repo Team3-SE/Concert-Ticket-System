@@ -70,7 +70,7 @@ Authorization: Bearer pm_test_key_concert_system_2024
   "recent": [
     {
       "id": "01JCXYZ...",
-      "order_ref": "b_TK2024001",
+      "payment_id": "12",
       "amount": 1200.00,
       "currency": "THB",
       "method": "promptpay",
@@ -108,7 +108,7 @@ Idempotency-Key: b_TK2024001
 
 ```json
 {
-  "order_ref":    "b_TK2024001",
+  "payment_id":   "12",
   "amount":       1200.00,
   "method":       "promptpay",
   "callback_url": "http://localhost:8080/webhooks/paymock",
@@ -125,7 +125,7 @@ Idempotency-Key: b_TK2024001
 
 ```json
 {
-  "order_ref":    "b_TK2024002",
+  "payment_id":   "13",
   "amount":       1200.00,
   "method":       "card",
   "callback_url": "http://localhost:8080/webhooks/paymock",
@@ -140,7 +140,7 @@ Idempotency-Key: b_TK2024001
 
 | Field | Type | Required | ค่าที่ยอมรับ | Default | คำอธิบาย |
 |-------|------|----------|-------------|---------|----------|
-| `order_ref` | string | ✅ | max 255 chars | — | รหัสอ้างอิงจากระบบคอนเสิร์ต (booking code) |
+| `payment_id` | string | ✅ | max 255 chars | — | รหัสรายการจากระบบคอนเสิร์ต ต้องส่งทุกครั้ง |
 | `amount` | number | ✅ | min 1 | — | ยอดเงิน (บาท, ทศนิยมได้) |
 | `method` | string | ✅ | `"card"` หรือ `"promptpay"` | — | วิธีชำระ |
 | `callback_url` | string | ✅ | URL ที่ถูกต้อง | — | URL ที่ PayMock จะ POST Webhook มาหา |
@@ -155,7 +155,7 @@ Idempotency-Key: b_TK2024001
 ### Idempotency
 
 - ถ้าส่ง `Idempotency-Key` header → ใช้ค่านั้น
-- ถ้าไม่ส่ง → ใช้ `order_ref` เป็น key อัตโนมัติ
+- ถ้าไม่ส่ง → ใช้ `payment_id` เป็น key อัตโนมัติ
 - ถ้าส่ง key เดิมซ้ำ → **คืน payment เดิม** (ไม่สร้างใหม่) ใช้เมื่อ retry หลัง timeout
 
 ### Response 201 Created (PromptPay)
@@ -163,7 +163,7 @@ Idempotency-Key: b_TK2024001
 ```json
 {
   "id":                 "01JCXYZ1234567890ABCDEFGH",
-  "order_ref":          "b_TK2024001",
+  "payment_id":         "12",
   "amount":             1200.00,
   "currency":           "THB",
   "method":             "promptpay",
@@ -181,8 +181,8 @@ Idempotency-Key: b_TK2024001
 
 | Field | Type | ความหมาย |
 |-------|------|----------|
-| `id` | string (ULID) | **Payment ID** — ใช้กับ GET / cancel / QR / ระบบคอนเสิร์ต ทั้งบัตรและ PromptPay (ไม่ใช้ `order_ref` หลังสร้างแล้ว) |
-| `order_ref` | string | รหัสที่ส่งมา |
+| `id` | string (ULID) | **Provider transaction ID** — ใช้กับ GET / cancel / QR / ระบบคอนเสิร์ต ทั้งบัตรและ PromptPay |
+| `payment_id` | string | รหัสรายการที่ merchant ส่งมาใน request |
 | `amount` | float | ยอดเงิน |
 | `currency` | string | สกุลเงิน |
 | `method` | string | `card` หรือ `promptpay` |
@@ -244,7 +244,7 @@ Authorization: Bearer pm_test_key_concert_system_2024
 ```json
 {
   "id":                 "01JCXYZ1234567890ABCDEFGH",
-  "order_ref":          "b_TK2024001",
+  "payment_id":         "12",
   "amount":             1200.00,
   "currency":           "THB",
   "method":             "promptpay",
@@ -328,7 +328,7 @@ X-Event-Id: 01JCABC9876543210ZYXWVUTS
 {
   "id":           "txn_01JCXYZ1234567890ABCDEFGH",
   "event":        "payment.completed",
-  "order_ref":    "b_TK2024001",
+  "payment_id":   "12",
   "amount":       1200.00,
   "currency":     "THB",
   "method":       "promptpay",
@@ -345,7 +345,7 @@ X-Event-Id: 01JCABC9876543210ZYXWVUTS
 |-------|------|----------|
 | `id` | string (ULID) | Payment ID (ขึ้นต้นด้วย `txn_` ใช้ call `GET /v1/payments/{id}` เพื่อยืนยันได้) |
 | `event` | string | ชื่อ event ดู [ตาราง events](#webhook-events) |
-| `order_ref` | string | รหัสอ้างอิงจากระบบคอนเสิร์ต |
+| `payment_id` | string | รหัสรายการจาก merchant ที่ส่งในตอนสร้าง payment |
 | `amount` | float | ยอดเงินที่ชำระ |
 | `currency` | string | สกุลเงิน (เช่น `THB`) |
 | `method` | string | ช่องทางชำระเงิน: `promptpay` หรือ `card` |
@@ -475,11 +475,11 @@ PayMock จะ retry webhook ถ้าได้รับ response ที่ **�
 | 1 (ใหญ่สุด) | Chaos Mode | คำขอเข้า `/v1/*` และ `/checkout/*` (ล่ม, ช้า, 429, 500, …) |
 | 2 (รอง) | Webhook Mode | ตอนยิง webhook หลัง settle (lost, delay, dup, bad_sig, replay) |
 
-ลำดับ resolve webhook: **override ต่อรายการ (ปุ่ม Admin launcher)** > **global `webhook_mode`**
+`webhook_mode` เป็นค่า global เดียวจาก Admin และมีผลกับทุกรายการ ไม่มี override ต่อ payment
 
 ### 8.1 Webhook Mode
 
-ตั้งค่าที่ Admin (ทั้งระบบ หรือ override ต่อรายการ):
+ตั้งค่าที่ Admin ทั้งระบบเท่านั้น:
 
 | Scenario | สิ่งที่ Gateway ส่งมา | สิ่งที่ Backend ต้องตอบ | ผลต่อตั๋วคอนเสิร์ต | การรับมือ / วัตถุประสงค์ |
 |----------|----------------------|-----------------------|-------------------|--------------------------|
@@ -508,7 +508,7 @@ PayMock จะ retry webhook ถ้าได้รับ response ที่ **�
 
 4. **`webhook_dup:N` (ส่ง Webhook ซ้ำหลายครั้ง)**
    - **พฤติกรรม:** PayMock จะยิง Webhook ข้อมูลเดิมเข้ามาติดกัน N ครั้ง (เช่น 3 ครั้ง)
-   - **สิ่งที่ Backend ต้องทำ:** ตรวจสอบ `X-Event-Id` หรือ `order_ref` หากเคยประมวลผลไปแล้วในครั้งแรก ครั้งต่อไปต้องตอบ `HTTP 200 OK` ทันทีโดยไม่รันคำสั่งออกตั๋วซ้ำ
+   - **สิ่งที่ Backend ต้องทำ:** ตรวจสอบ `X-Event-Id` หรือ `payment_id` หากเคยประมวลผลไปแล้วในครั้งแรก ครั้งต่อไปต้องตอบ `HTTP 200 OK` ทันทีโดยไม่รันคำสั่งออกตั๋วซ้ำ
 
 5. **`webhook_delay:N` (หน่วงเวลาส่ง Webhook)**
    - **พฤติกรรม:** รายการถูกตัดเงินสำเร็จทันที แต่ Gateway จะหน่วงเวลาก่อนส่ง Webhook ออกไปเป็นเวลา N วินาที
@@ -616,7 +616,7 @@ Content-Type: application/json
 1. **Layer 1 Chaos (ใหญ่สุด):** Admin `chaos_mode` ครอบคำขอเข้า `/v1/*` และ checkout (503/429/500/ช้า)
 2. **Layer 2 Request & Idempotency:** ตรวจ body และ `Idempotency-Key` (ถ้าซ้ำ คืนรายการเดิม)
 3. **Layer 3 การชำระเงิน:** Magic Card / PromptPay confirm / cancel
-4. **Layer 4 Webhook (รอง):** Admin `webhook_mode` หรือ override ต่อรายการ — lost / delay / dup / bad_sig / replay
+4. **Layer 4 Webhook (รอง):** Admin `webhook_mode` แบบ global — lost / delay / dup / bad_sig / replay
 
 ---
 
@@ -633,7 +633,7 @@ Content-Type: application/json
 | `4000 0000 0000 0127` | ❌ FAILED | `incorrect_cvc` | แจ้ง CVC ผิด |
 | `4000 0000 0000 0119` | ❌ FAILED | `processing_error` | แจ้งระบบขัดข้อง ลองอีกครั้ง |
 | `4100 0000 0000 0019` | ⚠️ FAILED | `fraud_suspected` | บันทึก anomaly แจ้ง Admin |
-| `4000 0000 0000 0341` | ✅ COMPLETED (webhook ช้า 11 นาที) | `null` | ห้าม expire booking ก่อน poll ยืนยัน |
+| `4000 0000 0000 0341` | ✅ COMPLETED | `null` | ผลเหมือนบัตรสำเร็จ; การหน่วง webhook ตั้งจาก Admin |
 
 > CVC และวันหมดอายุ: ใส่อะไรก็ได้ (ยกเว้นบัตร `...0069` ที่ตรวจจาก expiry จริง) — การตัดสินขึ้นอยู่กับเลขบัตรเท่านั้น
 
@@ -647,7 +647,7 @@ Content-Type: application/json
 ระบบคอนเสิร์ต                          PayMock
      │                                     │
      │  1. POST /v1/payments               │
-     │     order_ref, amount, method,      │
+     │     payment_id, amount, method,     │
      │     callback_url, Idempotency-Key   │
      │ ─────────────────────────────────► │
      │                                     │  สร้าง payment (PENDING หรือประมวลผลบัตร)

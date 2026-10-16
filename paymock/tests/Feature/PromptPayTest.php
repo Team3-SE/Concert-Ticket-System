@@ -75,11 +75,11 @@ class PromptPayTest extends TestCase
         ]);
     }
 
-    /** PromptPay: Auto-pay simulation API (e.g. auto_pay:15) */
+    /** PromptPay: Simulation API settles a pending payment */
     public function test_auto_pay_simulate_endpoint(): void
     {
         Queue::fake();
-        $payment = $this->createPendingPromptPay(['scenario' => 'auto_pay:15']);
+        $payment = $this->createPendingPromptPay();
 
         $response = $this->postJson(route('checkout.simulate', $payment->public_id), [
             'status' => 'COMPLETED',

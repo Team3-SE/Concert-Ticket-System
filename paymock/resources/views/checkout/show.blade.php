@@ -24,9 +24,6 @@
         <div class="mt-2 text-sm opacity-70">
             Payment ID: <span class="font-mono font-semibold">{{ $payment->payment_id ?? $payment->order_ref }}</span> &nbsp;|&nbsp;
             Provider Txn: <span class="font-mono">{{ $payment->public_id }}</span>
-            @if($payment->webhookScenario())
-                &nbsp;|&nbsp; Webhook: <span class="bg-indigo-800 px-2 py-0.5 rounded font-mono text-xs">{{ $payment->webhookScenario() }}</span>
-            @endif
         </div>
     </div>
 
@@ -191,11 +188,6 @@
                             class="w-full flex justify-between items-center p-2 rounded hover:bg-purple-50 text-left transition border border-transparent hover:border-purple-200">
                         <span class="font-bold text-purple-700">4100 0000 0000 0019</span>
                         <span class="text-purple-800 bg-purple-100 px-2 py-0.5 rounded font-sans text-xs">🚨 สงสัย Fraud (fraud_suspected)</span>
-                    </button>
-                    <button type="button" @click="fillCard('4000 0000 0000 0341', '12/28', '123', 'LATE USER')"
-                            class="w-full flex justify-between items-center p-2 rounded hover:bg-yellow-50 text-left transition border border-transparent hover:border-yellow-200">
-                        <span class="font-bold text-yellow-700">4000 0000 0000 0341</span>
-                        <span class="text-yellow-800 bg-yellow-100 px-2 py-0.5 rounded font-sans text-xs">⏳ สำเร็จ + Webhook ช้า 11 นาที</span>
                     </button>
                 </div>
             </details>

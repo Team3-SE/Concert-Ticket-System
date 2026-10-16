@@ -229,7 +229,7 @@ steps = [
     '④ ผู้ใช้สแกน QR ผ่านแอปธนาคาร หรือคลิก bank_simulator_url เพื่อจำลองการโอนเงิน',
     '⑤ PayMock เปลี่ยนสถานะ → ส่ง Webhook (POST {callback_url}) พร้อม HMAC-SHA256',
     '⑥ ระบบคอนเสิร์ตตรวจ signature → ตรวจ idempotency → อัปเดต booking + seat + ออกตั๋ว',
-    '⑦ (สำรอง) ระบบคอนเสิร์ตยิง GET /v1/payments/{payment_id} เพื่อ reconcile — ใช้ id ไม่ใช้ order_ref',
+    '⑦ (สำรอง) ระบบคอนเสิร์ตยิง GET /v1/payments/{id} เพื่อ reconcile — ใช้ response.id (provider transaction ID)',
 ]
 for s in steps:
     p = doc.add_paragraph(style='List Bullet')
@@ -289,8 +289,9 @@ add_code(doc, [
     '  "webhook_mode": "normal",',
     '  "recent": [',
     '    {',
-    '      "id":                 "01JCXYZ...",',
-    '      "order_ref":          "b_TK2024001",',
+    '      "id":                 "txn_01jcxyz...",',
+    '      "provider_transaction_id": "txn_01jcxyz...",',
+    '      "payment_id":         "b_TK2024001",',
     '      "amount":             1200.00,',
     '      "method":             "promptpay",',
     '      "status":             "COMPLETED",',
@@ -318,8 +319,8 @@ add_table(doc,
 add_heading(doc, '3.2  POST /v1/payments — สร้างรายการจ่ายเงิน', 2, color='065F46')
 add_para(doc, (
     'สร้างรายการชำระเงินใหม่ รองรับ Idempotency เพื่อป้องกันการสร้างรายการซ้ำเมื่อ retry '
-    'Response คืนฟิลด์ id ซึ่งคือ payment_id ระบบคอนเสิร์ตต้องเก็บค่านี้นำไปใช้กับ GET / cancel / QR / polling ทั้งบัตรและ PromptPay '
-    '(ไม่ใช้ order_ref เป็นคีย์หลังสร้างแล้ว)'
+    'ต้องส่ง payment_id ทุกครั้งเพื่อระบุรายการฝั่ง merchant และรองรับ Idempotency เพื่อป้องกันการสร้างรายการซ้ำเมื่อ retry. '
+    'Response คืน id (provider transaction ID) สำหรับใช้กับ GET / cancel / QR / polling ทั้งบัตรและ PromptPay.'
 ))
 
 add_heading(doc, 'Request', 3, color='374151')
@@ -331,7 +332,7 @@ add_code(doc, [
     '',
     '// PromptPay:',
     '{',
-    '  "order_ref":    "b_TK2024001",',
+    '  "payment_id":   "b_TK2024001",',
     '  "amount":       1200.00,',
     '  "method":       "promptpay",',
     '  "callback_url": "http://localhost:8080/webhooks/paymock",',
@@ -342,7 +343,7 @@ add_code(doc, [
     '',
     '// Credit Card (Direct API):',
     '{',
-    '  "order_ref":    "b_TK2024002",',
+    '  "payment_id":   "b_TK2024002",',
     '  "amount":       1200.00,',
     '  "method":       "card",',
     '  "callback_url": "http://localhost:8080/webhooks/paymock",',
@@ -357,7 +358,7 @@ add_heading(doc, 'Request Body Fields', 3, color='374151')
 add_table(doc,
     ['Field', 'Type', 'Required', 'ค่าที่ยอมรับ', 'คำอธิบาย'],
     [
-        ['order_ref',    'string',  'จำเป็นตอนสร้าง', 'max 255 chars',      'ส่งให้ gateway ตอน POST เท่านั้น หลังจากนั้นใช้ id'],
+        ['payment_id',   'string',  'จำเป็น',      'max 255 chars',          'รหัสรายการฝั่งร้านค้า ต้องส่งทุกครั้ง; response จะ echo กลับ'],
         ['amount',       'number',  'จำเป็น',      'min: 1',                 'ยอดเงิน (บาท, ทศนิยมได้)'],
         ['method',       'string',  'จำเป็น',      '"card" หรือ "promptpay"', 'วิธีชำระเงิน'],
         ['callback_url', 'string',  'จำเป็น',      'URL ที่ถูกต้อง',         'URL รับ Webhook จาก PayMock'],
@@ -375,15 +376,16 @@ add_table(doc,
 add_heading(doc, 'Idempotency', 3, color='374151')
 add_para(doc, (
     'ถ้าส่ง Idempotency-Key header → ใช้ค่านั้น  |  '
-    'ถ้าไม่ส่ง → ใช้ order_ref เป็น key อัตโนมัติ  |  '
+    'ถ้าไม่ส่ง → ใช้ payment_id เป็น key อัตโนมัติ  |  '
     'ถ้าส่ง key เดิมซ้ำ → คืน payment เดิม ไม่สร้างใหม่ (ใช้ตอน retry หลัง timeout)'
 ))
 
 add_heading(doc, 'Response 201 Created (PromptPay)', 3, color='374151')
 add_code(doc, [
     '{',
-    '  "id":                 "01JCXYZ1234567890ABCDEFGH",',
-    '  "order_ref":          "b_TK2024001",',
+    '  "id":                 "txn_01jcxyz1234567890",',
+    '  "provider_transaction_id": "txn_01jcxyz1234567890",',
+    '  "payment_id":         "b_TK2024001",',
     '  "amount":             1200.00,',
     '  "currency":           "THB",',
     '  "method":             "promptpay",',
@@ -401,7 +403,9 @@ add_heading(doc, 'Response Fields', 3, color='374151')
 add_table(doc,
     ['Field', 'Type', 'ความหมาย'],
     [
-        ['id',                 'string (ULID)',   'Payment ID — ใช้กับ GET / cancel / QR / ระบบคอนเสิร์ต หลังสร้าง'],
+        ['id',                 'string',          'Provider transaction ID (txn_...) — ใช้กับ GET / cancel / QR / ระบบคอนเสิร์ต หลังสร้าง'],
+        ['provider_transaction_id', 'string',      'ค่าเดียวกับ id'],
+        ['payment_id',         'string',          'รหัสรายการที่ merchant ส่งมา (required ใน request)'],
         ['status',             'string',          'PENDING / COMPLETED / FAILED / EXPIRED'],
         ['failure_code',       'string | null',   'รหัสเหตุผลเมื่อล้มเหลว (ดูตาราง Failure Codes)'],
         ['qrcode_url',         'string | null',   'URL รูปภาพ SVG QR Code สำหรับ PromptPay (ใส่ใน <img src="...">)'],
@@ -458,7 +462,7 @@ doc.add_page_break()
 
 # 3.3 GET /v1/payments/{id}
 add_heading(doc, '3.3  GET /v1/payments/{id} — ดูสถานะรายการ', 2, color='065F46')
-add_para(doc, 'ใช้สำหรับ Polling หรือ Reconcile เมื่อ Webhook ไม่มาหรือมาช้า — {id} คือ payment_id จาก POST ไม่ใช่ order_ref')
+add_para(doc, 'ใช้สำหรับ Polling หรือ Reconcile เมื่อ Webhook ไม่มาหรือมาช้า — {id} คือ response.id (provider transaction ID) จาก POST')
 
 add_heading(doc, 'Request', 3, color='374151')
 add_code(doc, [
@@ -515,8 +519,8 @@ add_table(doc,
 # 3.5 Concert backend — ใช้ payment_id
 add_heading(doc, '3.5  API ระบบคอนเสิร์ต — อ้างอิงด้วย payment_id', 2, color='065F46')
 add_para(doc, (
-    'หลัง POST /v1/payments สำเร็จ ให้เก็บ response.id เป็น payment_id '
-    'ทั้ง PromptPay และบัตรใช้คีย์นี้กับ polling / ยกเลิก / reconcile — ไม่ส่ง order_ref'
+    'หลัง POST /v1/payments สำเร็จ ให้เก็บ response.id เป็น provider transaction ID '
+    'ทั้ง PromptPay และบัตรใช้คีย์นี้กับ polling / ยกเลิก / reconcile'
 ))
 add_table(doc,
     ['Method', 'Path', 'Body / Query', 'หน้าที่'],
@@ -529,8 +533,8 @@ add_table(doc,
     col_widths=[2, 5, 5.5, 4]
 )
 add_para(doc, (
-    'order_ref ยังส่งให้ PayMock ตอนสร้างใบเสร็จเท่านั้น (ฟิลด์บังคับของ gateway) '
-    'หลังจากนั้นระบบคอนเสิร์ตทำงานด้วย payment_id อย่างเดียว'
+    'payment_id เป็นฟิลด์บังคับตอนสร้างรายการ '
+    'หลังจากสร้างแล้วระบบคอนเสิร์ตต้องทำงานด้วย response.id (provider transaction ID)'
 ), color='B45309')
 
 doc.add_page_break()
@@ -568,7 +572,7 @@ add_code(doc, [
     '{',
     '  "id":           "txn_01JCXYZ1234567890ABCDEFGH",',
     '  "event":        "payment.completed",',
-    '  "order_ref":    "b_TK2024001",',
+    '  "payment_id":   "12",',
     '  "amount":       1200.00,',
     '  "currency":     "THB",',
     '  "method":       "promptpay",',
@@ -585,7 +589,7 @@ add_table(doc,
     [
         ['id',           'string (ULID)',   'Payment ID (ขึ้นต้นด้วย txn_)'],
         ['event',        'string',          'ชื่อ event: payment.completed / payment.failed / payment.expired'],
-        ['order_ref',    'string',          'รหัสอ้างอิงจากระบบคอนเสิร์ต (Order Reference)'],
+        ['payment_id',   'string',          'รหัสรายการจาก merchant ที่ส่งในตอนสร้าง payment'],
         ['amount',       'float',           'ยอดเงินที่ชำระ'],
         ['currency',     'string',          'สกุลเงิน เช่น THB'],
         ['method',       'string',          'ช่องทางชำระเงิน: promptpay หรือ card'],
@@ -732,13 +736,10 @@ add_table(doc,
     ],
     col_widths=[3, 4, 9.5]
 )
-add_para(doc, 'ลำดับ resolve webhook: override ต่อรายการ (ปุ่ม Admin launcher) > global webhook_mode', color='B45309')
+add_para(doc, 'Webhook Mode เป็นค่า global เดียวจาก Admin และมีผลกับทุกรายการ ไม่มี override ต่อ payment', color='B45309')
 
 add_heading(doc, '5.1 Webhook Mode (ชั้น 2 — ตั้งจาก Admin)', 2)
-add_para(doc, (
-    'ตั้งค่าที่ Admin ทั้งระบบ หรือกด launcher เพื่อ override ต่อรายการ '
-    'ระบบคอนเสิร์ตไม่ต้องส่ง header อะไร:'
-))
+add_para(doc, 'ตั้งค่าที่ Admin ทั้งระบบเท่านั้น ระบบคอนเสิร์ตไม่ต้องส่ง header หรือ scenario ใด ๆ:')
 
 add_table(doc,
     ['Scenario', 'สิ่งที่ Gateway ส่งมา', 'สิ่งที่ Backend ต้องตอบ', 'ผลต่อตั๋วคอนเสิร์ต', 'การรับมือ / วัตถุประสงค์'],
@@ -831,7 +832,7 @@ add_table(doc,
         ['4000 0000 0000 0127', '❌ FAILED',           'incorrect_cvc',    'แจ้ง CVC ผิด'],
         ['4000 0000 0000 0119', '❌ FAILED',           'processing_error', 'แจ้งระบบขัดข้อง ลองใหม่'],
         ['4100 0000 0000 0019', '🚨 FAILED',           'fraud_suspected',  'บันทึก Anomaly แจ้ง Admin'],
-        ['4000 0000 0000 0341', '⏳ COMPLETED (ช้า)',  '—',                'Webhook ดีเลย์ 11 นาที ห้าม expire ก่อน'],
+        ['4000 0000 0000 0341', '✅ COMPLETED',        '—',                'ผลเหมือนบัตรสำเร็จ; การหน่วง webhook ตั้งจาก Admin'],
     ],
     col_widths=[4.5, 3, 3.5, 5.5]
 )
@@ -908,7 +909,7 @@ steps_hierarchy = [
     'Layer 1 Chaos (ใหญ่สุด): Admin chaos_mode ครอบคำขอเข้า /v1/* และ checkout (503/429/500/ช้า)',
     'Layer 2 Request & Idempotency: ตรวจ body และ Idempotency-Key (ถ้าซ้ำ คืนรายการเดิม)',
     'Layer 3 การชำระเงิน: Magic Card / PromptPay confirm / cancel — ระบบคอนเสิร์ตอ้างอิงด้วย payment_id',
-    'Layer 4 Webhook (รอง): Admin webhook_mode หรือ override ต่อรายการ — lost / delay / dup / bad_sig / replay',
+    'Layer 4 Webhook (รอง): Admin webhook_mode global — lost / delay / dup / bad_sig / replay',
 ]
 for s in steps_hierarchy:
     p = doc.add_paragraph()
@@ -1046,6 +1047,123 @@ add_code(doc, [
     '}',
     '</script>',
 ])
+
+# ═══════════════════════════════════════════════
+# 10. COMPLETE ROUTE CATALOG
+# ═══════════════════════════════════════════════
+doc.add_page_break()
+add_heading(doc, '10. รายการ Route ทั้งหมดและตัวอย่างข้อมูล', 1)
+add_para(doc, (
+    'ตารางนี้เป็นรายการ route ที่เปิดใช้งานจริง ณ เวอร์ชันเอกสารนี้ ครอบคลุม Merchant API, Checkout, Admin, '
+    'Demo, Bank Simulator และ Concert Backend. Route ที่คืนหน้าเว็บจะตอบ HTML หรือ redirect (302); route ที่เป็น API จะตอบ JSON ตามตัวอย่าง.'
+))
+
+add_heading(doc, '10.1 PayMock Merchant API และ Public Utility', 2)
+add_table(doc,
+    ['Method', 'Path', 'ต้องส่ง', 'ผลลัพธ์สำเร็จ', 'กรณีผิดพลาด'],
+    [
+        ['GET', '/v1/payments', 'Bearer token', '200 JSON: service, status, chaos_mode, webhook_mode, recent[]', '401 token ผิด; 429/500/502/503 เมื่อ Chaos Mode'],
+        ['POST', '/v1/payments', 'Bearer, JSON, Idempotency-Key แนะนำ', '201 JSON payment; Card ที่ส่ง card_number อาจ COMPLETED/FAILED ทันที', '401, 422 validation, 429, 500, 502, 503'],
+        ['GET', '/v1/payments/{publicId}', 'Bearer token; publicId = response.id', '200 JSON payment', '401, 404, 429, 500, 502, 503'],
+        ['POST', '/v1/payments/{publicId}/cancel', 'Bearer token; ไม่มี body', '200 { ok:true, status:"FAILED", failure_code:"cancelled" }', '401, 404, 409, 429, 500, 502, 503'],
+        ['GET', '/v1/payments/{publicId}/qr.svg', 'publicId; ไม่ต้อง Bearer', '200 image/svg+xml', '404 เมื่อไม่พบรายการ'],
+        ['GET', '/up', 'ไม่มี', '200 { "status":"ok" }', 'ไม่มีกรณีพิเศษจาก route'],
+        ['GET', '/', 'ไม่มี', '200 HTML landing page', 'ไม่มี JSON contract'],
+    ],
+    col_widths=[1.5, 4.8, 4, 5.5, 4.2]
+)
+
+add_heading(doc, 'ตัวอย่าง Merchant API ครบกรณีหลัก', 3, color='374151')
+add_code(doc, [
+    '// 1) PromptPay request',
+    'POST /v1/payments',
+    'Authorization: Bearer pm_test_key_concert_system_2024',
+    'Idempotency-Key: BOOKING-1001',
+    '{ "payment_id":"1001", "amount":1200.00, "method":"promptpay", "callback_url":"http://concert_backend:5000/api/webhook", "expires_in":600 }',
+    '',
+    '// 201 response',
+    '{ "id":"txn_01…", "provider_transaction_id":"txn_01…", "payment_id":"1001", "amount":1200, "currency":"THB", "method":"promptpay", "status":"PENDING", "failure_code":null, "expires_at":"2026-10-16T10:10:00+07:00", "paid_at":null, "created_at":"2026-10-16T10:00:00+07:00", "qrcode_url":"http://localhost:8081/v1/payments/txn_01…/qr.svg", "bank_simulator_url":"http://localhost:8081/bank-simulate/txn_01…" }',
+    '',
+    '// 2) Direct card success request and response',
+    '{ "payment_id":"1002", "amount":1200.00, "method":"card", "card_number":"4242424242424242", "exp_month":"12", "exp_year":"28", "cvc":"123", "callback_url":"http://concert_backend:5000/api/webhook" }',
+    '{ "id":"txn_02…", "payment_id":"1002", "method":"card", "status":"COMPLETED", "failure_code":null, "paid_at":"2026-10-16T10:00:02+07:00" }',
+    '',
+    '// 3) Direct card declined response (4000 0000 0000 0002)',
+    '{ "id":"txn_03…", "payment_id":"1003", "method":"card", "status":"FAILED", "failure_code":"card_declined", "paid_at":null }',
+    '',
+    '// 4) Validation and cancellation conflict',
+    '{ "error":"validation_error", "details":{ "amount":["The amount field is required."] } }',
+    '{ "error":"cannot_cancel", "message":"Payment is already settled and cannot be cancelled." }',
+])
+
+add_heading(doc, '10.2 Checkout และ Bank Simulator', 2)
+add_table(doc,
+    ['Method', 'Path', 'ข้อมูลที่ส่ง', 'Response ตัวอย่าง / ทุกกรณี'],
+    [
+        ['GET', '/checkout/{publicId}', 'path publicId', '200 HTML หน้าจ่าย; ถ้า settle หรือหมดอายุ แสดง receipt HTML; 404 ถ้าไม่พบ'],
+        ['POST', '/checkout/{publicId}/card', 'form: card_number; optional redirect_to_return', '302 -> checkout receipt; PENDING + valid card จะ settle; non-PENDING กลับพร้อม flash error; 404 ถ้าไม่พบ'],
+        ['POST', '/checkout/{publicId}/promptpay', 'form: action=pay (default) หรือ fail; optional redirect_to_return', '302 -> checkout receipt; pay => COMPLETED, fail => FAILED/payment_declined; non-PENDING กลับพร้อม flash error'],
+        ['POST', '/checkout/{publicId}/simulate', 'JSON/form: status (default COMPLETED), failure_code optional', '200 { "ok":true, "status":"COMPLETED" }; ถ้า non-PENDING: { "ok":false, "message":"Not pending" }; 404 ถ้าไม่พบ'],
+        ['GET', '/bank-simulate/{publicId}', 'path publicId', '200 HTML mobile banking simulator; 404 ถ้าไม่พบ'],
+        ['POST', '/bank-simulate/{publicId}/pay', 'ไม่มี body', '302 -> bank simulator, flash status=success; ถ้าจ่ายแล้ว flash status=already_processed; 404 ถ้าไม่พบ'],
+    ],
+    col_widths=[1.5, 5.2, 4.5, 9]
+)
+add_code(doc, [
+    'POST /checkout/txn_01…/simulate',
+    'Content-Type: application/json',
+    '{ "status":"FAILED", "failure_code":"payment_declined" }',
+    '// 200: { "ok":true, "status":"FAILED" }',
+])
+
+add_heading(doc, '10.3 Admin Routes', 2)
+add_para(doc, 'Admin routes ใช้ session login และ CSRF token ของ Laravel. Request สำเร็จส่วนใหญ่ตอบ 302 redirect กลับ dashboard พร้อม flash message; ไม่ใช่ Merchant API.')
+add_table(doc,
+    ['Method', 'Path', 'ข้อมูลที่ส่งตัวอย่าง', 'Response / เงื่อนไข'],
+    [
+        ['GET', '/admin/login', 'ไม่มี', '200 HTML login form'],
+        ['POST', '/admin/login', 'form: password=admin1234', '302 -> /admin เมื่อถูกต้อง; 302 กลับ form + validation error เมื่อผิด'],
+        ['POST', '/admin/logout', 'CSRF/session', '302 -> /admin/login'],
+        ['GET', '/admin', 'authenticated session', '200 HTML dashboard; unauthenticated ถูก redirect โดย middleware'],
+        ['POST', '/admin/chaos', 'form: chaos_mode=normal|down|slow:5|timeout:30|error_rate:30|rate_limit|bad_auth|bad_json', '302 กลับ dashboard; invalid value ถูกบังคับเป็น normal'],
+        ['POST', '/admin/webhook-mode', 'form: webhook_mode=normal|webhook_lost|webhook_delay:10|webhook_dup:3|webhook_bad_sig|webhook_replay', '302 กลับ dashboard; นี่คือจุดเดียวที่ตั้ง webhook behavior สำหรับทุกรายการ'],
+        ['POST', '/admin/scenarios/run', 'form: method=card|promptpay, amount optional, card_number optional', '302 -> /checkout/{publicId}; ไม่รับหรือบันทึก webhook override'],
+        ['POST', '/admin/payments/{publicId}/transition', 'form: status=COMPLETED|FAILED|EXPIRED, failure_code optional', '302; invalid status กลับพร้อม error; 404 เมื่อไม่พบ'],
+        ['POST', '/admin/payments/{publicId}/resend-webhook', 'ไม่มี body', '302; queue webhook ใหม่โดยใช้ Admin Webhook Mode ปัจจุบัน; 404 เมื่อไม่พบ'],
+        ['POST', '/admin/clear-all', 'ไม่มี body', '302; ลบ payments, webhook deliveries และ jobs ทั้งหมด'],
+        ['POST', '/admin/webhook-test', 'JSON/form: url, event, scenario=normal|webhook_bad_sig|webhook_replay', '200 JSON { ok,status,body,signature,raw_body } หรือ { ok:false,error }; 422 เมื่อ url/event หาย'],
+    ],
+    col_widths=[1.5, 5.2, 7, 7]
+)
+add_code(doc, [
+    'POST /admin/webhook-test',
+    '{ "url":"http://concert_backend:5000/api/webhook", "event":"payment.completed", "scenario":"normal" }',
+    '// 200: { "ok":true, "status":200, "body":"{\\"ok\\":true,...}", "signature":"t=...,v1=...", "raw_body":"{...}" }',
+])
+
+add_heading(doc, '10.4 Demo Routes', 2)
+add_table(doc,
+    ['Method', 'Path', 'ข้อมูลที่ส่ง', 'Response ตัวอย่าง / ทุกกรณี'],
+    [
+        ['GET', '/demo/modal', 'ไม่มี', '200 HTML demo modal'],
+        ['POST', '/demo/create-payment', 'JSON/form optional: amount, method', '200 { "ok":true, "payment_id":"<merchant id>", "provider_transaction_id":"txn_…", "checkout_url":"http://…/checkout/txn_…" }'],
+        ['POST', '/api/demo-webhook-sink', 'Webhook JSON ใด ๆ', '200 { "status":"received" }'],
+    ],
+    col_widths=[1.5, 5.2, 5, 9]
+)
+
+add_heading(doc, '10.5 Concert Backend Routes', 2)
+add_table(doc,
+    ['Method', 'Path', 'ข้อมูลที่ส่ง', 'Response ตัวอย่าง / ทุกกรณี'],
+    [
+        ['POST', '/api/webhook หรือ /webhooks/payment', 'headers X-Signature, X-Event-Id; PayMock webhook body', '200 { "ok":true, "message":"Webhook received and processed" }; 401 { "error":"invalid_signature", "reason":"bad_signature"|"replay_attack" }'],
+        ['POST', '/api/create-booking', 'JSON: seat, amount, method; card เพิ่ม card_number, exp_month, exp_year, cvc', '201 flow => 200 { ok:true,payment_id,status,failure_code,method,qrcode_url,bank_simulator_url }; gateway failure => status จาก gateway + { ok:false,error:"paymock_error",raw,httpCode }'],
+        ['POST', '/api/reconcile-booking', 'JSON: { "payment_id":"txn_…" }', '200 { ok:true,reconciled:true,gateway_status,booking_status,payment_id }; 404 { ok:false,error:"booking_or_payment_not_found" }; gateway error => { ok:false,error:"reconcile_failed",httpCode,raw }'],
+        ['POST', '/api/cancel-booking', 'JSON: { "payment_id":"txn_…" }', '200 { ok:true,payment_id,booking_status:"FAILED",failure_code:"cancelled" }; 404 not found; gateway conflict/error => { ok:false,error:"cannot_cancel",httpCode,raw }'],
+        ['GET', '/api/booking-status?payment_id=txn_…', 'query payment_id', '200 { "booking":{...}|null, "logs":[...] }'],
+    ],
+    col_widths=[1.5, 5.2, 6.5, 7]
+)
 
 # ─── Footer ───
 add_para(doc, '')

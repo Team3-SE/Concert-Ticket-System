@@ -71,7 +71,7 @@ Idempotency-Key: {BOOKING_CODE}
 Content-Type: application/json
 
 {
-  "order_ref": "BOOKING_20241013_001",
+  "payment_id": "12",
   "amount": 1500.00,
   "currency": "THB",
   "method": "card",           // "card" หรือ "promptpay"
@@ -85,7 +85,8 @@ Content-Type: application/json
 ```json
 {
   "id": "txn_01h...",
-  "order_ref": "BOOKING_20241013_001",
+  "provider_transaction_id": "txn_01h...",
+  "payment_id": "12",
   "amount": 1500.00,
   "currency": "THB",
   "method": "card",
@@ -134,7 +135,7 @@ Authorization: Bearer {API_KEY}
 | `4000 0000 0000 0119` | ⚠️ ระบบขัดข้อง | `processing_error` | ไม่ใช่ความผิดผู้ใช้ ให้ retry ได้ |
 | `4000 0000 0000 3220` | 🔐 ต้อง OTP (3DS) | `3ds_required` | ค้าง PENDING ไม่ปลดล็อกที่นั่งทันที |
 | `4100 0000 0000 0019` | 🚨 สงสัย Fraud | `fraud_suspected` | บันทึก `system_anomaly` (PAYMENT_FRAUD_CARD_TESTING) |
-| `4000 0000 0000 0341` | ✅ สำเร็จ แต่ Webhook ช้า | - | ต้องไม่ปลดที่นั่งทิ้งก่อนตรวจกับ gateway |
+| `4000 0000 0000 0341` | ✅ สำเร็จ | - | ความผิดปกติของ Webhook ตั้งจาก Admin |
 
 ---
 
@@ -161,7 +162,7 @@ Authorization: Bearer {API_KEY}
 
 ---
 
-### หมวด D: Webhook ผิดปกติ (ชั้น 2 — ตั้งที่ PayMock Admin เป็น global หรือ override ต่อรายการ)
+### หมวด D: Webhook ผิดปกติ (ชั้น 2 — ตั้งที่ PayMock Admin แบบ global)
 
 | Scenario | ผลลัพธ์ | พฤติกรรมฝั่งระบบหลัก |
 |---|---|---|
@@ -185,7 +186,7 @@ try {
         ->timeout(8)
         ->retry(2, 500, throw: false)
         ->post(config('services.paymock.url') . '/v1/payments', [
-            'order_ref'    => $booking->b_booking_code,
+            'payment_id'   => (string) $booking->id,
             'amount'       => (float) $booking->b_total_amount,
             'method'       => $method, // 'card' or 'promptpay'
             'callback_url' => route('webhooks.payment'),

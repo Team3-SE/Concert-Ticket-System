@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Support\MockMode;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
@@ -19,7 +18,6 @@ class Payment extends Model
         'currency',
         'method',
         'status',
-        'scenario',
         'failure_code',
         'callback_url',
         'idempotency_key',
@@ -61,9 +59,4 @@ class Payment extends Model
         return (string) ($id !== null && $id !== '' ? $id : ($this->order_ref ?? ''));
     }
 
-    /** Webhook anomaly ของรายการนี้: override บน payment หรือ global webhook_mode */
-    public function webhookScenario(): ?string
-    {
-        return MockMode::resolveWebhook(null, $this->scenario);
-    }
 }

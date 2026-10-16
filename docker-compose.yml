@@ -33,6 +33,7 @@ services:
       - ./paymock/resources:/var/www/html/resources
       - ./paymock/config:/var/www/html/config
       - ./paymock/public:/var/www/html/public
+      - ./paymock/database/migrations:/var/www/html/database/migrations
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/up"]
       interval: 15s
@@ -63,6 +64,7 @@ services:
       - ./paymock/app:/var/www/html/app
       - ./paymock/routes:/var/www/html/routes
       - ./paymock/config:/var/www/html/config
+      - ./paymock/database/migrations:/var/www/html/database/migrations
     depends_on:
       paymock:
         condition: service_healthy
@@ -91,6 +93,7 @@ services:
       - ./paymock/app:/var/www/html/app
       - ./paymock/routes:/var/www/html/routes
       - ./paymock/config:/var/www/html/config
+      - ./paymock/database/migrations:/var/www/html/database/migrations
     depends_on:
       paymock:
         condition: service_healthy

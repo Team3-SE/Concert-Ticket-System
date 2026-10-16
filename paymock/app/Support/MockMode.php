@@ -65,17 +65,4 @@ class MockMode
         return self::isWebhook($mode) ? $mode : 'normal';
     }
 
-    /**
-     * per-payment override (จาก Admin) > global webhook_mode
-     */
-    public static function resolveWebhook(?string $override, ?string $paymentScenario = null): ?string
-    {
-        foreach ([$override, $paymentScenario, Setting::get('webhook_mode', 'normal')] as $candidate) {
-            if (self::isWebhook($candidate)) {
-                return $candidate;
-            }
-        }
-
-        return null;
-    }
 }

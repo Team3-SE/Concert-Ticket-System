@@ -37,8 +37,7 @@ class PaymentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'payment_id'   => 'required_without:order_ref|nullable|string|max:255',
-            'order_ref'    => 'required_without:payment_id|nullable|string|max:255',
+            'payment_id'   => 'required|string|max:255',
             'amount'       => 'required|numeric|min:1',
             'method'       => 'required|in:card,promptpay',
             'callback_url' => 'required|url',
@@ -59,8 +58,7 @@ class PaymentController extends Controller
         }
 
         $validated = $validator->validated();
-        $merchantPaymentId = (string) ($validated['payment_id'] ?? $validated['order_ref']);
-        $validated['payment_id'] = $merchantPaymentId;
+        $merchantPaymentId = (string) $validated['payment_id'];
         $idempotencyKey = $request->header('Idempotency-Key') ?? $merchantPaymentId;
 
         $payment = $this->service->createOrFind(
@@ -72,9 +70,9 @@ class PaymentController extends Controller
             $cardNumber = preg_replace('/\D/', '', $request->input('card_number', ''));
             $rules      = config('paymock.card_rules', []);
             $rule       = $rules[$cardNumber] ?? ['FAILED', 'card_declined'];
-            [$status, $failureCode, $overrideScenario] = array_pad($rule, 3, null);
+            [$status, $failureCode] = $rule;
 
-            $this->service->transition($payment, $status, $failureCode, $overrideScenario);
+            $this->service->transition($payment, $status, $failureCode);
             $payment->refresh();
         }
 

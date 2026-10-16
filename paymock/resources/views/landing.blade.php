@@ -194,10 +194,6 @@
                     <span class="text-gray-400 font-sans">❌ ถูกปฏิเสธ</span>
                 </div>
                 <div class="flex justify-between items-center bg-gray-900 px-2.5 py-1.5 rounded">
-                    <span class="text-orange-400">4000 0000 0000 0341</span>
-                    <span class="text-gray-400 font-sans">⏳ Webhook ช้า 11 นาที</span>
-                </div>
-                <div class="flex justify-between items-center bg-gray-900 px-2.5 py-1.5 rounded">
                     <span class="text-purple-400">4100 0000 0000 0019</span>
                     <span class="text-gray-400 font-sans">🚨 Fraud</span>
                 </div>

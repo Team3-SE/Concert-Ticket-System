@@ -12,7 +12,7 @@ class PaymentService
     /**
      * สร้าง payment ใหม่ หรือคืนรายการเดิมถ้า idempotency_key ซ้ำ (idempotent)
      */
-    public function createOrFind(array $data, ?string $scenario = null): Payment
+    public function createOrFind(array $data): Payment
     {
         $existing = Payment::where('idempotency_key', $data['idempotency_key'])->first();
         if ($existing) {
@@ -28,7 +28,6 @@ class PaymentService
             'currency'        => $data['currency'] ?? 'THB',
             'method'          => $data['method'],
             'status'          => 'PENDING',
-            'scenario'        => $scenario,
             'callback_url'    => $data['callback_url'],
             'idempotency_key' => $data['idempotency_key'],
             'expires_at'      => now()->addSeconds($data['expires_in'] ?? config('paymock.default_expires_in')),
@@ -40,7 +39,7 @@ class PaymentService
      * เปลี่ยนสถานะ payment และ emit webhook
      * ป้องกัน transition จาก non-PENDING
      */
-    public function transition(Payment $payment, string $status, ?string $failureCode = null, ?string $overrideScenario = null): void
+    public function transition(Payment $payment, string $status, ?string $failureCode = null): void
     {
         if (! $payment->isPending()) {
             return; // already settled – idempotent
@@ -53,7 +52,7 @@ class PaymentService
         ]);
 
         $event = 'payment.' . strtolower($status);
-        $this->webhooks->emit($payment->fresh(), $event, $overrideScenario);
+        $this->webhooks->emit($payment->fresh(), $event);
     }
 
     public function cancel(Payment $payment): bool

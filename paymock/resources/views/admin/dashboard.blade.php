@@ -112,7 +112,7 @@
                 <div>
                     <div class="font-bold text-sm">WEBHOOK MODE (ชั้นรอง): <span class="font-mono bg-purple-900 px-2 py-0.5 rounded text-white">{{ strtoupper($webhookMode) }}</span></div>
                     <div class="text-xs opacity-90 mt-0.5">
-                        รายการที่ไม่มี override ต่อ payment จะถูกจำลอง webhook ตามโหมดนี้ (lost / delay / dup / bad_sig / replay)
+                        ทุกรายการจะถูกจำลอง webhook ตามโหมดนี้ (lost / delay / dup / bad_sig / replay)
                     </div>
                 </div>
             </div>
@@ -126,7 +126,7 @@
         </div>
     @endif
 
-    <!-- ═══ GRID: CHAOS + WEBHOOK GLOBAL + LAUNCHER ═══ -->
+    <!-- ═══ GRID: CHAOS + WEBHOOK GLOBAL ═══ -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         <!-- 1. Chaos Mode (ชั้นใหญ่สุด) -->
@@ -159,12 +159,12 @@
             </div>
         </div>
 
-        <!-- 2. Webhook Mode (ชั้นรอง, global default) -->
+        <!-- 2. Webhook Mode (ชั้นรอง, global) -->
         <div class="bg-white rounded-xl shadow p-6 border border-gray-100">
             <h2 class="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
                 <span>📡</span> ชั้น 2 — Webhook Mode (ทั้งระบบ)
             </h2>
-            <p class="text-xs text-gray-500 mb-4">มีผลตอนยิง webhook หลังจ่ายสำเร็จ / ล้มเหลว รายการที่ Admin สร้างแบบ override จะใช้ค่าบน payment แทน</p>
+            <p class="text-xs text-gray-500 mb-4">มีผลกับทุกรายการตอนยิง webhook หลังจ่ายสำเร็จ / ล้มเหลว ไม่มีการ override รายการต่อรายการ</p>
 
             <form action="{{ route('admin.webhook.mode') }}" method="POST" class="space-y-3">
                 @csrf
@@ -188,13 +188,13 @@
         </div>
     </div>
 
-    <!-- 3. One-Click Scenario Launcher -->
+    <!-- 3. One-Click Payment Launcher -->
     <div class="bg-white rounded-xl shadow p-6 border border-gray-100 flex flex-col justify-between">
             <div>
                 <h2 class="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
-                    <span>🚀</span> One-Click Scenario Launcher
+                    <span>🚀</span> One-Click Payment Launcher
                 </h2>
-                <p class="text-xs text-gray-500 mb-4">จำลองการสร้างรายการและเปิดหน้าชำระเงินทันทีเพื่อทดสอบทั้งกรณีปกติและกรณีจำลองต่าง ๆ</p>
+                <p class="text-xs text-gray-500 mb-4">สร้างรายการและเปิดหน้าชำระเงินทันที โดย Webhook Mode ใช้ค่าที่ตั้งไว้ด้านบนกับทุกรายการ</p>
 
                 <!-- ── Section A: กลุ่มวิธีการชำระเงิน ── -->
                 <div class="mb-5">
@@ -207,7 +207,6 @@
                         <form action="{{ route('admin.scenarios.run') }}" method="POST">
                             @csrf
                             <input type="hidden" name="method" value="promptpay">
-                            <input type="hidden" name="scenario" value="normal">
                             <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-green-500 hover:bg-green-50 transition shadow-xs">
                                 <div class="text-xs font-bold text-green-700 flex items-center justify-between">
                                     <span>📱 PromptPay QR</span>
@@ -221,7 +220,6 @@
                         <form action="{{ route('admin.scenarios.run') }}" method="POST">
                             @csrf
                             <input type="hidden" name="method" value="card">
-                            <input type="hidden" name="scenario" value="normal">
                             <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition shadow-xs">
                                 <div class="text-xs font-bold text-indigo-700 flex items-center justify-between">
                                     <span>💳 บัตรเครดิต / เดบิต</span>
@@ -233,73 +231,6 @@
                     </div>
                 </div>
 
-                <!-- ── Section B: กลุ่ม Webhook Scenarios (ครบ 5 Scenarios) ── -->
-                <div class="mt-4">
-                    <div class="flex items-center gap-2 mb-2 pb-1 border-b border-gray-100">
-                        <span class="text-xs font-bold text-purple-700 uppercase tracking-wider">📡 กลุ่มที่ 2: Override ต่อรายการ (ทับ global webhook_mode)</span>
-                        <span class="text-[10px] text-gray-400 font-normal">(สร้าง payment แล้วเปิด checkout — ไม่ต้องให้ระบบคอนเสิร์ตส่ง scenario)</span>
-                    </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-                        <!-- 1. Webhook Lost -->
-                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
-                            @csrf
-                            <input type="hidden" name="method" value="card">
-                            <input type="hidden" name="card_number" value="4242424242424242">
-                            <input type="hidden" name="scenario" value="webhook_lost">
-                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-yellow-500 hover:bg-yellow-50 transition shadow-xs">
-                                <div class="text-xs font-bold text-yellow-700">1. Webhook Lost</div>
-                                <div class="text-[10px] text-gray-500 mt-0.5">ไม่ส่ง Webhook (ทดสอบ Polling/Reconcile)</div>
-                            </button>
-                        </form>
-
-                        <!-- 2. Webhook Delay 10s -->
-                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
-                            @csrf
-                            <input type="hidden" name="method" value="promptpay">
-                            <input type="hidden" name="scenario" value="webhook_delay:10">
-                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-orange-500 hover:bg-orange-50 transition shadow-xs">
-                                <div class="text-xs font-bold text-orange-700">2. Delay 10s</div>
-                                <div class="text-[10px] text-gray-500 mt-0.5">หน่วงเวลาส่ง 10 วิ (ทดสอบ Async callback)</div>
-                            </button>
-                        </form>
-
-                        <!-- 3. Webhook Dup x3 -->
-                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
-                            @csrf
-                            <input type="hidden" name="method" value="card">
-                            <input type="hidden" name="card_number" value="4242424242424242">
-                            <input type="hidden" name="scenario" value="webhook_dup:3">
-                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition shadow-xs">
-                                <div class="text-xs font-bold text-indigo-700">3. Duplicate x3</div>
-                                <div class="text-[10px] text-gray-500 mt-0.5">ยิงซ้ำ 3 ครั้ง (ทดสอบ Idempotent)</div>
-                            </button>
-                        </form>
-
-                        <!-- 4. Webhook Bad Sig -->
-                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
-                            @csrf
-                            <input type="hidden" name="method" value="card">
-                            <input type="hidden" name="card_number" value="4242424242424242">
-                            <input type="hidden" name="scenario" value="webhook_bad_sig">
-                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-red-500 hover:bg-red-50 transition shadow-xs">
-                                <div class="text-xs font-bold text-red-700">4. Bad Signature</div>
-                                <div class="text-[10px] text-gray-500 mt-0.5">ลายเซ็นปลอม (ปลายทางต้อง Reject 401)</div>
-                            </button>
-                        </form>
-
-                        <!-- 5. Webhook Replay Attack -->
-                        <form action="{{ route('admin.scenarios.run') }}" method="POST">
-                            @csrf
-                            <input type="hidden" name="method" value="card">
-                            <input type="hidden" name="card_number" value="4242424242424242">
-                            <input type="hidden" name="scenario" value="webhook_replay">
-                            <button type="submit" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-rose-500 hover:bg-rose-50 transition shadow-xs">
-                                <div class="text-xs font-bold text-rose-700">5. Replay Attack</div>
-                                <div class="text-[10px] text-gray-500 mt-0.5">Timestamp เก่า 1 ชม. (ต้อง Reject 401)</div>
-                            </button>
-                        </form>
-                    </div>
-                </div>
             </div>
 
             <!-- Credentials Reference -->
@@ -402,7 +333,7 @@
                                 @endif
                             </span>
                         </td>
-                        <td class="py-2.5 pr-4 text-gray-500 font-sans text-xs">{{ $p->scenario ?: ($webhookMode !== 'normal' ? $webhookMode.' (global)' : '–') }}</td>
+                        <td class="py-2.5 pr-4 text-gray-500 font-sans text-xs">{{ $webhookMode !== 'normal' ? $webhookMode.' (Admin global)' : 'normal' }}</td>
                         <td class="py-2.5 pr-4 font-sans text-xs text-gray-500">{{ $p->expires_at?->format('H:i:s') ?? '–' }}</td>
                         <td class="py-2.5 font-sans">
                             <div class="flex gap-1 flex-wrap items-center">

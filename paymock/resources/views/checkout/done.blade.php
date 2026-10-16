@@ -44,12 +44,6 @@
                     {{ $payment->status }}
                 </span>
             </div>
-            @if($payment->webhookScenario())
-            <div class="flex justify-between">
-                <span class="text-gray-500">Scenario จำลอง:</span>
-                <span class="font-mono text-xs bg-gray-200 px-1.5 py-0.5 rounded text-gray-800">{{ $payment->webhookScenario() }}</span>
-            </div>
-            @endif
             @if($payment->paid_at)
             <div class="flex justify-between">
                 <span class="text-gray-500">เวลาที่ชำระ:</span>
@@ -87,7 +81,7 @@
                 </div>
             @empty
                 <p class="text-gray-500 text-[11px] italic">
-                    {{ $payment->webhookScenario() === 'webhook_lost' ? '⛔ จำลอง Webhook Lost: ไม่ส่ง Webhook ตาม scenario' : 'ยังไม่มีการส่ง Webhook' }}
+                    ไม่มีการส่ง Webhook (ตรวจสอบ Webhook Mode ปัจจุบันใน Admin)
                 </p>
             @endforelse
         </div>
