@@ -48,8 +48,9 @@ class SendWebhookJob implements ShouldQueue
         }
 
         try {
-            $response = Http::timeout(10)
-                ->withHeaders([
+            // No fixed client timeout: webhook receivers choose their own
+            // processing window, while queue retries handle failed delivery.
+            $response = Http::withHeaders([
                     'Content-Type' => 'application/json',
                     'X-Signature'  => "t={$t},v1={$sig}",
                     'X-Event-Id'   => $delivery->event_id,

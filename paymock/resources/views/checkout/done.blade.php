@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
             type: 'paymock:payment_result',
             status: @json($payment->status),
             payment_id: @json($payment->payment_id),
-            provider_transaction_id: @json($payment->public_id),
+            id: @json($payment->public_id),
             amount: {{ (float) $payment->amount }}
         }, '*');
     }

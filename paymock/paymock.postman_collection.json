@@ -1,13 +1,14 @@
 {
   "info": {
     "name": "PayMock Gateway API Collection",
-    "description": "Merchant API ของ PayMock + Concert Backend\n\nPOST /v1/payments ต้องส่ง payment_id (รหัสฝั่งร้านค้า) ทุกครั้ง\nResponse: id = txn_… (ใช้กับ GET / cancel / QR / concert) | payment_id = รหัสร้านค้าที่ส่งไป ต้องไม่เป็น null\nหลังจากสร้างแล้วใช้ response.id เป็น path param ทั้งบัตรและ PromptPay\n\nChaos / Webhook ผิดปกติตั้งที่ PayMock Admin (ชั้น 1 chaos_mode, ชั้น 2 webhook_mode)\n\nเวลา: created_at = สร้างรายการ | paid_at = จ่ายสำเร็จ (เฉพาะ COMPLETED) | ไม่มี completed_at",
+    "description": "Merchant API ของ PayMock + Concert Backend\n\nPOST /v1/payments ต้องส่ง payment_id ทุกครั้ง; ตัวอย่าง merchant ทั่วไปใช้เลขล้วน เช่น 12 และตั้ง Idempotency-Key เป็น 12. Concert backend ใช้ booking-{id}-attempt-{n} เพื่อแยกการลองจ่ายแต่ละครั้งใน booking เดิม.\nResponse: id = txn_… คือ provider transaction ID ตัวเดียวสำหรับ GET / cancel / QR / concert; payment_id คือรหัสที่ merchant ส่งมา\n\nChaos / Webhook ผิดปกติตั้งที่ PayMock Admin (ชั้น 1 chaos_mode, ชั้น 2 webhook_mode)\n\nเวลา: created_at = สร้างรายการ | paid_at = จ่ายสำเร็จ (เฉพาะ COMPLETED) | ไม่มี completed_at",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8081", "type": "string" },
     { "key": "apiKey", "value": "pm_test_key_concert_system_2024", "type": "string" },
     { "key": "bookingCode", "value": "101", "type": "string" },
+    { "key": "bookingId", "value": "", "type": "string" },
     { "key": "paymentId", "value": "txn_test", "type": "string" },
     { "key": "promptPayId", "value": "txn_test", "type": "string" },
     { "key": "concertUrl", "value": "http://localhost:5000", "type": "string" }
@@ -19,6 +20,19 @@
     ]
   },
   "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Every direct gateway request uses one stable key per payment attempt.",
+          "if (pm.request.method === 'POST' && /\\/v1\\/payments$/.test(pm.request.url.toString()) && pm.request.body && pm.request.body.raw) {",
+          "  var body = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+          "  if (body.payment_id) pm.request.headers.upsert({ key: 'Idempotency-Key', value: String(body.payment_id) });",
+          "}"
+        ]
+      }
+    },
     {
       "listen": "test",
       "script": {
@@ -73,7 +87,6 @@
                   "});",
                   "pm.test('id is gateway txn', function () {",
                   "  pm.expect(jsonData.id).to.be.a('string').and.match(/^txn_/);",
-                  "  pm.expect(jsonData.provider_transaction_id).to.eql(jsonData.id);",
                   "});"
                 ]
               }
@@ -83,7 +96,7 @@
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "Idempotency-Key", "value": "{{bookingCode}}" }
+              { "key": "Idempotency-Key", "value": "12" }
             ],
             "body": {
               "mode": "raw",
@@ -669,8 +682,44 @@
     },
     {
       "name": "5. Concert Backend — ใช้ payment_id (บัตร + PromptPay)",
-      "description": "หลังสร้างที่ PayMock แล้ว ทุก call ของเว็บคอนเสิร์ตใช้ response.id (txn_…) เป็น provider transaction ID",
+      "description": "สร้าง booking ครั้งแรกได้ payment attempt #1. หาก FAILED/EXPIRED ให้เรียก retry-payment โดยส่ง booking_id เดิม; backend จะสร้าง payment_id และ Idempotency-Key ใหม่เป็น booking-{id}-attempt-{n}. ทุก call หลังสร้างใช้ response.payment_id (txn_…) เป็น provider transaction ID.",
       "item": [
+        {
+          "name": "POST create-booking — attempt 1",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "var j = pm.response.json();",
+              "pm.test('booking created with attempt 1', function () { pm.expect(j.ok).to.eql(true); pm.expect(j.attempt_number).to.eql(1); });",
+              "if (j.ok) { pm.collectionVariables.set('bookingId', String(j.booking_id)); pm.collectionVariables.set('paymentId', j.payment_id); }"
+            ] }
+          }],
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"seat\": \"VIP-A1\",\n  \"amount\": 3500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4000000000000002\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\"\n}" },
+            "url": { "raw": "{{concertUrl}}/api/create-booking", "host": ["{{concertUrl}}"], "path": ["api", "create-booking"] }
+          }
+        },
+        {
+          "name": "POST retry-payment — attempt ใหม่ใน booking เดิม",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "var j = pm.response.json();",
+              "pm.test('same booking, next payment attempt', function () { pm.expect(j.ok).to.eql(true); pm.expect(String(j.booking_id)).to.eql(pm.collectionVariables.get('bookingId')); pm.expect(j.attempt_number).to.eql(2); });",
+              "if (j.ok) pm.collectionVariables.set('paymentId', j.payment_id);"
+            ] }
+          }],
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"booking_id\": \"{{bookingId}}\",\n  \"method\": \"card\",\n  \"card_number\": \"4242424242424242\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\"\n}" },
+            "url": { "raw": "{{concertUrl}}/api/retry-payment", "host": ["{{concertUrl}}"], "path": ["api", "retry-payment"] }
+          }
+        },
         {
           "name": "GET booking-status ?payment_id=",
           "request": {

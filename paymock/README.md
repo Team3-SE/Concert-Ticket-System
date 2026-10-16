@@ -67,7 +67,7 @@ php artisan schedule:work
 ```http
 POST /v1/payments
 Authorization: Bearer {API_KEY}
-Idempotency-Key: {BOOKING_CODE}
+Idempotency-Key: 12
 Content-Type: application/json
 
 {
@@ -85,7 +85,6 @@ Content-Type: application/json
 ```json
 {
   "id": "txn_01h...",
-  "provider_transaction_id": "txn_01h...",
   "payment_id": "12",
   "amount": 1500.00,
   "currency": "THB",
@@ -100,7 +99,9 @@ Content-Type: application/json
 }
 ```
 
-> **Idempotency:** ถ้าส่ง `Idempotency-Key` เดียวกันซ้ำ PayMock จะคืนรายการเดิมทันทีโดยไม่สร้างใหม่
+> **Idempotency:** Merchant ทั่วไปใช้เลขเดียวกันได้ เช่น `payment_id: "12"` และ `Idempotency-Key: 12`, แล้วส่งซ้ำเฉพาะ retry หลัง timeout. Concert backend ใช้ `booking-42-attempt-1`/`booking-42-attempt-2` ภายในเพื่อแยกการลองจ่ายแต่ละครั้งใน booking เดิม.
+
+> **Identifier:** `id` (`txn_...`) คือ provider transaction ID เพียงค่าเดียวสำหรับ GET/cancel/QR/polling; `payment_id` คือเลขอ้างอิงของ merchant. ไม่มี `provider_transaction_id` เพราะซ้ำกับ `id`.
 
 ---
 
@@ -181,12 +182,12 @@ Authorization: Bearer {API_KEY}
 try {
     $response = Http::withToken(config('services.paymock.key'))
         ->withHeaders([
-            'Idempotency-Key' => $booking->b_booking_code,
+            'Idempotency-Key' => $paymentAttempt->merchant_payment_id,
         ])
         ->timeout(8)
         ->retry(2, 500, throw: false)
         ->post(config('services.paymock.url') . '/v1/payments', [
-            'payment_id'   => (string) $booking->id,
+            'payment_id'   => $paymentAttempt->merchant_payment_id,
             'amount'       => (float) $booking->b_total_amount,
             'method'       => $method, // 'card' or 'promptpay'
             'callback_url' => route('webhooks.payment'),

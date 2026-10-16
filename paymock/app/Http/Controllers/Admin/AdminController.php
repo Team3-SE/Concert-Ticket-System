@@ -66,6 +66,12 @@ class AdminController extends Controller
     public function setChaos(Request $request): RedirectResponse
     {
         $mode = $request->input('chaos_mode', 'normal');
+        if (in_array($mode, ['slow', 'timeout'], true)) {
+            // Both delay modes are configurable from Admin. The cap prevents a
+            // typo from blocking a PHP worker indefinitely.
+            $seconds = max(0, min(3600, (int) $request->input('delay_seconds', 5)));
+            $mode .= ':' . $seconds;
+        }
         if (! \App\Support\MockMode::isChaos($mode)) {
             $mode = 'normal';
         }
@@ -185,9 +191,8 @@ class AdminController extends Controller
 
         $txnId = 'txn_TEST_' . strtoupper(substr(uniqid(), -8));
         $body = json_encode([
-            'id'                      => $txnId,
-            'provider_transaction_id' => $txnId,
-            'payment_id'              => '42',
+            'id'           => $txnId,
+            'payment_id'   => '42',
             'event'                   => $event,
             'amount'       => 1200.00,
             'currency'     => 'THB',
@@ -208,8 +213,7 @@ class AdminController extends Controller
         }
 
         try {
-            $response = \Illuminate\Support\Facades\Http::timeout(10)
-                ->withHeaders([
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
                     'Content-Type' => 'application/json',
                     'X-Signature'  => "t={$t},v1={$sig}",
                     'X-Event-Id'   => 'TEST_' . strtoupper(substr(uniqid(), -8)),

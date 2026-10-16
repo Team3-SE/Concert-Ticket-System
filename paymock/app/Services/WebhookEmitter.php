@@ -27,9 +27,9 @@ class WebhookEmitter
         $delay  = ($sc === 'webhook_delay') ? (int) ($arg ?: 60) : 0;
 
         $payload = [
-            'id'                      => $payment->public_id,
-            'provider_transaction_id' => $payment->public_id,
-            'payment_id'              => $payment->merchantPaymentId(),
+            // `id` is the canonical provider transaction ID in webhooks too.
+            'id'           => $payment->public_id,
+            'payment_id'   => $payment->merchantPaymentId(),
             'event'                   => $event,
             'amount'                  => (float) $payment->amount,
             'currency'     => $payment->currency,

@@ -29,7 +29,6 @@ class DemoController extends Controller
         return response()->json([
             'ok'                      => true,
             'payment_id'              => $payment->merchantPaymentId(),
-            'provider_transaction_id' => $payment->public_id,
             'checkout_url'            => route('checkout.show', $payment->public_id),
         ]);
     }

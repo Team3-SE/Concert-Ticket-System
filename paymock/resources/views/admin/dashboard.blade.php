@@ -142,13 +142,19 @@
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
                     <option value="normal" {{ $chaosMode === 'normal' ? 'selected' : '' }}>✅ Normal (ทำงานปกติ)</option>
                     <option value="down" {{ $chaosMode === 'down' ? 'selected' : '' }}>🔴 Down (503 Gateway ล่ม)</option>
-                    <option value="slow:5" {{ $chaosMode === 'slow:5' ? 'selected' : '' }}>🐢 Slow (หน่วงเวลา 5 วินาที)</option>
-                    <option value="timeout:30" {{ $chaosMode === 'timeout:30' ? 'selected' : '' }}>⏳ Timeout 30s (หน่วงแต่สร้างจริง)</option>
+                    <option value="slow" {{ str_starts_with($chaosMode, 'slow:') ? 'selected' : '' }}>🐢 Slow (หน่วงก่อนประมวลผล)</option>
+                    <option value="timeout" {{ str_starts_with($chaosMode, 'timeout:') ? 'selected' : '' }}>⏳ Timeout simulation (หน่วงก่อนตอบ แต่สร้าง payment จริง)</option>
                     <option value="error_rate:30" {{ $chaosMode === 'error_rate:30' ? 'selected' : '' }}>🎲 Error Rate 30% (สุ่ม 500)</option>
                     <option value="rate_limit" {{ $chaosMode === 'rate_limit' ? 'selected' : '' }}>🚦 Rate Limit (429 Too Many Requests)</option>
                     <option value="bad_json" {{ $chaosMode === 'bad_json' ? 'selected' : '' }}>💥 Bad JSON (502 HTML Body)</option>
                     <option value="bad_auth" {{ $chaosMode === 'bad_auth' ? 'selected' : '' }}>🔑 Bad Auth (401 Unauthorized)</option>
                 </select>
+                <label class="block text-xs text-gray-600">
+                    เวลา delay (วินาที, ใช้กับ Slow และ Timeout simulation; 0-3600)
+                    <input type="number" name="delay_seconds" min="0" max="3600"
+                           value="{{ (int) (explode(':', $chaosMode, 2)[1] ?? 5) }}"
+                           class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
+                </label>
                 <button type="submit"
                         class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg text-sm transition shadow">
                     Apply Chaos Mode
@@ -172,7 +178,6 @@
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
                     <option value="normal" {{ $webhookMode === 'normal' ? 'selected' : '' }}>✅ Normal (ส่ง webhook ตามจริง)</option>
                     <option value="webhook_lost" {{ $webhookMode === 'webhook_lost' ? 'selected' : '' }}>🟡 Lost (ไม่ส่งเลย — ทดสอบ reconcile)</option>
-                    <option value="webhook_delay:10" {{ $webhookMode === 'webhook_delay:10' ? 'selected' : '' }}>🟠 Delay 10s</option>
                     <option value="webhook_dup:3" {{ $webhookMode === 'webhook_dup:3' ? 'selected' : '' }}>🟣 Duplicate ×3</option>
                     <option value="webhook_bad_sig" {{ $webhookMode === 'webhook_bad_sig' ? 'selected' : '' }}>🔴 Bad Signature</option>
                     <option value="webhook_replay" {{ $webhookMode === 'webhook_replay' ? 'selected' : '' }}>🟤 Replay (timestamp เก่า 1 ชม.)</option>

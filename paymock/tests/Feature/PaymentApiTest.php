@@ -36,7 +36,7 @@ class PaymentApiTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonStructure([
-                'id', 'provider_transaction_id', 'payment_id', 'amount', 'method', 'status',
+                'id', 'payment_id', 'amount', 'method', 'status',
                 'expires_at', 'created_at',
             ])
             ->assertJson([
@@ -45,7 +45,7 @@ class PaymentApiTest extends TestCase
                 'status'     => 'PENDING',
             ]);
 
-        $this->assertEquals($response->json('id'), $response->json('provider_transaction_id'));
+        $this->assertNull($response->json('provider_transaction_id'));
         $this->assertDatabaseHas('payments', [
             'payment_id'      => '101',
             'idempotency_key' => 'BOOKING_001',

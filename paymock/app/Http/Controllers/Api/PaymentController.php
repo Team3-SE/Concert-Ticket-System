@@ -125,9 +125,11 @@ class PaymentController extends Controller
     private function formatPayment(Payment $payment): array
     {
         $data = [
-            'id'                       => $payment->public_id,
-            'provider_transaction_id'  => $payment->public_id,
-            'payment_id'               => $payment->merchantPaymentId(),
+            // `id` is the canonical PayMock provider transaction ID. Do not
+            // return a second alias for it; use this value for GET, cancel,
+            // QR, polling and reconciliation.
+            'id'           => $payment->public_id,
+            'payment_id'   => $payment->merchantPaymentId(),
             'amount'       => (float) $payment->amount,
             'currency'     => $payment->currency,
             'method'       => $payment->method,

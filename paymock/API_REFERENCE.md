@@ -44,7 +44,7 @@ Authorization: Bearer pm_test_key_concert_system_2024
 |--------|----------|-----|----------|
 | `Authorization` | ✅ ทุก request | `Bearer pm_test_key_concert_system_2024` | API Key |
 | `Content-Type` | ✅ POST | `application/json` | |
-| `Idempotency-Key` | ✅ แนะนำ | string ไม่ซ้ำ เช่น booking code | ป้องกัน duplicate เมื่อ retry |
+| `Idempotency-Key` | ✅ แนะนำ | ค่าเดียวกับ `payment_id` ของ payment attempt เช่น `12` | ป้องกัน duplicate เมื่อ retry request เดิม |
 
 ---
 
@@ -103,7 +103,7 @@ Authorization: Bearer pm_test_key_concert_system_2024
 POST /v1/payments HTTP/1.1
 Authorization: Bearer pm_test_key_concert_system_2024
 Content-Type: application/json
-Idempotency-Key: b_TK2024001
+Idempotency-Key: 12
 ```
 
 ```json
@@ -154,9 +154,17 @@ Idempotency-Key: b_TK2024001
 
 ### Idempotency
 
-- ถ้าส่ง `Idempotency-Key` header → ใช้ค่านั้น
-- ถ้าไม่ส่ง → ใช้ `payment_id` เป็น key อัตโนมัติ
-- ถ้าส่ง key เดิมซ้ำ → **คืน payment เดิม** (ไม่สร้างใหม่) ใช้เมื่อ retry หลัง timeout
+- Merchant ทั่วไปใช้เลขล้วนได้ เช่น `payment_id: "12"` และ `Idempotency-Key: 12`
+- Concert backend ใช้ `booking-42-attempt-1` เฉพาะภายใน เพื่อแยก attempt ของ booking เดียวกัน
+- retry เพราะ timeout ของ attempt เดิม ต้องส่ง body และ key เดิม → **คืน payment เดิม** (ไม่สร้างใหม่)
+- บัตรถูกปฏิเสธ/PromptPay หมดอายุแล้วต้องการจ่ายใหม่ใน booking เดิม ให้สร้าง attempt ใหม่: `booking-42-attempt-2` ทั้งสองค่า จึงได้ payment ใหม่โดยไม่ต้องสร้าง booking ใหม่
+- หากไม่ส่ง header ระบบใช้ `payment_id` เป็น key อัตโนมัติ แต่ production ควรส่ง header เสมอเพื่อทำให้ intent ชัดเจน
+
+### Identifier
+
+- `id` คือ provider transaction ID (`txn_...`) เพียงค่าเดียว ใช้กับ GET, cancel, QR, polling, reconcile และ webhook `payload.id`
+- `payment_id` คือรหัสของ merchant ที่ส่งเข้ามา เช่น `"12"`
+- ไม่มี `provider_transaction_id` แล้ว เพราะเคยมีค่าเท่ากับ `id` ทุกครั้งและซ้ำซ้อน
 
 ### Response 201 Created (PromptPay)
 

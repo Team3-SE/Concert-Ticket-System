@@ -36,12 +36,139 @@ $db->exec("
         payload TEXT,
         received_at TEXT
     );
+    CREATE TABLE IF NOT EXISTS payment_attempts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id INTEGER NOT NULL,
+        attempt_number INTEGER NOT NULL,
+        merchant_payment_id TEXT NOT NULL UNIQUE,
+        idempotency_key TEXT NOT NULL UNIQUE,
+        provider_transaction_id TEXT UNIQUE,
+        method TEXT NOT NULL,
+        amount REAL NOT NULL,
+        status TEXT NOT NULL DEFAULT 'PENDING',
+        failure_code TEXT,
+        created_at TEXT NOT NULL,
+        UNIQUE(booking_id, attempt_number)
+    );
 ");
 
 // Migrate: add rejection_reason and response_code if not exist (safe for existing DBs)
 try { $db->exec("ALTER TABLE webhook_logs ADD COLUMN rejection_reason TEXT"); } catch(Exception $e) {}
 try { $db->exec("ALTER TABLE webhook_logs ADD COLUMN response_code INTEGER DEFAULT 200"); } catch(Exception $e) {}
 try { $db->exec("ALTER TABLE webhook_logs ADD COLUMN payment_id TEXT"); } catch(Exception $e) {}
+
+/** Map the gateway payment state to the booking state. */
+function bookingStatus(string $gatewayStatus): string
+{
+    return match ($gatewayStatus) {
+        'COMPLETED' => 'PAID',
+        'FAILED'    => 'FAILED',
+        'EXPIRED'   => 'EXPIRED',
+        default     => 'PENDING',
+    };
+}
+
+/** Replace a Docker-only URL so the browser can use it. */
+function browserUrl(?string $url): ?string
+{
+    return $url === null ? null : str_replace(
+        ['http://paymock:80', 'http://paymock'],
+        'http://localhost:8081',
+        $url
+    );
+}
+
+/**
+ * Create one payment attempt for an existing booking.
+ * payment_id and Idempotency-Key deliberately match the attempt, not the booking.
+ */
+function createPaymentAttempt(PDO $db, array $booking, array $input): array
+{
+    $numberStmt = $db->prepare('SELECT COALESCE(MAX(attempt_number), 0) + 1 FROM payment_attempts WHERE booking_id = ?');
+    $numberStmt->execute([$booking['id']]);
+    $attemptNumber = (int) $numberStmt->fetchColumn();
+    $merchantPaymentId = 'booking-' . $booking['id'] . '-attempt-' . $attemptNumber;
+    $method = $input['method'] ?? 'promptpay';
+    $createdAt = date('Y-m-d H:i:s');
+
+    $attemptStmt = $db->prepare(
+        'INSERT INTO payment_attempts (booking_id, attempt_number, merchant_payment_id, idempotency_key, method, amount, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    $attemptStmt->execute([
+        $booking['id'], $attemptNumber, $merchantPaymentId, $merchantPaymentId,
+        $method, $booking['amount'], 'PENDING', $createdAt,
+    ]);
+
+    $callbackUrl = getenv('MY_WEBHOOK_URL') ?: 'http://concert_backend:5000/api/webhook';
+    $postData = [
+        'payment_id'   => $merchantPaymentId,
+        'amount'       => (float) $booking['amount'],
+        'method'       => $method,
+        'callback_url' => $callbackUrl,
+        'expires_in'   => 600,
+    ];
+
+    if ($method === 'card') {
+        $postData['card_number'] = $input['card_number'] ?? '4242424242424242';
+        $postData['exp_month']   = $input['exp_month'] ?? '12';
+        $postData['exp_year']    = $input['exp_year'] ?? '28';
+        $postData['cvc']         = $input['cvc'] ?? '123';
+    }
+
+    $paymockApiUrl = getenv('PAYMOCK_URL') ?: 'http://paymock:80/v1/payments';
+    $ch = curl_init($paymockApiUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: Bearer pm_test_key_concert_system_2024',
+        'Content-Type: application/json',
+        'Idempotency-Key: ' . $merchantPaymentId,
+    ]);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    $rawResponse = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $gateway = json_decode($rawResponse ?: '', true) ?? [];
+    if ($httpCode !== 201 || empty($gateway['id'])) {
+        $db->prepare('UPDATE payment_attempts SET status = ?, failure_code = ? WHERE merchant_payment_id = ?')
+            ->execute(['GATEWAY_ERROR', 'gateway_request_failed', $merchantPaymentId]);
+        return [
+            'ok' => false,
+            'http_code' => $httpCode ?: 500,
+            'merchant_payment_id' => $merchantPaymentId,
+            'raw' => $rawResponse,
+        ];
+    }
+
+    $gatewayStatus = $gateway['status'] ?? 'PENDING';
+    $providerId = $gateway['id'];
+    $db->prepare('UPDATE payment_attempts SET provider_transaction_id = ?, status = ?, failure_code = ? WHERE merchant_payment_id = ?')
+        ->execute([$providerId, $gatewayStatus, $gateway['failure_code'] ?? null, $merchantPaymentId]);
+    $db->prepare('UPDATE bookings SET payment_id = ?, status = ?, paid_at = ? WHERE id = ?')
+        ->execute([
+            $providerId,
+            bookingStatus($gatewayStatus),
+            $gatewayStatus === 'COMPLETED' ? ($gateway['paid_at'] ?? $createdAt) : null,
+            $booking['id'],
+        ]);
+
+    return [
+        'ok' => true,
+        'booking_id' => (int) $booking['id'],
+        'attempt_number' => $attemptNumber,
+        'merchant_payment_id' => $merchantPaymentId,
+        'payment_id' => $providerId,
+        'provider_transaction_id' => $providerId,
+        'status' => $gatewayStatus,
+        'failure_code' => $gateway['failure_code'] ?? null,
+        'method' => $gateway['method'] ?? $method,
+        'qrcode_url' => browserUrl($gateway['qrcode_url'] ?? null),
+        'bank_simulator_url' => browserUrl($gateway['bank_simulator_url'] ?? null),
+    ];
+}
 
 
 // ─────────────────────────────────────────────────────────────
@@ -81,7 +208,7 @@ if (($uri === '/api/webhook' || $uri === '/webhooks/payment') && $method === 'PO
     // ดึง payload (parse ก่อน log ทุกกรณี)
     $payload    = json_decode($rawBody, true) ?? [];
     $paymentId  = $payload['id'] ?? null;
-    $orderRef   = $payload['order_ref'] ?? null;
+    $orderRef   = $payload['payment_id'] ?? null;
     $event      = $payload['event'] ?? 'unknown';
     $status     = $payload['status'] ?? 'PENDING';
 
@@ -100,16 +227,34 @@ if (($uri === '/api/webhook' || $uri === '/webhooks/payment') && $method === 'PO
         exit;
     }
 
-    // ✅ Signature ถูกต้อง → อัปเดตสถานะตั๋ว
+    // ✅ Signature ถูกต้อง → อัปเดต payment attempt ก่อน
     if ($paymentId) {
-        $bookingStatus = match($status) {
-            'COMPLETED' => 'PAID',
-            'FAILED'    => 'FAILED',
-            'EXPIRED'   => 'EXPIRED',
-            default     => 'PENDING'
-        };
-        $stmtUpdate = $db->prepare("UPDATE bookings SET status = ?, paid_at = ? WHERE payment_id = ?");
-        $stmtUpdate->execute([$bookingStatus, $payload['paid_at'] ?? date('Y-m-d H:i:s'), $paymentId]);
+        $attemptStmt = $db->prepare('SELECT * FROM payment_attempts WHERE provider_transaction_id = ?');
+        $attemptStmt->execute([$paymentId]);
+        $attempt = $attemptStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($attempt) {
+            $db->prepare('UPDATE payment_attempts SET status = ?, failure_code = ? WHERE id = ?')
+                ->execute([$status, $payload['failure_code'] ?? null, $attempt['id']]);
+
+            // Only the current attempt may change the booking. A delayed webhook from
+            // an older failed attempt must never overwrite the retried payment state.
+            $stmtUpdate = $db->prepare('UPDATE bookings SET status = ?, paid_at = ? WHERE id = ? AND payment_id = ?');
+            $stmtUpdate->execute([
+                bookingStatus($status),
+                $status === 'COMPLETED' ? ($payload['paid_at'] ?? date('Y-m-d H:i:s')) : null,
+                $attempt['booking_id'],
+                $paymentId,
+            ]);
+        } else {
+            // Compatibility for payments created before payment_attempts existed.
+            $stmtUpdate = $db->prepare('UPDATE bookings SET status = ?, paid_at = ? WHERE payment_id = ?');
+            $stmtUpdate->execute([
+                bookingStatus($status),
+                $status === 'COMPLETED' ? ($payload['paid_at'] ?? date('Y-m-d H:i:s')) : null,
+                $paymentId,
+            ]);
+        }
     }
 
     echo json_encode(['ok' => true, 'message' => 'Webhook received and processed']);
@@ -126,102 +271,44 @@ if ($uri === '/api/create-booking' && $method === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true) ?? [];
     $seat = $input['seat'] ?? 'VIP-01';
     $amount = (float)($input['amount'] ?? 1800.00);
-    $methodType = $input['method'] ?? 'promptpay';
-
     $orderRef = 'TK-' . date('ymd') . '-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 5));
 
     // บันทึกลงระบบคอนเสิร์ต สถานะเริ่มต้น PENDING
     $stmt = $db->prepare("INSERT INTO bookings (order_ref, concert_title, seat, amount, status, created_at) VALUES (?, ?, ?, ?, 'PENDING', ?)");
     $stmt->execute([$orderRef, 'Coldplay Live in Bangkok 2026', $seat, $amount, date('Y-m-d H:i:s')]);
-    $merchantPaymentId = (string) $db->lastInsertId();
+    $bookingId = (int) $db->lastInsertId();
+    $booking = $db->query('SELECT * FROM bookings WHERE id = ' . $bookingId)->fetch(PDO::FETCH_ASSOC);
+    $result = createPaymentAttempt($db, $booking, $input);
+    http_response_code($result['ok'] ? 200 : $result['http_code']);
+    echo json_encode($result);
+    exit;
+}
 
-    // ยิง cURL ไปหา PayMock Gateway
-    // PayMock รันใน Docker network เดียวกัน หรือบน host
-    $paymockApiUrl = getenv('PAYMOCK_URL') ?: 'http://paymock:80/v1/payments';
-    
-    // Webhook callback URL ที่ PayMock จะยิงกลับมา
-    $callbackUrl = getenv('MY_WEBHOOK_URL') ?: 'http://concert_backend:5000/api/webhook';
+// ─────────────────────────────────────────────────────────────
+// 2.1 API: ลองจ่ายใหม่ใน booking เดิม (สร้าง payment attempt ใหม่)
+// ─────────────────────────────────────────────────────────────
+if ($uri === '/api/retry-payment' && $method === 'POST') {
+    header('Content-Type: application/json');
+    $input = json_decode(file_get_contents('php://input'), true) ?? [];
+    $bookingId = (int) ($input['booking_id'] ?? 0);
+    $stmt = $db->prepare('SELECT * FROM bookings WHERE id = ?');
+    $stmt->execute([$bookingId]);
+    $booking = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    $postData = [
-        'payment_id'   => $merchantPaymentId,
-        'amount'       => $amount,
-        'method'       => $methodType,
-        'callback_url' => $callbackUrl,
-        'expires_in'   => 600,
-    ];
-
-    if ($methodType === 'card') {
-        $postData['card_number'] = $input['card_number'] ?? '4242424242424242';
-        $postData['exp_month']   = $input['exp_month'] ?? '12';
-        $postData['exp_year']    = $input['exp_year'] ?? '28';
-        $postData['cvc']         = $input['cvc'] ?? '123';
+    if (!$booking) {
+        http_response_code(404);
+        echo json_encode(['ok' => false, 'error' => 'booking_not_found']);
+        exit;
+    }
+    if ($booking['status'] === 'PAID') {
+        http_response_code(409);
+        echo json_encode(['ok' => false, 'error' => 'booking_already_paid']);
+        exit;
     }
 
-    $headers = [
-        'Authorization: Bearer pm_test_key_concert_system_2024',
-        'Content-Type: application/json',
-        'Idempotency-Key: ' . $orderRef,
-    ];
-
-    $ch = curl_init($paymockApiUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    $resData = json_decode($response, true);
-
-    if ($httpCode === 201 && isset($resData['id'])) {
-        // อัปเดต payment_id และสถานะทันทีถ้าได้รับผลแล้ว
-        $initialStatus = $resData['status'] ?? 'PENDING';
-        $paidAt = $resData['paid_at'] ?? null;
-
-        if ($initialStatus === 'COMPLETED') {
-            $stmt2 = $db->prepare("UPDATE bookings SET payment_id = ?, status = 'PAID', paid_at = ? WHERE order_ref = ?");
-            $stmt2->execute([$resData['id'], $paidAt ?: date('Y-m-d H:i:s'), $orderRef]);
-        } elseif ($initialStatus === 'FAILED') {
-            $stmt2 = $db->prepare("UPDATE bookings SET payment_id = ?, status = 'FAILED' WHERE order_ref = ?");
-            $stmt2->execute([$resData['id'], $orderRef]);
-        } else {
-            $stmt2 = $db->prepare("UPDATE bookings SET payment_id = ? WHERE order_ref = ?");
-            $stmt2->execute([$resData['id'], $orderRef]);
-        }
-
-        // แปลง host ภายใน docker (paymock:80) เป็น localhost:8081 เพื่อให้เบราว์เซอร์เปิดได้
-        $qrcodeUrl = isset($resData['qrcode_url']) ? str_replace(
-            ['http://paymock:80', 'http://paymock'],
-            'http://localhost:8081',
-            $resData['qrcode_url']
-        ) : null;
-
-        $bankSimulatorUrl = isset($resData['bank_simulator_url']) ? str_replace(
-            ['http://paymock:80', 'http://paymock'],
-            'http://localhost:8081',
-            $resData['bank_simulator_url']
-        ) : null;
-
-        echo json_encode([
-            'ok'                 => true,
-            'payment_id'         => $resData['id'],
-            'status'             => $resData['status'] ?? 'PENDING',
-            'failure_code'       => $resData['failure_code'] ?? null,
-            'method'             => $resData['method'] ?? $methodType,
-            'qrcode_url'         => $qrcodeUrl,
-            'bank_simulator_url' => $bankSimulatorUrl,
-        ]);
-    } else {
-        http_response_code($httpCode ?: 500);
-        echo json_encode([
-            'ok'       => false,
-            'error'    => 'paymock_error',
-            'raw'      => $response,
-            'httpCode' => $httpCode
-        ]);
-    }
+    $result = createPaymentAttempt($db, $booking, $input);
+    http_response_code($result['ok'] ? 200 : $result['http_code']);
+    echo json_encode($result);
     exit;
 }
 
@@ -269,8 +356,17 @@ if ($uri === '/api/reconcile-booking' && $method === 'POST') {
             default     => $booking['status']
         };
 
+        // Reconciliation targets one provider payment attempt.  Only update the
+        // booking when it still points at that attempt, so an old attempt cannot
+        // overwrite a newer retry.
+        $db->prepare('UPDATE payment_attempts SET status = ?, failure_code = ? WHERE provider_transaction_id = ?')
+            ->execute([$gwStatus, $gwData['failure_code'] ?? null, $paymentId]);
         $stmtUp = $db->prepare("UPDATE bookings SET status = ?, paid_at = ? WHERE payment_id = ?");
-        $stmtUp->execute([$newBookingStatus, $paidAt ?: date('Y-m-d H:i:s'), $paymentId]);
+        $stmtUp->execute([
+            $newBookingStatus,
+            $gwStatus === 'COMPLETED' ? ($paidAt ?: date('Y-m-d H:i:s')) : null,
+            $paymentId,
+        ]);
 
         echo json_encode([
             'ok'             => true,
@@ -327,6 +423,8 @@ if ($uri === '/api/cancel-booking' && $method === 'POST') {
     $gwData = json_decode($gwResponse, true) ?? [];
 
     if ($gwCode === 200 && ($gwData['ok'] ?? false)) {
+        $db->prepare("UPDATE payment_attempts SET status = 'FAILED', failure_code = ? WHERE provider_transaction_id = ?")
+            ->execute([$gwData['failure_code'] ?? 'cancelled', $paymentId]);
         $stmtUp = $db->prepare("UPDATE bookings SET status = 'FAILED' WHERE payment_id = ?");
         $stmtUp->execute([$paymentId]);
         echo json_encode([
@@ -361,9 +459,17 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
     $stmt2->execute([$paymentId]);
     $logs = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
+    $attempts = [];
+    if ($booking) {
+        $attemptStmt = $db->prepare('SELECT attempt_number, merchant_payment_id, provider_transaction_id, method, status, failure_code, created_at FROM payment_attempts WHERE booking_id = ? ORDER BY attempt_number DESC');
+        $attemptStmt->execute([$booking['id']]);
+        $attempts = $attemptStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     echo json_encode([
-        'booking' => $booking ?: null,
-        'logs'    => $logs
+        'booking'  => $booking ?: null,
+        'attempts' => $attempts,
+        'logs'     => $logs
     ]);
     exit;
 }
@@ -636,6 +742,8 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
         let currentSeat = 'VIP-A1';
         let currentAmount = 3500;
         let currentPaymentId = null;
+        let currentBookingId = null;
+        let currentBookingStatus = null;
         let pollingTimer = null;
 
         function updatePrice(seat, amount) {
@@ -648,7 +756,10 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
             const method = document.getElementById('paymentMethod').value;
             const cardSection = document.getElementById('cardInputSection');
             const bookBtnText = document.getElementById('bookBtnText');
-            if (method === 'card') {
+            const retrying = currentBookingId && ['FAILED', 'EXPIRED'].includes(currentBookingStatus);
+            if (retrying) {
+                bookBtnText.innerText = '🔁 ลองจ่ายใหม่ (Booking เดิม)';
+            } else if (method === 'card') {
                 cardSection.style.display = 'block';
                 bookBtnText.innerText = '⚡ ชำระเงินด้วยบัตรทันที (Direct API)';
             } else {
@@ -682,8 +793,12 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
             }
 
             try {
-                // 1. เรียก Backend ตัวเอง (port 5000)
-                const res = await fetch('/api/create-booking', {
+                // A declined or expired payment retries on the same booking.
+                const retrying = currentBookingId && ['FAILED', 'EXPIRED'].includes(currentBookingStatus);
+                if (retrying) {
+                    payload.booking_id = currentBookingId;
+                }
+                const res = await fetch(retrying ? '/api/retry-payment' : '/api/create-booking', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -692,6 +807,8 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
 
                 if (data.ok) {
                     currentPaymentId = data.payment_id;
+                    currentBookingId = data.booking_id;
+                    currentBookingStatus = data.status;
                     showBookingCard(data.payment_id, currentSeat, currentAmount, data.status);
 
                     if (method === 'promptpay' && data.qrcode_url) {
@@ -749,6 +866,7 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                 badge.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
                 badge.innerText = '❌ FAILED' + (reason ? ` (${reason})` : '');
                 if (recSection) recSection.style.display = 'none';
+                document.getElementById('bookBtnText').innerText = '🔁 ลองจ่ายใหม่ (Booking เดิม)';
             } else if (status === 'REJECTED') {
                 badge.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
                 badge.innerText = '🔒 REJECTED (Signature ปลอม - ปฏิเสธออกตั๋ว)';
@@ -757,6 +875,7 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                 badge.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30';
                 badge.innerText = '⏳ PENDING (รอชำระเงิน / รอ Webhook)';
                 if (recSection) recSection.style.display = 'flex';
+                toggleCardInputs();
             }
         }
 
@@ -771,6 +890,8 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                 const data = await res.json();
 
                 if (data.booking) {
+                    currentBookingId = data.booking.id;
+                    currentBookingStatus = data.booking.status;
                     const hasRejected = data.logs && data.logs.some(l => parseInt(l.signature_valid) === 0);
                     if (data.booking.status === 'PAID') {
                         updateBadge('PAID');
@@ -807,6 +928,7 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                 });
                 const data = await res.json();
                 if (data.ok) {
+                    currentBookingStatus = 'FAILED';
                     updateBadge('FAILED', data.failure_code || 'cancelled');
                     closeModal();
                     if (pollingTimer) clearInterval(pollingTimer);
@@ -833,6 +955,9 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                     body: JSON.stringify({ payment_id: currentPaymentId })
                 });
                 const data = await res.json();
+                if (data.ok) {
+                    currentBookingStatus = data.booking_status;
+                }
                 if (data.ok && data.booking_status === 'PAID') {
                     updateBadge('PAID');
                     document.getElementById('cardPaidAt').innerText = new Date().toLocaleTimeString() + ' (Reconciled)';
@@ -840,6 +965,9 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                     if (pollingTimer) clearInterval(pollingTimer);
                     alert('✅ Reconcile สำเร็จ! Gateway ยืนยันสถานะ COMPLETED -> ออกตั๋วเรียบร้อย');
                 } else {
+                    if (data.ok && ['FAILED', 'EXPIRED'].includes(data.booking_status)) {
+                        updateBadge(data.booking_status, data.failure_code);
+                    }
                     alert('ผลการ Reconcile: ' + JSON.stringify(data));
                 }
             } catch (err) {
