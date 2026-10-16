@@ -10,6 +10,9 @@
 @section('body_class', 'page-home')
 
 @section('content')
+@if(session('status'))
+  <div class="home-flash">{{ session('status') }}</div>
+@endif
 {{-- Search Bar --}}
 <div class="search-wrap">
   <div class="search-box">
@@ -147,7 +150,12 @@
 
     {{-- แสดง error --}}
     @if(session('open_modal') === 'register' && $errors->any())
-      <div class="modal-error">{{ $errors->first() }}</div>
+      <div class="modal-error">
+        {{ $errors->first() }}
+        @if(session('pending_verify'))
+          <a href="{{ route('verification.notice') }}">ส่งลิงก์ยืนยันอีกครั้ง</a>
+        @endif
+      </div>
     @endif
 
     <form id="registerForm" method="POST" action="{{ route('auth.register') }}">

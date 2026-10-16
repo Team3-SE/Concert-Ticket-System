@@ -188,6 +188,26 @@
     background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;
     border-radius:8px;padding:9px 13px;font-size:12px;margin-bottom:14px;
   }
+  .modal-error a{color:#b91c1c;font-weight:700;margin-left:6px;}
+  .modal-success{
+    background:#ecfdf3;border:1px solid #abefc6;color:#067647;
+    border-radius:8px;padding:9px 13px;font-size:12px;margin-bottom:14px;
+  }
+  .home-flash{
+    max-width:1100px;margin:16px auto 0;padding:10px 16px;
+    background:#e9f8ef;border:1px solid #b5e6c8;color:#166534;
+    border-radius:8px;font-size:13px;
+  }
+  /* หน้ายืนยันอีเมล */
+  .verify-wrap{display:flex;justify-content:center;padding:60px 16px;}
+  .verify-card{
+    width:100%;max-width:440px;background:#fff;border-radius:16px;
+    padding:36px 32px;text-align:center;box-shadow:0 10px 40px rgba(10,16,50,.12);
+  }
+  .verify-card h1{font-size:22px;font-weight:800;color:var(--navy-800);margin-bottom:12px;}
+  .verify-text{font-size:14px;color:var(--gray-700);line-height:1.7;}
+  .verify-hint{font-size:12px;color:var(--gray-500);margin:12px 0 20px;}
+  .verify-back{display:inline-block;margin-top:16px;font-size:12px;color:var(--gray-500);}
   .modal h2{
     text-align:center;color:var(--navy-800);font-size:19px;font-weight:800;margin-bottom:4px;
   }
