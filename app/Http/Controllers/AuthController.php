@@ -10,7 +10,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\AppUser;
-use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -20,7 +19,7 @@ class AuthController extends Controller
 {
     /**
      * register(request)
-     * ตรวจสอบข้อมูลสมัครสมาชิก สร้างบัญชีผู้ใช้ (role = CUSTOMER) แล้วเข้าสู่ระบบให้ทันที
+     * ตรวจสอบข้อมูลสมัครสมาชิก สร้างบัญชีผู้ใช้ (role = USER ตรงกับ app_user.role ใน database) แล้วเข้าสู่ระบบให้ทันที
      * param : request
      * return : RedirectResponse ไปหน้าแรก (ถ้าข้อมูลไม่ถูกต้องจะกลับหน้าเดิมพร้อม error)
      */

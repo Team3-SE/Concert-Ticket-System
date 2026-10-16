@@ -42,9 +42,9 @@
   main.content{padding:46px 40px 60px;background:#eef2fb;flex:1;}
   .team-header{background:#0b2f61;border-bottom:2px solid #f47b1f;min-height:68px;padding:0 40px;}
   .page-title{
-    font-size:15px;font-weight:700;color:var(--text);
-    border-left:4px solid var(--orange);padding-left:10px;
-    margin-bottom:20px;
+    font-size:24px;font-weight:700;line-height:1.25;color:var(--text);
+    border-left:6px solid var(--orange);padding-left:8px;
+    margin-bottom:26px;
   }
   .status-msg{
     margin:0 0 16px;padding:10px 16px;
@@ -153,25 +153,25 @@
   /* Table card */
   .table-card{
     background:#fff;
-    border-radius:8px;
+    border-radius:12px;
     border:1px solid var(--gray-border);
     overflow:hidden;
-    max-width:1100px;
   }
   /* Table */
   table.orders{
-    width:100%;border-collapse:collapse;font-size:12.5px;
+    width:100%;border-collapse:collapse;font-size:14.5px;
+    table-layout:fixed; /* 7 คอลัมน์กว้างเท่ากัน */
   }
   table.orders thead th{
     text-align:left;
-    font-size:11.5px;font-weight:600;color:#8b95b0;
-    padding:13px 20px;
+    font-size:14px;font-weight:500;color:#6b7694;
+    padding:18px 12px;
     border-bottom:1px solid var(--gray-border);
     white-space:nowrap;
     background:#fff;
   }
   table.orders tbody td{
-    padding:14px 20px;
+    padding:26px 12px;
     border-bottom:1px solid #f0f1f7;
     vertical-align:middle;
     color:var(--text);
@@ -179,24 +179,28 @@
   table.orders tbody tr:last-child td{border-bottom:none;}
   table.orders tbody tr:hover{background:#fafbff;}
   /* Cell variants */
-  .order-id{color:#122070;font-weight:700;font-size:12.5px;}
-  .concert-name{font-weight:700;color:var(--text);margin-bottom:2px;font-size:12.5px;}
-  .concert-venue{font-size:11px;color:#8b95b0;}
+  /* คอลัมน์สุดท้าย (จำนวนเงินรวม) ชิดขวา */
+  table.orders thead th:last-child,
+  table.orders tbody td.amount{text-align:right;padding-right:70px;}
+  .order-id{color:var(--navy);font-weight:700;font-size:14px;}
+  .concert-name{font-weight:700;color:var(--text);margin-bottom:3px;font-size:14px;line-height:1.45;}
+  .concert-venue{font-size:12px;color:#8b95b0;}
   .qty-badge{
     display:inline-block;
     background:#e8eaf6;color:#3a50b0;
-    font-size:11.5px;font-weight:700;
-    padding:3px 12px;border-radius:20px;
+    font-size:13px;font-weight:700;
+    padding:4px 12px;border-radius:20px;
     white-space:nowrap;
   }
-  .amount{font-weight:700;color:var(--text);white-space:nowrap;font-size:13px;}
+  .amount{font-weight:700;color:var(--text);white-space:nowrap;font-size:14.5px;}
   /* Footer / Pagination */
   .table-footer{
     display:flex;align-items:center;justify-content:space-between;
-    padding:14px 20px;font-size:11.5px;color:#8b95b0;
+    padding:24px 20px;font-size:14px;color:#8b95b0;
     background:#F8F9FC;border-top:1px solid #E9ECF2;
   }
   .table-footer b{color:var(--text);}
+  .table-footer .pager-summary{font-size:14px;color:#8b95b0;}
   /* Empty state */
   .empty-state{
     text-align:center;padding:60px 24px;color:#8b95b0;

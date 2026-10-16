@@ -140,7 +140,7 @@ class ConcertController extends Controller
                 'venue'        => $concert->venue,
                 'organization' => $concert->organization?->name,
                 'date'         => $concert->event_datetime
-                    ? Carbon::parse($concert->event_datetime)->locale('th')->translatedFormat('j M Y · H:i น.')
+                    ? Carbon::parse($concert->event_datetime)->thDateTime() . ' น.'
                     : null,
                 'status'       => strtoupper((string) $concert->status),
                 'poster'       => $concert->poster_path ? asset('storage/' . $concert->poster_path) : null,

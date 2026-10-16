@@ -25,8 +25,8 @@ class AppUser extends Authenticatable
     protected $primaryKey = 'user_id';
     public $timestamps = false;
 
-    // Role Enumerations
-    public const ROLE_CUSTOMER  = 'CUSTOMER';
+    // Role Enumerations (ค่าต้องตรงกับ app_user.role ในฐานข้อมูล: ลูกค้าทั่วไปคือ 'USER' เหมือน default ของ schema v3.1.0)
+    public const ROLE_CUSTOMER  = 'USER';
     public const ROLE_ORGANIZER = 'ORGANIZER';
     public const ROLE_STAFF     = 'STAFF';
     public const ROLE_ADMIN     = 'ADMIN';
@@ -219,7 +219,7 @@ class AppUser extends Authenticatable
 
     /**
      * isCustomer()
-     * ตรวจว่าผู้ใช้มี role เป็น CUSTOMER
+     * ตรวจว่าผู้ใช้มี role เป็น USER (ลูกค้าทั่วไป)
      * param : -
      * return : bool
      */

@@ -19,7 +19,8 @@ $statelessDevMiddleware = [
 
 Route::view('/welcome', 'welcome');
 // ===== จัดการรูปภาพคอนเสิร์ต =====
-Route::get('/manage-images', [\App\Http\Controllers\ConcertImageController::class, 'index']);
+Route::get('/manage-images', [\App\Http\Controllers\ConcertImageController::class, 'index'])->name('manage.images');
+Route::put('/manage/concerts/{concertId}', [\App\Http\Controllers\ConcertImageController::class, 'update'])->name('manage.concerts.update');
 Route::post('/manage/images/{concertId}/{type}', [\App\Http\Controllers\ConcertImageController::class, 'upload']);
 Route::delete('/manage/images/{concertId}/{type}', [\App\Http\Controllers\ConcertImageController::class, 'destroy']);
 

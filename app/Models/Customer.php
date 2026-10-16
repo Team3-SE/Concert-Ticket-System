@@ -2,7 +2,7 @@
 
 /**
  * Customer
- * ลูกค้า (AppUser ที่ role = CUSTOMER)
+ * ลูกค้า (AppUser ที่ role = USER)
  * Author :
  * Created :
  */
@@ -17,7 +17,7 @@ class Customer extends AppUser
 {
     /**
      * boot()
-     * กำหนดให้ query เฉพาะผู้ใช้ role CUSTOMER และตั้ง role ให้อัตโนมัติเมื่อสร้าง
+     * กำหนดให้ query เฉพาะผู้ใช้ role USER และตั้ง role ให้อัตโนมัติเมื่อสร้าง
      * param : -
      * return : void
      */

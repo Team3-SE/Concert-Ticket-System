@@ -15,7 +15,6 @@
   <div class="flex-1">
     {{-- HERO BANNER WRAPPER --}}
     <div class="hero-banner">
-      <img src="{{ asset('images/Gradient.png') }}" alt="Background Gradient" class="hero-bg-img">
     </div>
 
     {{-- MAIN HERO CARD OVERLAY --}}
@@ -24,7 +23,9 @@
 
         {{-- Concert Poster --}}
         <div class="poster-card">
-          <img src="{{ $concert && $concert->poster_path ? asset($concert->poster_path) : asset('images/poster.png') }}" alt="Concert Poster">
+          @if($concert && $concert->poster_path)
+            <img src="{{ asset('storage/' . $concert->poster_path) }}" alt="{{ $concert->name }}" onerror="this.remove()">
+          @endif
         </div>
 
         {{-- Main Dark Info Card --}}
@@ -36,7 +37,7 @@
               <div class="badge-group">
                 <span class="badge-item">
                   <svg class="badge-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  {{ $concert ? $concert->event_datetime->locale('th')->isoFormat('D MMMM YYYY') : '-' }}
+                  {{ $concert ? $concert->event_datetime->thDateLong() : '-' }}
                 </span>
                 <span class="badge-item">
                   <svg class="badge-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 16 14"/></svg>
@@ -66,7 +67,8 @@
             <span class="price-title">TICKET PRICES</span>
             <div>
               @foreach($zones as $zone)
-              <div class="price-row">
+              <div class="price-row" title="{{ $zone['name'] }}">
+                <span class="w-2 h-2 rounded-sm inline-block mr-2" style="background-color: {{ $zone['color'] ?: '#4D7EE0' }}"></span>
                 <span class="num">{{ number_format($zone['price']) }}</span>
                 <span class="unit">THB</span>
               </div>
@@ -86,7 +88,7 @@
         <h3 class="section-label">วันเวลาการแสดง</h3>
         <div class="date-pill">
           <span class="dot-orange"></span>
-          วันที่ {{ $concert ? $concert->event_datetime->locale('th')->isoFormat('D MMMM YYYY') : '-' }}
+          วันที่ {{ $concert ? $concert->event_datetime->thDateLong() : '-' }}
           เวลา {{ $concert ? $concert->event_datetime->format('H:i') : '-' }} น.
         </div>
       </div>
@@ -108,7 +110,12 @@
 
         <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
           <div class="md:col-span-5 bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center justify-center">
-            <img src="{{ asset('images/zone-map.png') }}" alt="Venue Zone Map" class="w-full h-auto object-contain rounded-lg">
+            @if($concert && $concert->seat_map_image_path)
+              <img src="{{ asset('storage/' . $concert->seat_map_image_path) }}" alt="ผังโซนที่นั่ง" class="w-full h-auto object-contain rounded-lg"
+                   onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'text-xs text-gray-400 py-10',textContent:'ยังไม่มีรูปผังโซนที่นั่ง'}))">
+            @else
+              <span class="text-xs text-gray-400 py-10">ยังไม่มีรูปผังโซนที่นั่ง</span>
+            @endif
           </div>
 
           <div class="md:col-span-7 bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center">
@@ -144,7 +151,7 @@
       </div>
 
       {{-- OPTION 1: SEAT MAP <= 20 SEATS --}}
-      <template x-if="totalSeats <= 20">
+      <template x-if="cols.length <= 20">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
 
           {{-- ฝั่งซ้าย: ผังที่นั่งขนาดกระชับ --}}
@@ -157,7 +164,7 @@
                 {{-- Header Numbers --}}
                 <div class="flex gap-1 items-center mb-1">
                   <span class="w-[14px] inline-block"></span>
-                  <template x-for="col in totalSeats" :key="'hdr-'+col">
+                  <template x-for="col in cols" :key="'hdr-'+col">
                     <span class="w-[14px] text-[9px] seat-label-text text-center inline-block" x-text="col"></span>
                   </template>
                   <span class="w-[14px] inline-block"></span>
@@ -166,7 +173,7 @@
                 <template x-for="row in rows" :key="'r20-'+row">
                   <div class="flex gap-1 items-center">
                     <span class="w-[14px] text-[9px] seat-label-text text-center select-none" x-text="row"></span>
-                    <template x-for="col in totalSeats" :key="'s20-'+row+col">
+                    <template x-for="col in cols" :key="'s20-'+row+col">
                       <button @click="toggleSeat(row + col)"
                               :disabled="isOccupied(row + col)"
                               :class="{
@@ -205,7 +212,7 @@
               <div class="text-xs space-y-3.5">
                 <div class="flex justify-between border-b border-gray-100 pb-2.5">
                   <span class="font-semibold text-gray-700">รอบการแสดง</span>
-                  <span class="text-gray-700 font-medium">{{ $concert ? $concert->event_datetime->locale('th')->isoFormat('D MMMM YYYY') . ', ' . $concert->event_datetime->format('H:i') . ' น.' : '-' }}</span>
+                  <span class="text-gray-700 font-medium">{{ $concert ? $concert->event_datetime->thDateLong() . ', ' . $concert->event_datetime->format('H:i') . ' น.' : '-' }}</span>
                 </div>
                 <div class="flex justify-between border-b border-gray-100 pb-2.5">
                   <span class="font-semibold text-gray-700">โซน</span>
@@ -243,7 +250,7 @@
       </template>
 
       {{-- OPTION 2: SEAT MAP > 20 SEATS --}}
-      <template x-if="totalSeats > 20">
+      <template x-if="cols.length > 20">
         <div class="space-y-6">
 
           {{-- 1. FULL WIDTH SEAT MAP TRANSPARENT SECTION --}}
@@ -258,7 +265,7 @@
                 {{-- Header Numbers --}}
                 <div class="flex gap-1 items-center mb-1">
                   <span class="w-[14px] inline-block"></span>
-                  <template x-for="col in totalSeats" :key="'hdr40-'+col">
+                  <template x-for="col in cols" :key="'hdr40-'+col">
                     <span class="w-[14px] text-[9px] seat-label-text text-center inline-block" x-text="col"></span>
                   </template>
                   <span class="w-[14px] inline-block"></span>
@@ -268,7 +275,7 @@
                 <template x-for="row in rows" :key="'r40-'+row">
                   <div class="flex gap-1 items-center">
                     <span class="w-[14px] text-[9px] seat-label-text text-center select-none" x-text="row"></span>
-                    <template x-for="col in totalSeats" :key="'s40-'+row+col">
+                    <template x-for="col in cols" :key="'s40-'+row+col">
                       <button @click="toggleSeat(row + col)"
                               :disabled="isOccupied(row + col)"
                               :class="{
@@ -309,7 +316,7 @@
               <div class="space-y-3">
                 <div class="ticket-summary-row">
                   <span class="font-semibold text-gray-700">รอบการแสดง</span>
-                  <span class="text-gray-700 font-medium">{{ $concert ? $concert->event_datetime->locale('th')->isoFormat('D MMMM YYYY') . ', ' . $concert->event_datetime->format('H:i') . ' น.' : '-' }}</span>
+                  <span class="text-gray-700 font-medium">{{ $concert ? $concert->event_datetime->thDateLong() . ', ' . $concert->event_datetime->format('H:i') . ' น.' : '-' }}</span>
                 </div>
                 <div class="ticket-summary-row">
                   <span class="font-semibold text-gray-700">โซน</span>
@@ -367,19 +374,21 @@
       const concertId = @json($concert ? $concert->concert_id : null);
       const maxTickets = @json($concert ? $concert->max_ticket_per_order : 4);
 
+      const defaultCols = Array.from({ length: 20 }, (_, i) => i + 1);
+
       return {
-        totalSeats: dbZones.length > 0 ? dbZones[0].totalCols : 20,
+        cols: (dbZones.length > 0 && dbZones[0].cols && dbZones[0].cols.length) ? dbZones[0].cols : defaultCols,
         selectedSeats: [],
         selectedZone: null,
-        rows: dbZones.length > 0 ? dbZones[0].rows : ['A','B','C','D','E'],
+        rows: (dbZones.length > 0 && dbZones[0].rows && dbZones[0].rows.length) ? dbZones[0].rows : ['A','B','C','D','E'],
         zones: dbZones,
         zoneTags: dbZones,
         occupiedSeats: dbOccupied,
 
         selectZone(zone) {
           this.selectedZone = zone;
-          this.totalSeats = zone.totalCols || 20;
-          this.rows = zone.rows || ['A','B','C','D','E'];
+          this.cols = (zone.cols && zone.cols.length) ? zone.cols : defaultCols;
+          this.rows = (zone.rows && zone.rows.length) ? zone.rows : ['A','B','C','D','E'];
           this.selectedSeats = [];
         },
         selectZoneByName(name) {
@@ -413,7 +422,11 @@
           return '#4D7EE0';
         },
 
-        isOccupied(seatId) { return this.occupiedSeats.includes(seatId); },
+        isOccupied(seatId) {
+          const zone = this.selectedZone || this.zones[0];
+          const list = (zone && zone.occupied) ? zone.occupied : this.occupiedSeats;
+          return list.includes(seatId);
+        },
 
         calculateTotalPrice() {
           if (!this.selectedZone || this.selectedSeats.length === 0) return '0 บาท';

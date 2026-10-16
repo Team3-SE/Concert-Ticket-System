@@ -2,7 +2,7 @@
  * index.blade.php
  * หน้าคอนเสิร์ตทั้งหมด (Show All): ค้นหา กรองสถานะ และแบ่งหน้า
  * @Author 67160292 ธีรเมธ พลสาย
- * @Create Date 09-10-2569
+ * @Create Date 09/10/2569
 --}}
 @extends('layouts.main')
 

@@ -151,7 +151,7 @@
         <h2 class="text-base font-bold text-gray-900">{{ $concert ? strtoupper($concert->name) : '-' }}</h2>
         <p class="text-[11px] text-gray-400">
           วันและเวลา : Show Date :
-          {{ $concert ? $concert->event_datetime->locale('en')->isoFormat('D MMMM YYYY HH:mm') : '-' }}
+          {{ $concert ? $concert->event_datetime->thDateTime() : '-' }}
           | สถานที่/Venue : {{ $concert ? $concert->venue : '-' }}
         </p>
       </div>

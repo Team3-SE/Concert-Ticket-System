@@ -18,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             '/dev/*',
         ]);
+
+        // ไม่มี route ชื่อ login (ฟอร์มเข้าสู่ระบบเป็น modal ในหน้า Home) → ระบุปลายทางเองเพื่อไม่ให้ middleware auth หา route('login') แล้ว error
+        // การเปิด modal ทำใน withExceptions ด้านล่าง
+        $middleware->redirectGuestsTo('/');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // เมื่อยังไม่ login แล้วพยายามเข้าหน้า protected → redirect กลับ /

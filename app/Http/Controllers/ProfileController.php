@@ -49,7 +49,7 @@ class ProfileController extends Controller
     public function update(Request $request)
     {
         $this->userController->updateProfile($request, Auth::id());
-        return redirect()->route('profile.edit')->with('status', 'บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว ✅');
+        return redirect()->route('profile.edit')->with('status', 'บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว');
     }
 
     /**

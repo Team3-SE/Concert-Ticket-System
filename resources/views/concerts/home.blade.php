@@ -42,7 +42,6 @@
                  onerror="this.closest('.hero-slide').classList.remove('has-banner'); this.closest('a').remove();">
           </a>
         @endif
-        <span class="hero-badge">HIGHLIGHT LIVE CONCERT</span>
         <h1>{{ $highlight->name }}</h1>
         <p>{{ $highlight->artist }} — {{ $highlight->venue }}</p>
       </div>
@@ -50,7 +49,6 @@
     @else
       {{-- แสดง layout เหมือนในรูป แต่ยังไม่มีข้อมูลจริง --}}
       <div class="hero-slide active">
-        <span class="hero-badge">HIGHLIGHT LIVE CONCERT</span>
         <h1>&nbsp;</h1>
         <p>&nbsp;</p>
       </div>
@@ -243,9 +241,7 @@
   document.querySelectorAll('[data-close]').forEach(btn => {
     btn.addEventListener('click', closeAll);
   });
-  [loginOverlay, registerOverlay].forEach(ov => {
-    ov.addEventListener('click', (e) => { if(e.target === ov) closeAll(); });
-  });
+
   document.addEventListener('keydown', (e) => { if(e.key==='Escape') closeAll(); });
 
   // ----- เปิด modal อัตโนมัติเมื่อ server ส่ง error กลับมา -----

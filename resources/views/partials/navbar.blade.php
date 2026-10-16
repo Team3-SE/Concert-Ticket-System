@@ -14,8 +14,8 @@
   $profileInitial = $profileUser
       ? mb_strtoupper(mb_substr($profileUser->first_name ?: ($profileUser->email ?? '?'), 0, 1))
       : '';
-  $profileColors = ['#2563eb', '#0f766e', '#c2410c', '#7c3aed', '#be123c', '#0369a1'];
-  $profileColor = $profileUser ? $profileColors[crc32((string) $profileUser->getKey()) % count($profileColors)] : $profileColors[0];
+    $profileHue = $profileUser ? crc32((string) $profileUser->getKey()) % 360 : 220;
+    $profileColor = "hsl({$profileHue}, 60%, 40%)";
 @endphp
 
 <header class="team-header {{ $showLogo ? '' : 'no-logo' }}">

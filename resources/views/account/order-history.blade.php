@@ -36,6 +36,10 @@
           </tr>
         </thead>
         <tbody>
+          @php
+            // รูปแบบวันเวลา: ว/ด/ป(พ.ศ.) เวลา 24 ชม. เช่น 18/07/2569 13:37
+            $thDate = fn ($value) => $value ? \Carbon\Carbon::parse($value)->thDateTime() : '–';
+          @endphp
           @foreach($orders as $order)
           @php
             $booking     = $order->booking;
@@ -43,10 +47,8 @@
             $seats       = $booking?->bookingSeats ?? collect();
             $ticketCount = $order->tickets?->count() ?? $seats->count();
 
-            // โซนและที่นั่ง: รวมจาก BookingSeat snapshots
-            $seatLabels = $seats->map(fn($s) => ($s->zone_name_snapshot ?? '–') . ' : ' . ($s->seat_label_snapshot ?? '–'))
-                               ->join(', ');
-            if ($seatLabels === '') $seatLabels = '–';
+            // โซนและที่นั่ง: จัดกลุ่มตามโซนจาก BookingSeat snapshots เช่น "โซน B4 : F05, F06"
+            $seatGroups = $seats->groupBy(fn($s) => $s->zone_name_snapshot ?? '–');
 
             // ยอดรวม: จาก payment ถ้ามี ไม่งั้น booking
             $totalAmount = $order->payment?->amount ?? $booking?->total_amount ?? 0;
@@ -55,19 +57,26 @@
             $eventDate = $order->event_datetime_snapshot ?? $concert?->date_time;
           @endphp
           <tr>
-            <td><span class="order-id">#{{ $order->order_code ?? substr($order->order_id, 0, 8) }}</span></td>
+            <td><span class="order-id">{{ $order->order_code ?? substr($order->order_id, 0, 8) }}</span></td>
             <td>
               <div class="concert-name">{{ $order->concert_name_snapshot ?? $concert?->name ?? '–' }}</div>
               <div class="concert-venue">{{ $order->venue_snapshot ?? $concert?->venue ?? '–' }}</div>
             </td>
+            <td>{{ $thDate($eventDate) }}</td>
             <td>
-              {{ $eventDate ? \Carbon\Carbon::parse($eventDate)->translatedFormat('j M Y · H:i') : '–' }}
+              @forelse($seatGroups as $zoneName => $zoneSeats)
+                <div>
+                  {{ \Illuminate\Support\Str::startsWith($zoneName, 'โซน') ? $zoneName : 'โซน ' . $zoneName }}
+                  : <strong>{{ $zoneSeats->pluck('seat_label_snapshot')->filter()->join(', ') ?: '–' }}</strong>
+                </div>
+              @empty
+                –
+              @endforelse
             </td>
-            <td>{{ $seatLabels }}</td>
             <td><span class="qty-badge">{{ $ticketCount }} ใบ</span></td>
-            <td>{{ \Carbon\Carbon::parse($order->order_date)->translatedFormat('j M Y') }}</td>
+            <td>{{ $thDate($order->order_date) }}</td>
             <td class="amount">
-              {{ number_format((float)$totalAmount, 0) }} ฿
+              {{ number_format((float)$totalAmount, 0) }} บาท
             </td>
           </tr>
           @endforeach

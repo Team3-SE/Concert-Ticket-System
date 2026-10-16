@@ -23,6 +23,10 @@ class DatabaseSeeder extends Seeder
             'name' => 'GMM Grammy',
             'initials' => 'GMM',
             'description' => 'Thai entertainment company and concert promoter.',
+            'phone' => '02-669-9000',
+            'email' => 'contact@gmm-grammy.example',
+            'facebook' => 'GMM Grammy Official',
+            'line' => '@gmmgrammy',
             'created_at' => $now,
         ]);
 
@@ -30,6 +34,10 @@ class DatabaseSeeder extends Seeder
             'name' => 'BEC-Tero Entertainment',
             'initials' => 'BEC',
             'description' => 'Live event and concert promoter.',
+            'phone' => '02-612-9999',
+            'email' => 'contact@bec-tero.example',
+            'facebook' => 'BEC-Tero Entertainment',
+            'line' => '@bectero',
             'created_at' => $now,
         ]);
 

@@ -49,10 +49,28 @@ class BookingController extends Controller
             ]);
         }
 
-        $zones = $concert->zones->map(function ($zone) {
-            $availableCount = $zone->zone_type !== 'STANDING'
+        $occupiedSeats = [];
+        $zones = $concert->zones->map(function ($zone) use (&$occupiedSeats) {
+            $isStanding = $zone->zone_type === 'STANDING';
+            $availableCount = !$isStanding
                 ? $zone->getAvailableSeats()->count()
                 : $zone->getAvailableCapacity();
+
+            // ผังที่นั่งจริงของโซน: แถว, เลขที่นั่ง และที่นั่งที่ถูกจองแล้ว (แยกตามโซน)
+            $rows = [];
+            $cols = [];
+            $occupied = [];
+            if (!$isStanding) {
+                $seats = $zone->seats()->get(['row', 'number', 'seat_booking_status']);
+                $rows = $seats->pluck('row')->unique()->sort()->values()->all();
+                $cols = $seats->pluck('number')->unique()->sort()->values()->all();
+                foreach ($seats as $seat) {
+                    if (in_array($seat->seat_booking_status, ['LOCKED', 'RESERVED', 'SOLD'], true)) {
+                        $occupied[] = $seat->row . $seat->number;
+                        $occupiedSeats[] = $seat->row . $seat->number;
+                    }
+                }
+            }
 
             return [
                 'zone_id'   => $zone->zone_id,
@@ -61,21 +79,11 @@ class BookingController extends Controller
                 'price'     => (int) $zone->price,
                 'seats'     => $availableCount,
                 'color'     => $zone->color,
+                'rows'      => $rows,
+                'cols'      => $cols,
+                'occupied'  => $occupied,
             ];
         });
-
-        // ที่นั่งที่ถูกจองแล้ว (LOCKED, RESERVED, SOLD)
-        $occupiedSeats = [];
-        foreach ($concert->zones as $zone) {
-            if ($zone->zone_type !== 'STANDING') {
-                $zone->seats()
-                    ->whereIn('seat_booking_status', ['LOCKED', 'RESERVED', 'SOLD'])
-                    ->get(['row', 'number'])
-                    ->each(function ($seat) use (&$occupiedSeats) {
-                        $occupiedSeats[] = $seat->row . $seat->number;
-                    });
-            }
-        }
 
         return view('booking.booking', compact('concert', 'zones', 'occupiedSeats'));
     }
