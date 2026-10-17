@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "PayMock Gateway API Collection",
-    "description": "Merchant API ของ PayMock + Concert Backend\n\nPOST /v1/payments ต้องส่ง payment_id ทุกครั้ง; ตัวอย่าง merchant ทั่วไปใช้เลขล้วน เช่น 12 และตั้ง Idempotency-Key เป็น 12. Concert backend ใช้ booking-{id}-attempt-{n} เพื่อแยกการลองจ่ายแต่ละครั้งใน booking เดิม.\nResponse: id = txn_… คือ provider transaction ID ตัวเดียวสำหรับ GET / cancel / QR / concert; payment_id คือรหัสที่ merchant ส่งมา\n\nChaos / Webhook ผิดปกติตั้งที่ PayMock Admin (ชั้น 1 chaos_mode, ชั้น 2 webhook_mode)\n\nเวลา: created_at = สร้างรายการ | paid_at = จ่ายสำเร็จ (เฉพาะ COMPLETED) | ไม่มี completed_at",
+    "description": "Merchant API ของ PayMock + Concert Backend\n\nPOST /v1/payments ต้องส่ง payment_id ทุกครั้ง; ตัวอย่าง merchant ทั่วไปใช้เลขล้วน เช่น 12 และตั้ง Idempotency-Key เป็น 12. Concert backend สร้าง Concert payment ใหม่ใต้ booking เดิมเมื่อ FAILED/EXPIRED และใช้เลข Concert payment นั้นเป็น payment_id.\nResponse: id = txn_… คือ provider transaction ID ตัวเดียวสำหรับ GET / cancel / QR / concert; payment_id คือรหัสที่ merchant ส่งมา\n\nChaos / Webhook ผิดปกติตั้งที่ PayMock Admin (ชั้น 1 chaos_mode, ชั้น 2 webhook_mode)\n\nเวลา: created_at = สร้างรายการ | paid_at = จ่ายสำเร็จ (เฉพาะ COMPLETED) | ไม่มี completed_at",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -25,7 +25,7 @@
       "script": {
         "type": "text/javascript",
         "exec": [
-          "// Every direct gateway request uses one stable key per payment attempt.",
+          "// Every direct gateway request uses one stable key for that payment.",
           "if (pm.request.method === 'POST' && /\\/v1\\/payments$/.test(pm.request.url.toString()) && pm.request.body && pm.request.body.raw) {",
           "  var body = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
           "  if (body.payment_id) pm.request.headers.upsert({ key: 'Idempotency-Key', value: String(body.payment_id) });",
@@ -682,15 +682,15 @@
     },
     {
       "name": "5. Concert Backend — ใช้ payment_id (บัตร + PromptPay)",
-      "description": "สร้าง booking ครั้งแรกได้ payment attempt #1. หาก FAILED/EXPIRED ให้เรียก retry-payment โดยส่ง booking_id เดิม; backend จะสร้าง payment_id และ Idempotency-Key ใหม่เป็น booking-{id}-attempt-{n}. ทุก call หลังสร้างใช้ response.payment_id (txn_…) เป็น provider transaction ID.",
+      "description": "create-booking สร้าง booking + Concert payment แรก. หาก FAILED/EXPIRED ให้สร้าง Concert payment ใหม่ใน booking เดิมด้วย POST /api/bookings/{bookingId}/payments. ทุก call หลังสร้างใช้ response.payment_id (txn_…) เป็น provider transaction ID.",
       "item": [
         {
-          "name": "POST create-booking — attempt 1",
+          "name": "POST create-booking",
           "event": [{
             "listen": "test",
             "script": { "type": "text/javascript", "exec": [
               "var j = pm.response.json();",
-              "pm.test('booking created with attempt 1', function () { pm.expect(j.ok).to.eql(true); pm.expect(j.attempt_number).to.eql(1); });",
+              "pm.test('booking and payment created', function () { pm.expect(j.ok).to.eql(true); pm.expect(j.booking_id).to.be.a('number'); });",
               "if (j.ok) { pm.collectionVariables.set('bookingId', String(j.booking_id)); pm.collectionVariables.set('paymentId', j.payment_id); }"
             ] }
           }],
@@ -703,21 +703,20 @@
           }
         },
         {
-          "name": "POST retry-payment — attempt ใหม่ใน booking เดิม",
+          "name": "POST /api/bookings/{bookingId}/payments — Payment ใหม่ใน Booking เดิม",
           "event": [{
             "listen": "test",
             "script": { "type": "text/javascript", "exec": [
               "var j = pm.response.json();",
-              "pm.test('same booking, next payment attempt', function () { pm.expect(j.ok).to.eql(true); pm.expect(String(j.booking_id)).to.eql(pm.collectionVariables.get('bookingId')); pm.expect(j.attempt_number).to.eql(2); });",
+              "pm.test('same booking, new Concert payment', function () { pm.expect(j.ok).to.eql(true); pm.expect(String(j.booking_id)).to.eql(pm.collectionVariables.get('bookingId')); pm.expect(j.concert_payment_id).to.be.a('number'); });",
               "if (j.ok) pm.collectionVariables.set('paymentId', j.payment_id);"
             ] }
           }],
           "request": {
-            "method": "POST",
-            "auth": { "type": "noauth" },
+            "method": "POST", "auth": { "type": "noauth" },
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"booking_id\": \"{{bookingId}}\",\n  \"method\": \"card\",\n  \"card_number\": \"4242424242424242\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\"\n}" },
-            "url": { "raw": "{{concertUrl}}/api/retry-payment", "host": ["{{concertUrl}}"], "path": ["api", "retry-payment"] }
+            "body": { "mode": "raw", "raw": "{\n  \"method\": \"card\",\n  \"card_number\": \"4242424242424242\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\"\n}" },
+            "url": { "raw": "{{concertUrl}}/api/bookings/{{bookingId}}/payments", "host": ["{{concertUrl}}"], "path": ["api", "bookings", "{{bookingId}}", "payments"] }
           }
         },
         {

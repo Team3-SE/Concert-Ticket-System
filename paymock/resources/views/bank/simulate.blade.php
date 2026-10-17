@@ -43,13 +43,6 @@
                     <p class="text-xs text-gray-500">
                         ยอดเงิน <strong>฿{{ number_format($payment->amount, 2) }}</strong> ถูกส่งไปยังระบบคอนเสิร์ตเรียบร้อย
                     </p>
-                    <div class="p-3 bg-gray-50 rounded-xl border border-gray-200 text-left text-xs font-mono space-y-1">
-                        <div class="text-gray-400 text-[10px]">TRANSACTION SLIP:</div>
-                        <div>Payment ID: <span class="font-bold text-gray-700">{{ $payment->payment_id ?? $payment->order_ref }}</span></div>
-                        <div>Txn: <span class="font-bold text-gray-700">{{ $payment->public_id }}</span></div>
-                        <div>Time: {{ now()->format('d M Y H:i:s') }}</div>
-                        <div class="text-emerald-600 font-bold mt-1">Webhook Status: Sent ✅</div>
-                    </div>
                     <p class="text-[11px] text-gray-400 mt-4">
                         * คุณสามารถปิดหน้านี้ได้เลย หน้าจอคอนเสิร์ตจะออกตั๋วให้อัตโนมัติ
                     </p>

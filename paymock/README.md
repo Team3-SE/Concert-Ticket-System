@@ -99,7 +99,7 @@ Content-Type: application/json
 }
 ```
 
-> **Idempotency:** Merchant ทั่วไปใช้เลขเดียวกันได้ เช่น `payment_id: "12"` และ `Idempotency-Key: 12`, แล้วส่งซ้ำเฉพาะ retry หลัง timeout. Concert backend ใช้ `booking-42-attempt-1`/`booking-42-attempt-2` ภายในเพื่อแยกการลองจ่ายแต่ละครั้งใน booking เดิม.
+> **Idempotency:** Merchant ทั่วไปใช้เลขเดียวกันได้ เช่น `payment_id: "12"` และ `Idempotency-Key: 12`, แล้วส่งซ้ำเฉพาะ retry หลัง timeout. Concert backend สร้าง Concert payment ก่อนเรียก PayMock และใช้เลขนั้นเป็นทั้ง `payment_id`/key; เมื่อ FAILED/EXPIRED จึงสร้าง Concert payment ใหม่ใต้ booking เดิม. ข้อจำกัดปัจจุบัน: timeout ระหว่าง Concert → PayMock ยังไม่ resend อัตโนมัติ จึงต้อง retry/reconcile attempt เดิมด้วย key เดิมก่อนสร้าง attempt ใหม่.
 
 > **Identifier:** `id` (`txn_...`) คือ provider transaction ID เพียงค่าเดียวสำหรับ GET/cancel/QR/polling; `payment_id` คือเลขอ้างอิงของ merchant. ไม่มี `provider_transaction_id` เพราะซ้ำกับ `id`.
 
@@ -177,17 +177,25 @@ Authorization: Bearer {API_KEY}
 
 ## 🔗 ตัวอย่างโค้ดฝั่งระบบคอนเสิร์ต (Integration Snippets)
 
-### 1. เรียกสร้าง Payment พร้อมรับมือ Timeout
+### 1. แนวทางเพิ่ม retry/reconcile หลัง Timeout
 ```php
+// สร้าง Concert payment เพียงครั้งเดียวก่อนส่งไป PayMock
+$concertPayment = ConcertPayment::create([
+    'booking_id' => $booking->id,
+    'method' => $method,
+    'status' => 'PENDING',
+]);
+$merchantPaymentId = (string) $concertPayment->id;
+
 try {
     $response = Http::withToken(config('services.paymock.key'))
         ->withHeaders([
-            'Idempotency-Key' => $paymentAttempt->merchant_payment_id,
+            'Idempotency-Key' => $merchantPaymentId,
         ])
         ->timeout(8)
         ->retry(2, 500, throw: false)
         ->post(config('services.paymock.url') . '/v1/payments', [
-            'payment_id'   => $paymentAttempt->merchant_payment_id,
+            'payment_id'   => $merchantPaymentId,
             'amount'       => (float) $booking->b_total_amount,
             'method'       => $method, // 'card' or 'promptpay'
             'callback_url' => route('webhooks.payment'),
@@ -198,11 +206,14 @@ try {
     return redirect($response->json('checkout_url'));
 
 } catch (\Illuminate\Http\Client\ConnectionException|\Illuminate\Http\Client\RequestException $e) {
-    // ปลดล็อกที่นั่ง + แจ้งผู้ใช้
-    $this->bookingService->failAndRelease($booking);
-    return back()->with('error', 'ระบบชำระเงินขัดข้อง กรุณาลองใหม่อีกครั้ง');
+    // ห้ามสร้าง Concert payment ใหม่จาก timeout เพียงอย่างเดียว
+    // enqueue retry/reconcile ของ $concertPayment โดยใช้ body และ key เดิม
+    $concertPayment->update(['status' => 'GATEWAY_ERROR']);
+    return back()->with('error', 'กำลังตรวจสอบสถานะการชำระเงิน');
 }
 ```
+
+> Snippet นี้เป็นแนวทางสำหรับการเพิ่ม retry/reconcile; ระบบ Concert ปัจจุบันยังไม่มี worker หรือ route สำหรับ resend แถวเดิมอัตโนมัติ และจะบันทึกเป็น `GATEWAY_ERROR` เมื่อไม่ได้ response.
 
 ### 2. Webhook Controller (ตรวจ Signature + จัดการสถานะ)
 ```php

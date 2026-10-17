@@ -44,7 +44,7 @@ Authorization: Bearer pm_test_key_concert_system_2024
 |--------|----------|-----|----------|
 | `Authorization` | ✅ ทุก request | `Bearer pm_test_key_concert_system_2024` | API Key |
 | `Content-Type` | ✅ POST | `application/json` | |
-| `Idempotency-Key` | ✅ แนะนำ | ค่าเดียวกับ `payment_id` ของ payment attempt เช่น `12` | ป้องกัน duplicate เมื่อ retry request เดิม |
+| `Idempotency-Key` | ✅ แนะนำ | ค่าเดียวกับ `payment_id` ของ payment เช่น `12` | ป้องกัน duplicate เมื่อ retry request เดิม |
 
 ---
 
@@ -155,10 +155,31 @@ Idempotency-Key: 12
 ### Idempotency
 
 - Merchant ทั่วไปใช้เลขล้วนได้ เช่น `payment_id: "12"` และ `Idempotency-Key: 12`
-- Concert backend ใช้ `booking-42-attempt-1` เฉพาะภายใน เพื่อแยก attempt ของ booking เดียวกัน
+- Concert backend สร้าง Concert payment ใหม่ใต้ booking เดิมหลัง FAILED/EXPIRED และใช้เลข Concert payment นั้นเป็น `payment_id` และ Idempotency-Key
 - retry เพราะ timeout ของ attempt เดิม ต้องส่ง body และ key เดิม → **คืน payment เดิม** (ไม่สร้างใหม่)
-- บัตรถูกปฏิเสธ/PromptPay หมดอายุแล้วต้องการจ่ายใหม่ใน booking เดิม ให้สร้าง attempt ใหม่: `booking-42-attempt-2` ทั้งสองค่า จึงได้ payment ใหม่โดยไม่ต้องสร้าง booking ใหม่
+- บัตรถูกปฏิเสธ/PromptPay หมดอายุแล้วต้องการจ่ายใหม่ ให้สร้าง Concert payment ใหม่ใต้ booking เดิม
 - หากไม่ส่ง header ระบบใช้ `payment_id` เป็น key อัตโนมัติ แต่ production ควรส่ง header เสมอเพื่อทำให้ intent ชัดเจน
+
+#### Concert ↔ PayMock: flow ปัจจุบัน
+
+Concert สร้างแถว `concert_payments` ก่อนเรียก PayMock และใช้เลข `id` ของแถวนั้นเป็นทั้ง `payment_id` ใน body และ `Idempotency-Key` ใน header. เช่น booking `74` มี Concert payment `12`:
+
+```http
+POST http://paymock:80/v1/payments
+Authorization: Bearer pm_test_key_concert_system_2024
+Idempotency-Key: 12
+
+{ "payment_id":"12", "amount":1200.00, "method":"card" }
+```
+
+| เหตุการณ์ | สิ่งที่ส่ง | ผลลัพธ์ |
+|---|---|---|
+| ครั้งแรก | body/key = `12` | PayMock สร้าง `txn_A`; Concert เก็บ `txn_A` ไว้กับ Concert payment 12 |
+| ส่งซ้ำ request เดิม | body เดิม + key `12` | PayMock คืน `txn_A` เดิม ไม่สร้าง payment ซ้ำ |
+| FAILED/EXPIRED แล้วจ่ายใหม่ | Concert สร้าง payment 13 ใต้ booking 74; body/key = `13` | PayMock สร้าง `txn_B` ใหม่ โดย booking เดิมยังเก็บประวัติ 12 และ 13 |
+| webhook ซ้ำ/มาช้า | `payload.id` ของ `txn_A` หรือ `txn_B` | Concert อัปเดตแถวตาม provider id; booking จะอัปเดตเฉพาะ current payment จึงไม่ให้ webhook ของ attempt เก่าเขียนทับ attempt ล่าสุด |
+
+**ข้อจำกัดที่มีอยู่จริง:** Concert ตั้ง cURL timeout 10 วินาที. หาก PayMock สร้างรายการแล้วแต่ Concert ไม่ได้รับ response, PayMock รองรับการ resend ด้วย `payment_id`/key เดิมอยู่แล้ว แต่ Concert ยังไม่มี route หรือ worker ที่ resend แถวเดิมอัตโนมัติ และบันทึก attempt นั้นเป็น `GATEWAY_ERROR`. จึงห้ามสร้าง Concert payment ใหม่เพียงเพราะ timeout; ต้อง retry/reconcile attempt เดิมด้วย key เดิมก่อน และสร้าง payment ใหม่เมื่อยืนยันว่า `FAILED` หรือ `EXPIRED` เท่านั้น.
 
 ### Identifier
 

@@ -36,19 +36,14 @@ $db->exec("
         payload TEXT,
         received_at TEXT
     );
-    CREATE TABLE IF NOT EXISTS payment_attempts (
+    CREATE TABLE IF NOT EXISTS concert_payments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         booking_id INTEGER NOT NULL,
-        attempt_number INTEGER NOT NULL,
-        merchant_payment_id TEXT NOT NULL UNIQUE,
-        idempotency_key TEXT NOT NULL UNIQUE,
-        provider_transaction_id TEXT UNIQUE,
+        provider_payment_id TEXT UNIQUE,
         method TEXT NOT NULL,
-        amount REAL NOT NULL,
         status TEXT NOT NULL DEFAULT 'PENDING',
         failure_code TEXT,
-        created_at TEXT NOT NULL,
-        UNIQUE(booking_id, attempt_number)
+        created_at TEXT NOT NULL
     );
 ");
 
@@ -78,31 +73,20 @@ function browserUrl(?string $url): ?string
     );
 }
 
-/**
- * Create one payment attempt for an existing booking.
- * payment_id and Idempotency-Key deliberately match the attempt, not the booking.
- */
-function createPaymentAttempt(PDO $db, array $booking, array $input): array
+/** Create a new Concert payment under an existing booking, then create it at PayMock. */
+function createConcertPayment(PDO $db, array $booking, array $input): array
 {
-    $numberStmt = $db->prepare('SELECT COALESCE(MAX(attempt_number), 0) + 1 FROM payment_attempts WHERE booking_id = ?');
-    $numberStmt->execute([$booking['id']]);
-    $attemptNumber = (int) $numberStmt->fetchColumn();
-    $merchantPaymentId = 'booking-' . $booking['id'] . '-attempt-' . $attemptNumber;
     $method = $input['method'] ?? 'promptpay';
     $createdAt = date('Y-m-d H:i:s');
-
-    $attemptStmt = $db->prepare(
-        'INSERT INTO payment_attempts (booking_id, attempt_number, merchant_payment_id, idempotency_key, method, amount, status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-    );
-    $attemptStmt->execute([
-        $booking['id'], $attemptNumber, $merchantPaymentId, $merchantPaymentId,
-        $method, $booking['amount'], 'PENDING', $createdAt,
-    ]);
+    $db->prepare('INSERT INTO concert_payments (booking_id, method, status, created_at) VALUES (?, ?, ?, ?)')
+        ->execute([$booking['id'], $method, 'PENDING', $createdAt]);
+    // This is a numeric ID of the Concert payment record, not the booking ID.
+    // A failed booking can therefore create payment 74, 75, ... safely.
+    $concertPaymentId = (string) $db->lastInsertId();
 
     $callbackUrl = getenv('MY_WEBHOOK_URL') ?: 'http://concert_backend:5000/api/webhook';
     $postData = [
-        'payment_id'   => $merchantPaymentId,
+        'payment_id'   => $concertPaymentId,
         'amount'       => (float) $booking['amount'],
         'method'       => $method,
         'callback_url' => $callbackUrl,
@@ -124,7 +108,7 @@ function createPaymentAttempt(PDO $db, array $booking, array $input): array
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Authorization: Bearer pm_test_key_concert_system_2024',
         'Content-Type: application/json',
-        'Idempotency-Key: ' . $merchantPaymentId,
+        'Idempotency-Key: ' . $concertPaymentId,
     ]);
     curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     $rawResponse = curl_exec($ch);
@@ -133,20 +117,20 @@ function createPaymentAttempt(PDO $db, array $booking, array $input): array
 
     $gateway = json_decode($rawResponse ?: '', true) ?? [];
     if ($httpCode !== 201 || empty($gateway['id'])) {
-        $db->prepare('UPDATE payment_attempts SET status = ?, failure_code = ? WHERE merchant_payment_id = ?')
-            ->execute(['GATEWAY_ERROR', 'gateway_request_failed', $merchantPaymentId]);
+        $db->prepare('UPDATE concert_payments SET status = ?, failure_code = ? WHERE id = ?')
+            ->execute(['GATEWAY_ERROR', 'gateway_request_failed', $concertPaymentId]);
         return [
             'ok' => false,
             'http_code' => $httpCode ?: 500,
-            'merchant_payment_id' => $merchantPaymentId,
+            'concert_payment_id' => (int) $concertPaymentId,
             'raw' => $rawResponse,
         ];
     }
 
     $gatewayStatus = $gateway['status'] ?? 'PENDING';
     $providerId = $gateway['id'];
-    $db->prepare('UPDATE payment_attempts SET provider_transaction_id = ?, status = ?, failure_code = ? WHERE merchant_payment_id = ?')
-        ->execute([$providerId, $gatewayStatus, $gateway['failure_code'] ?? null, $merchantPaymentId]);
+    $db->prepare('UPDATE concert_payments SET provider_payment_id = ?, status = ?, failure_code = ? WHERE id = ?')
+        ->execute([$providerId, $gatewayStatus, $gateway['failure_code'] ?? null, $concertPaymentId]);
     $db->prepare('UPDATE bookings SET payment_id = ?, status = ?, paid_at = ? WHERE id = ?')
         ->execute([
             $providerId,
@@ -158,10 +142,8 @@ function createPaymentAttempt(PDO $db, array $booking, array $input): array
     return [
         'ok' => true,
         'booking_id' => (int) $booking['id'],
-        'attempt_number' => $attemptNumber,
-        'merchant_payment_id' => $merchantPaymentId,
+        'concert_payment_id' => (int) $concertPaymentId,
         'payment_id' => $providerId,
-        'provider_transaction_id' => $providerId,
         'status' => $gatewayStatus,
         'failure_code' => $gateway['failure_code'] ?? null,
         'method' => $gateway['method'] ?? $method,
@@ -227,32 +209,21 @@ if (($uri === '/api/webhook' || $uri === '/webhooks/payment') && $method === 'PO
         exit;
     }
 
-    // ✅ Signature ถูกต้อง → อัปเดต payment attempt ก่อน
+    // ✅ Signature ถูกต้อง → อัปเดต Concert payment ก่อน
     if ($paymentId) {
-        $attemptStmt = $db->prepare('SELECT * FROM payment_attempts WHERE provider_transaction_id = ?');
-        $attemptStmt->execute([$paymentId]);
-        $attempt = $attemptStmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($attempt) {
-            $db->prepare('UPDATE payment_attempts SET status = ?, failure_code = ? WHERE id = ?')
-                ->execute([$status, $payload['failure_code'] ?? null, $attempt['id']]);
-
-            // Only the current attempt may change the booking. A delayed webhook from
-            // an older failed attempt must never overwrite the retried payment state.
+        $paymentStmt = $db->prepare('SELECT * FROM concert_payments WHERE provider_payment_id = ?');
+        $paymentStmt->execute([$paymentId]);
+        $concertPayment = $paymentStmt->fetch(PDO::FETCH_ASSOC);
+        if ($concertPayment) {
+            $db->prepare('UPDATE concert_payments SET status = ?, failure_code = ? WHERE id = ?')
+                ->execute([$status, $payload['failure_code'] ?? null, $concertPayment['id']]);
+            // A delayed webhook for an older Concert payment cannot overwrite
+            // the booking after the user has created a newer payment.
             $stmtUpdate = $db->prepare('UPDATE bookings SET status = ?, paid_at = ? WHERE id = ? AND payment_id = ?');
             $stmtUpdate->execute([
                 bookingStatus($status),
                 $status === 'COMPLETED' ? ($payload['paid_at'] ?? date('Y-m-d H:i:s')) : null,
-                $attempt['booking_id'],
-                $paymentId,
-            ]);
-        } else {
-            // Compatibility for payments created before payment_attempts existed.
-            $stmtUpdate = $db->prepare('UPDATE bookings SET status = ?, paid_at = ? WHERE payment_id = ?');
-            $stmtUpdate->execute([
-                bookingStatus($status),
-                $status === 'COMPLETED' ? ($payload['paid_at'] ?? date('Y-m-d H:i:s')) : null,
-                $paymentId,
+                $concertPayment['booking_id'], $paymentId,
             ]);
         }
     }
@@ -278,23 +249,20 @@ if ($uri === '/api/create-booking' && $method === 'POST') {
     $stmt->execute([$orderRef, 'Coldplay Live in Bangkok 2026', $seat, $amount, date('Y-m-d H:i:s')]);
     $bookingId = (int) $db->lastInsertId();
     $booking = $db->query('SELECT * FROM bookings WHERE id = ' . $bookingId)->fetch(PDO::FETCH_ASSOC);
-    $result = createPaymentAttempt($db, $booking, $input);
+    $result = createConcertPayment($db, $booking, $input);
     http_response_code($result['ok'] ? 200 : $result['http_code']);
     echo json_encode($result);
     exit;
 }
 
 // ─────────────────────────────────────────────────────────────
-// 2.1 API: ลองจ่ายใหม่ใน booking เดิม (สร้าง payment attempt ใหม่)
+// 2.1 API: สร้าง payment ใหม่ใน booking เดิม
 // ─────────────────────────────────────────────────────────────
-if ($uri === '/api/retry-payment' && $method === 'POST') {
+if (preg_match('#^/api/bookings/(\d+)/payments$#', $uri, $matches) && $method === 'POST') {
     header('Content-Type: application/json');
-    $input = json_decode(file_get_contents('php://input'), true) ?? [];
-    $bookingId = (int) ($input['booking_id'] ?? 0);
     $stmt = $db->prepare('SELECT * FROM bookings WHERE id = ?');
-    $stmt->execute([$bookingId]);
+    $stmt->execute([(int) $matches[1]]);
     $booking = $stmt->fetch(PDO::FETCH_ASSOC);
-
     if (!$booking) {
         http_response_code(404);
         echo json_encode(['ok' => false, 'error' => 'booking_not_found']);
@@ -305,8 +273,13 @@ if ($uri === '/api/retry-payment' && $method === 'POST') {
         echo json_encode(['ok' => false, 'error' => 'booking_already_paid']);
         exit;
     }
-
-    $result = createPaymentAttempt($db, $booking, $input);
+    if (!in_array($booking['status'], ['FAILED', 'EXPIRED'], true)) {
+        http_response_code(409);
+        echo json_encode(['ok' => false, 'error' => 'booking_payment_not_retryable']);
+        exit;
+    }
+    $input = json_decode(file_get_contents('php://input'), true) ?? [];
+    $result = createConcertPayment($db, $booking, $input);
     http_response_code($result['ok'] ? 200 : $result['http_code']);
     echo json_encode($result);
     exit;
@@ -356,10 +329,8 @@ if ($uri === '/api/reconcile-booking' && $method === 'POST') {
             default     => $booking['status']
         };
 
-        // Reconciliation targets one provider payment attempt.  Only update the
-        // booking when it still points at that attempt, so an old attempt cannot
-        // overwrite a newer retry.
-        $db->prepare('UPDATE payment_attempts SET status = ?, failure_code = ? WHERE provider_transaction_id = ?')
+        // Reconciliation targets the one PayMock transaction stored on this booking.
+        $db->prepare('UPDATE concert_payments SET status = ?, failure_code = ? WHERE provider_payment_id = ?')
             ->execute([$gwStatus, $gwData['failure_code'] ?? null, $paymentId]);
         $stmtUp = $db->prepare("UPDATE bookings SET status = ?, paid_at = ? WHERE payment_id = ?");
         $stmtUp->execute([
@@ -423,7 +394,7 @@ if ($uri === '/api/cancel-booking' && $method === 'POST') {
     $gwData = json_decode($gwResponse, true) ?? [];
 
     if ($gwCode === 200 && ($gwData['ok'] ?? false)) {
-        $db->prepare("UPDATE payment_attempts SET status = 'FAILED', failure_code = ? WHERE provider_transaction_id = ?")
+        $db->prepare("UPDATE concert_payments SET status = 'FAILED', failure_code = ? WHERE provider_payment_id = ?")
             ->execute([$gwData['failure_code'] ?? 'cancelled', $paymentId]);
         $stmtUp = $db->prepare("UPDATE bookings SET status = 'FAILED' WHERE payment_id = ?");
         $stmtUp->execute([$paymentId]);
@@ -459,16 +430,16 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
     $stmt2->execute([$paymentId]);
     $logs = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
-    $attempts = [];
+    $payments = [];
     if ($booking) {
-        $attemptStmt = $db->prepare('SELECT attempt_number, merchant_payment_id, provider_transaction_id, method, status, failure_code, created_at FROM payment_attempts WHERE booking_id = ? ORDER BY attempt_number DESC');
-        $attemptStmt->execute([$booking['id']]);
-        $attempts = $attemptStmt->fetchAll(PDO::FETCH_ASSOC);
+        $paymentStmt = $db->prepare('SELECT id, provider_payment_id, method, status, failure_code, created_at FROM concert_payments WHERE booking_id = ? ORDER BY id DESC');
+        $paymentStmt->execute([$booking['id']]);
+        $payments = $paymentStmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     echo json_encode([
         'booking'  => $booking ?: null,
-        'attempts' => $attempts,
+        'payments' => $payments,
         'logs'     => $logs
     ]);
     exit;
@@ -756,9 +727,9 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
             const method = document.getElementById('paymentMethod').value;
             const cardSection = document.getElementById('cardInputSection');
             const bookBtnText = document.getElementById('bookBtnText');
-            const retrying = currentBookingId && ['FAILED', 'EXPIRED'].includes(currentBookingStatus);
-            if (retrying) {
-                bookBtnText.innerText = '🔁 ลองจ่ายใหม่ (Booking เดิม)';
+            const canCreatePayment = currentBookingId && ['FAILED', 'EXPIRED'].includes(currentBookingStatus);
+            if (canCreatePayment) {
+                bookBtnText.innerText = '💳 สร้าง Payment ใหม่ใน Booking เดิม';
             } else if (method === 'card') {
                 cardSection.style.display = 'block';
                 bookBtnText.innerText = '⚡ ชำระเงินด้วยบัตรทันที (Direct API)';
@@ -793,12 +764,11 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
             }
 
             try {
-                // A declined or expired payment retries on the same booking.
-                const retrying = currentBookingId && ['FAILED', 'EXPIRED'].includes(currentBookingStatus);
-                if (retrying) {
-                    payload.booking_id = currentBookingId;
-                }
-                const res = await fetch(retrying ? '/api/retry-payment' : '/api/create-booking', {
+                const createPaymentForBooking = currentBookingId && ['FAILED', 'EXPIRED'].includes(currentBookingStatus);
+                const endpoint = createPaymentForBooking
+                    ? '/api/bookings/' + encodeURIComponent(currentBookingId) + '/payments'
+                    : '/api/create-booking';
+                const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -866,7 +836,7 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                 badge.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
                 badge.innerText = '❌ FAILED' + (reason ? ` (${reason})` : '');
                 if (recSection) recSection.style.display = 'none';
-                document.getElementById('bookBtnText').innerText = '🔁 ลองจ่ายใหม่ (Booking เดิม)';
+                document.getElementById('bookBtnText').innerText = '💳 สร้าง Payment ใหม่ใน Booking เดิม';
             } else if (status === 'REJECTED') {
                 badge.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
                 badge.innerText = '🔒 REJECTED (Signature ปลอม - ปฏิเสธออกตั๋ว)';
@@ -955,9 +925,6 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                     body: JSON.stringify({ payment_id: currentPaymentId })
                 });
                 const data = await res.json();
-                if (data.ok) {
-                    currentBookingStatus = data.booking_status;
-                }
                 if (data.ok && data.booking_status === 'PAID') {
                     updateBadge('PAID');
                     document.getElementById('cardPaidAt').innerText = new Date().toLocaleTimeString() + ' (Reconciled)';
@@ -966,6 +933,7 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                     alert('✅ Reconcile สำเร็จ! Gateway ยืนยันสถานะ COMPLETED -> ออกตั๋วเรียบร้อย');
                 } else {
                     if (data.ok && ['FAILED', 'EXPIRED'].includes(data.booking_status)) {
+                        currentBookingStatus = data.booking_status;
                         updateBadge(data.booking_status, data.failure_code);
                     }
                     alert('ผลการ Reconcile: ' + JSON.stringify(data));

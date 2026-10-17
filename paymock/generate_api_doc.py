@@ -260,7 +260,7 @@ add_table(doc,
     [
         ['Authorization',    'จำเป็น',    'Bearer pm_test_key_concert_system_2024', 'API Key ยืนยันตัวตน'],
         ['Content-Type',     'จำเป็น (POST)', 'application/json', 'ชนิดข้อมูล'],
-        ['Idempotency-Key',  'แนะนำ',     'booking-42-attempt-1', 'ต้องเท่ากับ payment_id ของ attempt'],
+        ['Idempotency-Key',  'แนะนำ',     '12',                 'ต้องเท่ากับ payment_id ของ request'],
     ],
     col_widths=[4, 3, 5.5, 4]
 )
@@ -375,9 +375,9 @@ add_table(doc,
 add_heading(doc, 'Idempotency', 3, color='374151')
 add_para(doc, (
     'Merchant ทั่วไปใช้เลข payment_id ได้ เช่น 12 และตั้ง Idempotency-Key: 12. Retry หลัง timeout '
-    'ของ attempt เดิมต้องส่ง body และ key เดิม เพื่อคืน payment เดิมโดยไม่สร้างซ้ำ. Concert backend '
-    'ต้องจ่ายซ้ำใน booking เดิม จึงสร้าง payment attempt ภายในเป็น booking-42-attempt-1, '
-    'booking-42-attempt-2 และใช้ค่านั้นทั้ง payment_id กับ Idempotency-Key เพื่อแยกการลองจ่ายคนละครั้ง. '
+    'ของ request เดิมต้องส่ง body และ key เดิม เพื่อคืน payment เดิมโดยไม่สร้างซ้ำ. Concert backend '
+    'สร้าง Concert payment ภายในก่อน แล้วใช้เลข Concert payment นั้นเป็น payment_id และ Idempotency-Key. '
+    'เมื่อ FAILED หรือ EXPIRED จึงสร้าง Concert payment ใหม่ใต้ booking เดิมและใช้เลขใหม่. '
     'หากไม่ส่ง header ระบบใช้ payment_id เป็น key อัตโนมัติ แต่ production ควรส่ง header เสมอ.'
 ))
 
@@ -422,12 +422,42 @@ add_table(doc,
     ['ค่า', 'เจ้าของ', 'รูปแบบ', 'ใช้ทำอะไร'],
     [
         ['id', 'PayMock', 'txn_<ULID>', 'Provider transaction ID เดียว ใช้ path GET / cancel / QR, polling, reconcile และ webhook payload.id'],
-        ['payment_id', 'Merchant', 'เลขล้วนได้ เช่น 12', 'รหัสที่ merchant ผูกกับ order/payment attempt ของตนเอง และ PayMock echo กลับ'],
-        ['Idempotency-Key', 'Merchant', 'แนะนำให้เท่ากับ payment_id ของ attempt นั้น', 'ทำให้ retry request เดิมคืน payment เดิม ไม่สร้าง/ตัดเงินซ้ำ'],
+        ['payment_id', 'Merchant', 'เลขล้วนได้ เช่น 12', 'รหัสที่ merchant ผูกกับ order หรือ payment ของตนเอง และ PayMock echo กลับ'],
+        ['Idempotency-Key', 'Merchant', 'แนะนำให้เท่ากับ payment_id ของ request นั้น', 'ทำให้ retry request เดิมคืน payment เดิม ไม่สร้าง/ตัดเงินซ้ำ'],
     ],
     col_widths=[3.5, 3, 4.5, 5.5]
 )
-add_para(doc, 'Format มีความหมายตามระบบต้นทาง: merchant ทั่วไปใช้ 12 / 12 ได้ง่าย; Concert backend ใช้ booking-42-attempt-1 เพื่อบอกชัดว่าเป็นการลองจ่ายครั้งที่ 1 ของ booking 42. เมื่อ fail แล้วจ่ายใหม่ใช้ booking-42-attempt-2 จึงไม่ชน idempotency ของ attempt เก่า. ห้ามเปลี่ยน key ระหว่าง retry หลัง timeout เพราะจะทำให้ gateway สร้าง payment ซ้ำ.')
+add_para(doc, 'Format มีความหมายตามระบบต้นทาง: merchant ทั่วไปใช้ 12 / 12 ได้ง่าย; Concert backend ใช้เลข Concert payment / key เดียวกันสำหรับ payment attempt นั้น. เมื่อผู้ใช้ต้องการจ่ายใหม่หลัง FAILED/EXPIRED ระบบสร้าง Concert payment ใหม่ใต้ booking เดิม. ห้ามเปลี่ยน key ระหว่าง retry หลัง timeout เพราะจะทำให้ gateway สร้าง payment ซ้ำ.')
+
+add_heading(doc, 'Concert ↔ PayMock: Idempotency ที่ใช้งานจริง', 3, color='374151')
+add_para(doc, (
+    'ตัวอย่าง booking 74: Concert สร้างแถว Concert payment id = 12 ก่อนเรียก PayMock แล้วส่ง request แบบ backend-to-backend '
+    'โดยใช้เลข 12 ทั้ง body.payment_id และ header Idempotency-Key. PayMock เก็บ key นี้ไว้กับ payment; '
+    'request ที่มี key เดิมจึงได้ transaction เดิมกลับมา ไม่ใช่ transaction ใหม่.'
+))
+add_code(doc, [
+    'POST http://paymock:80/v1/payments',
+    'Authorization: Bearer pm_test_key_concert_system_2024',
+    'Idempotency-Key: 12',
+    '',
+    '{ "payment_id":"12", "amount":1200.00, "method":"card", "callback_url":"http://concert_backend:5000/api/webhook" }',
+])
+add_table(doc,
+    ['กรณี', 'Concert ส่งอะไร', 'ผลที่ PayMock / Concert'],
+    [
+        ['ครั้งแรก', 'Concert payment 12; payment_id="12"; key="12"', 'สร้าง PayMock id เช่น txn_A และ Concert บันทึก txn_A ไว้ในแถว 12'],
+        ['retry request เดิม', 'body เดิม + payment_id="12" + key="12"', 'PayMock คืน txn_A เดิม ไม่สร้าง payment ซ้ำ'],
+        ['FAILED/EXPIRED แล้วจ่ายใหม่', 'สร้าง Concert payment 13 ใต้ booking 74; payment_id="13"; key="13"', 'สร้าง PayMock transaction ใหม่ txn_B โดย booking เดิมมีประวัติทั้ง 12 และ 13'],
+        ['webhook ซ้ำ/มาช้า', 'PayMock ส่ง id เดิมของ txn_A หรือ txn_B', 'Concert อัปเดตแถวที่ตรง provider id; การอัปเดต booking ผูกกับ current payment_id จึงไม่ให้ webhook เก่าเขียนทับ attempt ล่าสุด'],
+    ],
+    col_widths=[4, 6.5, 8]
+)
+add_para(doc, (
+    'ข้อจำกัดปัจจุบัน: Concert ตั้ง cURL timeout 10 วินาที. ถ้า PayMock สร้าง payment แล้วแต่ Concert ไม่ได้รับ response, '
+    'PayMock รองรับการส่งซ้ำด้วย Concert payment id และ key เดิมอยู่แล้ว แต่ Concert ยังไม่มีงาน/route ที่ resend แถวเดิมอัตโนมัติ; '
+    'โค้ดปัจจุบันบันทึกแถวนั้นเป็น GATEWAY_ERROR. ดังนั้นห้ามตีความ timeout ว่า FAILED แล้วสร้าง Concert payment ใหม่ทันที. '
+    'การแก้ที่ถูกต้องคือตรวจ/retry payment attempt เดิมด้วย key เดิมก่อน; สร้าง attempt ใหม่ได้เมื่อยืนยันว่า FAILED หรือ EXPIRED เท่านั้น.'
+), color='B45309')
 
 add_heading(doc, 'สถานะ Payment', 3, color='374151')
 add_table(doc,
@@ -529,7 +559,7 @@ add_table(doc,
 )
 
 # 3.5 Concert backend — ใช้ payment_id
-add_heading(doc, '3.5  API ระบบคอนเสิร์ต — payment attempts และ payment_id', 2, color='065F46')
+add_heading(doc, '3.5  API ระบบคอนเสิร์ต — booking และ Concert payment', 2, color='065F46')
 add_para(doc, (
     'หลัง POST /v1/payments สำเร็จ ให้เก็บ response.id เป็น provider transaction ID '
     'ทั้ง PromptPay และบัตรใช้คีย์นี้กับ polling / ยกเลิก / reconcile'
@@ -537,8 +567,8 @@ add_para(doc, (
 add_table(doc,
     ['Method', 'Path', 'Body / Query', 'หน้าที่'],
     [
-        ['POST', '/api/create-booking',     'seat, amount, method, card fields', 'สร้าง booking + attempt #1'],
-        ['POST', '/api/retry-payment',      '{ "booking_id": 42, "method":"card", ... }', 'สร้าง attempt ถัดไปใน booking เดิม'],
+        ['POST', '/api/create-booking',     'seat, amount, method, card fields', 'สร้าง booking + Concert payment แรก'],
+        ['POST', '/api/bookings/{id}/payments', 'method, card fields optional', 'สร้าง Concert payment ใหม่ใน booking เดิมหลัง FAILED/EXPIRED'],
         ['GET',  '/api/booking-status',    '?payment_id=txn_…',            'สถานะตั๋ว + webhook logs'],
         ['POST', '/api/reconcile-booking', '{ "payment_id": "txn_…" }',    'GET จาก PayMock แล้วอัปเดตตั๋ว'],
         ['POST', '/api/cancel-booking',    '{ "payment_id": "txn_…" }',    'เรียก POST /v1/payments/{id}/cancel'],
@@ -547,8 +577,9 @@ add_table(doc,
     col_widths=[2, 5, 5.5, 4]
 )
 add_para(doc, (
-    'ตัวอย่าง: booking 42 เริ่มด้วย merchant payment_id / Idempotency-Key = booking-42-attempt-1. '
-    'ถ้าล้มเหลว endpoint retry-payment จะสร้าง booking-42-attempt-2 อัตโนมัติ โดยไม่สร้าง booking ใหม่. '
+    'create-booking สร้าง booking และ Concert payment แรก. หากบัตรล้มเหลว ให้เรียก '
+    '/api/bookings/{bookingId}/payments เพื่อสร้าง Concert payment ใหม่ใต้ booking เดิม. '
+    'ระบบใช้เลข Concert payment ใหม่นั้นเป็น merchant payment_id และ Idempotency-Key. '
     'หลังจากสร้างแล้วทุก endpoint สถานะใช้ response.id (provider transaction ID, txn_…)'
 ), color='B45309')
 
@@ -1077,7 +1108,7 @@ add_table(doc,
     ['Method', 'Path', 'ใช้เมื่อ', 'ต้องส่ง', 'ผลลัพธ์สำเร็จ', 'กรณีผิดพลาด'],
     [
         ['GET', '/v1/payments', 'ตรวจ health และรายการล่าสุด', 'Bearer token', '200 JSON: service, status, chaos_mode, webhook_mode, recent[]', '401 token ผิด; 429/500/502/503 เมื่อ Chaos Mode'],
-        ['POST', '/v1/payments', 'เริ่ม payment attempt ใหม่ หรือ retry request ที่ timeout', 'Bearer, JSON, Idempotency-Key แนะนำ', '201 JSON payment; Card ที่ส่ง card_number อาจ COMPLETED/FAILED ทันที', '401, 422 validation, 429, 500, 502, 503'],
+        ['POST', '/v1/payments', 'เริ่ม payment ใหม่ หรือ retry request ที่ timeout', 'Bearer, JSON, Idempotency-Key แนะนำ', '201 JSON payment; Card ที่ส่ง card_number อาจ COMPLETED/FAILED ทันที', '401, 422 validation, 429, 500, 502, 503'],
         ['GET', '/v1/payments/{publicId}', 'poll/reconcile สถานะ transaction', 'Bearer token; publicId = response.id', '200 JSON payment', '401, 404, 429, 500, 502, 503'],
         ['POST', '/v1/payments/{publicId}/cancel', 'ยกเลิกเฉพาะรายการที่ยัง PENDING', 'Bearer token; ไม่มี body', '200 { ok:true, status:"FAILED", failure_code:"cancelled" }', '401, 404, 409, 429, 500, 502, 503'],
         ['GET', '/v1/payments/{publicId}/qr.svg', 'นำ QR PromptPay ไปแสดงในหน้า merchant', 'publicId; ไม่ต้อง Bearer', '200 image/svg+xml', '404 เมื่อไม่พบรายการ'],
@@ -1171,11 +1202,11 @@ add_table(doc,
     ['Method', 'Path', 'ใช้เมื่อ', 'ข้อมูลที่ส่ง', 'Response ตัวอย่าง / ทุกกรณี'],
     [
         ['POST', '/api/webhook หรือ /webhooks/payment', 'PayMock แจ้งผลเข้า backend', 'headers X-Signature, X-Event-Id; PayMock webhook body', '200 { "ok":true, "message":"Webhook received and processed" }; 401 { "error":"invalid_signature", "reason":"bad_signature"|"replay_attack" }'],
-        ['POST', '/api/create-booking', 'สร้าง booking และ payment attempt แรก', 'JSON: seat, amount, method; card เพิ่ม card_number, exp_month, exp_year, cvc', '200 { ok:true,booking_id,attempt_number:1,merchant_payment_id:"booking-<id>-attempt-1",payment_id:"txn_…",status,... }; gateway failure => { ok:false,http_code,merchant_payment_id,raw }'],
-        ['POST', '/api/retry-payment', 'จ่ายใหม่หลัง FAILED/EXPIRED โดยใช้ booking เดิม', 'JSON: { booking_id:42, method:"card"|"promptpay", card fields optional }', '200 { ok:true,booking_id:42,attempt_number:2,merchant_payment_id:"booking-42-attempt-2",payment_id:"txn_…",status,... }; 404 booking_not_found; 409 booking_already_paid'],
+        ['POST', '/api/create-booking', 'สร้าง booking และ Concert payment แรก', 'JSON: seat, amount, method; card เพิ่ม card_number, exp_month, exp_year, cvc', '200 { ok:true,booking_id,concert_payment_id,payment_id:"txn_…",status,... }; gateway failure => { ok:false,http_code,concert_payment_id,raw }'],
+        ['POST', '/api/bookings/{bookingId}/payments', 'สร้าง Concert payment ใหม่ใน booking เดิมหลัง FAILED/EXPIRED', 'JSON: method; card เพิ่ม card_number, exp_month, exp_year, cvc', '200 { ok:true,booking_id,concert_payment_id,payment_id:"txn_…",status,... }; 404 booking_not_found; 409 booking_already_paid'],
         ['POST', '/api/reconcile-booking', 'กู้สถานะเมื่อ webhook หายหรือมาช้า', 'JSON: { "payment_id":"txn_…" }', '200 { ok:true,reconciled:true,gateway_status,booking_status,payment_id }; 404 { ok:false,error:"booking_or_payment_not_found" }; gateway error => { ok:false,error:"reconcile_failed",httpCode,raw }'],
         ['POST', '/api/cancel-booking', 'ผู้ใช้ยกเลิกรายการ PENDING', 'JSON: { "payment_id":"txn_…" }', '200 { ok:true,payment_id,booking_status:"FAILED",failure_code:"cancelled" }; 404 not found; gateway conflict/error => { ok:false,error:"cannot_cancel",httpCode,raw }'],
-        ['GET', '/api/booking-status?payment_id=txn_…', 'หน้าเว็บ polling booking และดู attempts/logs', 'query payment_id', '200 { "booking":{...}|null, "attempts":[...], "logs":[...] }'],
+        ['GET', '/api/booking-status?payment_id=txn_…', 'หน้าเว็บ polling booking และดู Concert payments/logs', 'query payment_id', '200 { "booking":{...}|null, "payments":[...], "logs":[...] }'],
     ],
     col_widths=[1.3, 4.5, 3.8, 5.4, 5.5]
 )
