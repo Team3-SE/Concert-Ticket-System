@@ -17,11 +17,12 @@ class MockMode
         'normal',
         'down',
         'rate_limit',
-        'bad_auth',
-        'bad_json',
-        'error_rate',
         'slow',
-        'timeout',
+    ];
+
+    /** Chaos modes retired in favour of one business-facing 503 response. */
+    private const RETIRED_CHAOS_NAMES = [
+        'bad_auth', 'bad_json', 'error_rate', 'timeout',
     ];
 
     public const WEBHOOK_NAMES = [
@@ -55,7 +56,16 @@ class MockMode
     {
         $mode = Setting::get('chaos_mode', 'normal') ?: 'normal';
 
-        return self::isChaos($mode) ? $mode : 'normal';
+        if (self::isChaos($mode)) {
+            return $mode;
+        }
+
+        // Existing installations may still have an older simulation saved.
+        // Treat it as the single outage scenario, rather than exposing a
+        // technical 401/429/500/502 response to a customer.
+        return in_array(self::name($mode), self::RETIRED_CHAOS_NAMES, true)
+            ? 'down'
+            : 'normal';
     }
 
     public static function webhookMode(): string

@@ -66,9 +66,7 @@ class AdminController extends Controller
     public function setChaos(Request $request): RedirectResponse
     {
         $mode = $request->input('chaos_mode', 'normal');
-        if (in_array($mode, ['slow', 'timeout'], true)) {
-            // Both delay modes are configurable from Admin. The cap prevents a
-            // typo from blocking a PHP worker indefinitely.
+        if ($mode === 'slow') {
             $seconds = max(0, min(3600, (int) $request->input('delay_seconds', 5)));
             $mode .= ':' . $seconds;
         }

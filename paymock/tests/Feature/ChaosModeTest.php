@@ -31,37 +31,41 @@ class ChaosModeTest extends TestCase
         ]);
     }
 
-    /** Chaos: down → 503 */
+    /** Chaos: down → one customer-facing 503 response */
     public function test_chaos_down_returns_503(): void
     {
-        $res = $this->postPayment(['X-Mock-Scenario' => 'down']);
-        $res->assertStatus(503)->assertJson(['error' => 'service_unavailable']);
+        Setting::set('chaos_mode', 'down');
+
+        $this->postPayment()
+            ->assertStatus(503)
+            ->assertJson([
+                'error' => 'service_unavailable',
+                'message' => 'Gateway มีปัญหา โปรดลองอีกครั้ง',
+            ]);
     }
 
-    /** Chaos: rate_limit → 429 + Retry-After */
-    public function test_chaos_rate_limit_returns_429_with_header(): void
+    /** Chaos: rate limit remains available for API backoff testing. */
+    public function test_chaos_rate_limit_returns_429_with_retry_after(): void
     {
-        $res = $this->postPayment(['X-Mock-Scenario' => 'rate_limit']);
-        $res->assertStatus(429)
+        Setting::set('chaos_mode', 'rate_limit');
+
+        $this->postPayment()
+            ->assertStatus(429)
             ->assertHeader('Retry-After', '30');
     }
 
-    /** Chaos: bad_auth → 401 */
-    public function test_chaos_bad_auth_returns_401(): void
+    /** Old saved simulations collapse into the one 503 gateway scenario. */
+    public function test_retired_chaos_modes_return_the_same_503_response(): void
     {
-        $res = $this->postPayment(['X-Mock-Scenario' => 'bad_auth']);
-        $res->assertStatus(401)->assertJson(['error' => 'invalid_api_key']);
+        foreach (['timeout:5', 'bad_json', 'bad_auth'] as $oldMode) {
+            Setting::set('chaos_mode', $oldMode);
+            $this->postPayment()
+                ->assertStatus(503)
+                ->assertJsonPath('message', 'Gateway มีปัญหา โปรดลองอีกครั้ง');
+        }
     }
 
-    /** Chaos: bad_json → 502 with HTML body */
-    public function test_chaos_bad_json_returns_502_html(): void
-    {
-        $res = $this->postPayment(['X-Mock-Scenario' => 'bad_json']);
-        $res->assertStatus(502);
-        $this->assertStringContainsString('Bad Gateway', $res->getContent());
-    }
-
-    /** Chaos: System-wide setting works when header not present */
+    /** Chaos: system-wide setting works */
     public function test_system_wide_chaos_mode_works(): void
     {
         Setting::set('chaos_mode', 'down');
@@ -69,23 +73,11 @@ class ChaosModeTest extends TestCase
         $res->assertStatus(503);
     }
 
-    /** Chaos: Header overrides system-wide setting */
-    public function test_header_overrides_system_chaos_mode(): void
+    /** Request headers cannot change the system-wide business outage mode. */
+    public function test_request_header_cannot_override_chaos_mode(): void
     {
         Setting::set('chaos_mode', 'down');
-        // normal override
-        $res = $this->postPayment(['X-Mock-Scenario' => 'normal']);
-        $res->assertStatus(201);
-    }
-
-    /** Merchant ส่ง webhook_* ใน header ไม่มีผล — ต้องตั้งที่ Admin */
-    public function test_webhook_header_does_not_apply_chaos_or_stamp_scenario(): void
-    {
-        $res = $this->postPayment(['X-Mock-Scenario' => 'webhook_lost']);
-        $res->assertStatus(201);
-        $this->assertDatabaseHas('payments', [
-            'public_id' => $res->json('id'),
-            'scenario'  => null,
-        ]);
+        $this->postPayment(['X-Mock-Scenario' => 'normal'])
+            ->assertStatus(503);
     }
 }

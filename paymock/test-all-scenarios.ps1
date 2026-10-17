@@ -91,59 +91,21 @@ try {
 }
 
 # ------------------------------------------------------------------------------
-# 4. Chaos Mode Headers
+# 4. Chaos Mode (single 503 business response)
 # ------------------------------------------------------------------------------
-Write-Host "`n4. Testing Chaos Mode Headers (X-Mock-Scenario)..." -ForegroundColor Yellow
+Write-Host "`n4. Testing Chaos Mode..." -ForegroundColor Yellow
 
-# down -> 503
+# Configure Gateway unavailable from PayMock Admin, then verify its single
+# customer-facing response. This script does not use X-Mock-Scenario because
+# merchants cannot override a system-wide outage mode.
 try {
     $resDown = Invoke-WebRequest -Uri "$BaseUrl/v1/payments" -Method Post `
-        -Headers @{ "Authorization" = "Bearer $ApiKey"; "X-Mock-Scenario" = "down" } `
+        -Headers @{ "Authorization" = "Bearer $ApiKey" } `
         -Body $body -ContentType "application/json" -SkipHttpErrorCheck
-    Assert-Result "Scenario [down] returns 503" ($resDown.StatusCode -eq 503)
+    $gatewayMessage = $resDown.Content | ConvertFrom-Json
+    Assert-Result "Gateway unavailable returns 503 with business message" ($resDown.StatusCode -eq 503 -and $gatewayMessage.message -eq "Gateway มีปัญหา โปรดลองอีกครั้ง")
 } catch {
-    Assert-Result "Scenario [down]" $true
-}
-
-# rate_limit -> 429
-try {
-    $resRate = Invoke-WebRequest -Uri "$BaseUrl/v1/payments" -Method Post `
-        -Headers @{ "Authorization" = "Bearer $ApiKey"; "X-Mock-Scenario" = "rate_limit" } `
-        -Body $body -ContentType "application/json" -SkipHttpErrorCheck
-    $hasRetryAfter = $resRate.Headers["Retry-After"] -ne $null
-    Assert-Result "Scenario [rate_limit] returns 429 with Retry-After" ($resRate.StatusCode -eq 429 -and $hasRetryAfter)
-} catch {
-    Assert-Result "Scenario [rate_limit]" $true
-}
-
-# bad_json -> 502
-try {
-    $resBad = Invoke-WebRequest -Uri "$BaseUrl/v1/payments" -Method Post `
-        -Headers @{ "Authorization" = "Bearer $ApiKey"; "X-Mock-Scenario" = "bad_json" } `
-        -Body $body -ContentType "application/json" -SkipHttpErrorCheck
-    Assert-Result "Scenario [bad_json] returns 502 Bad Gateway" ($resBad.StatusCode -eq 502)
-} catch {
-    Assert-Result "Scenario [bad_json]" $true
-}
-
-# slow:2 -> takes at least 2 seconds
-try {
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    $slowBody = @{
-        order_ref    = "BOOK_SLOW_" + (Get-Random)
-        amount       = 500.00
-        method       = "promptpay"
-        callback_url = "http://concert_backend:5000/api/webhook"
-    } | ConvertTo-Json
-
-    $resSlow = Invoke-RestMethod -Uri "$BaseUrl/v1/payments" -Method Post `
-        -Headers @{ "Authorization" = "Bearer $ApiKey"; "X-Mock-Scenario" = "slow:2" } `
-        -Body $slowBody -ContentType "application/json"
-    $sw.Stop()
-    $sec = $sw.Elapsed.TotalSeconds
-    Assert-Result "Scenario [slow:2] delayed by $([Math]::Round($sec, 2))s" ($sec -ge 1.9)
-} catch {
-    Assert-Result "Scenario [slow:2]" $false $_.Exception.Message
+    Assert-Result "Gateway unavailable" $false $_.Exception.Message
 }
 
 # ------------------------------------------------------------------------------

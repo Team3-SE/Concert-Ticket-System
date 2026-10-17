@@ -307,7 +307,7 @@ add_table(doc,
     ['Field', 'Type', 'ความหมาย'],
     [
         ['status',       'string', '"online" เสมอ (ถ้าตอบได้)'],
-        ['chaos_mode',   'string', 'ชั้น 1 — ตั้งที่ Admin: normal, down, slow:3 ฯลฯ'],
+        ['chaos_mode',   'string', 'ชั้น 1 — ตั้งที่ Admin: normal, down, slow:N หรือ rate_limit'],
         ['webhook_mode', 'string', 'ชั้น 2 — ตั้งที่ Admin: normal, webhook_lost ฯลฯ'],
         ['recent',       'array',  '10 รายการล่าสุด (schema เดียวกับ POST response)'],
     ],
@@ -493,7 +493,7 @@ add_table(doc,
     [
         ['401', 'unauthorized',       'API Key ผิดหรือไม่มี'],
         ['422', 'validation_error',   'ข้อมูลที่ส่งไม่ถูกต้อง (ดูฟิลด์ details)'],
-        ['429', 'rate_limited',       'ถูก rate limit (ดู Retry-After header)'],
+        ['429', 'too_many_requests',  'Chaos mode = rate_limit (ดู Retry-After header)'],
         ['500', 'internal_error',     'ข้อผิดพลาดภายใน gateway'],
         ['503', 'service_unavailable','gateway อยู่ในโหมด down'],
     ],
@@ -848,13 +848,9 @@ add_table(doc,
     ['mode', 'พฤติกรรม', 'ระบบคอนเสิร์ตควรทำ'],
     [
         ['normal',        'ทำงานปกติ',                   '—'],
-        ['down',          'ตอบ 503 ทุก request',          'แจ้ง "ระบบชำระเงินขัดข้อง"'],
+        ['down',          'ตอบ 503 ทุก request',          'แจ้ง "Gateway มีปัญหา โปรดลองอีกครั้ง"'],
         ['slow:N',        'หน่วง N วินาที',               'แสดง loading ไม่กดซ้ำ'],
-        ['timeout:N',     'หน่วง N วินาที (payment สร้างจริง)', 'Retry ด้วย Idempotency-Key เดิม'],
-        ['error_rate:N',  'สุ่ม 500 ใส่ N%',             'Retry จำกัดครั้ง'],
-        ['rate_limit',    'ตอบ 429 + Retry-After: 30',   'อ่าน Retry-After แล้ว backoff'],
-        ['bad_auth',      'ตอบ 401',                      'แจ้ง Admin (ไม่แจ้งผู้ใช้ด้วยข้อความเทคนิค)'],
-        ['bad_json',      'ตอบ HTML หรือ JSON พัง',       'ไม่ crash จับเป็น error'],
+        ['rate_limit',    'ตอบ 429 + Retry-After: 30',    'รอแล้วค่อยลองใหม่'],
     ],
     col_widths=[3.5, 5, 8]
 )
@@ -910,11 +906,11 @@ add_code(doc, [
     'HTTP/1.1 429 Too Many Requests',
     'Retry-After: 30',
     '',
-    '{ "error": "rate_limited", "message": "Retry after 30 seconds." }',
+    '{ "error": "too_many_requests", "message": "Too many requests. Please retry after 30 seconds." }',
 ])
 
 add_heading(doc, '503 Service Unavailable', 2, color='991B1B')
-add_code(doc, ['{ "error": "service_unavailable", "message": "Gateway is currently down." }'])
+add_code(doc, ['{ "error": "service_unavailable", "message": "Gateway มีปัญหา โปรดลองอีกครั้ง" }'])
 
 add_heading(doc, '7.1 ปรัชญาการออกแบบ HTTP Status Code (ทำไมแต่ละ API ถึงต่างกัน)', 2)
 add_para(doc, (
@@ -936,8 +932,7 @@ add_table(doc,
     [
         ['POST /v1/payments', '401', 'unauthorized', 'API Key ผิด/ไม่มี', 'เช็ค config .env ห้าม Retry'],
         ['POST /v1/payments', '422', 'validation_error', 'amount <= 0 หรือพารามิเตอร์ขาด', 'เช็ค request body ก่อนส่ง'],
-        ['POST /v1/payments', '429', 'rate_limited', 'ยิงถี่เกินไป', 'อ่าน Retry-After แล้วหน่วงเวลาก่อนลองใหม่'],
-        ['POST /v1/payments', '503', 'service_unavailable', 'Gateway อยู่ในโหมด down', 'แจ้งผู้ใช้ระบบขัดข้องชั่วคราว'],
+        ['POST /v1/payments', '503', 'service_unavailable', 'Gateway unavailable', 'แจ้ง Gateway มีปัญหา โปรดลองอีกครั้ง'],
         ['GET /v1/payments/{id}', '404', 'not_found', 'ไม่พบ Payment ID นี้ในระบบ', 'เช็ค ID ว่าคัดลอกมาถูกต้องหรือไม่'],
         ['POST /v1/payments/{id}/cancel', '409', 'cannot_cancel', 'รายการจ่ายสำเร็จแล้ว (Settled)', 'ห้ามยกเลิก ปล่อยผ่านเป็น COMPLETED'],
         ['Webhook (POST callback)', '400', 'expired', 'Timestamp ห่างเกิน 5 นาที', 'ระวัง Replay Attack ปฏิเสธทันที'],
@@ -951,7 +946,7 @@ add_para(doc, (
     'ระบบ PayMock มีลำดับชั้นการตัดสินใจ (Execution Hierarchy) แบ่งเป็น 4 ชั้นอย่างเด็ดขาด:'
 ))
 steps_hierarchy = [
-    'Layer 1 Chaos (ใหญ่สุด): Admin chaos_mode ครอบคำขอเข้า /v1/* และ checkout (503/429/500/ช้า)',
+    'Layer 1 Chaos (ใหญ่สุด): Admin chaos_mode ครอบคำขอเข้า /v1/* และ checkout ด้วย 503, slow หรือ rate limit',
     'Layer 2 Request & Idempotency: ตรวจ body และ Idempotency-Key (ถ้าซ้ำ คืนรายการเดิม)',
     'Layer 3 การชำระเงิน: Magic Card / PromptPay confirm / cancel — ระบบคอนเสิร์ตอ้างอิงด้วย payment_id',
     'Layer 4 Webhook (รอง): Admin webhook_mode global — lost / delay / dup / bad_sig / replay',
@@ -1170,7 +1165,7 @@ add_table(doc,
         ['POST', '/admin/login', 'เริ่ม session Admin', 'form: password=admin1234', '302 -> /admin เมื่อถูกต้อง; 302 กลับ form + validation error เมื่อผิด'],
         ['POST', '/admin/logout', 'จบ session Admin', 'CSRF/session', '302 -> /admin/login'],
         ['GET', '/admin', 'ดู payments, deliveries และ config', 'authenticated session', '200 HTML dashboard; unauthenticated ถูก redirect โดย middleware'],
-        ['POST', '/admin/chaos', 'เลือกความผิดปกติและเวลาหน่วง API', 'form: chaos_mode=normal|down|slow|timeout|error_rate:30|rate_limit|bad_auth|bad_json; delay_seconds=0..3600 สำหรับ slow/timeout', '302 กลับ dashboard; slow/timeout ตั้งเวลาหน่วงเองได้; invalid value ถูกบังคับเป็น normal'],
+        ['POST', '/admin/chaos', 'เลือกสถานะ Gateway', 'form: chaos_mode=normal|down|slow|rate_limit; delay_seconds=0..3600 สำหรับ slow', '302 กลับ dashboard; down ตอบ 503 พร้อมข้อความสำหรับลูกค้า; invalid value ถูกบังคับเป็น normal'],
         ['POST', '/admin/webhook-mode', 'เลือก anomaly ของ webhook ทั้งระบบ', 'form: webhook_mode=normal|webhook_lost|webhook_dup:3|webhook_bad_sig|webhook_replay', '302 กลับ dashboard; ไม่มี webhook delay 10 วินาทีตายตัว และนี่คือจุดเดียวที่ตั้ง webhook behavior สำหรับทุกรายการ'],
         ['POST', '/admin/scenarios/run', 'สร้างรายการ demo และเปิด checkout', 'form: method=card|promptpay, amount optional, card_number optional', '302 -> /checkout/{publicId}; ไม่รับหรือบันทึก webhook override'],
         ['POST', '/admin/payments/{publicId}/transition', 'บังคับสถานะเพื่อทดสอบ', 'form: status=COMPLETED|FAILED|EXPIRED, failure_code optional', '302; invalid status กลับพร้อม error; 404 เมื่อไม่พบ'],

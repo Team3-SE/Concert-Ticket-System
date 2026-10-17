@@ -151,15 +151,13 @@ Authorization: Bearer {API_KEY}
 
 ระบบคอนเสิร์ตไม่ส่ง `X-Mock-Scenario` — ตั้ง `chaos_mode` ที่ Admin แล้วทุกคำขอเข้า `/v1/*` และ checkout จะถูกจำลองตามนั้น
 
-| Scenario | พฤติกรรม |
+| Scenario | พฤติกรรมที่ลูกค้าเห็น |
 |---|---|
-| `down` | ตอบ 503 ทันที |
-| `rate_limit` | ตอบ 429 พร้อม header `Retry-After: 30` |
-| `bad_auth` | ตอบ 401 |
-| `bad_json` | ตอบ HTML 502 Bad Gateway |
-| `error_rate:N` | สุ่มตอบ 500 ตาม % ที่ระบุ เช่น `error_rate:30` |
-| `slow:N` | หน่วงเวลา N วินาทีแล้วทำงานต่อ |
-| `timeout:N` | หน่วงแต่ **รายการถูกสร้างจริง** (จุดทดสอบ Idempotency) |
+| `down` | ตอบ `503` พร้อมข้อความ `Gateway มีปัญหา โปรดลองอีกครั้ง` |
+| `slow:N` | หน่วง N วินาทีแล้วประมวลผลต่อ |
+| `rate_limit` | API ตอบ `429` พร้อม `Retry-After: 30` |
+
+ไม่มี timeout simulation, bad JSON, bad auth หรือสุ่ม 5xx ใน Chaos Mode
 
 ---
 

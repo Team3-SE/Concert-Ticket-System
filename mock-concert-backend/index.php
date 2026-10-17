@@ -121,9 +121,12 @@ function createConcertPayment(PDO $db, array $booking, array $input): array
             ->execute(['GATEWAY_ERROR', 'gateway_request_failed', $concertPaymentId]);
         return [
             'ok' => false,
-            'http_code' => $httpCode ?: 500,
+            // Every upstream payment-gateway failure is presented to the
+            // customer as the one business-level 503 outcome.
+            'http_code' => 503,
             'concert_payment_id' => (int) $concertPaymentId,
-            'raw' => $rawResponse,
+            'error' => 'service_unavailable',
+            'message' => 'Gateway มีปัญหา โปรดลองอีกครั้ง',
         ];
     }
 
@@ -794,10 +797,10 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                         startPollingStatus(data.payment_id);
                     }
                 } else {
-                    alert('เกิดข้อผิดพลาดในการสร้างรายการ: ' + JSON.stringify(data));
+                    alert(data.message || 'Gateway มีปัญหา โปรดลองอีกครั้ง');
                 }
             } catch (err) {
-                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ Backend: ' + err.message);
+                alert('Gateway มีปัญหา โปรดลองอีกครั้ง');
             } finally {
                 btn.disabled = false;
                 btn.classList.remove('opacity-70');

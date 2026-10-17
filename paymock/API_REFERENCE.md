@@ -34,7 +34,6 @@ Authorization: Bearer pm_test_key_concert_system_2024
 | สถานการณ์ | Response |
 |-----------|----------|
 | ไม่มี header / key ผิด | `401 Unauthorized` |
-| Chaos mode = `bad_auth` | `401 Unauthorized` (จำลอง key หมดอายุ) |
 
 ---
 
@@ -251,7 +250,7 @@ Idempotency-Key: 12
 |------|---------|--------|
 | `401` | `unauthorized` | API Key ผิดหรือไม่มี |
 | `422` | `validation_error` | ข้อมูลที่ส่งไม่ถูกต้อง (ดู `details`) |
-| `429` | `rate_limited` | ถูก rate limit (ดู `Retry-After` header) |
+| `429` | `too_many_requests` | Chaos mode = `rate_limit` (ดู `Retry-After` header) |
 | `500` | `internal_error` | ข้อผิดพลาดภายใน gateway |
 | `503` | `service_unavailable` | gateway อยู่ในโหมด `down` |
 
@@ -550,13 +549,11 @@ PayMock จะ retry webhook ถ้าได้รับ response ที่ **�
 | mode | พฤติกรรม | ระบบควรทำ |
 |------|---------|----------|
 | `normal` | ปกติ | — |
-| `down` | ตอบ 503 ทุก request | แจ้ง "ระบบชำระเงินขัดข้อง" |
-| `slow:N` | หน่วง N วินาที | แสดง loading ไม่กดซ้ำ |
-| `timeout:N` | หน่วง N วินาที (เกิน timeout ของ client) | retry ด้วย Idempotency-Key เดิม |
-| `error_rate:N` | สุ่ม 500 ใส่ N% | retry จำกัดครั้ง |
-| `rate_limit` | ตอบ 429 + Retry-After: 30 | อ่าน Retry-After แล้ว backoff |
-| `bad_auth` | ตอบ 401 | แจ้ง Admin (ไม่แจ้งผู้ใช้ด้วยข้อความเทคนิค) |
-| `bad_json` | ตอบ HTML หรือ JSON พัง | ไม่ crash จับเป็น error |
+| `down` | ตอบ 503 ทุก request ด้วยข้อความเดียว | แจ้ง `Gateway มีปัญหา โปรดลองอีกครั้ง` |
+| `slow:N` | หน่วง N วินาที | แสดง loading และไม่กดซ้ำ |
+| `rate_limit` | ตอบ 429 พร้อม `Retry-After: 30` | รอแล้วค่อยลองใหม่ |
+
+ไม่มี timeout simulation, bad JSON, bad auth หรือสุ่ม 5xx ใน Chaos Mode
 
 > **ลำดับความสำคัญ:** Chaos Mode ทั้งระบบ (inbound) > เลขบัตรวิเศษ (ผลจ่าย) > Webhook Mode (outbound)
 
@@ -596,25 +593,21 @@ Error response ทุกชนิดมี format เดียวกัน:
 }
 ```
 
-### 429 Rate Limited
-
-```http
-HTTP/1.1 429 Too Many Requests
-Retry-After: 30
-Content-Type: application/json
-
-{
-  "error": "rate_limited",
-  "message": "Too many requests. Retry after 30 seconds."
-}
-```
-
 ### 503 Service Unavailable
 
 ```json
 {
   "error": "service_unavailable",
-  "message": "Payment gateway is currently down (chaos mode: down)."
+  "message": "Gateway มีปัญหา โปรดลองอีกครั้ง"
+}
+```
+
+### 429 Rate Limited
+
+```json
+{
+  "error": "too_many_requests",
+  "message": "Too many requests. Please retry after 30 seconds."
 }
 ```
 
@@ -633,8 +626,8 @@ Content-Type: application/json
 |---|---|---|---|---|
 | `POST /v1/payments` | 401 | `unauthorized` | API Key ผิดหรือไม่มี | เช็ค config `.env` ห้าม Retry ซ้ำ |
 | `POST /v1/payments` | 422 | `validation_error` | ข้อมูลไม่ครบ เช่น amount <= 0 | แก้ไข request body ก่อนส่งใหม่ |
-| `POST /v1/payments` | 429 | `rate_limited` | ยิง API ถี่เกินกำหนด | อ่าน Header `Retry-After` แล้วหน่วงเวลา |
-| `POST /v1/payments` | 503 | `service_unavailable` | Gateway อยู่ในโหมด down | แจ้งผู้ใช้ระบบขัดข้องชั่วคราว |
+| `POST /v1/payments` | 429 | `too_many_requests` | Chaos rate limit | รอตาม `Retry-After` แล้วค่อยลองใหม่ |
+| `POST /v1/payments` | 503 | `service_unavailable` | Gateway unavailable | แจ้ง `Gateway มีปัญหา โปรดลองอีกครั้ง` |
 | `GET /v1/payments/{id}` | 404 | `not_found` | ไม่พบ Payment ID นี้ | ตรวจสอบ ID ว่าส่งมาถูกต้องหรือไม่ |
 | `POST /v1/payments/{id}/cancel` | 409 | `cannot_cancel` | รายการจ่ายสำเร็จไปแล้ว | ห้ามยกเลิก ปล่อยผ่านเป็น COMPLETED |
 | `Webhook (POST callback)` | 400 | `expired` | Timestamp เก่าเกิน 5 นาที | ระวัง Replay Attack ปฏิเสธทันที |
@@ -642,7 +635,7 @@ Content-Type: application/json
 
 ### 9.3 Hierarchy ลำดับชั้นการตรวจสอบในระบบ PayMock
 
-1. **Layer 1 Chaos (ใหญ่สุด):** Admin `chaos_mode` ครอบคำขอเข้า `/v1/*` และ checkout (503/429/500/ช้า)
+1. **Layer 1 Chaos (ใหญ่สุด):** Admin `chaos_mode` ครอบคำขอเข้า `/v1/*` และ checkout ด้วย 503, slow หรือ rate limit
 2. **Layer 2 Request & Idempotency:** ตรวจ body และ `Idempotency-Key` (ถ้าซ้ำ คืนรายการเดิม)
 3. **Layer 3 การชำระเงิน:** Magic Card / PromptPay confirm / cancel
 4. **Layer 4 Webhook (รอง):** Admin `webhook_mode` แบบ global — lost / delay / dup / bad_sig / replay

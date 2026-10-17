@@ -141,16 +141,12 @@
                 <select name="chaos_mode"
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
                     <option value="normal" {{ $chaosMode === 'normal' ? 'selected' : '' }}>✅ Normal (ทำงานปกติ)</option>
-                    <option value="down" {{ $chaosMode === 'down' ? 'selected' : '' }}>🔴 Down (503 Gateway ล่ม)</option>
+                    <option value="down" {{ $chaosMode === 'down' ? 'selected' : '' }}>🔴 Gateway มีปัญหา (503)</option>
                     <option value="slow" {{ str_starts_with($chaosMode, 'slow:') ? 'selected' : '' }}>🐢 Slow (หน่วงก่อนประมวลผล)</option>
-                    <option value="timeout" {{ str_starts_with($chaosMode, 'timeout:') ? 'selected' : '' }}>⏳ Timeout simulation (หน่วงก่อนตอบ แต่สร้าง payment จริง)</option>
-                    <option value="error_rate:30" {{ $chaosMode === 'error_rate:30' ? 'selected' : '' }}>🎲 Error Rate 30% (สุ่ม 500)</option>
                     <option value="rate_limit" {{ $chaosMode === 'rate_limit' ? 'selected' : '' }}>🚦 Rate Limit (429 Too Many Requests)</option>
-                    <option value="bad_json" {{ $chaosMode === 'bad_json' ? 'selected' : '' }}>💥 Bad JSON (502 HTML Body)</option>
-                    <option value="bad_auth" {{ $chaosMode === 'bad_auth' ? 'selected' : '' }}>🔑 Bad Auth (401 Unauthorized)</option>
                 </select>
                 <label class="block text-xs text-gray-600">
-                    เวลา delay (วินาที, ใช้กับ Slow และ Timeout simulation; 0-3600)
+                    เวลา delay (วินาที, ใช้กับ Slow; 0-3600)
                     <input type="number" name="delay_seconds" min="0" max="3600"
                            value="{{ (int) (explode(':', $chaosMode, 2)[1] ?? 5) }}"
                            class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
