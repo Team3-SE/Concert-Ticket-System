@@ -10,9 +10,6 @@
 @section('body_class', 'page-home')
 
 @section('content')
-@if(session('status'))
-  <div class="home-flash">{{ session('status') }}</div>
-@endif
 {{-- Search Bar --}}
 <div class="search-wrap">
   <div class="search-box">
@@ -105,6 +102,22 @@
       </div>
       @endfor
     @endif
+  </div>
+</div>
+
+{{-- Success Modal: ยืนยันอีเมลสำเร็จ --}}
+<div class="overlay" id="verifiedOverlay">
+  <div class="modal verified-modal" role="dialog" aria-modal="true" aria-labelledby="verifiedTitle">
+    <div class="verified-icon">
+      <span class="verified-ring"></span>
+      <span class="verified-check">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12.5 10 17.5 19 7.5"/></svg>
+      </span>
+    </div>
+    <h2 id="verifiedTitle">ยืนยันอีเมลสำเร็จ</h2>
+    <p class="verified-text">บัญชีของคุณพร้อมใช้งานแล้ว<br>ยินดีต้อนรับสู่ TEAM 3 Ticket</p>
+    <a class="verified-cta" href="{{ route('concerts.index') }}">เลือกคอนเสิร์ตเลย</a>
+    <button type="button" class="verified-close" data-close>ปิดหน้าต่างนี้</button>
   </div>
 </div>
 
@@ -229,10 +242,11 @@
   // ----- Modal logic -----
   const loginOverlay    = document.getElementById('loginOverlay');
   const registerOverlay = document.getElementById('registerOverlay');
+  const verifiedOverlay = document.getElementById('verifiedOverlay');
 
   function openModal(el)  { el.classList.add('open'); }
   function closeModal(el) { el.classList.remove('open'); }
-  function closeAll()     { closeModal(loginOverlay); closeModal(registerOverlay); }
+  function closeAll()     { closeModal(loginOverlay); closeModal(registerOverlay); closeModal(verifiedOverlay); }
 
   const openLoginBtn = document.getElementById('openLogin');
   if (openLoginBtn) {
@@ -255,6 +269,10 @@
   // ----- เปิด modal อัตโนมัติเมื่อ server ส่ง error กลับมา -----
   // มาจากปุ่ม "เข้าสู่ระบบ" ของหน้าอื่น (/?login=1)
   if (new URLSearchParams(window.location.search).get('login') === '1') openModal(loginOverlay);
+
+  @if(session('verified'))
+    openModal(verifiedOverlay);
+  @endif
 
   @if(session('open_modal') === 'login')
     openModal(loginOverlay);

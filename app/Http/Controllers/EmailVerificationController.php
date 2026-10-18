@@ -80,7 +80,7 @@ class EmailVerificationController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect('/')->with('status', 'ยืนยันอีเมลสำเร็จ ยินดีต้อนรับ!');
+        return redirect('/')->with('verified', true);
     }
 
     /**
