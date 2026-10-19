@@ -3,8 +3,8 @@
 /**
  * HomeController
  * แสดงหน้า Home: คอนเสิร์ตแนะนำ ผลการค้นหา และคอนเสิร์ตไฮไลต์
- * Author :
- * Created :
+ * Author : 67160292 ธีรเมธ พลสาย
+ * Created : 16/10/2569
  */
 
 namespace App\Http\Controllers;

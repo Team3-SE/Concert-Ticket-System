@@ -3,8 +3,8 @@
 /**
  * PaymentController
  * จัดการการชำระเงิน: หน้าชำระเงิน ตรวจ rate limit สร้าง/ยืนยันการชำระเงิน และสร้างคำสั่งซื้อ
- * Author :
- * Created :
+ * Author : 67160292 ธีรเมธ พลสาย
+ * Created : 04/09/2569
  */
 
 namespace App\Http\Controllers;

@@ -3,8 +3,8 @@
 /**
  * ProfileController
  * หน้าแก้ไขข้อมูลส่วนตัวและเปลี่ยนรหัสผ่าน (ส่งต่องานบันทึกให้ UserController)
- * Author :
- * Created :
+ * Author : 67160292 ธีรเมธ พลสาย
+ * Created : 04/09/2569
  */
 
 namespace App\Http\Controllers;

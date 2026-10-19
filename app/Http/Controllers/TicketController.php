@@ -3,8 +3,8 @@
 /**
  * TicketController
  * สร้างและดึงข้อมูลบัตร (E-Ticket) ของคำสั่งซื้อ
- * Author :
- * Created :
+ * Author : 67160292 ธีรเมธ พลสาย
+ * Created : 18/20.2569
  */
 
 namespace App\Http\Controllers;

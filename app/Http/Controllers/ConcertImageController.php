@@ -1,11 +1,11 @@
 <?php
 
 /**
- * ConcertImageController
+ * ConcertImageController ไม่ได้ใช้จริง
  * จัดการข้อมูลคอนเสิร์ตทั้งหมดในหน้าเดียว (ข้อมูลทั่วไป ช่วงขายบัตร รูปภาพ โซนและที่นั่ง)
  * และอัปโหลด/ลบรูปภาพรายประเภท (poster, banner, seat_map)
- * Author :
- * Created :
+ * Author : 67160292 ธีรเมธ พลสาย
+ * Created : 04/09/2569
  */
 
 namespace App\Http\Controllers;

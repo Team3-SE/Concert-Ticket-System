@@ -3,8 +3,8 @@
 /**
  * BookingController
  * จัดการการจองบัตรของลูกค้า: หน้าเลือกที่นั่ง ตรวจความปลอดภัย สร้างการจอง และประวัติการจอง
- * Author :
- * Created :
+ * Author : 67160292 ธีรเมธ พลสาย
+ * Created : 04/09/2569
  */
 
 namespace App\Http\Controllers;

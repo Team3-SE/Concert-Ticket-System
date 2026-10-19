@@ -3,8 +3,8 @@
 /**
  * AuthController
  * จัดการการสมัครสมาชิก เข้าสู่ระบบ และออกจากระบบของผู้ใช้
- * Author :
- * Created :
+ * Author : 67160292 ธีรเมธ พลสาย
+ * Created : 04/09/2569
  */
 
 namespace App\Http\Controllers;
