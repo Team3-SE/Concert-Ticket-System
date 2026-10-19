@@ -86,6 +86,7 @@
 
           <div class="ticket-modal-qr">
             <img data-ticket-qr alt="QR Code สำหรับตรวจสอบตั๋ว">
+            <p data-ticket-qr-error hidden>ไม่สามารถแสดง QR Code ได้ในขณะนี้</p>
             <p class="ticket-modal-code">หมายเลขตั๋ว : <span data-ticket-code></span></p>
           </div>
 

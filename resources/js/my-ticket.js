@@ -37,12 +37,26 @@
     modal.querySelector('[data-ticket-time]').textContent = `${ticketDetails.event_time} น.`;
     modal.querySelector('[data-ticket-zone]').textContent = ticketDetails.zone;
     modal.querySelector('[data-ticket-seat]').textContent = ticketDetails.seat;
-    modal.querySelector('[data-ticket-qr]').src = ticketDetails.qr_code;
     modal.querySelector('[data-ticket-code]').textContent = ticketDetails.ticket_code;
     modal.querySelector('[data-ticket-phone]').textContent = ticketDetails.contact.phone;
     modal.querySelector('[data-ticket-line]').textContent = ticketDetails.contact.line;
     modal.querySelector('[data-ticket-facebook]').textContent = ticketDetails.contact.facebook;
     modal.querySelector('[data-ticket-email]').textContent = ticketDetails.contact.email;
+
+    const qrImage = modal.querySelector('[data-ticket-qr]');
+    const qrError = modal.querySelector('[data-ticket-qr-error]');
+    qrImage.hidden = !ticketDetails.qr_code;
+    qrError.hidden = Boolean(ticketDetails.qr_code);
+
+    if (ticketDetails.qr_code) {
+      qrImage.onerror = () => {
+        qrImage.hidden = true;
+        qrError.hidden = false;
+      };
+      qrImage.src = ticketDetails.qr_code;
+    } else {
+      qrImage.removeAttribute('src');
+    }
   };
 
   document.addEventListener('click', async (event) => {

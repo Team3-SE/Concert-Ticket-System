@@ -18,7 +18,9 @@ use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 class TicketController extends Controller
 {
@@ -163,6 +165,16 @@ class TicketController extends Controller
         $eventDate = $concert?->event_datetime ?? $order?->event_datetime_snapshot;
         $organization = $concert?->organization;
 
+        try {
+            $qrCode = $this->generateTicketQrCode($ticket->ticket_code);
+        } catch (Throwable $exception) {
+            Log::error('Unable to generate ticket QR code.', [
+                'ticket_id' => $ticket->ticket_id,
+                'exception' => $exception,
+            ]);
+            $qrCode = null;
+        }
+
         return response()->json([
             'ticket_code' => $ticket->ticket_code,
             'concert_name' => $order?->concert_name_snapshot ?: $concert?->name ?: 'ไม่ระบุชื่อคอนเสิร์ต',
@@ -171,7 +183,7 @@ class TicketController extends Controller
             'zone' => $ticket->zone_name_snapshot ?: $ticket->zone?->name ?: 'ไม่ระบุโซน',
             'seat' => $ticket->seat_label_snapshot
                 ?: ($ticket->seat ? $ticket->seat->row . $ticket->seat->number : 'บัตรยืน'),
-            'qr_code' => $this->generateTicketQrCode($ticket->ticket_code),
+            'qr_code' => $qrCode,
             'contact' => [
                 'phone' => $organization?->phone ?: '-',
                 'line' => $organization?->line ?: '-',
