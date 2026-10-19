@@ -40,7 +40,7 @@
       @endif
     @endif
     @if($btnClass === 'buy')
-      <a href="{{ url('/booking?concert_id=' . $concert->concert_id) }}" class="card-btn buy">{{ $btnText }}</a>
+      <a href="{{ url('/concert-detail?concert_id=' . $concert->concert_id) }}" class="card-btn buy">{{ $btnText }}</a>
     @else
       <span class="card-btn {{ $btnClass }}">{{ $btnText }}</span>
     @endif

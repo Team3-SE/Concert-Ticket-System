@@ -37,7 +37,7 @@
       <div class="hero-slide {{ $index === 0 ? 'active' : '' }} {{ $bannerUrl ? 'has-banner' : '' }}" data-slide="{{ $index }}">
         @if($bannerUrl)
           {{-- รูปโหลดไม่ได้: ลบรูปแล้วกลับไปแสดงสไลด์แบบข้อความ --}}
-          <a class="hero-banner-link" href="{{ url('/booking?concert_id=' . $highlight->concert_id) }}" aria-label="{{ $highlight->name }}">
+          <a class="hero-banner-link" href="{{ url('/concert-detail?concert_id=' . $highlight->concert_id) }}" aria-label="{{ $highlight->name }}">
             <img class="hero-banner-img" src="{{ $bannerUrl }}" alt="{{ $highlight->name }}"
                  onerror="this.closest('.hero-slide').classList.remove('has-banner'); this.closest('a').remove();">
           </a>

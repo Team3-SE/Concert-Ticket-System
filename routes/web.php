@@ -41,6 +41,8 @@ Route::get('/dev/models', function () {
 Route::post('/dev/models/methods', [\App\Http\Controllers\Dev\ModelTesterController::class, 'getMethods'])->withoutMiddleware($statelessDevMiddleware);
 Route::post('/dev/models/execute', [\App\Http\Controllers\Dev\ModelTesterController::class, 'execute'])->withoutMiddleware($statelessDevMiddleware);
 
+// Route Concert-detail
+Route::get('/concert-detail', [\App\Http\Controllers\BookingController::class, 'detail']);
 
 // Route Booking
 Route::get('/booking', [\App\Http\Controllers\BookingController::class, 'index']);
@@ -72,5 +74,4 @@ Route::middleware('auth')->group(function () {
 Route::post('/auth/register', [\App\Http\Controllers\AuthController::class, 'register'])->name('auth.register');
 Route::post('/auth/login',    [\App\Http\Controllers\AuthController::class, 'login'])->name('auth.login');
 Route::post('/auth/logout',   [\App\Http\Controllers\AuthController::class, 'logout'])->name('auth.logout');
-
 

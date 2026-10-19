@@ -89,6 +89,36 @@ class BookingController extends Controller
     }
 
     /**
+     * แสดงรายละเอียดคอนเสิร์ต ราคา และจำนวนบัตรที่ยังว่าง
+     */
+    public function detail(Request $request)
+    {
+        $concertController = new ConcertController();
+        $concertId = (int) $request->query('concert_id');
+
+        $concert = $concertId
+            ? $concertController->getConcertDetail($concertId)
+            : \App\Models\Concert::with(['organization', 'zones'])
+                ->where('status', 'ON_SALE')
+                ->where('is_deleted', 0)
+                ->orderBy('event_datetime', 'asc')
+                ->first();
+
+        $zones = $concert
+            ? $concert->zones->map(function ($zone) {
+                return [
+                    'name'  => $zone->name,
+                    'price' => (int) $zone->price,
+                    'color' => $zone->color,
+                    'seats' => $zone->getAvailableCapacity(),
+                ];
+            })
+            : collect();
+
+        return view('booking.concert-detail', compact('concert', 'zones'));
+    }
+
+    /**
      * validateBookingSecurity(customerId, deviceFingerprint, captchaToken)
      * ตรวจความปลอดภัยก่อนสร้างการจอง (บัญชีถูกระงับ, CAPTCHA, device fingerprint)
      * param : customerId, deviceFingerprint, captchaToken
@@ -198,4 +228,3 @@ class BookingController extends Controller
             ->get();
     }
 }
-
