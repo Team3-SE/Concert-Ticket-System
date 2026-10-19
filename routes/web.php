@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TicketController;
 
 $statelessDevMiddleware = [
     EncryptCookies::class,
@@ -64,6 +65,11 @@ Route::middleware('auth')->group(function () {
     // เปลี่ยนรหัสผ่าน
     Route::put('/profile/password/update', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
 
+    // ===== TICKETS =====
+
+    Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
+    Route::get('/tickets/{ticketCode}', [TicketController::class, 'show'])->name('tickets.show');
+
     // ===== ORDER HISTORY =====
 
     Route::get('/orders/history', [OrderController::class, 'history'])->name('orders.history');
@@ -74,4 +80,3 @@ Route::middleware('auth')->group(function () {
 Route::post('/auth/register', [\App\Http\Controllers\AuthController::class, 'register'])->name('auth.register');
 Route::post('/auth/login',    [\App\Http\Controllers\AuthController::class, 'login'])->name('auth.login');
 Route::post('/auth/logout',   [\App\Http\Controllers\AuthController::class, 'logout'])->name('auth.logout');
-

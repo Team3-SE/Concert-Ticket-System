@@ -31,7 +31,7 @@
 | `booking/booking.css` | `booking/booking` | หน้าเลือกโซน/ที่นั่ง |
 | `booking/payment.css` | `booking/payment` | หน้าชำระเงิน |
 | `booking/qr-modal.css` | `booking/qr-modal` | popup ชำระเงินด้วย QR |
-| `account/account.css` | `layouts/app`, `account/order-history`, `account/edit-profile` | หน้า account (มี sidebar) |
+| `account/account.css` | `layouts/app`, `account/order-history`, `account/edit-profile`, `account/my-ticket` | หน้า account (มี sidebar) |
 | `app.css` | `welcome` | หน้า welcome ของ Laravel (Tailwind) — ไม่เกี่ยวกับหน้าอื่น |
 
 ## class บน `<body>` (กันสไตล์ชนกันระหว่างหน้า)

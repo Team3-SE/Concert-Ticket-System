@@ -11,6 +11,12 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomerOrder;
 use App\Models\Ticket;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
@@ -18,6 +24,22 @@ class TicketController extends Controller
 {
     /* จำนวนคำสั่งซื้อต่อหน้าในหน้าประวัติการสั่งซื้อ */
     private const ORDERS_PER_PAGE = 10;
+    private const TICKETS_PER_PAGE = 10;
+    private const QR_CODE_SIZE = 320;
+    private const THAI_MONTHS = [
+        1 => 'ม.ค.',
+        2 => 'ก.พ.',
+        3 => 'มี.ค.',
+        4 => 'เม.ย.',
+        5 => 'พ.ค.',
+        6 => 'มิ.ย.',
+        7 => 'ก.ค.',
+        8 => 'ส.ค.',
+        9 => 'ก.ย.',
+        10 => 'ต.ค.',
+        11 => 'พ.ย.',
+        12 => 'ธ.ค.',
+    ];
 
     /**
      * generateTickets(orderId)
@@ -79,6 +101,101 @@ class TicketController extends Controller
                   ->where('status', 'CONFIRMED');
             })
             ->get();
+    }
+
+    /**
+     * index()
+     * แสดงตั๋วของผู้ใช้ที่เข้าสู่ระบบ โดยเรียงตามวันที่สร้างบัตร
+     * param : -
+     * return : View account.my-ticket
+     */
+    public function index(): View
+    {
+        $tickets = Ticket::query()
+            ->with(['zone', 'seat', 'order.booking.concert'])
+            ->whereNotNull('ticket_code')
+            ->whereHas('order.booking', function ($query) {
+                $query->where('user_id', Auth::id())
+                    ->where('status', 'CONFIRMED');
+            })
+            ->orderByDesc('ticket_id')
+            ->paginate(self::TICKETS_PER_PAGE)
+            ->through(function (Ticket $ticket) {
+                $order = $ticket->order;
+                $concert = $order?->booking?->concert;
+                $eventDate = $concert?->event_datetime ?? $order?->event_datetime_snapshot;
+
+                return [
+                    'ticket_code' => $ticket->ticket_code,
+                    'concert_name' => $order?->concert_name_snapshot ?: $concert?->name ?: 'ไม่ระบุชื่อคอนเสิร์ต',
+                    'event_day' => $eventDate?->format('d') ?? '--',
+                    'event_month' => $eventDate ? self::THAI_MONTHS[$eventDate->month] : '',
+                    'event_time' => $eventDate?->format('H:i') ?? 'ไม่ระบุเวลา',
+                    'venue' => $order?->venue_snapshot ?: $concert?->venue ?: 'ไม่ระบุสถานที่',
+                    'zone' => $ticket->zone_name_snapshot ?: $ticket->zone?->name ?: 'ไม่ระบุโซน',
+                    'seat' => $ticket->seat_label_snapshot
+                        ?: ($ticket->seat ? $ticket->seat->row . $ticket->seat->number : 'บัตรยืน'),
+                ];
+            });
+
+        return view('account.my-ticket', compact('tickets'));
+    }
+
+    /**
+     * show(ticketCode)
+     * ส่งข้อมูลและ QR ของตั๋วให้เจ้าของตั๋วที่เข้าสู่ระบบเท่านั้น
+     * param : ticketCode
+     * return : JsonResponse
+     */
+    public function show(string $ticketCode): JsonResponse
+    {
+        $ticket = Ticket::query()
+            ->with(['zone', 'seat', 'order.booking.concert.organization'])
+            ->where('ticket_code', $ticketCode)
+            ->whereHas('order.booking', function ($query) {
+                $query->where('user_id', Auth::id())
+                    ->where('status', 'CONFIRMED');
+            })
+            ->firstOrFail();
+
+        $order = $ticket->order;
+        $concert = $order?->booking?->concert;
+        $eventDate = $concert?->event_datetime ?? $order?->event_datetime_snapshot;
+        $organization = $concert?->organization;
+
+        return response()->json([
+            'ticket_code' => $ticket->ticket_code,
+            'concert_name' => $order?->concert_name_snapshot ?: $concert?->name ?: 'ไม่ระบุชื่อคอนเสิร์ต',
+            'event_date' => $eventDate?->thDateLong() ?? 'ไม่ระบุวันที่',
+            'event_time' => $eventDate?->format('H:i') ?? 'ไม่ระบุเวลา',
+            'zone' => $ticket->zone_name_snapshot ?: $ticket->zone?->name ?: 'ไม่ระบุโซน',
+            'seat' => $ticket->seat_label_snapshot
+                ?: ($ticket->seat ? $ticket->seat->row . $ticket->seat->number : 'บัตรยืน'),
+            'qr_code' => $this->generateTicketQrCode($ticket->ticket_code),
+            'contact' => [
+                'phone' => $organization?->phone ?: '-',
+                'line' => $organization?->line ?: '-',
+                'facebook' => $organization?->facebook ?: '-',
+                'email' => $organization?->email ?: '-',
+            ],
+        ]);
+    }
+
+    /**
+     * generateTicketQrCode(ticketCode)
+     * สร้าง QR Code ที่เข้ารหัส ticket_code และคืนค่าเป็น data URI
+     * param : ticketCode
+     * return : string
+     */
+    private function generateTicketQrCode(string $ticketCode): string
+    {
+        $qrCode = QrCode::create($ticketCode)
+            ->setEncoding(new Encoding('UTF-8'))
+            ->setErrorCorrectionLevel(ErrorCorrectionLevel::High)
+            ->setSize(self::QR_CODE_SIZE)
+            ->setMargin(12);
+
+        return (new PngWriter())->write($qrCode)->getDataUri();
     }
 
     /**

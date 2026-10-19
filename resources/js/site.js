@@ -9,3 +9,4 @@ import './navbar.js';          // เมนูโปรไฟล์, ตัว�
 import './pagination.js';      // ปุ่ม "…" ในตัวแบ่งหน้า
 import './dropdown.js';        // เมนู dropdown (ตัวกรองสถานะหน้าคอนเสิร์ตทั้งหมด)
 import './concert-search.js';  // ช่องค้นหาที่มีรายการแนะนำ (หน้า Home / คอนเสิร์ตทั้งหมด)
+import './my-ticket.js';       // popup แสดง e-ticket ในหน้าตั๋วของฉัน

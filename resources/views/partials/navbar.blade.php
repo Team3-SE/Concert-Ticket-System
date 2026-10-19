@@ -54,7 +54,7 @@
       {{-- Menu Items --}}
       <div class="profile-popup-menu">
 
-        <a href="#" aria-disabled="true">
+        <a href="{{ route('tickets.index') }}">
           ตั๋วของฉัน
         </a>
 

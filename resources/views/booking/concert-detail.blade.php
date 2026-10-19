@@ -2,7 +2,7 @@
   * concert-detail.blade.php
   * หน้ารายละเอียดคอนเสิร์ตและข้อมูลบัตร
   * @Author 67160279 กนกพล แซ่ตั๊น
-  * @Create Date 09-10-2026
+  * @Create Date 18-10-2026
 *@--}}
 
 @extends('layouts.main')
