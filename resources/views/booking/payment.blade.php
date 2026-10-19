@@ -1,8 +1,8 @@
 {{--
  * payment.blade.php
  * หน้าชำระเงิน
- * @Author
- * @Create Date
+ * @Author 67160434 จิตฏิยากร โสภา
+ * @Create Date 2026-10-13
 --}}
 @extends('layouts.main')
 

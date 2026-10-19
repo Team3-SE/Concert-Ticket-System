@@ -1,8 +1,8 @@
 {{--
  * booking.blade.php
  * หน้าเลือกโซนและที่นั่งของคอนเสิร์ต
- * @Author
- * @Create Date
+ * @Author 67160434 จิตฏิยากร โสภา
+ * @Create Date 2026-10-13
 --}}
 @extends('layouts.main')
 
@@ -53,7 +53,6 @@
             <div class="contact-info">
               <p>ติดต่อผู้จัดงาน</p>
               <div class="contact-grid">
-                {{-- schema v3.1.0: ช่องทางติดต่ออยู่ในตาราง organization (ไม่มีตาราง concert_contact แล้ว) --}}
                 @php $org = $concert?->organization; @endphp
                 <div>โทร: <span>{{ $org?->phone ?: '-' }}</span></div>
                 <div>Facebook: <span>{{ $org?->facebook ?: '-' }}</span></div>
@@ -93,53 +92,40 @@
         </div>
       </div>
 
-      {{-- ZONE SELECTOR + MAP --}}
+      {{-- zone-overview start --}}
+      {{-- ZONE OVERVIEW MAP & TABLE --}}
       <div class="space-y-2.5">
-        <div class="flex flex-wrap items-center gap-2">
-          <h3 class="section-label mr-1">เลือกโซนที่นั่ง</h3>
-          <div class="flex flex-wrap gap-1">
-            <template x-for="(tag, idx) in zoneTags" :key="idx">
-              <button @click="selectZoneByName(tag.name)"
-                      :style="{ backgroundColor: tag.color }"
-                      class="text-white text-[10px] px-2 py-0.5 rounded-[2px] font-semibold hover:opacity-90 transition"
-                      x-text="tag.name">
-              </button>
-            </template>
-          </div>
-        </div>
+        <h3 class="section-label">โซนทั้งหมด</h3>
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
 
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
-          <div class="md:col-span-5 bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center justify-center">
-            @if($concert && $concert->seat_map_image_path)
-              <img src="{{ asset('storage/' . $concert->seat_map_image_path) }}" alt="ผังโซนที่นั่ง" class="w-full h-auto object-contain rounded-lg"
-                   onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'text-xs text-gray-400 py-10',textContent:'ยังไม่มีรูปผังโซนที่นั่ง'}))">
-            @else
-              <span class="text-xs text-gray-400 py-10">ยังไม่มีรูปผังโซนที่นั่ง</span>
-            @endif
+          {{-- ฝั่งซ้าย: รูปผังโซน --}}
+          <div class="md:col-span-4 bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-center">
+            <img src="{{ asset('images/zone-map.png') }}" alt="Venue Zone Map" class="w-full h-auto max-h-[360px] object-contain rounded-lg">
           </div>
 
-          <div class="md:col-span-7 bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center">
+          {{-- ฝั่งขวา: การ์ดตารางโซน --}}
+          <div class="md:col-span-8 bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-start">
             <table class="w-full text-left text-xs">
               <thead>
                 <tr class="text-gray-400 border-b border-gray-100">
-                  <th class="pb-2.5 font-medium">โซน</th>
-                  <th class="pb-2.5 font-medium text-center">ราคา</th>
-                  <th class="pb-2.5 text-right font-medium">ที่นั่งว่าง</th>
+                  <th class="pb-3.5 pt-1 font-medium w-2/5 pl-4">โซน</th>
+                  <th class="pb-3.5 pt-1 font-medium text-center w-1/5">ราคา</th>
+                  <th class="pb-3.5 pt-1 font-medium text-right w-2/5 pr-4">ที่นั่งว่าง</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
                 <template x-for="zone in zones" :key="zone.name">
                   <tr class="hover:bg-blue-50/50 cursor-pointer transition-colors" @click="selectZone(zone)">
-                    <td class="py-3">
-                      <div class="flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-sm inline-block flex-shrink-0" :style="{ backgroundColor: zone.color }"></span>
+                    <td class="py-3.5 pl-4">
+                      <div class="flex items-center gap-2.5">
+                        <span class="w-2.5 h-2.5 rounded-sm inline-block flex-shrink-0" :style="{ backgroundColor: zone.color }"></span>
                         <span class="font-semibold text-gray-700 text-xs" x-text="zone.name"></span>
                       </div>
                     </td>
-                    <td class="text-gray-600 text-xs text-center" x-text="zone.price + ' บาท'"></td>
-                    <td class="text-right">
-                      <span class="px-3 py-0.5 text-[10px] text-white font-bold rounded-full inline-block min-w-[60px] text-center shadow-sm"
-                            :class="zone.seats === 0 ? 'bg-[#E6483C]' : (zone.seats < 50 ? 'bg-[#E79B1F]' : 'bg-[#1FA855]')"
+                    <td class="py-3.5 text-gray-600 text-xs text-center" x-text="zone.price + ' บาท'"></td>
+                    <td class="py-3.5 pr-4 text-right">
+                      <span class="px-3.5 py-1 text-[10px] text-white font-bold rounded-full inline-block min-w-[65px] text-center shadow-sm"
+                            :class="zone.seats === 0 ? 'bg-[#E6483C]' : ((zone.seats / (zone.capacity || zone.totalSeats || 100)) <= 0.3 ? 'bg-[#E79B1F]' : 'bg-[#1FA855]')"
                             x-text="zone.seats === 0 ? 'Sold out' : zone.seats"></span>
                     </td>
                   </tr>
@@ -147,219 +133,262 @@
               </tbody>
             </table>
           </div>
+
         </div>
       </div>
+      {{-- zone-overview end --}}
 
+      {{-- zone-selector start --}}
+      {{-- ZONE TAG BUTTONS SELECTOR --}}
+      <div class="space-y-2">
+        <h3 class="section-label">เลือกโซน</h3>
+        <div class="flex flex-wrap gap-1.5">
+          <template x-for="(tag, idx) in zoneTags" :key="idx">
+            <button @click="selectZoneByName(tag.name)"
+                    :style="{ backgroundColor: tag.color }"
+                    class="text-white text-[11px] px-3 py-1 rounded-[3px] font-semibold hover:opacity-90 transition shadow-sm"
+                    x-text="tag.name">
+            </button>
+          </template>
+        </div>
+      </div>
+      {{-- zone-selector end --}}
+
+      {{-- seat-map-option-1 start --}}
       {{-- OPTION 1: SEAT MAP <= 20 SEATS --}}
-      <template x-if="cols.length <= 20">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
-
-          {{-- ฝั่งซ้าย: ผังที่นั่งขนาดกระชับ --}}
-          <div class="seat-map-transparent-box seat-map-box-20 p-1">
-            <h3 class="section-label mb-4">แผนผังที่นั่ง</h3>
-            <div class="bg-[#061838] text-white text-center py-1.5 text-[10px] tracking-[0.2em] font-bold rounded max-w-[240px] mx-auto mb-4">STAGE</div>
-
-            <div class="overflow-x-auto seat-scroll pb-2">
-              <div class="flex flex-col gap-1 items-center min-w-fit mx-auto">
-                {{-- Header Numbers --}}
-                <div class="flex gap-1 items-center mb-1">
-                  <span class="w-[14px] inline-block"></span>
-                  <template x-for="col in cols" :key="'hdr-'+col">
-                    <span class="w-[14px] text-[9px] seat-label-text text-center inline-block" x-text="col"></span>
-                  </template>
-                  <span class="w-[14px] inline-block"></span>
-                </div>
-                {{-- Rows --}}
-                <template x-for="row in rows" :key="'r20-'+row">
-                  <div class="flex gap-1 items-center">
-                    <span class="w-[14px] text-[9px] seat-label-text text-center select-none" x-text="row"></span>
-                    <template x-for="col in cols" :key="'s20-'+row+col">
-                      <button @click="toggleSeat(row + col)"
-                              :disabled="isOccupied(row + col)"
-                              :class="{
-                                'bg-[#F47B1F] scale-110 shadow-md z-10': selectedSeats.includes(row + col),
-                                'seat-btn-occupied': isOccupied(row + col),
-                                'cursor-pointer': !isOccupied(row + col) && !selectedSeats.includes(row + col)
-                              }"
-                              :style="!isOccupied(row + col) && !selectedSeats.includes(row + col) ? { backgroundColor: getZoneColorForRow(row) } : {}"
-                              class="seat-icon-shape transition-all duration-150 flex-shrink-0 border-0 outline-none">
-                      </button>
-                    </template>
-                    <span class="w-[14px] text-[9px] seat-label-text text-center select-none" x-text="row"></span>
-                  </div>
-                </template>
-              </div>
+      <template x-if="selectedZone && totalSeats <= 20">
+        <div>
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-2">
+            <div class="md:col-span-7">
+              <h3 class="section-label">เลือกที่นั่ง</h3>
             </div>
-
-            {{-- Legend --}}
-            <div class="flex justify-center gap-5 mt-4 text-[10px] text-gray-500">
-              <div class="flex items-center gap-1.5">
-                <span class="seat-legend-icon" :style="{ backgroundColor: selectedZone ? selectedZone.color : '#4D7EE0' }"></span> ว่าง
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="seat-legend-icon seat-btn-occupied"></span> ขายแล้ว
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="seat-legend-icon bg-[#F47B1F]"></span> ที่นั่งที่เลือก
-              </div>
+            <div class="md:col-span-5">
+              <h3 class="section-label">ข้อมูลบัตร</h3>
             </div>
           </div>
 
-          {{-- ฝั่งขวา: ข้อมูลบัตร --}}
-          <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
-            <div>
-              <h3 class="section-label mb-4">ข้อมูลบัตร</h3>
-              <div class="text-xs space-y-3.5">
-                <div class="flex justify-between border-b border-gray-100 pb-2.5">
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+
+            {{-- ฝั่งซ้าย: ผังที่นั่ง --}}
+            <div class="md:col-span-7 seat-map-transparent-box p-2">
+              <div class="bg-[#061838] text-white text-center py-1.5 text-[10px] tracking-[0.2em] font-bold rounded max-w-[280px] mx-auto mb-4">STAGE</div>
+
+              <div class="overflow-x-auto seat-scroll pb-2">
+                <div class="flex flex-col gap-1 items-center min-w-fit mx-auto">
+
+                  <div class="flex gap-1 items-center mb-1">
+                    <span class="min-w-[28px] inline-block flex-shrink-0"></span>
+                    <template x-for="col in totalSeats" :key="'hdr-'+col">
+                      <span class="w-[14px] h-[14px] text-[9px] seat-label-text text-center inline-flex items-center justify-center font-semibold flex-shrink-0" x-text="col"></span>
+                    </template>
+                    <span class="min-w-[28px] inline-block flex-shrink-0"></span>
+                  </div>
+
+                  {{-- แถวเก้าอี้ที่นั่ง --}}
+                  <template x-for="row in rows" :key="'r20-'+row">
+                    <div class="flex gap-1 items-center">
+                      <span class="min-w-[28px] px-1 h-[14px] text-[9px] seat-label-text text-center inline-flex items-center justify-center font-semibold select-none flex-shrink-0" x-text="row"></span>
+                      <template x-for="col in totalSeats" :key="'s20-'+row+col">
+                        <button @click="toggleSeat(row + col)"
+                                :disabled="isOccupied(row + col) || isPending(row + col)"
+                                :class="{
+                                  '!rounded-full !bg-black text-white scale-105 shadow-md z-10 flex items-center justify-center': selectedSeats.includes(row + col),
+                                  '!bg-[#F47B1F] scale-105 shadow-md z-10 cursor-not-allowed opacity-90': isPending(row + col),
+                                  'seat-btn-occupied': isOccupied(row + col),
+                                  'cursor-pointer': !isOccupied(row + col) && !isPending(row + col) && !selectedSeats.includes(row + col)
+                                }"
+                                :style="!isOccupied(row + col) && !isPending(row + col) && !selectedSeats.includes(row + col) ? { backgroundColor: getZoneColorForRow(row) } : {}"
+                                class="!w-[14px] !h-[14px] seat-icon-shape transition-all duration-150 flex-shrink-0 border-0 outline-none p-0 flex items-center justify-center">
+                          <template x-if="selectedSeats.includes(row + col)">
+                            <svg class="w-2.5 h-2.5 text-white stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                            </svg>
+                          </template>
+                        </button>
+                      </template>
+                      <span class="min-w-[28px] px-1 h-[14px] text-[9px] seat-label-text text-center inline-flex items-center justify-center font-semibold select-none flex-shrink-0" x-text="row"></span>
+                    </div>
+                  </template>
+
+                </div>
+              </div>
+
+              {{-- Legend --}}
+              <div class="flex justify-center gap-6 mt-5 text-[11px] text-gray-500">
+                <div class="flex items-center gap-1.5">
+                  <span class="seat-legend-icon" :style="{ backgroundColor: selectedZone ? selectedZone.color : '#4D7EE0' }"></span> ว่าง
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="seat-legend-icon seat-btn-occupied"></span> ขายแล้ว
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="seat-legend-icon bg-[#F47B1F]"></span> กำลังทำรายการ
+                </div>
+              </div>
+            </div>
+
+            {{-- ฝั่งขวา: ข้อมูลบัตร --}}
+            <div class="md:col-span-5 bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between min-h-[300px]">
+              <div class="text-xs space-y-4">
+                <div class="flex justify-between border-b border-gray-100 pb-3">
                   <span class="font-semibold text-gray-700">รอบการแสดง</span>
                   <span class="text-gray-700 font-medium">{{ $concert ? $concert->event_datetime->thDateLong() . ', ' . $concert->event_datetime->format('H:i') . ' น.' : '-' }}</span>
                 </div>
-                <div class="flex justify-between border-b border-gray-100 pb-2.5">
+                <div class="flex justify-between border-b border-gray-100 pb-3">
                   <span class="font-semibold text-gray-700">โซน</span>
                   <span class="text-gray-600" x-text="selectedZone ? selectedZone.name : '-'"></span>
                 </div>
-                <div class="flex justify-between border-b border-gray-100 pb-2.5">
+                <div class="flex justify-between border-b border-gray-100 pb-3">
                   <span class="font-semibold text-gray-700">เลขที่นั่ง</span>
-                  <span class="text-gray-600" x-text="selectedSeats.length > 0 ? selectedSeats.join(', ') : '-'"></span>
+                  <span class="text-gray-600 font-medium" x-text="selectedSeats.length > 0 ? selectedSeats.join(', ') : '-'"></span>
                 </div>
-                <div class="flex justify-between border-b border-gray-100 pb-2.5">
+                <div class="flex justify-between border-b border-gray-100 pb-3">
                   <span class="font-semibold text-gray-700">จำนวน</span>
                   <span class="text-gray-600" x-text="selectedSeats.length > 0 ? selectedSeats.length : '0'"></span>
                 </div>
-                <div class="flex justify-between border-b border-gray-100 pb-2.5">
+                <div class="flex justify-between border-b border-gray-100 pb-3">
                   <span class="font-semibold text-gray-700">ราคาต่อบัตร</span>
                   <span class="text-gray-600" x-text="selectedZone ? selectedZone.price + ' บาท' : '0 บาท'"></span>
                 </div>
                 <div class="flex justify-between pt-1">
-                  <span class="font-bold text-[#F47B1F]">ราคารวม</span>
-                  <span class="font-bold text-[#F47B1F]" x-text="calculateTotalPrice()"></span>
+                  <span class="font-bold text-[#F47B1F] text-sm">ราคารวม</span>
+                  <span class="font-bold text-[#F47B1F] text-sm" x-text="calculateTotalPrice()"></span>
                 </div>
+              </div>
+
+              <div class="flex gap-3 mt-8">
+                <button class="flex-1 py-2.5 rounded-lg bg-[#E8EEF7] text-gray-600 text-xs font-semibold hover:bg-gray-200 transition" @click="window.location.href='/'">ย้อนกลับ</button>
+                <button :disabled="selectedSeats.length === 0"
+                        :class="selectedSeats.length > 0 ? 'bg-[#F47B1F] hover:bg-orange-600 text-white shadow-md cursor-pointer' : 'bg-[#FBC48E] text-white cursor-not-allowed'"
+                        class="flex-1 py-2.5 rounded-lg text-xs font-semibold transition"
+                        @click="nextPage()">จองบัตร</button>
               </div>
             </div>
 
-            <div class="flex gap-3 mt-6">
-              <button class="flex-1 py-2.5 rounded-lg bg-[#E8EEF7] text-gray-600 text-xs font-semibold hover:bg-gray-200 transition" @click="window.location.href='/'">ย้อนกลับ</button>
-              <button :disabled="selectedSeats.length === 0"
-                      :class="selectedSeats.length > 0 ? 'bg-[#F47B1F] hover:bg-orange-600 text-white shadow-md cursor-pointer' : 'bg-[#FBC48E] text-white cursor-not-allowed'"
-                      class="flex-1 py-2.5 rounded-lg text-xs font-semibold transition"
-                      @click="nextPage()">จองบัตร</button>
-            </div>
           </div>
-
         </div>
       </template>
+      {{-- seat-map-option-1 end --}}
 
+      {{-- seat-map-option-2 start --}}
       {{-- OPTION 2: SEAT MAP > 20 SEATS --}}
-      <template x-if="cols.length > 20">
+      <template x-if="selectedZone && totalSeats > 20">
         <div class="space-y-6">
 
-          {{-- 1. FULL WIDTH SEAT MAP TRANSPARENT SECTION --}}
-          <div class="seat-map-transparent-box space-y-4">
-            <h3 class="section-label">แผนผังที่นั่ง</h3>
+          <div class="space-y-2">
+            <h3 class="section-label">เลือกที่นั่ง</h3>
 
-            <div class="bg-[#061838] text-white text-center py-1.5 text-[10px] tracking-[0.2em] font-bold rounded max-w-[280px] mx-auto">STAGE</div>
+            <div class="seat-map-transparent-box space-y-4 p-2">
+              <div class="bg-[#061838] text-white text-center py-1.5 text-[10px] tracking-[0.2em] font-bold rounded max-w-[300px] mx-auto">STAGE</div>
 
-            {{-- Wide Seat Grid Area --}}
-            <div class="overflow-x-auto seat-scroll py-2">
-              <div class="flex flex-col gap-1 items-center min-w-fit mx-auto">
-                {{-- Header Numbers --}}
-                <div class="flex gap-1 items-center mb-1">
-                  <span class="w-[14px] inline-block"></span>
-                  <template x-for="col in cols" :key="'hdr40-'+col">
-                    <span class="w-[14px] text-[9px] seat-label-text text-center inline-block" x-text="col"></span>
-                  </template>
-                  <span class="w-[14px] inline-block"></span>
-                </div>
+              <div class="overflow-x-auto seat-scroll py-2">
+                <div class="flex flex-col gap-1 items-center min-w-fit mx-auto">
 
-                {{-- Seat Rows --}}
-                <template x-for="row in rows" :key="'r40-'+row">
-                  <div class="flex gap-1 items-center">
-                    <span class="w-[14px] text-[9px] seat-label-text text-center select-none" x-text="row"></span>
-                    <template x-for="col in cols" :key="'s40-'+row+col">
-                      <button @click="toggleSeat(row + col)"
-                              :disabled="isOccupied(row + col)"
-                              :class="{
-                                'bg-[#F47B1F] scale-110 shadow-md z-10': selectedSeats.includes(row + col),
-                                'seat-btn-occupied': isOccupied(row + col),
-                                'cursor-pointer': !isOccupied(row + col) && !selectedSeats.includes(row + col)
-                              }"
-                              :style="!isOccupied(row + col) && !selectedSeats.includes(row + col) ? { backgroundColor: getZoneColorForRow(row) } : {}"
-                              class="seat-icon-shape transition-all duration-150 flex-shrink-0 border-0 outline-none">
-                      </button>
+                  {{-- Header Numbers --}}
+                  <div class="flex gap-1 items-center mb-1">
+                    <span class="min-w-[28px] inline-block flex-shrink-0"></span>
+                    <template x-for="col in totalSeats" :key="'hdr40-'+col">
+                      <span class="w-[14px] h-[14px] text-[9px] seat-label-text text-center font-semibold flex-shrink-0" x-text="col"></span>
                     </template>
-                    <span class="w-[14px] text-[9px] seat-label-text text-center select-none" x-text="row"></span>
+                    <span class="min-w-[28px] inline-block flex-shrink-0"></span>
                   </div>
-                </template>
-              </div>
-            </div>
 
-            {{-- Seat Legend --}}
-            <div class="flex justify-center gap-6 pt-2 text-[10px] text-gray-500">
-              <div class="flex items-center gap-1.5">
-                <span class="seat-legend-icon" :style="{ backgroundColor: selectedZone ? selectedZone.color : '#4D7EE0' }"></span> ว่าง
+                  {{-- Seat Rows --}}
+                  <template x-for="row in rows" :key="'r40-'+row">
+                    <div class="flex gap-1 items-center">
+                      <span class="min-w-[28px] px-1 h-[14px] text-[9px] seat-label-text text-center inline-flex items-center justify-center font-semibold select-none flex-shrink-0" x-text="row"></span>
+                      <template x-for="col in totalSeats" :key="'s40-'+row+col">
+                        <button @click="toggleSeat(row + col)"
+                                :disabled="isOccupied(row + col) || isPending(row + col)"
+                                :class="{
+                                  '!rounded-full !bg-black text-white scale-105 shadow-md z-10 flex items-center justify-center': selectedSeats.includes(row + col),
+                                  '!bg-[#F47B1F] scale-105 shadow-md z-10 cursor-not-allowed opacity-90': isPending(row + col),
+                                  'seat-btn-occupied': isOccupied(row + col),
+                                  'cursor-pointer': !isOccupied(row + col) && !isPending(row + col) && !selectedSeats.includes(row + col)
+                                }"
+                                :style="!isOccupied(row + col) && !isPending(row + col) && !selectedSeats.includes(row + col) ? { backgroundColor: getZoneColorForRow(row) } : {}"
+                                class="!w-[14px] !h-[14px] seat-icon-shape transition-all duration-150 flex-shrink-0 border-0 outline-none p-0 flex items-center justify-center">
+                          <template x-if="selectedSeats.includes(row + col)">
+                            <svg class="w-2.5 h-2.5 text-white stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                            </svg>
+                          </template>
+                        </button>
+                      </template>
+                      <span class="min-w-[28px] px-1 h-[14px] text-[9px] seat-label-text text-center inline-flex items-center justify-center font-semibold select-none flex-shrink-0" x-text="row"></span>
+                    </div>
+                  </template>
+                </div>
               </div>
-              <div class="flex items-center gap-1.5">
-                <span class="seat-legend-icon seat-btn-occupied"></span> ขายแล้ว
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="seat-legend-icon bg-[#F47B1F]"></span> ที่นั่งที่เลือก
+
+              {{-- Seat Legend --}}
+              <div class="flex justify-center gap-6 pt-2 text-[11px] text-gray-500">
+                <div class="flex items-center gap-1.5">
+                  <span class="seat-legend-icon" :style="{ backgroundColor: selectedZone ? selectedZone.color : '#4D7EE0' }"></span> ว่าง
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="seat-legend-icon seat-btn-occupied"></span> ขายแล้ว
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="seat-legend-icon bg-[#F47B1F]"></span> กำลังทำรายการ
+                </div>
               </div>
             </div>
           </div>
 
           {{-- 2. FULL WIDTH TICKET INFO CARD --}}
-          <div class="ticket-info-card-full space-y-6">
+          <div class="space-y-2">
             <h3 class="section-label">ข้อมูลบัตร</h3>
 
-            <div class="ticket-summary-grid">
-              {{-- Left Column Specs --}}
-              <div class="space-y-3">
-                <div class="ticket-summary-row">
-                  <span class="font-semibold text-gray-700">รอบการแสดง</span>
-                  <span class="text-gray-700 font-medium">{{ $concert ? $concert->event_datetime->thDateLong() . ', ' . $concert->event_datetime->format('H:i') . ' น.' : '-' }}</span>
+            <div class="ticket-info-card-full space-y-6">
+              <div class="ticket-summary-grid">
+                <div class="space-y-3">
+                  <div class="ticket-summary-row">
+                    <span class="font-semibold text-gray-700">รอบการแสดง</span>
+                    <span class="text-gray-700 font-medium">{{ $concert ? $concert->event_datetime->locale('th')->isoFormat('D MMMM YYYY') . ', ' . $concert->event_datetime->format('H:i') . ' น.' : '-' }}</span>
+                  </div>
+                  <div class="ticket-summary-row">
+                    <span class="font-semibold text-gray-700">โซน</span>
+                    <span class="text-gray-600" x-text="selectedZone ? selectedZone.name : '-'"></span>
+                  </div>
+                  <div class="ticket-summary-row">
+                    <span class="font-semibold text-gray-700">เลขที่นั่ง</span>
+                    <span class="text-gray-600 font-medium" x-text="selectedSeats.length > 0 ? selectedSeats.join(', ') : '-'"></span>
+                  </div>
                 </div>
-                <div class="ticket-summary-row">
-                  <span class="font-semibold text-gray-700">โซน</span>
-                  <span class="text-gray-600" x-text="selectedZone ? selectedZone.name : '-'"></span>
-                </div>
-                <div class="ticket-summary-row">
-                  <span class="font-semibold text-gray-700">เลขที่นั่ง</span>
-                  <span class="text-gray-600" x-text="selectedSeats.length > 0 ? selectedSeats.join(', ') : '-'"></span>
+
+                <div class="space-y-3">
+                  <div class="ticket-summary-row">
+                    <span class="font-semibold text-gray-700">จำนวน</span>
+                    <span class="text-gray-600" x-text="selectedSeats.length > 0 ? selectedSeats.length : '0'"></span>
+                  </div>
+                  <div class="ticket-summary-row">
+                    <span class="font-semibold text-gray-700">ราคาต่อบัตร</span>
+                    <span class="text-gray-600" x-text="selectedZone ? selectedZone.price + ' บาท' : '0 บาท'"></span>
+                  </div>
+                  <div class="ticket-summary-row">
+                    <span class="font-bold text-[#F47B1F]">ราคารวม</span>
+                    <span class="font-bold text-[#F47B1F]" x-text="calculateTotalPrice()"></span>
+                  </div>
                 </div>
               </div>
 
-              {{-- Right Column Specs --}}
-              <div class="space-y-3">
-                <div class="ticket-summary-row">
-                  <span class="font-semibold text-gray-700">จำนวน</span>
-                  <span class="text-gray-600" x-text="selectedSeats.length > 0 ? selectedSeats.length : '0'"></span>
-                </div>
-                <div class="ticket-summary-row">
-                  <span class="font-semibold text-gray-700">ราคาต่อบัตร</span>
-                  <span class="text-gray-600" x-text="selectedZone ? selectedZone.price + ' บาท' : '0 บาท'"></span>
-                </div>
-                <div class="ticket-summary-row">
-                  <span class="font-bold text-[#F47B1F]">ราคารวม</span>
-                  <span class="font-bold text-[#F47B1F]" x-text="calculateTotalPrice()"></span>
-                </div>
+              <div class="action-buttons-center">
+                <button class="btn-clean-back" @click="window.location.href='/'">
+                  ย้อนกลับ
+                </button>
+                <button class="btn-clean-submit"
+                        :disabled="selectedSeats.length === 0"
+                        @click="nextPage()">
+                  จองบัตร
+                </button>
               </div>
-            </div>
-
-            {{-- Action Buttons Centered at Bottom --}}
-            <div class="action-buttons-center">
-              <button class="btn-clean-back" @click="window.location.href='/'">
-                ย้อนกลับ
-              </button>
-              <button class="btn-clean-submit"
-                      :disabled="selectedSeats.length === 0"
-                      @click="nextPage()">
-                จองบัตร
-              </button>
             </div>
           </div>
 
         </div>
       </template>
+      {{-- seat-map-option-2 end --}}
 
     </main>
   </div>
@@ -367,53 +396,121 @@
 
 @push('scripts')
 <script>
+    /**
+     * bookingApp()
+     * Alpine.js App Component สำหรับหน้าเลือกโซนและที่นั่งของคอนเสิร์ต
+     * รองรับการอัปเดตสถานะที่นั่งกำลังทำรายการแบบ Real-time
+     * @Author 67160434 จิตฏิยากร โสภา
+     * @Create Date 2026-10-13
+     */
     function bookingApp() {
       // ข้อมูลจากฐานข้อมูล (inject โดย PHP/Blade)
-      const dbZones = @json($zones);
-      const dbOccupied = @json($occupiedSeats);
+      const dbZones = @json($zones ?? []);
+      const dbOccupied = @json($occupiedSeats ?? []);
+      const dbPending = @json($pendingSeats ?? []);
       const concertId = @json($concert ? $concert->concert_id : null);
       const maxTickets = @json($concert ? $concert->max_ticket_per_order : 4);
 
       const defaultCols = Array.from({ length: 20 }, (_, i) => i + 1);
 
       return {
-        cols: (dbZones.length > 0 && dbZones[0].cols && dbZones[0].cols.length) ? dbZones[0].cols : defaultCols,
+        totalSeats: dbZones.length > 0 ? (dbZones[0].totalCols || 20) : 20,
         selectedSeats: [],
         selectedZone: null,
-        rows: (dbZones.length > 0 && dbZones[0].rows && dbZones[0].rows.length) ? dbZones[0].rows : ['A','B','C','D','E'],
+        rows: dbZones.length > 0 ? (dbZones[0].rows || ['A','B','C','D','E']) : ['A','B','C','D','E'],
         zones: dbZones,
         zoneTags: dbZones,
         occupiedSeats: dbOccupied,
+        pendingSeats: dbPending,
 
+        /**
+         * init()
+         * เริ่มต้นระบบดักฟัง Event Real-time จาก WebSocket (Laravel Echo)
+         */
+        init() {
+          if (typeof window.Echo !== 'undefined' && concertId) {
+            window.Echo.channel(`concert.${concertId}`)
+              .listen('.SeatStatusUpdated', (e) => {
+                if (e.occupiedSeats) this.occupiedSeats = e.occupiedSeats;
+                if (e.pendingSeats) this.pendingSeats = e.pendingSeats;
+              });
+          }
+        },
+
+        /**
+         * selectZone()
+         * เลือกโซนการแสดง
+         * @param {Object} zone
+         */
         selectZone(zone) {
           this.selectedZone = zone;
           this.cols = (zone.cols && zone.cols.length) ? zone.cols : defaultCols;
           this.rows = (zone.rows && zone.rows.length) ? zone.rows : ['A','B','C','D','E'];
           this.selectedSeats = [];
         },
+
+        /**
+         * selectZoneByName()
+         * เลือกโซนตามชื่อ
+         * @param {string} name
+         */
         selectZoneByName(name) {
           const zone = this.zones.find(z => z.name === name);
           if (zone) this.selectZone(zone);
         },
 
+        /**
+         * toggleSeat()
+         * เลือกหรือยกเลิกการเลือกที่นั่ง
+         * @param {string} seatId
+         */
         toggleSeat(seatId) {
-            if (this.selectedSeats.includes(seatId)) {
-                this.selectedSeats = this.selectedSeats.filter(s => s !== seatId);
-            } else {
-                if (this.selectedSeats.length < maxTickets) {
-                    this.selectedSeats.push(seatId);
-                    if (!this.selectedZone && this.zones.length > 0) {
-                        this.selectedZone = this.zones[0];
-                    }
-                }
+          if (this.isOccupied(seatId) || this.isPending(seatId)) return;
+
+          if (this.selectedSeats.includes(seatId)) {
+            this.selectedSeats = this.selectedSeats.filter(s => s !== seatId);
+          } else {
+            if (this.selectedSeats.length < maxTickets) {
+              this.selectedSeats.push(seatId);
+              if (!this.selectedZone && this.zones.length > 0) {
+                this.selectedZone = this.zones[0];
+              }
             }
+          }
+
+          // ยิง Broadcast บอก Backend ว่าเรากำลังทำรายการที่นั่งนี้
+          this.broadcastSeatSelection();
         },
 
+        /**
+         * broadcastSeatSelection()
+         * ส่งข้อมูลที่นั่งที่กำลังเลือกไปยัง Backend แบบ Real-time
+         */
+        broadcastSeatSelection() {
+          if (!concertId) return;
+          fetch(`/api/concerts/${concertId}/hold-seats`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            },
+            body: JSON.stringify({
+              seats: this.selectedSeats,
+              zone: this.selectedZone?.name
+            })
+          }).catch(() => {});
+        },
+
+        /**
+         * getZoneColorForRow()
+         * คืนค่าสีประจำโซนตามแถวของที่นั่ง
+         * @param {string} row
+         * @return {string}
+         */
         getZoneColorForRow(row) {
           if (this.selectedZone && this.selectedZone.color) {
             return this.selectedZone.color;
           }
-          // fallback: find zone that contains this row
           for (const z of this.zones) {
             if (z.rows && z.rows.includes(row)) {
               return z.color || '#4D7EE0';
@@ -422,18 +519,41 @@
           return '#4D7EE0';
         },
 
+        /**
+         * isOccupied()
+         * ตรวจสอบว่าที่นั่งถูกขายไปแล้วหรือไม่
+         * @param {string} seatId
+         * @return {boolean}
+         */
         isOccupied(seatId) {
-          const zone = this.selectedZone || this.zones[0];
-          const list = (zone && zone.occupied) ? zone.occupied : this.occupiedSeats;
-          return list.includes(seatId);
+          return Array.isArray(this.occupiedSeats) && this.occupiedSeats.includes(seatId);
         },
 
+        /**
+         * isPending()
+         * ตรวจสอบว่ามีลูกค้ารายอื่นกำลังทำรายการอยู่หรือไม่
+         * @param {string} seatId
+         * @return {boolean}
+         */
+        isPending(seatId) {
+          return Array.isArray(this.pendingSeats) && this.pendingSeats.includes(seatId) && !this.selectedSeats.includes(seatId);
+        },
+
+        /**
+         * calculateTotalPrice()
+         * คำนวณราคารวมของที่นั่งที่เลือก
+         * @return {string}
+         */
         calculateTotalPrice() {
           if (!this.selectedZone || this.selectedSeats.length === 0) return '0 บาท';
           const price = parseInt(this.selectedZone.price) || 0;
           return (price * this.selectedSeats.length).toLocaleString() + ' บาท';
         },
 
+        /**
+         * nextPage()
+         * นำทางไปยังหน้าชำระเงินพร้อมแนบข้อมูลตั๋ว
+         */
         nextPage() {
           if (this.selectedSeats.length > 0 && this.selectedZone) {
             const params = new URLSearchParams({
@@ -449,5 +569,5 @@
         }
       }
     }
-  </script>
+</script>
 @endpush
