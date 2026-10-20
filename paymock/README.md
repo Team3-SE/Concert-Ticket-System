@@ -103,7 +103,9 @@ Content-Type: application/json
 
 > **Identifier:** `id` (`txn_...`) คือ provider transaction ID เพียงค่าเดียวสำหรับ GET/cancel/QR/polling; `payment_id` คือเลขอ้างอิงของ merchant. ไม่มี `provider_transaction_id` เพราะซ้ำกับ `id`.
 
-> **Hosted card flow:** Card payment สร้างเป็น `PENDING` ก่อน แล้วให้ browser redirect ไปยัง `checkout_url` (`/checkout/{public_id}`). ผู้ใช้กรอกบัตรในหน้า PayMock และฟอร์มจะ `POST /payments/{public_id}` เพื่อ settle payment เดิม จากนั้น Gateway redirect กลับ `return_url?payment_id={public_id}`. Demo ใช้ return path `/demo/bookings/{public_id}` ซึ่งอ่านสถานะล่าสุดจากฐานข้อมูลก่อนแสดง booking.
+> **Hosted card flow:** Card payment สร้างเป็น `PENDING` ก่อน แล้วให้ browser redirect ไปยัง `checkout_url` (`/checkout/{public_id}`). ผู้ใช้กรอกบัตรในหน้า PayMock และฟอร์มจะ `POST /payments/{public_id}` เพื่อ settle payment เดิม จากนั้น Gateway redirect กลับ `return_url` โดยไม่เติม payment ID ลงใน URL. ส่ง `booking_ref` เป็น booking code เพื่อแสดงบนหน้า checkout/receipt และใช้สร้าง return path เช่น `/booking/{booking_ref}`; ระบบร้านค้าควรอ่านสถานะจากฐานข้อมูลหรือ webhook โดยใช้ mapping ที่บันทึกไว้. Demo ใช้ return path `/demo/bookings/{public_id}` ซึ่งอ่านสถานะล่าสุดจากฐานข้อมูลก่อนแสดง booking.
+
+Public API ใช้ `booking_ref` เป็น booking code; request เก่าที่ยังส่ง `order_ref` รองรับเพื่อ backward compatibility แต่ response จะส่ง `booking_ref` เท่านั้น.
 
 ---
 

@@ -27,6 +27,7 @@ class PaymentApiTest extends TestCase
             'Idempotency-Key' => 'BOOKING_001',
         ])->postJson('/v1/payments', [
             'payment_id'   => '101',
+            'booking_ref'  => 'TK-BOOKING-101',
             'amount'       => 1500.00,
             'method'       => 'card',
             'callback_url' => 'http://concert/webhooks/payment',
@@ -36,11 +37,12 @@ class PaymentApiTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonStructure([
-                'id', 'payment_id', 'amount', 'method', 'status',
+                'id', 'payment_id', 'booking_ref', 'amount', 'method', 'status',
                 'checkout_url', 'return_url', 'expires_at', 'created_at',
             ])
             ->assertJson([
                 'payment_id' => '101',
+                'booking_ref' => 'TK-BOOKING-101',
                 'amount'     => 1500.0,
                 'status'     => 'PENDING',
             ]);
@@ -48,10 +50,29 @@ class PaymentApiTest extends TestCase
         $this->assertNull($response->json('provider_transaction_id'));
         $this->assertDatabaseHas('payments', [
             'payment_id'      => '101',
+            'order_ref'       => 'TK-BOOKING-101',
             'idempotency_key' => 'BOOKING_001',
             'status'          => 'PENDING',
             'return_url'      => 'http://localhost:8080/return',
         ]);
+        $response->assertJsonMissingPath('order_ref');
+    }
+
+    public function test_legacy_order_ref_request_is_returned_as_booking_ref(): void
+    {
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey,
+        ])->postJson('/v1/payments', [
+            'payment_id'   => 'LEGACY-101',
+            'order_ref'    => 'TK-LEGACY-101',
+            'amount'       => 1500,
+            'method'       => 'card',
+            'callback_url' => 'http://concert/webhooks/payment',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('booking_ref', 'TK-LEGACY-101')
+            ->assertJsonMissingPath('order_ref');
     }
 
     /** Test: PromptPay PENDING คืน payment_id ของร้านค้า ไม่เป็น null */

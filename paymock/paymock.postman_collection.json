@@ -100,7 +100,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/123\",\n  \"expires_in\": 600\n}"
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"expires_in\": 600\n}"
             },
             "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
           }
@@ -172,7 +172,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/123\"\n}"
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
           }
@@ -211,7 +211,7 @@
     },
     {
       "name": "2. Hosted Card Checkout Redirect",
-      "description": "สร้าง Card payment ให้เป็น PENDING ก่อนด้วย POST /v1/payments แล้วเปิด checkout_url ในเบราว์เซอร์ ผู้ใช้กรอกบัตรบน Hosted Checkout และ form จะ POST /payments/{publicId} เพื่อชำระ payment เดิม ก่อน redirect ไป return_url พร้อม ?payment_id={publicId}",
+      "description": "สร้าง Card payment ให้เป็น PENDING ก่อนด้วย POST /v1/payments แล้วเปิด checkout_url ในเบราว์เซอร์ ผู้ใช้กรอกบัตรบน Hosted Checkout และ form จะ POST /payments/{publicId} เพื่อชำระ payment เดิม ก่อน redirect กลับไปยัง return_url โดยไม่มี payment ID ใน URL",
       "item": [
         {
           "name": "Step 1 – Create Card Payment (PENDING + checkout_url)",
@@ -239,7 +239,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"HOSTED_CARD_{{$timestamp}}\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/123\",\n  \"expires_in\": 600\n}"
+              "raw": "{\n  \"payment_id\": \"HOSTED_CARD_{{$timestamp}}\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"expires_in\": 600\n}"
             },
             "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] },
             "description": "คัดลอก checkout_url ไปเปิดใน browser หรือรัน request ถัดไปเพื่อจำลองการ submit form จาก hosted checkout"

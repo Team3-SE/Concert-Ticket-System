@@ -37,6 +37,7 @@ class WebhookTest extends TestCase
         app(WebhookEmitter::class)->emit($payment, 'payment.completed');
 
         Queue::assertPushed(SendWebhookJob::class, 1);
+        $this->assertSame($payment->order_ref, WebhookDelivery::firstOrFail()->payload['booking_ref']);
     }
 
     /** Webhook lost: ไม่ dispatch job เลย */

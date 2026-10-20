@@ -30,6 +30,7 @@ class WebhookEmitter
             // `id` is the canonical provider transaction ID in webhooks too.
             'id'           => $payment->public_id,
             'payment_id'   => $payment->merchantPaymentId(),
+            'booking_ref'  => $payment->order_ref,
             'event'                   => $event,
             'amount'                  => (float) $payment->amount,
             'currency'     => $payment->currency,

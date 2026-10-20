@@ -25,8 +25,7 @@
             </div>
         </div>
         <div class="mt-2 text-sm opacity-70">
-            Payment ID: <span class="font-mono font-semibold">{{ $payment->payment_id ?? $payment->order_ref }}</span> &nbsp;|&nbsp;
-            Provider Txn: <span class="font-mono">{{ $payment->public_id }}</span>
+            Booking Code: <span class="font-mono font-semibold">{{ $payment->order_ref }}</span>
         </div>
     </div>
 

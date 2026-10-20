@@ -38,6 +38,8 @@ class PaymentController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'payment_id'   => 'required|string|max:255',
+            'booking_ref'  => 'nullable|string|max:255',
+            'order_ref'    => 'nullable|string|max:255',
             'amount'       => 'required|numeric|min:1',
             'method'       => 'required|in:card,promptpay',
             'callback_url' => 'required|url',
@@ -55,6 +57,7 @@ class PaymentController extends Controller
         }
 
         $validated = $validator->validated();
+        $validated['booking_ref'] = $validated['booking_ref'] ?? $validated['order_ref'] ?? null;
         $merchantPaymentId = (string) $validated['payment_id'];
         $idempotencyKey = $request->header('Idempotency-Key') ?? $merchantPaymentId;
 
@@ -116,6 +119,7 @@ class PaymentController extends Controller
             // QR, polling and reconciliation.
             'id'           => $payment->public_id,
             'payment_id'   => $payment->merchantPaymentId(),
+            'booking_ref'  => $payment->order_ref,
             'amount'       => (float) $payment->amount,
             'currency'     => $payment->currency,
             'method'       => $payment->method,

@@ -23,7 +23,7 @@ class PaymentService
 
         return Payment::create([
             'payment_id'      => $merchantPaymentId,
-            'order_ref'       => $data['order_ref'] ?? $merchantPaymentId,
+            'order_ref'       => $data['booking_ref'] ?? $data['order_ref'] ?? $merchantPaymentId,
             'amount'          => $data['amount'],
             'currency'        => $data['currency'] ?? 'THB',
             'method'          => $data['method'],

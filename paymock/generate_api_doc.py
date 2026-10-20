@@ -223,11 +223,11 @@ add_table(doc,
 add_heading(doc, '1.2 Flow การทำงาน', 2)
 add_para(doc, 'ลำดับการทำงานระหว่างระบบคอนเสิร์ตและ PayMock:')
 steps = [
-    '① ผู้ใช้เลือกที่นั่ง → ระบบคอนเสิร์ตล็อกที่นั่ง 10 นาที + สร้าง booking (PENDING_PAYMENT)',
-    '② ระบบคอนเสิร์ต POST /v1/payments → PayMock คืน payment_id + (qrcode_url สำหรับ PromptPay / ผลบัตรทันทีสำหรับ Card)',
-    '③ PromptPay: เว็บคอนเสิร์ตแสดง QR Code จาก qrcode_url ใน Native Modal ของตัวเอง | Card: แจ้งผลลัพธ์ทันที (COMPLETED หรือ FAILED)',
+    '① ผู้ใช้เลือกที่นั่ง → Concert สร้าง booking และ booking code (booking_ref) เช่น TK-260101-ABCDE ก่อนสร้างรายการจ่ายเงิน',
+    '② Concert ส่ง payment_id (รหัส payment attempt) และ booking_ref (booking code) ให้ PayMock; booking_ref ใช้แสดงแก่ผู้ใช้และสร้าง return_url',
+    '③ PromptPay: เว็บคอนเสิร์ตแสดง QR Code จาก qrcode_url ใน Native Modal ของตัวเอง | Card: สร้างสถานะ PENDING แล้ว redirect ไป Hosted Checkout',
     '④ ผู้ใช้สแกน QR ผ่านแอปธนาคาร หรือคลิก bank_simulator_url เพื่อจำลองการโอนเงิน',
-    '⑤ PayMock เปลี่ยนสถานะ → ส่ง Webhook (POST {callback_url}) พร้อม HMAC-SHA256',
+    '⑤ PayMock เปลี่ยนสถานะ → ส่ง Webhook (POST {callback_url}) พร้อม HMAC-SHA256; หลังจ่ายบัตร redirect กลับ /booking/{booking_ref} โดยไม่ใส่ payment ID ใน URL',
     '⑥ ระบบคอนเสิร์ตตรวจ signature → ตรวจ idempotency → อัปเดต booking + seat + ออกตั๋ว',
     '⑦ (สำรอง) ระบบคอนเสิร์ตยิง GET /v1/payments/{id} เพื่อ reconcile — ใช้ response.id (provider transaction ID)',
 ]
@@ -260,7 +260,7 @@ add_table(doc,
     [
         ['Authorization',    'จำเป็น',    'Bearer pm_test_key_concert_system_2024', 'API Key ยืนยันตัวตน'],
         ['Content-Type',     'จำเป็น (POST)', 'application/json', 'ชนิดข้อมูล'],
-        ['Idempotency-Key',  'แนะนำ',     '12',                 'ต้องเท่ากับ payment_id ของ request'],
+        ['Idempotency-Key',  'แนะนำ',     '12',                 'ต้องคงเดิมสำหรับ payment attempt เดิม; Concert ใช้ payment_id ของ attempt'],
     ],
     col_widths=[4, 3, 5.5, 4]
 )
@@ -332,6 +332,7 @@ add_code(doc, [
     '// PromptPay:',
     '{',
     '  "payment_id":   "12",',
+    '  "booking_ref":    "TK-260101-ABCDE",',
     '  "amount":       1200.00,',
     '  "method":       "promptpay",',
     '  "callback_url": "http://localhost:8080/webhooks/paymock",',
@@ -343,10 +344,11 @@ add_code(doc, [
     '// Credit Card (Hosted Checkout):',
     '{',
     '  "payment_id":   "13",',
+    '  "booking_ref":    "TK-260101-ABCDE",',
     '  "amount":       1200.00,',
     '  "method":       "card",',
     '  "callback_url": "http://localhost:8080/webhooks/paymock",',
-    '  "return_url":   "http://localhost:5000/booking/74"',
+    '  "return_url":   "http://localhost:5000/booking/TK-260101-ABCDE"',
     '}',
 ])
 
@@ -355,6 +357,7 @@ add_table(doc,
     ['Field', 'Type', 'Required', 'ค่าที่ยอมรับ', 'คำอธิบาย'],
     [
         ['payment_id',   'string',  'จำเป็น',      'max 255 chars',          'รหัสรายการฝั่งร้านค้า ต้องส่งทุกครั้ง; response จะ echo กลับ'],
+        ['booking_ref',    'string',  'ไม่จำเป็น',   'max 255 chars',          'Booking code จากระบบร้านค้า; แสดงให้ผู้ใช้และใช้ผูกหน้า return (หากไม่ส่งจะใช้ payment_id)'],
         ['amount',       'number',  'จำเป็น',      'min: 1',                 'ยอดเงิน (บาท, ทศนิยมได้)'],
         ['method',       'string',  'จำเป็น',      '"card" หรือ "promptpay"', 'วิธีชำระเงิน'],
         ['callback_url', 'string',  'จำเป็น',      'URL ที่ถูกต้อง',         'URL รับ Webhook จาก PayMock'],
@@ -365,13 +368,15 @@ add_table(doc,
     ],
     col_widths=[3, 2, 2.5, 3.5, 5.5]
 )
+add_para(doc, 'รองรับ request เดิมที่ส่ง order_ref เพื่อ backward compatibility แต่จะคืนชื่อ booking_ref ใน response ทุกครั้ง; integrations ใหม่ควรใช้ booking_ref. PayMock ยังเก็บค่าในคอลัมน์เดิมภายในเพื่อไม่ต้อง migrate ข้อมูล.')
 
 add_heading(doc, 'Idempotency', 3, color='374151')
 add_para(doc, (
     'Merchant ทั่วไปใช้เลข payment_id ได้ เช่น 12 และตั้ง Idempotency-Key: 12. Retry หลัง timeout '
-    'ของ request เดิมต้องส่ง body และ key เดิม เพื่อคืน payment เดิมโดยไม่สร้างซ้ำ. Concert backend '
-    'สร้าง Concert payment ภายในก่อน แล้วใช้เลข Concert payment นั้นเป็น payment_id และ Idempotency-Key. '
-    'เมื่อ FAILED หรือ EXPIRED จึงสร้าง Concert payment ใหม่ใต้ booking เดิมและใช้เลขใหม่. '
+    'ของ request เดิมต้องส่ง body และ key เดิม เพื่อคืน payment เดิมโดยไม่สร้างซ้ำ. Concert สร้าง booking code (booking_ref) '
+    'ตอนสร้าง booking ก่อนเรียก PayMock; code นี้คงเดิมตลอด booking แม้มีการจ่ายซ้ำ. '
+    'แต่ละ payment attempt จะมี payment_id และ Idempotency-Key ของตัวเอง; retry attempt เดิมต้องใช้ key เดิม. '
+    'เมื่อ FAILED หรือ EXPIRED จึงสร้าง Concert payment attempt ใหม่ใต้ booking เดิมและใช้ payment_id/key ใหม่. '
     'หากไม่ส่ง header ระบบใช้ payment_id เป็น key อัตโนมัติ แต่ production ควรส่ง header เสมอ.'
 ))
 
@@ -380,6 +385,7 @@ add_code(doc, [
     '{',
     '  "id":                 "txn_01jcxyz1234567890",',
     '  "payment_id":         "b_TK2024001",',
+    '  "booking_ref":          "TK-260101-ABCDE",',
     '  "amount":             1200.00,',
     '  "currency":           "THB",',
     '  "method":             "promptpay",',
@@ -399,6 +405,7 @@ add_table(doc,
     [
         ['id',                 'string',          'Provider transaction ID (txn_...) — ใช้กับ GET / cancel / QR / ระบบคอนเสิร์ต หลังสร้าง'],
         ['payment_id',         'string',          'รหัสรายการที่ merchant ส่งมา (required ใน request)'],
+        ['booking_ref',          'string',          'Booking code ที่ merchant ส่งมา; ใช้แสดงให้ผู้ใช้และระบุหน้า return'],
         ['status',             'string',          'PENDING / COMPLETED / FAILED / EXPIRED'],
         ['failure_code',       'string | null',   'รหัสเหตุผลเมื่อล้มเหลว (ดูตาราง Failure Codes)'],
         ['qrcode_url',         'string | null',   'URL รูปภาพ SVG QR Code สำหรับ PromptPay (ใส่ใน <img src="...">)'],
@@ -417,16 +424,17 @@ add_table(doc,
     [
         ['id', 'PayMock', 'txn_<ULID>', 'Provider transaction ID เดียว ใช้ path GET / cancel / QR, polling, reconcile และ webhook payload.id'],
         ['payment_id', 'Merchant', 'เลขล้วนได้ เช่น 12', 'รหัสที่ merchant ผูกกับ order หรือ payment ของตนเอง และ PayMock echo กลับ'],
+        ['booking_ref', 'Merchant', 'booking code เช่น TK-260101-ABCDE', 'รหัส booking ที่สร้างก่อน payment attempt; ใช้แสดงให้ผู้ใช้และทำ return URL ที่ไม่มี payment ID'],
         ['Idempotency-Key', 'Merchant', 'แนะนำให้เท่ากับ payment_id ของ request นั้น', 'ทำให้ retry request เดิมคืน payment เดิม ไม่สร้าง/ตัดเงินซ้ำ'],
     ],
     col_widths=[3.5, 3, 4.5, 5.5]
 )
-add_para(doc, 'Format มีความหมายตามระบบต้นทาง: merchant ทั่วไปใช้ 12 / 12 ได้ง่าย; Concert backend ใช้เลข Concert payment / key เดียวกันสำหรับ payment attempt นั้น. เมื่อผู้ใช้ต้องการจ่ายใหม่หลัง FAILED/EXPIRED ระบบสร้าง Concert payment ใหม่ใต้ booking เดิม. ห้ามเปลี่ยน key ระหว่าง retry หลัง timeout เพราะจะทำให้ gateway สร้าง payment ซ้ำ.')
+add_para(doc, 'booking_ref เกิดเมื่อ Concert สร้าง booking ก่อนเริ่มชำระเงิน (เช่น TK-260101-ABCDE) และคงเดิมแม้สร้าง payment attempt ใหม่. payment_id และ Idempotency-Key อ้างถึง attempt แต่ละครั้ง; retry attempt เดิมต้องใช้ key เดิม และสร้าง attempt ใหม่พร้อม key ใหม่เมื่อ FAILED/EXPIRED.')
 
 add_heading(doc, 'Concert ↔ PayMock: Idempotency ที่ใช้งานจริง', 3, color='374151')
 add_para(doc, (
-    'ตัวอย่าง booking 74: Concert สร้างแถว Concert payment id = 12 ก่อนเรียก PayMock แล้วส่ง request แบบ backend-to-backend '
-    'โดยใช้เลข 12 ทั้ง body.payment_id และ header Idempotency-Key. PayMock เก็บ key นี้ไว้กับ payment; '
+    'ตัวอย่าง booking code TK-260101-ABCDE: Concert สร้าง booking ก่อน แล้วสร้างแถว Concert payment id = 12 ก่อนเรียก PayMock '
+    'โดยส่ง payment_id = 12, booking_ref = TK-260101-ABCDE และ header Idempotency-Key = 12. PayMock เก็บ key นี้ไว้กับ payment; '
     'request ที่มี key เดิมจึงได้ transaction เดิมกลับมา ไม่ใช่ transaction ใหม่.'
 ))
 add_code(doc, [
@@ -434,7 +442,7 @@ add_code(doc, [
     'Authorization: Bearer pm_test_key_concert_system_2024',
     'Idempotency-Key: 12',
     '',
-    '{ "payment_id":"12", "amount":1200.00, "method":"card", "callback_url":"http://concert_backend:5000/api/webhook" }',
+    '{ "payment_id":"12", "booking_ref":"TK-260101-ABCDE", "amount":1200.00, "method":"card", "return_url":"http://localhost:5000/booking/TK-260101-ABCDE", "callback_url":"http://concert_backend:5000/api/webhook" }',
 ])
 add_table(doc,
     ['กรณี', 'Concert ส่งอะไร', 'ผลที่ PayMock / Concert'],
@@ -561,7 +569,7 @@ add_para(doc, (
 add_table(doc,
     ['Method', 'Path', 'Body / Query', 'หน้าที่'],
     [
-        ['POST', '/api/create-booking',     'seat, amount, method, card fields', 'สร้าง booking + Concert payment แรก'],
+        ['POST', '/api/create-booking',     'seat, amount, method, card fields', 'สร้าง booking code (booking_ref) + Concert payment แรก'],
         ['POST', '/api/bookings/{id}/payments', 'method, card fields optional', 'สร้าง Concert payment ใหม่ใน booking เดิมหลัง FAILED/EXPIRED'],
         ['GET',  '/api/booking-status',    '?payment_id=txn_…',            'สถานะตั๋ว + webhook logs'],
         ['POST', '/api/reconcile-booking', '{ "payment_id": "txn_…" }',    'GET จาก PayMock แล้วอัปเดตตั๋ว'],
@@ -571,7 +579,8 @@ add_table(doc,
     col_widths=[2, 5, 5.5, 4]
 )
 add_para(doc, (
-    'create-booking สร้าง booking และ Concert payment แรก. หากบัตรล้มเหลว ให้เรียก '
+    'เมื่อผู้ใช้เริ่มจอง Concert สร้าง booking code (booking_ref เช่น TK-260101-ABCDE) พร้อม booking ก่อนเรียก PayMock; '
+    'รหัสนี้เกิดก่อน payment attempt และคงเดิมตลอด booking. create-booking จะสร้าง Concert payment attempt แรกด้วย. หากบัตรล้มเหลว ให้เรียก '
     '/api/bookings/{bookingId}/payments เพื่อสร้าง Concert payment ใหม่ใต้ booking เดิม. '
     'ระบบใช้เลข Concert payment ใหม่นั้นเป็น merchant payment_id และ Idempotency-Key. '
     'หลังจากสร้างแล้วทุก endpoint สถานะใช้ response.id (provider transaction ID, txn_…)'
@@ -612,6 +621,7 @@ add_code(doc, [
     '  "id":           "txn_01JCXYZ1234567890ABCDEFGH",',
     '  "event":        "payment.completed",',
     '  "payment_id":   "12",',
+    '  "booking_ref":  "TK-260101-ABCDE",',
     '  "amount":       1200.00,',
     '  "currency":     "THB",',
     '  "method":       "promptpay",',
@@ -629,6 +639,7 @@ add_table(doc,
         ['id',           'string (ULID)',   'Payment ID (ขึ้นต้นด้วย txn_)'],
         ['event',        'string',          'ชื่อ event: payment.completed / payment.failed / payment.expired'],
         ['payment_id',   'string',          'รหัสรายการจาก merchant ที่ส่งในตอนสร้าง payment'],
+        ['booking_ref',  'string',          'Booking code จาก merchant; ใช้จับคู่กับ booking'],
         ['amount',       'float',           'ยอดเงินที่ชำระ'],
         ['currency',     'string',          'สกุลเงิน เช่น THB'],
         ['method',       'string',          'ช่องทางชำระเงิน: promptpay หรือ card'],
@@ -1021,9 +1032,11 @@ doc.add_page_break()
 # ═══════════════════════════════════════════════
 add_heading(doc, '9. การเชื่อมต่อแบบ Native PromptPay และ Hosted Card Checkout', 1)
 add_para(doc, (
+    'booking_ref คือ booking code ที่ระบบ Concert สร้างพร้อม booking ก่อนสร้าง payment เช่น TK-260101-ABCDE; '
+    'ค่านี้คงเดิมตลอด booking แม้ผู้ใช้เริ่มชำระใหม่. payment_id และ provider id ใช้อ้างอิงรายการจ่ายภายในเท่านั้น. '
     'PromptPay ใช้ Native Modal ได้ ส่วนบัตรใช้ Hosted Checkout: สร้าง payment เป็น PENDING, redirect browser ไปที่ checkout_url, '
-    'ส่งฟอร์มบัตรไปยัง POST /payments/{publicId}, แล้ว Gateway redirect กลับ return_url?payment_id={publicId}. '
-    'หน้าจองต้องอ่านสถานะล่าสุดจากฐานข้อมูลหลังกลับมา'
+    'ส่งฟอร์มบัตรไปยัง POST /payments/{publicId}, แล้ว Gateway redirect กลับ return_url ที่เป็น /booking/{booking_ref} โดยไม่แนบ payment ID. '
+    'หน้าจองใช้ booking code หา payment ล่าสุดในฐานข้อมูลและแสดงเฉพาะ booking code ให้ผู้ใช้'
 ))
 
 add_heading(doc, '9.1 Flow การชำระเงิน', 2)
@@ -1033,7 +1046,7 @@ add_table(doc,
         ['PromptPay', 'PayMock ส่งคืน qrcode_url (SVG) + bank_simulator_url',
          'เว็บคอนเสิร์ตนำ QR ใส่ใน Native Modal — ไม่ต้องใช้ iframe'],
         ['Credit Card', 'redirect ไปที่ checkout_url ของ PayMock เพื่อกรอกบัตร แล้ว form POST /payments/{publicId}',
-         'Gateway กลับ return_url พร้อม payment_id; หน้า booking query DB ใหม่'],
+         'Gateway กลับ /booking/{booking_ref} โดยไม่มี payment ID ใน URL; หน้า booking โหลด payment จาก DB'],
     ],
     col_widths=[2.5, 7, 7]
 )
@@ -1116,15 +1129,15 @@ add_code(doc, [
     'POST /v1/payments',
     'Authorization: Bearer pm_test_key_concert_system_2024',
     'Idempotency-Key: BOOKING-1001',
-    '{ "payment_id":"1001", "amount":1200.00, "method":"promptpay", "callback_url":"http://concert_backend:5000/api/webhook", "expires_in":600 }',
+    '{ "payment_id":"1001", "booking_ref":"TK-260101-ABCDE", "amount":1200.00, "method":"promptpay", "callback_url":"http://concert_backend:5000/api/webhook", "expires_in":600 }',
     '',
     '// 201 response',
-    '{ "id":"txn_01…", "payment_id":"1001", "amount":1200, "currency":"THB", "method":"promptpay", "status":"PENDING", "failure_code":null, "expires_at":"2026-10-16T10:10:00+07:00", "paid_at":null, "created_at":"2026-10-16T10:00:00+07:00", "qrcode_url":"http://localhost:8081/v1/payments/txn_01…/qr.svg", "bank_simulator_url":"http://localhost:8081/bank-simulate/txn_01…" }',
+    '{ "id":"txn_01…", "payment_id":"1001", "booking_ref":"TK-260101-ABCDE", "amount":1200, "currency":"THB", "method":"promptpay", "status":"PENDING", "failure_code":null, "expires_at":"2026-10-16T10:10:00+07:00", "paid_at":null, "created_at":"2026-10-16T10:00:00+07:00", "qrcode_url":"http://localhost:8081/v1/payments/txn_01…/qr.svg", "bank_simulator_url":"http://localhost:8081/bank-simulate/txn_01…" }',
     '',
     '// 2) Hosted card: create PENDING then redirect browser to checkout_url',
-    '{ "payment_id":"1002", "amount":1200.00, "method":"card", "return_url":"http://concert_backend:5000/booking/42", "callback_url":"http://concert_backend:5000/api/webhook" }',
-    '{ "id":"txn_02…", "payment_id":"1002", "method":"card", "status":"PENDING", "checkout_url":"http://localhost:8081/checkout/txn_02…", "return_url":"http://concert_backend:5000/booking/42" }',
-    '// Browser: POST /payments/txn_02… with card form → 302 http://concert_backend:5000/booking/42?payment_id=txn_02…',
+    '{ "payment_id":"1002", "booking_ref":"TK-260101-ABCDE", "amount":1200.00, "method":"card", "return_url":"http://localhost:5000/booking/TK-260101-ABCDE", "callback_url":"http://concert_backend:5000/api/webhook" }',
+    '{ "id":"txn_02…", "payment_id":"1002", "booking_ref":"TK-260101-ABCDE", "method":"card", "status":"PENDING", "checkout_url":"http://localhost:8081/checkout/txn_02…", "return_url":"http://localhost:5000/booking/TK-260101-ABCDE" }',
+    '// Browser: POST /payments/txn_02… with card form → 302 http://localhost:5000/booking/TK-260101-ABCDE',
     '',
     '// 3) Invalid/declined card is shown on the hosted page; booking checks DB status after the redirect',
     '',
@@ -1138,7 +1151,7 @@ add_table(doc,
     ['Method', 'Path', 'ใช้เมื่อ', 'ข้อมูลที่ส่ง', 'Response ตัวอย่าง / ทุกกรณี'],
     [
         ['GET', '/checkout/{publicId}', 'เปิด UI ชำระเงิน', 'path publicId', '200 HTML หน้าจ่าย; ถ้า settle หรือหมดอายุ แสดง receipt HTML; 404 ถ้าไม่พบ'],
-        ['POST', '/payments/{publicId}', 'ส่งบัตรจาก hosted checkout', 'form: card_number, expiry, cvc, cardholder, redirect_to_return=1', '302 -> return_url?payment_id={publicId}; PENDING + valid card จะ settle; 404 ถ้าไม่พบ'],
+        ['POST', '/payments/{publicId}', 'ส่งบัตรจาก hosted checkout', 'form: card_number, expiry, cvc, cardholder, redirect_to_return=1', '302 -> return_url (เช่น /booking/{booking_ref}, ไม่มี payment ID); PENDING + valid card จะ settle; 404 ถ้าไม่พบ'],
         ['POST', '/checkout/{publicId}/promptpay', 'ยืนยัน/ปฏิเสธ PromptPay ใน UI', 'form: action=pay (default) หรือ fail; optional redirect_to_return', '302 -> checkout receipt; pay => COMPLETED, fail => FAILED/payment_declined; non-PENDING กลับพร้อม flash error'],
         ['POST', '/checkout/{publicId}/simulate', 'ทดสอบเปลี่ยนผล payment ผ่าน API', 'JSON/form: status (default COMPLETED), failure_code optional', '200 { "ok":true, "status":"COMPLETED" }; ถ้า non-PENDING: { "ok":false, "message":"Not pending" }; 404 ถ้าไม่พบ'],
         ['GET', '/bank-simulate/{publicId}', 'เปิดแอปธนาคารจำลองจาก QR', 'path publicId', '200 HTML mobile banking simulator; 404 ถ้าไม่พบ'],
@@ -1225,4 +1238,3 @@ for output_path in paths:
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     doc.save(output_path)
     print("SUCCESS: Generated " + os.path.abspath(output_path))
-

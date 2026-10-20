@@ -90,10 +90,11 @@ function createConcertPayment(PDO $db, array $booking, array $input): array
     $concertBrowserUrl = rtrim(getenv('CONCERT_BROWSER_URL') ?: 'http://localhost:5000', '/');
     $postData = [
         'payment_id'   => $concertPaymentId,
+        'booking_ref'  => $booking['order_ref'],
         'amount'       => (float) $booking['amount'],
         'method'       => $method,
         'callback_url' => $callbackUrl,
-        'return_url'   => $concertBrowserUrl . '/booking/' . $booking['id'],
+        'return_url'   => $concertBrowserUrl . '/booking/' . rawurlencode($booking['order_ref']),
         'expires_in'   => 600,
     ];
 
@@ -142,6 +143,7 @@ function createConcertPayment(PDO $db, array $booking, array $input): array
     return [
         'ok' => true,
         'booking_id' => (int) $booking['id'],
+        'booking_ref' => $booking['order_ref'],
         'concert_payment_id' => (int) $concertPaymentId,
         'payment_id' => $providerId,
         'status' => $gatewayStatus,
@@ -150,7 +152,7 @@ function createConcertPayment(PDO $db, array $booking, array $input): array
         'qrcode_url' => browserUrl($gateway['qrcode_url'] ?? null),
         'bank_simulator_url' => browserUrl($gateway['bank_simulator_url'] ?? null),
         'checkout_url' => browserUrl($gateway['checkout_url'] ?? null),
-        'return_path' => '/booking/' . $booking['id'],
+        'return_path' => '/booking/' . rawurlencode($booking['order_ref']),
     ];
 }
 
@@ -437,6 +439,8 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
         $paymentStmt = $db->prepare('SELECT id, provider_payment_id, method, status, failure_code, created_at FROM concert_payments WHERE booking_id = ? ORDER BY id DESC');
         $paymentStmt->execute([$booking['id']]);
         $payments = $paymentStmt->fetchAll(PDO::FETCH_ASSOC);
+        $booking['booking_ref'] = $booking['order_ref'];
+        unset($booking['order_ref']);
     }
 
     echo json_encode([
@@ -447,11 +451,29 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
     exit;
 }
 
-// Booking return page after hosted card checkout. The page below loads normally,
-// then queries the database-backed booking-status endpoint with this payment ID.
+// Resolve the customer's booking code to its active payment server-side.
 $returnPaymentId = '';
-if ($method === 'GET' && preg_match('#^/booking/\d+$#', $uri)) {
-    $returnPaymentId = (string) ($_GET['payment_id'] ?? '');
+$returnBookingCode = '';
+if ($method === 'GET' && preg_match('#^/booking/([^/]+)$#', $uri, $matches)) {
+    $bookingCode = rawurldecode($matches[1]);
+    $stmt = $db->prepare('SELECT order_ref, payment_id FROM bookings WHERE order_ref = ?');
+    $stmt->execute([$bookingCode]);
+    $bookingReturn = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Keep old numeric booking links working during the transition.
+    if (!$bookingReturn && ctype_digit($bookingCode)) {
+        $stmt = $db->prepare('SELECT order_ref, payment_id FROM bookings WHERE id = ?');
+        $stmt->execute([(int) $bookingCode]);
+        $bookingReturn = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    if ($bookingReturn) {
+        $returnBookingCode = (string) $bookingReturn['order_ref'];
+        $returnPaymentId = (string) ($bookingReturn['payment_id'] ?? '');
+    } else {
+        // Accept older return links that carried a payment ID in the query.
+        $returnPaymentId = (string) ($_GET['payment_id'] ?? '');
+    }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -557,8 +579,8 @@ if ($method === 'GET' && preg_match('#^/booking/\d+$#', $uri)) {
             <div id="bookingResultCard" style="display: none;" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
                 <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                     <div class="text-sm font-bold text-white flex items-center gap-2">
-                        <span>🎟️ Payment ID:</span>
-                        <span id="cardPaymentId" class="font-mono text-amber-400 text-xs">--</span>
+                        <span>🎟️ Booking Code:</span>
+                        <span id="cardBookingCode" class="font-mono text-amber-400 text-xs">--</span>
                     </div>
                     <span id="cardStatusBadge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
                         PENDING
@@ -651,8 +673,8 @@ if ($method === 'GET' && preg_match('#^/booking/\d+$#', $uri)) {
             <div class="p-6 text-center space-y-4">
                 <div class="flex items-center justify-between bg-slate-50 border border-slate-200/80 rounded-2xl p-3 px-4">
                     <div class="text-left">
-                        <div class="text-[11px] text-slate-500 font-medium">Payment ID</div>
-                        <div id="modalPaymentId" class="font-mono font-bold text-slate-800 text-[11px] mt-0.5 break-all">txn_…</div>
+                        <div class="text-[11px] text-slate-500 font-medium">Booking Code</div>
+                        <div id="modalBookingCode" class="font-mono font-bold text-slate-800 text-[11px] mt-0.5 break-all">--</div>
                     </div>
                     <div class="text-right">
                         <div class="text-[11px] text-slate-500 font-medium">ยอดชำระ</div>
@@ -691,6 +713,7 @@ if ($method === 'GET' && preg_match('#^/booking/\d+$#', $uri)) {
         let currentBookingStatus = null;
         let pollingTimer = null;
         const returnPaymentId = <?= json_encode($returnPaymentId) ?>;
+        const returnBookingCode = <?= json_encode($returnBookingCode) ?>;
 
         document.addEventListener('DOMContentLoaded', () => {
             if (returnPaymentId) {
@@ -752,10 +775,10 @@ if ($method === 'GET' && preg_match('#^/booking/\d+$#', $uri)) {
                     currentPaymentId = data.payment_id;
                     currentBookingId = data.booking_id;
                     currentBookingStatus = data.status;
-                    showBookingCard(data.payment_id, currentSeat, currentAmount, data.status);
+                    showBookingCard(data.booking_ref, currentSeat, currentAmount, data.status);
 
                     if (method === 'promptpay' && data.qrcode_url) {
-                        openPromptPayModal(data.payment_id, currentAmount, data.qrcode_url, data.bank_simulator_url);
+                        openPromptPayModal(data.booking_ref, currentAmount, data.qrcode_url, data.bank_simulator_url);
                         startPollingStatus(data.payment_id);
                     } else if (method === 'card') {
                         window.location.assign(data.checkout_url);
@@ -772,8 +795,8 @@ if ($method === 'GET' && preg_match('#^/booking/\d+$#', $uri)) {
             }
         }
 
-        function openPromptPayModal(paymentId, amount, qrUrl, simulateUrl) {
-            document.getElementById('modalPaymentId').innerText = paymentId;
+        function openPromptPayModal(bookingCode, amount, qrUrl, simulateUrl) {
+            document.getElementById('modalBookingCode').innerText = bookingCode;
             document.getElementById('modalAmount').innerText = '฿' + Number(amount).toLocaleString('th-TH', {minimumFractionDigits: 2});
             document.getElementById('modalQrImg').src = qrUrl;
             document.getElementById('bankSimulateLink').href = simulateUrl || '#';
@@ -784,9 +807,9 @@ if ($method === 'GET' && preg_match('#^/booking/\d+$#', $uri)) {
             document.getElementById('paymentModal').style.display = 'none';
         }
 
-        function showBookingCard(paymentId, seat, amount, status) {
+        function showBookingCard(bookingCode, seat, amount, status) {
             document.getElementById('bookingResultCard').style.display = 'block';
-            document.getElementById('cardPaymentId').innerText = paymentId;
+            document.getElementById('cardBookingCode').innerText = bookingCode;
             document.getElementById('cardSeat').innerText = seat;
             document.getElementById('cardAmount').innerText = '฿' + Number(amount).toLocaleString('th-TH');
             updateBadge(status);
@@ -831,7 +854,7 @@ if ($method === 'GET' && preg_match('#^/booking/\d+$#', $uri)) {
                     currentBookingId = data.booking.id;
                     currentBookingStatus = data.booking.status;
                     currentPaymentId = ref;
-                    showBookingCard(ref, data.booking.seat, data.booking.amount, data.booking.status);
+                    showBookingCard(data.booking.booking_ref || returnBookingCode, data.booking.seat, data.booking.amount, data.booking.status);
                     const hasRejected = data.logs && data.logs.some(l => parseInt(l.signature_valid) === 0);
                     if (data.booking.status === 'PAID') {
                         updateBadge('PAID');

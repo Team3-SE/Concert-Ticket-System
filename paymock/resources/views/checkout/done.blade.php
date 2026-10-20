@@ -23,12 +23,8 @@
         <!-- Transaction Details Box -->
         <div class="mt-6 p-4 bg-gray-50 rounded-xl text-sm text-left space-y-2 border border-gray-100">
             <div class="flex justify-between">
-                <span class="text-gray-500">Provider Txn:</span>
-                <span class="font-mono font-bold text-indigo-700">{{ $payment->public_id }}</span>
-            </div>
-            <div class="flex justify-between">
-                <span class="text-gray-500">Payment ID:</span>
-                <span class="font-mono">{{ $payment->payment_id ?? $payment->order_ref }}</span>
+                <span class="text-gray-500">Booking Code:</span>
+                <span class="font-mono font-bold text-indigo-700">{{ $payment->order_ref }}</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-gray-500">ยอดชำระ:</span>
@@ -65,7 +61,6 @@
                 <div class="bg-white p-2.5 rounded-lg border border-indigo-100 flex items-center justify-between font-mono text-[11px]">
                     <div>
                         <span class="font-bold text-gray-800">{{ $d->event }}</span>
-                        <span class="text-gray-400">({{ substr($d->event_id, 0, 14) }}...)</span>
                     </div>
                     <div>
                         @if($d->delivered_at)
@@ -104,7 +99,7 @@
 
             @if($payment->return_url)
             <div class="w-full sm:w-auto">
-                <a href="{{ $payment->return_url }}?payment_id={{ $payment->public_id }}"
+                <a href="{{ $payment->return_url }}"
                    target="_top"
                    class="w-full sm:w-auto inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition shadow">
                     🔗 กลับไปยังระบบคอนเสิร์ต

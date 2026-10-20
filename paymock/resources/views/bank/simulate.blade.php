@@ -73,8 +73,8 @@
                             <span class="font-bold text-gray-800">บริษัท จำหน่ายตั๋วคอนเสิร์ต จำกัด</span>
                         </div>
                         <div class="flex justify-between py-1 border-b border-gray-100">
-                            <span class="text-gray-500">Payment ID:</span>
-                            <span class="font-mono font-bold text-indigo-700">{{ $payment->payment_id ?? $payment->order_ref }}</span>
+                            <span class="text-gray-500">Booking Code:</span>
+                            <span class="font-mono font-bold text-indigo-700">{{ $payment->order_ref }}</span>
                         </div>
                         <div class="flex justify-between py-1 border-b border-gray-100">
                             <span class="text-gray-500">ช่องทาง:</span>

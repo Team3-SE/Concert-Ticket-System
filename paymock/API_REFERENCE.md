@@ -70,6 +70,7 @@ Authorization: Bearer pm_test_key_concert_system_2024
     {
       "id": "01JCXYZ...",
       "payment_id": "12",
+      "booking_ref": "TK-260101-ABCDE",
       "amount": 1200.00,
       "currency": "THB",
       "method": "promptpay",
@@ -125,10 +126,11 @@ Idempotency-Key: 12
 ```json
 {
   "payment_id":   "13",
+  "booking_ref":    "TK-260101-ABCDE",
   "amount":       1200.00,
   "method":       "card",
   "callback_url": "http://localhost:8080/webhooks/paymock",
-  "return_url":   "http://localhost:5000/booking/74"
+  "return_url":   "http://localhost:5000/booking/TK-260101-ABCDE"
 }
 ```
 
@@ -137,6 +139,7 @@ Idempotency-Key: 12
 | Field | Type | Required | ค่าที่ยอมรับ | Default | คำอธิบาย |
 |-------|------|----------|-------------|---------|----------|
 | `payment_id` | string | ✅ | max 255 chars | — | รหัสรายการจากระบบคอนเสิร์ต ต้องส่งทุกครั้ง |
+| `booking_ref` | string | ❌ | max 255 chars | ค่าเดียวกับ `payment_id` | Booking code ที่ใช้แสดงแก่ผู้ใช้และใช้เป็น path สำหรับกลับมาหน้า booking |
 | `amount` | number | ✅ | min 1 | — | ยอดเงิน (บาท, ทศนิยมได้) |
 | `method` | string | ✅ | `"card"` หรือ `"promptpay"` | — | วิธีชำระ |
 | `callback_url` | string | ✅ | URL ที่ถูกต้อง | — | URL ที่ PayMock จะ POST Webhook มาหา |
@@ -144,6 +147,8 @@ Idempotency-Key: 12
 | `expires_in` | integer | ❌ | min 60 (วินาที) | 600 | อายุรายการก่อนหมดเวลา |
 | `currency` | string | ❌ | 3 ตัวอักษร | `"THB"` | สกุลเงิน (default: `"THB"`) |
 | `metadata` | object | ❌ | JSON object ใดก็ได้ | `null` | ข้อมูลเพิ่มเติม (ไม่ส่งใน webhook) |
+
+เพื่อ backward compatibility ยังรับ `order_ref` ใน request เก่าได้ แต่ response ใช้ชื่อ `booking_ref` เสมอ; integration ใหม่ควรส่ง `booking_ref`. ชื่อคอลัมน์ persistence ภายในยังคงเดิม จึงไม่ต้อง migrate ข้อมูล.
 
 ### Idempotency
 
@@ -162,8 +167,10 @@ POST http://paymock:80/v1/payments
 Authorization: Bearer pm_test_key_concert_system_2024
 Idempotency-Key: 12
 
-{ "payment_id":"12", "amount":1200.00, "method":"card" }
+{ "payment_id":"12", "booking_ref":"TK-260101-ABCDE", "amount":1200.00, "method":"card" }
 ```
+
+`payment_id` และ `id` ยังคงใช้ภายใน API/webhook สำหรับอ้างอิงรายการจ่าย ส่วน UI จะแสดง `booking_ref` (booking code) เท่านั้น และ redirect กลับ `/booking/{booking_ref}` โดยไม่มี payment ID ใน URL.
 
 | เหตุการณ์ | สิ่งที่ส่ง | ผลลัพธ์ |
 |---|---|---|
@@ -186,6 +193,7 @@ Idempotency-Key: 12
 {
   "id":                 "01JCXYZ1234567890ABCDEFGH",
   "payment_id":         "12",
+  "booking_ref":          "TK-260101-ABCDE",
   "amount":             1200.00,
   "currency":           "THB",
   "method":             "promptpay",
@@ -205,6 +213,7 @@ Idempotency-Key: 12
 |-------|------|----------|
 | `id` | string (ULID) | **Provider transaction ID** — ใช้กับ GET / cancel / QR / ระบบคอนเสิร์ต ทั้งบัตรและ PromptPay |
 | `payment_id` | string | รหัสรายการที่ merchant ส่งมาใน request |
+| `booking_ref` | string | Booking code ที่ merchant ส่งมา (ใช้แสดงให้ผู้ใช้และจับคู่หน้า return) |
 | `amount` | float | ยอดเงิน |
 | `currency` | string | สกุลเงิน |
 | `method` | string | `card` หรือ `promptpay` |
@@ -351,6 +360,7 @@ X-Event-Id: 01JCABC9876543210ZYXWVUTS
   "id":           "txn_01JCXYZ1234567890ABCDEFGH",
   "event":        "payment.completed",
   "payment_id":   "12",
+  "booking_ref":  "TK-260101-ABCDE",
   "amount":       1200.00,
   "currency":     "THB",
   "method":       "promptpay",
@@ -368,6 +378,7 @@ X-Event-Id: 01JCABC9876543210ZYXWVUTS
 | `id` | string (ULID) | Payment ID (ขึ้นต้นด้วย `txn_` ใช้ call `GET /v1/payments/{id}` เพื่อยืนยันได้) |
 | `event` | string | ชื่อ event ดู [ตาราง events](#webhook-events) |
 | `payment_id` | string | รหัสรายการจาก merchant ที่ส่งในตอนสร้าง payment |
+| `booking_ref` | string | Booking code จาก merchant ใช้จับคู่กับ booking |
 | `amount` | float | ยอดเงินที่ชำระ |
 | `currency` | string | สกุลเงิน (เช่น `THB`) |
 | `method` | string | ช่องทางชำระเงิน: `promptpay` หรือ `card` |
@@ -716,11 +727,11 @@ Error response ทุกชนิดมี format เดียวกัน:
 
 PromptPay ใช้ Native Modal ได้ แต่บัตรใช้ Hosted Checkout เพื่อไม่รับข้อมูลบัตรบนหน้า booking:
 - **PromptPay**: PayMock ส่งคืน `qrcode_url` (ภาพ SVG) และ `bank_simulator_url` (หน้าจำลองแอปมือถือ) เพื่อให้เว็บคอนเสิร์ตนำรูป QR Code ไปใส่ใน Native Modal ของตัวเองได้ทันที
-- **Credit Card**: `POST /v1/payments` สร้างรายการ `PENDING` และคืน `checkout_url`; browser redirect ไปที่ `/checkout/{publicId}`. เมื่อกดจ่าย ฟอร์มจะ `POST /payments/{publicId}` เพื่อ settle payment เดิม แล้ว redirect ไป `return_url?payment_id={publicId}`
+- **Credit Card**: `POST /v1/payments` สร้างรายการ `PENDING` และคืน `checkout_url`; browser redirect ไปที่ `/checkout/{publicId}`. เมื่อกดจ่าย ฟอร์มจะ `POST /payments/{publicId}` เพื่อ settle payment เดิม แล้ว redirect ไป `return_url` โดยไม่เติม payment ID ลงใน URL. ระบบร้านค้าควรใช้ข้อมูล mapping ที่บันทึกไว้หรือ webhook เพื่อตรวจสถานะ
 
 ### 12.1 Hosted Card Flow
 1. **แยกข้อมูลบัตรจาก booking page**: ผู้ใช้กรอกบัตรบนหน้า PayMock เท่านั้น
-2. **Redirect ที่ตรวจสอบได้**: เส้นทาง submit คือ `POST /payments/{publicId}` และเส้นทางกลับคือ `return_url?payment_id={publicId}`
+2. **Redirect กลับร้านค้า**: เส้นทาง submit คือ `POST /payments/{publicId}` และเส้นทางกลับคือ `return_url` ตามที่ร้านค้าระบุ โดยไม่มี payment ID ใน URL
 3. **สถานะล่าสุด**: booking page ต้อง query ฐานข้อมูลอีกครั้งหลัง redirect; webhook ยังเป็นแหล่งอัปเดตสถานะหลัก
 
 ### 12.2 ตัวอย่างโค้ด HTML + JavaScript ฝั่งเว็บคอนเสิร์ต (PromptPay Modal)

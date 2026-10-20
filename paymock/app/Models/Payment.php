@@ -52,7 +52,7 @@ class Payment extends Model
         return $this->status === 'PENDING';
     }
 
-    /** รหัสฝั่งร้านค้า: คอลัมน์ payment_id หรือ fallback เป็น order_ref ของรายการเก่า */
+    /** รหัส payment ฝั่งร้านค้า โดยรองรับรายการเก่าที่ไม่มี payment_id */
     public function merchantPaymentId(): string
     {
         $id = $this->attributes['payment_id'] ?? null;
