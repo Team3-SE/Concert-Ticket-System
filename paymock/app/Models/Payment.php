@@ -20,6 +20,7 @@ class Payment extends Model
         'status',
         'failure_code',
         'callback_url',
+        'return_url',
         'idempotency_key',
         'expires_at',
         'paid_at',

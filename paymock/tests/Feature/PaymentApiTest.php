@@ -37,7 +37,7 @@ class PaymentApiTest extends TestCase
         $response->assertStatus(201)
             ->assertJsonStructure([
                 'id', 'payment_id', 'amount', 'method', 'status',
-                'expires_at', 'created_at',
+                'checkout_url', 'return_url', 'expires_at', 'created_at',
             ])
             ->assertJson([
                 'payment_id' => '101',
@@ -50,6 +50,7 @@ class PaymentApiTest extends TestCase
             'payment_id'      => '101',
             'idempotency_key' => 'BOOKING_001',
             'status'          => 'PENDING',
+            'return_url'      => 'http://localhost:8080/return',
         ]);
     }
 

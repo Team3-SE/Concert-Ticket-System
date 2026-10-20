@@ -40,8 +40,8 @@ class CheckoutController extends Controller
     }
 
     /**
-     * POST /checkout/{publicId}/card
-     * รับเลขบัตรทดสอบ
+     * POST /payments/{publicId}
+     * รับเลขบัตรจาก Hosted Checkout เพื่อชำระ payment ที่สร้างไว้แล้ว
      */
     public function processCard(string $publicId, Request $request): RedirectResponse
     {
@@ -68,7 +68,7 @@ class CheckoutController extends Controller
 
         // Stay on PayMock receipt page by default to display transaction status & receipt
         if ($request->boolean('redirect_to_return') && $payment->return_url) {
-            return redirect($payment->return_url . '?payment_id=' . $payment->public_id);
+            return redirect($this->returnUrl($payment));
         }
 
         return redirect()->route('checkout.show', $publicId);
@@ -96,7 +96,7 @@ class CheckoutController extends Controller
         }
 
         if ($request->boolean('redirect_to_return') && $payment->return_url) {
-            return redirect($payment->return_url . '?payment_id=' . $payment->public_id);
+            return redirect($this->returnUrl($payment));
         }
 
         return redirect()->route('checkout.show', $publicId);
@@ -143,6 +143,13 @@ class CheckoutController extends Controller
         // CRC16-CCITT
         $crc = $this->crc16($payload);
         return $payload . $crc;
+    }
+
+    private function returnUrl(Payment $payment): string
+    {
+        $separator = str_contains($payment->return_url, '?') ? '&' : '?';
+
+        return $payment->return_url . $separator . 'payment_id=' . urlencode($payment->public_id);
     }
 
     private function crc16(string $data): string

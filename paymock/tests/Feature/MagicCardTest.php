@@ -21,6 +21,7 @@ class MagicCardTest extends TestCase
             'method'          => 'card',
             'status'          => 'PENDING',
             'callback_url'    => 'http://concert/webhooks/payment',
+            'return_url'      => 'http://concert.local/booking/42',
             'idempotency_key' => 'IDEMP_' . uniqid(),
         ]);
     }
@@ -31,12 +32,15 @@ class MagicCardTest extends TestCase
         Queue::fake();
         $payment = $this->createPendingPayment();
 
-        $this->post(route('checkout.card', $payment->public_id), [
+        $response = $this->post(route('payments.process', $payment->public_id), [
             'card_number' => '4242 4242 4242 4242',
             'expiry'      => '12/28',
             'cvc'         => '123',
             'cardholder'  => 'JOHN DOE',
+            'redirect_to_return' => '1',
         ]);
+
+        $response->assertRedirect('http://concert.local/booking/42?payment_id=' . $payment->public_id);
 
         $this->assertEquals('COMPLETED', $payment->fresh()->status);
         $this->assertNotNull($payment->fresh()->paid_at);
@@ -52,7 +56,7 @@ class MagicCardTest extends TestCase
         Queue::fake();
         $payment = $this->createPendingPayment();
 
-        $this->post(route('checkout.card', $payment->public_id), [
+        $this->post(route('payments.process', $payment->public_id), [
             'card_number' => '4000 0000 0000 0002',
             'expiry'      => '12/28',
             'cvc'         => '123',
@@ -70,7 +74,7 @@ class MagicCardTest extends TestCase
         Queue::fake();
         $payment = $this->createPendingPayment();
 
-        $this->post(route('checkout.card', $payment->public_id), [
+        $this->post(route('payments.process', $payment->public_id), [
             'card_number' => '4000 0000 0000 9995',
             'expiry'      => '12/28',
             'cvc'         => '123',
@@ -86,7 +90,7 @@ class MagicCardTest extends TestCase
         Queue::fake();
         $payment = $this->createPendingPayment();
 
-        $this->post(route('checkout.card', $payment->public_id), [
+        $this->post(route('payments.process', $payment->public_id), [
             'card_number' => '4000 0000 0000 0069',
             'expiry'      => '12/28',
             'cvc'         => '123',
@@ -102,7 +106,7 @@ class MagicCardTest extends TestCase
         Queue::fake();
         $payment = $this->createPendingPayment();
 
-        $this->post(route('checkout.card', $payment->public_id), [
+        $this->post(route('payments.process', $payment->public_id), [
             'card_number' => '4100 0000 0000 0019',
             'expiry'      => '12/28',
             'cvc'         => '123',

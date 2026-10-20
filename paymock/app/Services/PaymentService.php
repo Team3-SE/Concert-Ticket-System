@@ -29,6 +29,7 @@ class PaymentService
             'method'          => $data['method'],
             'status'          => 'PENDING',
             'callback_url'    => $data['callback_url'],
+            'return_url'      => $data['return_url'] ?? null,
             'idempotency_key' => $data['idempotency_key'],
             'expires_at'      => now()->addSeconds($data['expires_in'] ?? config('paymock.default_expires_in')),
             'metadata'        => $data['metadata'] ?? null,

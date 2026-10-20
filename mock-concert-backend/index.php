@@ -85,20 +85,17 @@ function createConcertPayment(PDO $db, array $booking, array $input): array
     $concertPaymentId = (string) $db->lastInsertId();
 
     $callbackUrl = getenv('MY_WEBHOOK_URL') ?: 'http://concert_backend:5000/api/webhook';
+    // Browser-facing return URL. In Docker, the gateway calls its internal API
+    // address, but the browser must return to the public Concert URL.
+    $concertBrowserUrl = rtrim(getenv('CONCERT_BROWSER_URL') ?: 'http://localhost:5000', '/');
     $postData = [
         'payment_id'   => $concertPaymentId,
         'amount'       => (float) $booking['amount'],
         'method'       => $method,
         'callback_url' => $callbackUrl,
+        'return_url'   => $concertBrowserUrl . '/booking/' . $booking['id'],
         'expires_in'   => 600,
     ];
-
-    if ($method === 'card') {
-        $postData['card_number'] = $input['card_number'] ?? '4242424242424242';
-        $postData['exp_month']   = $input['exp_month'] ?? '12';
-        $postData['exp_year']    = $input['exp_year'] ?? '28';
-        $postData['cvc']         = $input['cvc'] ?? '123';
-    }
 
     $paymockApiUrl = getenv('PAYMOCK_URL') ?: 'http://paymock:80/v1/payments';
     $ch = curl_init($paymockApiUrl);
@@ -152,6 +149,8 @@ function createConcertPayment(PDO $db, array $booking, array $input): array
         'method' => $gateway['method'] ?? $method,
         'qrcode_url' => browserUrl($gateway['qrcode_url'] ?? null),
         'bank_simulator_url' => browserUrl($gateway['bank_simulator_url'] ?? null),
+        'checkout_url' => browserUrl($gateway['checkout_url'] ?? null),
+        'return_path' => '/booking/' . $booking['id'],
     ];
 }
 
@@ -448,6 +447,13 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
     exit;
 }
 
+// Booking return page after hosted card checkout. The page below loads normally,
+// then queries the database-backed booking-status endpoint with this payment ID.
+$returnPaymentId = '';
+if ($method === 'GET' && preg_match('#^/booking/\d+$#', $uri)) {
+    $returnPaymentId = (string) ($_GET['payment_id'] ?? '');
+}
+
 // ─────────────────────────────────────────────────────────────
 // 4. FRONTEND: หน้าเว็บคอนเสิร์ต (HTML + Tailwind + Modal)
 // ─────────────────────────────────────────────────────────────
@@ -525,48 +531,13 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                         <label class="block text-xs font-bold text-slate-400 uppercase mb-1">ช่องทางชำระเงิน</label>
                         <select id="paymentMethod" onchange="toggleCardInputs()" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
                             <option value="promptpay">📱 PromptPay QR Code (Native Modal)</option>
-                            <option value="card">💳 บัตรเครดิต / เดบิต (Direct API)</option>
+                            <option value="card">💳 บัตรเครดิต / เดบิต (Redirect to Hosted Checkout)</option>
                         </select>
                         <p class="mt-2 text-[11px] text-slate-500">
                             Chaos / Webhook ผิดปกติตั้งที่
                             <a href="http://localhost:8081/admin" target="_blank" class="text-amber-400 hover:underline">PayMock Admin</a>
                             ไม่ส่ง scenario จากหน้านี้
                         </p>
-                    </div>
-
-                    <!-- Direct Card Form (Shown only if method === 'card') -->
-                    <div id="cardInputSection" style="display: none;" class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold text-slate-300">กรอกข้อมูลบัตรเครดิต (Direct API ไม่ผ่าน checkout_url)</span>
-                            <span class="text-[10px] text-amber-400 font-mono">Magic Cards Enabled</span>
-                        </div>
-                        <div>
-                            <label class="block text-[11px] text-slate-400 mb-1">หมายเลขบัตร (Card Number)</label>
-                            <input type="text" id="cardNumber" value="4242424242424242" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-white tracking-widest focus:border-amber-500 outline-none">
-                        </div>
-                        <div class="flex flex-wrap gap-1.5 pt-1">
-                            <span class="text-[10px] text-slate-500 self-center mr-1">Magic Test:</span>
-                            <button type="button" onclick="setCard('4242424242424242')" class="text-[10px] px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60 transition cursor-pointer">✅ ผ่าน</button>
-                            <button type="button" onclick="setCard('4000000000000002')" class="text-[10px] px-2 py-0.5 rounded bg-rose-950/80 border border-rose-500/40 text-rose-300 hover:bg-rose-900/60 transition cursor-pointer">❌ ระงับ</button>
-                            <button type="button" onclick="setCard('4000000000009995')" class="text-[10px] px-2 py-0.5 rounded bg-rose-950/80 border border-rose-500/40 text-rose-300 hover:bg-rose-900/60 transition cursor-pointer">❌ วงเงินไม่พอ</button>
-                            <button type="button" onclick="setCard('4000000000000069')" class="text-[10px] px-2 py-0.5 rounded bg-rose-950/80 border border-rose-500/40 text-rose-300 hover:bg-rose-900/60 transition cursor-pointer">❌ หมดอายุ</button>
-                            <button type="button" onclick="setCard('4000000000000127')" class="text-[10px] px-2 py-0.5 rounded bg-rose-950/80 border border-rose-500/40 text-rose-300 hover:bg-rose-900/60 transition cursor-pointer">❌ CVC</button>
-                            <button type="button" onclick="setCard('4000000000000119')" class="text-[10px] px-2 py-0.5 rounded bg-rose-950/80 border border-rose-500/40 text-rose-300 hover:bg-rose-900/60 transition cursor-pointer">❌ ประมวลผล</button>
-                            <button type="button" onclick="setCard('4100000000000019')" class="text-[10px] px-2 py-0.5 rounded bg-rose-950/80 border border-rose-500/40 text-rose-300 hover:bg-rose-900/60 transition cursor-pointer">❌ ทุจริต</button>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3 pt-1">
-                            <div>
-                                <label class="block text-[11px] text-slate-400 mb-1">วันหมดอายุ (MM/YY)</label>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <input type="text" id="expMonth" value="12" maxlength="2" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono text-center text-white">
-                                    <input type="text" id="expYear" value="28" maxlength="2" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono text-center text-white">
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-[11px] text-slate-400 mb-1">CVC</label>
-                                <input type="text" id="cvc" value="123" maxlength="4" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono text-center text-white">
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Price summary & Action button -->
@@ -719,6 +690,19 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
         let currentBookingId = null;
         let currentBookingStatus = null;
         let pollingTimer = null;
+        const returnPaymentId = <?= json_encode($returnPaymentId) ?>;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (returnPaymentId) {
+                // The customer is back from PayMock. Query the Concert DB again
+                // so this booking page is rendered from the latest stored state.
+                checkStatus(returnPaymentId).then(() => {
+                    document.getElementById('bookingResultCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    startPollingStatus(returnPaymentId);
+                });
+            }
+            toggleCardInputs();
+        });
 
         function updatePrice(seat, amount) {
             currentSeat = seat;
@@ -728,22 +712,15 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
 
         function toggleCardInputs() {
             const method = document.getElementById('paymentMethod').value;
-            const cardSection = document.getElementById('cardInputSection');
             const bookBtnText = document.getElementById('bookBtnText');
             const canCreatePayment = currentBookingId && ['FAILED', 'EXPIRED'].includes(currentBookingStatus);
             if (canCreatePayment) {
                 bookBtnText.innerText = '💳 สร้าง Payment ใหม่ใน Booking เดิม';
             } else if (method === 'card') {
-                cardSection.style.display = 'block';
-                bookBtnText.innerText = '⚡ ชำระเงินด้วยบัตรทันที (Direct API)';
+                bookBtnText.innerText = '⚡ ไปหน้าชำระเงินด้วยบัตร';
             } else {
-                cardSection.style.display = 'none';
                 bookBtnText.innerText = '⚡ จองตั๋ว & แสดง QR Code (Modal)';
             }
-        }
-
-        function setCard(num) {
-            document.getElementById('cardNumber').value = num;
         }
 
         async function startBooking() {
@@ -758,13 +735,6 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                 amount: currentAmount,
                 method: method
             };
-
-            if (method === 'card') {
-                payload.card_number = document.getElementById('cardNumber').value.trim();
-                payload.exp_month = document.getElementById('expMonth').value.trim();
-                payload.exp_year = document.getElementById('expYear').value.trim();
-                payload.cvc = document.getElementById('cvc').value.trim();
-            }
 
             try {
                 const createPaymentForBooking = currentBookingId && ['FAILED', 'EXPIRED'].includes(currentBookingStatus);
@@ -788,13 +758,8 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                         openPromptPayModal(data.payment_id, currentAmount, data.qrcode_url, data.bank_simulator_url);
                         startPollingStatus(data.payment_id);
                     } else if (method === 'card') {
-                        if (data.status === 'COMPLETED') {
-                            updateBadge('PAID');
-                        } else if (data.status === 'FAILED') {
-                            updateBadge('FAILED', data.failure_code);
-                            alert('❌ ชำระเงินผ่านบัตรไม่สำเร็จ: ' + (data.failure_code || 'declined'));
-                        }
-                        startPollingStatus(data.payment_id);
+                        window.location.assign(data.checkout_url);
+                        return;
                     }
                 } else {
                     alert(data.message || 'Gateway มีปัญหา โปรดลองอีกครั้ง');
@@ -865,6 +830,8 @@ if ($uri === '/api/booking-status' && $method === 'GET') {
                 if (data.booking) {
                     currentBookingId = data.booking.id;
                     currentBookingStatus = data.booking.status;
+                    currentPaymentId = ref;
+                    showBookingCard(ref, data.booking.seat, data.booking.amount, data.booking.status);
                     const hasRejected = data.logs && data.logs.some(l => parseInt(l.signature_valid) === 0);
                     if (data.booking.status === 'PAID') {
                         updateBadge('PAID');

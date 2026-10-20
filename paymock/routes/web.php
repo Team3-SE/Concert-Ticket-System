@@ -15,10 +15,14 @@ Route::prefix('checkout')
     ->middleware('chaos')
     ->group(function () {
         Route::get('{publicId}', [CheckoutController::class, 'show'])->name('checkout.show');
-        Route::post('{publicId}/card', [CheckoutController::class, 'processCard'])->name('checkout.card');
         Route::post('{publicId}/promptpay', [CheckoutController::class, 'processPromptPay'])->name('checkout.promptpay');
         Route::post('{publicId}/simulate', [CheckoutController::class, 'simulate'])->name('checkout.simulate');
     });
+
+// Hosted card form.  It settles an existing payment; it never creates one.
+Route::post('payments/{publicId}', [CheckoutController::class, 'processCard'])
+    ->middleware('chaos')
+    ->name('payments.process');
 
 /*
 |--------------------------------------------------------------------------
@@ -54,6 +58,7 @@ Route::get('/', [LandingController::class, 'index'])->name('landing');
 
 // Demo Playground (Concert Ticket Modal Integration)
 Route::get('/demo/modal', [DemoController::class, 'modal'])->name('demo.modal');
+Route::get('/demo/bookings/{publicId}', [DemoController::class, 'booking'])->name('demo.booking');
 Route::post('/demo/create-payment', [DemoController::class, 'createDemoPayment'])
     ->name('demo.create.payment')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);

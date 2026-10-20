@@ -120,7 +120,7 @@ Idempotency-Key: 12
 }
 ```
 
-### Request (Credit Card - Direct API)
+### Request (Credit Card - Hosted Checkout)
 
 ```json
 {
@@ -128,10 +128,7 @@ Idempotency-Key: 12
   "amount":       1200.00,
   "method":       "card",
   "callback_url": "http://localhost:8080/webhooks/paymock",
-  "card_number":  "4242424242424242",
-  "exp_month":    "12",
-  "exp_year":     "28",
-  "cvc":          "123"
+  "return_url":   "http://localhost:5000/booking/74"
 }
 ```
 
@@ -143,12 +140,9 @@ Idempotency-Key: 12
 | `amount` | number | ✅ | min 1 | — | ยอดเงิน (บาท, ทศนิยมได้) |
 | `method` | string | ✅ | `"card"` หรือ `"promptpay"` | — | วิธีชำระ |
 | `callback_url` | string | ✅ | URL ที่ถูกต้อง | — | URL ที่ PayMock จะ POST Webhook มาหา |
+| `return_url` | string | ❌ | URL ที่ถูกต้อง | `null` | หน้าที่ Gateway redirect กลับหลัง submit บัตร |
 | `expires_in` | integer | ❌ | min 60 (วินาที) | 600 | อายุรายการก่อนหมดเวลา |
 | `currency` | string | ❌ | 3 ตัวอักษร | `"THB"` | สกุลเงิน (default: `"THB"`) |
-| `card_number` | string | ❌ | 16 หลัก | `null` | หมายเลขบัตรเครดิต (สำหรับ Direct Card Payment) |
-| `exp_month` | string | ❌ | 2 หลัก (01-12) | `null` | เดือนหมดอายุบัตร |
-| `exp_year` | string | ❌ | 2 หรือ 4 หลัก | `null` | ปีหมดอายุบัตร |
-| `cvc` | string | ❌ | 3-4 หลัก | `null` | รหัสตรวจสอบบัตร |
 | `metadata` | object | ❌ | JSON object ใดก็ได้ | `null` | ข้อมูลเพิ่มเติม (ไม่ส่งใน webhook) |
 
 ### Idempotency
@@ -718,16 +712,16 @@ Error response ทุกชนิดมี format เดียวกัน:
 
 ---
 
-## 12. การเชื่อมต่อแบบ Native Modal & Direct Payment (Headless Flow)
+## 12. การเชื่อมต่อแบบ Native PromptPay และ Hosted Card Checkout
 
-ระบบออกแบบเป็น **Direct API / Headless Flow** โดยสมบูรณ์ ไม่จำเป็นต้องมี `checkout_url` หรือ `return_url`:
+PromptPay ใช้ Native Modal ได้ แต่บัตรใช้ Hosted Checkout เพื่อไม่รับข้อมูลบัตรบนหน้า booking:
 - **PromptPay**: PayMock ส่งคืน `qrcode_url` (ภาพ SVG) และ `bank_simulator_url` (หน้าจำลองแอปมือถือ) เพื่อให้เว็บคอนเสิร์ตนำรูป QR Code ไปใส่ใน Native Modal ของตัวเองได้ทันที
-- **Credit Card**: เว็บคอนเสิร์ตรับข้อมูลบัตรจากผู้ใช้ แล้วส่งไปยัง `POST /v1/payments` เพื่อประมวลผลและทราบผลทันที (`COMPLETED` หรือ `FAILED`)
+- **Credit Card**: `POST /v1/payments` สร้างรายการ `PENDING` และคืน `checkout_url`; browser redirect ไปที่ `/checkout/{publicId}`. เมื่อกดจ่าย ฟอร์มจะ `POST /payments/{publicId}` เพื่อ settle payment เดิม แล้ว redirect ไป `return_url?payment_id={publicId}`
 
-### 12.1 ข้อดีของ Headless Direct Flow
-1. **Seamless User Experience**: ผู้ใช้อยู่บนเว็บไซต์คอนเสิร์ตตลอดเวลา ไม่ถูก Redirect ข้ามโดเมน
-2. **ไม่ใช้ iframe**: ปลอดภัยกว่า ไร้ปัญหา iframe sandbox / cross-origin cookie / CSP restrictions
-3. **การอัปเดตสถานะ**: เว็บคอนเสิร์ตใช้ Polling ตรวจสอบสถานะตั๋วจาก Database ตัวเอง ควบคู่ไปกับการรอรับ Webhook จาก PayMock
+### 12.1 Hosted Card Flow
+1. **แยกข้อมูลบัตรจาก booking page**: ผู้ใช้กรอกบัตรบนหน้า PayMock เท่านั้น
+2. **Redirect ที่ตรวจสอบได้**: เส้นทาง submit คือ `POST /payments/{publicId}` และเส้นทางกลับคือ `return_url?payment_id={publicId}`
+3. **สถานะล่าสุด**: booking page ต้อง query ฐานข้อมูลอีกครั้งหลัง redirect; webhook ยังเป็นแหล่งอัปเดตสถานะหลัก
 
 ### 12.2 ตัวอย่างโค้ด HTML + JavaScript ฝั่งเว็บคอนเสิร์ต (PromptPay Modal)
 

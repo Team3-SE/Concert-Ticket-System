@@ -340,16 +340,13 @@ add_code(doc, [
     '  "metadata":     { "booking_id": 42 }',
     '}',
     '',
-    '// Credit Card (Direct API):',
+    '// Credit Card (Hosted Checkout):',
     '{',
     '  "payment_id":   "13",',
     '  "amount":       1200.00,',
     '  "method":       "card",',
     '  "callback_url": "http://localhost:8080/webhooks/paymock",',
-    '  "card_number":  "4242424242424242",',
-    '  "exp_month":    "12",',
-    '  "exp_year":     "28",',
-    '  "cvc":          "123"',
+    '  "return_url":   "http://localhost:5000/booking/74"',
     '}',
 ])
 
@@ -361,12 +358,9 @@ add_table(doc,
         ['amount',       'number',  'จำเป็น',      'min: 1',                 'ยอดเงิน (บาท, ทศนิยมได้)'],
         ['method',       'string',  'จำเป็น',      '"card" หรือ "promptpay"', 'วิธีชำระเงิน'],
         ['callback_url', 'string',  'จำเป็น',      'URL ที่ถูกต้อง',         'URL รับ Webhook จาก PayMock'],
+        ['return_url',   'string',  'ไม่จำเป็น',   'URL ที่ถูกต้อง',         'Gateway redirect กลับหลัง submit บัตร'],
         ['expires_in',   'integer', 'ไม่จำเป็น',   'min: 60 (วินาที)',        'อายุก่อนหมดเวลา (default: 600)'],
         ['currency',     'string',  'ไม่จำเป็น',   '3 ตัวอักษร',             'สกุลเงิน (default: "THB")'],
-        ['card_number',  'string',  'ไม่จำเป็น',   '16 หลัก',                'หมายเลขบัตรเครดิต (สำหรับ Direct Card Payment)'],
-        ['exp_month',    'string',  'ไม่จำเป็น',   '2 หลัก (01-12)',          'เดือนหมดอายุบัตร'],
-        ['exp_year',     'string',  'ไม่จำเป็น',   '2 หรือ 4 หลัก',           'ปีหมดอายุบัตร'],
-        ['cvc',          'string',  'ไม่จำเป็น',   '3-4 หลัก',               'รหัสตรวจสอบบัตร (CVV/CVC)'],
         ['metadata',     'object',  'ไม่จำเป็น',   'JSON object',            'ข้อมูลเพิ่มเติม (ไม่ส่งใน webhook)'],
     ],
     col_widths=[3, 2, 2.5, 3.5, 5.5]
@@ -974,7 +968,8 @@ add_table(doc,
         ['GET',  '/v1/payments/{id}',         'ดูสถานะรายการ (Polling)'],
         ['POST', '/v1/payments/{id}/cancel',  'ยกเลิกรายการที่ยัง PENDING'],
         ['GET',  '/v1/payments/{id}/qr.svg',  'ภาพ QR (PromptPay) — {id} = payment_id'],
-        ['GET',  '/checkout/{id}',            'หน้าจ่ายเงินจำลอง (QR + Card)'],
+        ['GET',  '/checkout/{id}',            'Hosted checkout สำหรับบัตร และ QR UI'],
+        ['POST', '/payments/{id}',            'submit บัตรเพื่อ settle payment เดิม แล้ว redirect กลับ return_url'],
         ['GET',  '/admin',                    'Admin Dashboard (Chaos + Webhook Mode)'],
         ['GET',  '/api/booking-status',       'Concert: ?payment_id=txn_…'],
         ['POST', '/api/cancel-booking',       'Concert: body { payment_id }'],
@@ -1022,21 +1017,23 @@ add_para(doc, (
 doc.add_page_break()
 
 # ═══════════════════════════════════════════════
-# 9. NATIVE MODAL & DIRECT CARD INTEGRATION
+# 9. NATIVE PROMPTPAY & HOSTED CARD CHECKOUT
 # ═══════════════════════════════════════════════
-add_heading(doc, '9. การเชื่อมต่อแบบ Native Modal & Direct Payment (Headless Flow)', 1)
+add_heading(doc, '9. การเชื่อมต่อแบบ Native PromptPay และ Hosted Card Checkout', 1)
 add_para(doc, (
-    'ระบบออกแบบเป็น Direct API / Headless Flow โดยสมบูรณ์ ไม่จำเป็นต้องมี checkout_url หรือ return_url:'
+    'PromptPay ใช้ Native Modal ได้ ส่วนบัตรใช้ Hosted Checkout: สร้าง payment เป็น PENDING, redirect browser ไปที่ checkout_url, '
+    'ส่งฟอร์มบัตรไปยัง POST /payments/{publicId}, แล้ว Gateway redirect กลับ return_url?payment_id={publicId}. '
+    'หน้าจองต้องอ่านสถานะล่าสุดจากฐานข้อมูลหลังกลับมา'
 ))
 
-add_heading(doc, '9.1 ข้อดีของ Headless Direct Flow', 2)
+add_heading(doc, '9.1 Flow การชำระเงิน', 2)
 add_table(doc,
     ['วิธีชำระ', 'การทำงาน', 'ผลลัพธ์ที่ได้'],
     [
         ['PromptPay', 'PayMock ส่งคืน qrcode_url (SVG) + bank_simulator_url',
          'เว็บคอนเสิร์ตนำ QR ใส่ใน Native Modal — ไม่ต้องใช้ iframe'],
-        ['Credit Card', 'เว็บคอนเสิร์ตส่งข้อมูลบัตรผ่าน card_number/exp_month/exp_year/cvc',
-         'ได้ผลทันที: COMPLETED หรือ FAILED'],
+        ['Credit Card', 'redirect ไปที่ checkout_url ของ PayMock เพื่อกรอกบัตร แล้ว form POST /payments/{publicId}',
+         'Gateway กลับ return_url พร้อม payment_id; หน้า booking query DB ใหม่'],
     ],
     col_widths=[2.5, 7, 7]
 )
@@ -1103,7 +1100,7 @@ add_table(doc,
     ['Method', 'Path', 'ใช้เมื่อ', 'ต้องส่ง', 'ผลลัพธ์สำเร็จ', 'กรณีผิดพลาด'],
     [
         ['GET', '/v1/payments', 'ตรวจ health และรายการล่าสุด', 'Bearer token', '200 JSON: service, status, chaos_mode, webhook_mode, recent[]', '401 token ผิด; 429/500/502/503 เมื่อ Chaos Mode'],
-        ['POST', '/v1/payments', 'เริ่ม payment ใหม่ หรือ retry request ที่ timeout', 'Bearer, JSON, Idempotency-Key แนะนำ', '201 JSON payment; Card ที่ส่ง card_number อาจ COMPLETED/FAILED ทันที', '401, 422 validation, 429, 500, 502, 503'],
+        ['POST', '/v1/payments', 'เริ่ม payment ใหม่ หรือ retry request ที่ timeout', 'Bearer, JSON, Idempotency-Key แนะนำ', '201 JSON PENDING; Card คืน checkout_url เพื่อ redirect', '401, 422 validation, 429, 500, 502, 503'],
         ['GET', '/v1/payments/{publicId}', 'poll/reconcile สถานะ transaction', 'Bearer token; publicId = response.id', '200 JSON payment', '401, 404, 429, 500, 502, 503'],
         ['POST', '/v1/payments/{publicId}/cancel', 'ยกเลิกเฉพาะรายการที่ยัง PENDING', 'Bearer token; ไม่มี body', '200 { ok:true, status:"FAILED", failure_code:"cancelled" }', '401, 404, 409, 429, 500, 502, 503'],
         ['GET', '/v1/payments/{publicId}/qr.svg', 'นำ QR PromptPay ไปแสดงในหน้า merchant', 'publicId; ไม่ต้อง Bearer', '200 image/svg+xml', '404 เมื่อไม่พบรายการ'],
@@ -1124,12 +1121,12 @@ add_code(doc, [
     '// 201 response',
     '{ "id":"txn_01…", "payment_id":"1001", "amount":1200, "currency":"THB", "method":"promptpay", "status":"PENDING", "failure_code":null, "expires_at":"2026-10-16T10:10:00+07:00", "paid_at":null, "created_at":"2026-10-16T10:00:00+07:00", "qrcode_url":"http://localhost:8081/v1/payments/txn_01…/qr.svg", "bank_simulator_url":"http://localhost:8081/bank-simulate/txn_01…" }',
     '',
-    '// 2) Direct card success request and response',
-    '{ "payment_id":"1002", "amount":1200.00, "method":"card", "card_number":"4242424242424242", "exp_month":"12", "exp_year":"28", "cvc":"123", "callback_url":"http://concert_backend:5000/api/webhook" }',
-    '{ "id":"txn_02…", "payment_id":"1002", "method":"card", "status":"COMPLETED", "failure_code":null, "paid_at":"2026-10-16T10:00:02+07:00" }',
+    '// 2) Hosted card: create PENDING then redirect browser to checkout_url',
+    '{ "payment_id":"1002", "amount":1200.00, "method":"card", "return_url":"http://concert_backend:5000/booking/42", "callback_url":"http://concert_backend:5000/api/webhook" }',
+    '{ "id":"txn_02…", "payment_id":"1002", "method":"card", "status":"PENDING", "checkout_url":"http://localhost:8081/checkout/txn_02…", "return_url":"http://concert_backend:5000/booking/42" }',
+    '// Browser: POST /payments/txn_02… with card form → 302 http://concert_backend:5000/booking/42?payment_id=txn_02…',
     '',
-    '// 3) Direct card declined response (4000 0000 0000 0002)',
-    '{ "id":"txn_03…", "payment_id":"1003", "method":"card", "status":"FAILED", "failure_code":"card_declined", "paid_at":null }',
+    '// 3) Invalid/declined card is shown on the hosted page; booking checks DB status after the redirect',
     '',
     '// 4) Validation and cancellation conflict',
     '{ "error":"validation_error", "details":{ "amount":["The amount field is required."] } }',
@@ -1141,7 +1138,7 @@ add_table(doc,
     ['Method', 'Path', 'ใช้เมื่อ', 'ข้อมูลที่ส่ง', 'Response ตัวอย่าง / ทุกกรณี'],
     [
         ['GET', '/checkout/{publicId}', 'เปิด UI ชำระเงิน', 'path publicId', '200 HTML หน้าจ่าย; ถ้า settle หรือหมดอายุ แสดง receipt HTML; 404 ถ้าไม่พบ'],
-        ['POST', '/checkout/{publicId}/card', 'ส่งบัตรจาก checkout UI', 'form: card_number; optional redirect_to_return', '302 -> checkout receipt; PENDING + valid card จะ settle; non-PENDING กลับพร้อม flash error; 404 ถ้าไม่พบ'],
+        ['POST', '/payments/{publicId}', 'ส่งบัตรจาก hosted checkout', 'form: card_number, expiry, cvc, cardholder, redirect_to_return=1', '302 -> return_url?payment_id={publicId}; PENDING + valid card จะ settle; 404 ถ้าไม่พบ'],
         ['POST', '/checkout/{publicId}/promptpay', 'ยืนยัน/ปฏิเสธ PromptPay ใน UI', 'form: action=pay (default) หรือ fail; optional redirect_to_return', '302 -> checkout receipt; pay => COMPLETED, fail => FAILED/payment_declined; non-PENDING กลับพร้อม flash error'],
         ['POST', '/checkout/{publicId}/simulate', 'ทดสอบเปลี่ยนผล payment ผ่าน API', 'JSON/form: status (default COMPLETED), failure_code optional', '200 { "ok":true, "status":"COMPLETED" }; ถ้า non-PENDING: { "ok":false, "message":"Not pending" }; 404 ถ้าไม่พบ'],
         ['GET', '/bank-simulate/{publicId}', 'เปิดแอปธนาคารจำลองจาก QR', 'path publicId', '200 HTML mobile banking simulator; 404 ถ้าไม่พบ'],
@@ -1185,8 +1182,9 @@ add_heading(doc, '10.4 Demo Routes', 2)
 add_table(doc,
     ['Method', 'Path', 'ใช้เมื่อ', 'ข้อมูลที่ส่ง', 'Response ตัวอย่าง / ทุกกรณี'],
     [
-        ['GET', '/demo/modal', 'เปิดตัวอย่าง checkout แบบ modal', 'ไม่มี', '200 HTML demo modal'],
-        ['POST', '/demo/create-payment', 'สร้าง payment สำหรับ demo modal', 'JSON/form optional: amount, method', '200 { "ok":true, "payment_id":"<merchant id>", "id":"txn_…", "checkout_url":"http://…/checkout/txn_…" }'],
+        ['GET', '/demo/modal', 'เปิดตัวอย่าง booking demo', 'ไม่มี', '200 HTML demo; PromptPay ใช้ modal, Card redirect'],
+        ['GET', '/demo/bookings/{publicId}', 'หน้า booking หลังกลับจาก Card Checkout', 'query: payment_id จาก Gateway', '200 HTML โดยอ่าน payment ล่าสุดจาก DB'],
+        ['POST', '/demo/create-payment', 'สร้าง payment สำหรับ demo', 'JSON/form optional: amount, method', '200 { "ok":true, "payment_id":"<merchant id>", "redirect_url":"…/checkout/txn_…", "return_path":"…/demo/bookings/txn_…" }'],
         ['POST', '/api/demo-webhook-sink', 'endpoint รับ webhook สำหรับทดลอง', 'Webhook JSON ใด ๆ', '200 { "status":"received" }'],
     ],
     col_widths=[1.3, 4.6, 4.3, 4.2, 6.1]
@@ -1197,8 +1195,8 @@ add_table(doc,
     ['Method', 'Path', 'ใช้เมื่อ', 'ข้อมูลที่ส่ง', 'Response ตัวอย่าง / ทุกกรณี'],
     [
         ['POST', '/api/webhook หรือ /webhooks/payment', 'PayMock แจ้งผลเข้า backend', 'headers X-Signature, X-Event-Id; PayMock webhook body', '200 { "ok":true, "message":"Webhook received and processed" }; 401 { "error":"invalid_signature", "reason":"bad_signature"|"replay_attack" }'],
-        ['POST', '/api/create-booking', 'สร้าง booking และ Concert payment แรก', 'JSON: seat, amount, method; card เพิ่ม card_number, exp_month, exp_year, cvc', '200 { ok:true,booking_id,concert_payment_id,payment_id:"txn_…",status,... }; gateway failure => { ok:false,http_code,concert_payment_id,raw }'],
-        ['POST', '/api/bookings/{bookingId}/payments', 'สร้าง Concert payment ใหม่ใน booking เดิมหลัง FAILED/EXPIRED', 'JSON: method; card เพิ่ม card_number, exp_month, exp_year, cvc', '200 { ok:true,booking_id,concert_payment_id,payment_id:"txn_…",status,... }; 404 booking_not_found; 409 booking_already_paid'],
+        ['POST', '/api/create-booking', 'สร้าง booking และ Concert payment แรก', 'JSON: seat, amount, method; card ไม่ส่งข้อมูลบัตร', '200 { ok:true,booking_id,concert_payment_id,payment_id:"txn_…",checkout_url,status,... }; card redirect ไป Hosted Checkout'],
+        ['POST', '/api/bookings/{bookingId}/payments', 'สร้าง Concert payment ใหม่ใน booking เดิมหลัง FAILED/EXPIRED', 'JSON: method; card ไม่ส่งข้อมูลบัตร', '200 { ok:true,booking_id,concert_payment_id,payment_id:"txn_…",checkout_url,status,... }; 404 booking_not_found; 409 booking_already_paid'],
         ['POST', '/api/reconcile-booking', 'กู้สถานะเมื่อ webhook หายหรือมาช้า', 'JSON: { "payment_id":"txn_…" }', '200 { ok:true,reconciled:true,gateway_status,booking_status,payment_id }; 404 { ok:false,error:"booking_or_payment_not_found" }; gateway error => { ok:false,error:"reconcile_failed",httpCode,raw }'],
         ['POST', '/api/cancel-booking', 'ผู้ใช้ยกเลิกรายการ PENDING', 'JSON: { "payment_id":"txn_…" }', '200 { ok:true,payment_id,booking_status:"FAILED",failure_code:"cancelled" }; 404 not found; gateway conflict/error => { ok:false,error:"cannot_cancel",httpCode,raw }'],
         ['GET', '/api/booking-status?payment_id=txn_…', 'หน้าเว็บ polling booking และดู Concert payments/logs', 'query payment_id', '200 { "booking":{...}|null, "payments":[...], "logs":[...] }'],

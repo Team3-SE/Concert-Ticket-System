@@ -32,7 +32,7 @@ class PaymentController extends Controller
     /**
      * POST /v1/payments
      * สร้างรายการจ่ายเงิน (idempotent ด้วย Idempotency-Key)
-     * รองรับ PromptPay (ส่งกลับ qrcode_url) และ Card โดยตรง (ไม่ต้องผ่าน checkout_url)
+     * Card จะสร้างเป็น PENDING แล้วให้ redirect ไปยัง hosted checkout เพื่อกรอกบัตร
      */
     public function store(Request $request): JsonResponse
     {
@@ -41,13 +41,10 @@ class PaymentController extends Controller
             'amount'       => 'required|numeric|min:1',
             'method'       => 'required|in:card,promptpay',
             'callback_url' => 'required|url',
+            'return_url'   => 'nullable|url',
             'expires_in'   => 'nullable|integer|min:60',
             'currency'     => 'nullable|string|size:3',
             'metadata'     => 'nullable|array',
-            'card_number'  => 'nullable|string',
-            'exp_month'    => 'nullable|string',
-            'exp_year'     => 'nullable|string',
-            'cvc'          => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -64,17 +61,6 @@ class PaymentController extends Controller
         $payment = $this->service->createOrFind(
             array_merge($validated, ['idempotency_key' => $idempotencyKey])
         );
-
-        // ถ้าจ่ายผ่านบัตรเครดิตโดยตรง และส่งเลขบัตรมา ให้ประมวลผลทันที
-        if ($payment->isPending() && $payment->method === 'card' && $request->filled('card_number')) {
-            $cardNumber = preg_replace('/\D/', '', $request->input('card_number', ''));
-            $rules      = config('paymock.card_rules', []);
-            $rule       = $rules[$cardNumber] ?? ['FAILED', 'card_declined'];
-            [$status, $failureCode] = $rule;
-
-            $this->service->transition($payment, $status, $failureCode);
-            $payment->refresh();
-        }
 
         return response()->json($this->formatPayment($payment), 201);
     }
@@ -138,6 +124,8 @@ class PaymentController extends Controller
             'expires_at'   => $payment->expires_at?->toIso8601String(),
             'paid_at'      => $payment->paid_at?->toIso8601String(),
             'created_at'   => $payment->created_at?->toIso8601String(),
+            'checkout_url' => url("/checkout/{$payment->public_id}"),
+            'return_url'   => $payment->return_url,
         ];
 
         // สำหรับ PromptPay ส่งคืน URL แสดงภาพ QR Code และ URL จำลองแอปธนาคาร

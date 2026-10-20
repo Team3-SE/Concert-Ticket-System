@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Demo: Payment Modal Integration')
+@section('title', 'Demo: Hosted Card Checkout')
 
 @section('content')
 <div class="max-w-4xl mx-auto space-y-8" x-data="demoModalApp()">
@@ -9,10 +9,10 @@
         <div>
             <div class="text-xs uppercase tracking-wider font-bold text-indigo-600 mb-1">Developer Playground</div>
             <h1 class="text-2xl font-black text-gray-900 flex items-center gap-2">
-                🎪 ระบบจำลองการจองตั๋วคอนเสิร์ต (Modal Integration)
+                🎪 ระบบจำลองการจองตั๋วคอนเสิร์ต
             </h1>
             <p class="text-sm text-gray-500 mt-1">
-                ตัวอย่างการฝัง PayMock ลงในหน้าเว็บคอนเสิร์ตด้วย <strong>Modal + iframe + postMessage</strong> โดยไม่ต้อง Redirect ข้ามหน้า
+                PromptPay ใช้ Modal ได้ตามเดิม ส่วนบัตรจะ Redirect ไปยังหน้า Hosted Checkout แล้วกลับมาที่ booking เดิม
             </p>
         </div>
         <a href="{{ route('landing') }}" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition font-medium">
@@ -64,7 +64,7 @@
                 <button @click="openPaymentModal()"
                         :disabled="loading"
                         class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 text-base cursor-pointer">
-                    <span x-show="!loading">💳 ชำระเงินผ่าน Modal Popup (คลิกเพื่อทดสอบ)</span>
+                    <span x-show="!loading">💳 สร้าง Payment และไปชำระเงิน</span>
                     <span x-show="loading" class="flex items-center gap-2">
                         <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -117,54 +117,14 @@
         </div>
 
         <p class="text-sm text-gray-600">
-            เมื่อผู้ใช้กดจองตั๋ว ให้ฝั่ง Frontend ของคุณเปิด Modal แล้วใส่ <code>checkout_url</code> ใน <code>&lt;iframe&gt;</code> จากนั้นดักฟัง Event <code>message</code>:
+            เมื่อเลือกบัตร ให้ redirect ผู้ใช้ไปยัง <code>redirect_url</code> ที่ Gateway คืนมา หลังชำระเงิน Gateway จะกลับมาที่ <code>return_path</code> ซึ่งอ่าน payment ล่าสุดจากฐานข้อมูลก่อนแสดงสถานะ booking
         </p>
 
         <div class="bg-gray-900 rounded-xl p-4 text-emerald-400 font-mono text-xs overflow-x-auto relative">
-<pre><code>&lt;!-- 1. Modal Container บนเว็บคอนเสิร์ต --&gt;
-&lt;div id="paymentModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; justify-content:center; align-items:center;"&gt;
-    &lt;div style="background:white; border-radius:16px; overflow:hidden; width:95%; max-width:540px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);"&gt;
-        &lt;div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#f3f4f6; border-bottom:1px solid #e5e7eb;"&gt;
-            &lt;span style="font-weight:bold; font-size:14px; color:#374151;"&gt;ชำระเงินค่าตั๋วคอนเสิร์ต&lt;/span&gt;
-            &lt;button onclick="closePaymentModal()" style="border:none; background:none; font-size:18px; cursor:pointer; color:#6b7280;"&gt;✕&lt;/button&gt;
-        &lt;/div&gt;
-        &lt;!-- iframe แสดงหน้า PayMock --&gt;
-        &lt;iframe id="paymentFrame" src="" style="width:100%; height:620px; border:none;"&gt;&lt;/iframe&gt;
-    &lt;/div&gt;
-&lt;/div&gt;
-
-&lt;!-- 2. JavaScript จัดการเปิด Modal และดักฟัง Event postMessage --&gt;
-&lt;script&gt;
-function openModalWithUrl(checkoutUrl) {
-    document.getElementById('paymentFrame').src = checkoutUrl;
-    document.getElementById('paymentModal').style.display = 'flex';
-}
-
-function closePaymentModal() {
-    document.getElementById('paymentModal').style.display = 'none';
-    document.getElementById('paymentFrame').src = '';
-}
-
-// ดักฟังข้อความจาก PayMock เมื่อจ่ายเงินเสร็จหรือกดปิด
-window.addEventListener('message', function(event) {
-    if (!event.data || !event.data.type) return;
-
-    // เมื่อผู้ใช้กดปุ่มปิดใน iframe
-    if (event.data.type === 'paymock:close_modal') {
-        closePaymentModal();
-    }
-
-    // เมื่อสถานะการชำระเงินเปลี่ยน (COMPLETED / FAILED)
-    if (event.data.type === 'paymock:payment_result') {
-        console.log('Payment result:', event.data);
-        if (event.data.status === 'COMPLETED') {
-            closePaymentModal();
-            alert('🎉 ชำระเงินสำเร็จ! ออกตั๋วคอนเสิร์ตเรียบร้อย');
-            window.location.reload(); // หรือรีเฟรชหน้าเพื่ออัปเดตตั๋ว
-        }
-    }
-});
-&lt;/script&gt;</code></pre>
+<pre><code>const payment = await createPayment({ method: 'card' });
+// redirect_url = /checkout/{publicId}
+// return_path = /demo/bookings/{publicId}
+window.location.assign(payment.redirect_url);</code></pre>
         </div>
     </div>
 
@@ -206,6 +166,11 @@ window.addEventListener('message', function(event) {
 function demoModalApp() {
     return {
         method: 'promptpay',
+        returnedBooking: @json($bookingPayment ? [
+            'id' => $bookingPayment->public_id,
+            'status' => $bookingPayment->status,
+            'failure_code' => $bookingPayment->failure_code,
+        ] : null),
         loading: false,
         modalOpen: false,
         currentCheckoutUrl: '',
@@ -217,6 +182,17 @@ function demoModalApp() {
         ],
 
         init() {
+            if (this.returnedBooking) {
+                const payment = this.returnedBooking;
+                this.ticketStatusText = payment.status === 'COMPLETED'
+                    ? 'ออกตั๋วสำเร็จแล้ว (PAID) 🎉'
+                    : payment.status === 'FAILED'
+                        ? `การชำระเงินล้มเหลว (${payment.failure_code || 'declined'})`
+                        : `สถานะล่าสุด: ${payment.status}`;
+                this.ticketStatusColor = payment.status === 'COMPLETED' ? 'text-green-400' : payment.status === 'FAILED' ? 'text-red-400' : 'text-yellow-400';
+                this.ticketStatusIcon = payment.status === 'COMPLETED' ? '✅' : payment.status === 'FAILED' ? '❌' : '⏳';
+                this.addLog('กลับมาที่ booking แล้ว — อ่านสถานะล่าสุดจากฐานข้อมูล', this.ticketStatusColor, payment);
+            }
             // ฟัง postMessage จาก PayMock ภายใน iframe
             window.addEventListener('message', (event) => {
                 if (!event.data || !event.data.type) return;
@@ -277,6 +253,10 @@ function demoModalApp() {
                 const data = await res.json();
                 if (data.ok) {
                     this.addLog(`สร้าง Payment สำเร็จ! ID: ${data.payment_id}`, 'text-green-400', data);
+                    if (this.method === 'card') {
+                        window.location.assign(data.redirect_url);
+                        return;
+                    }
                     this.currentCheckoutUrl = data.checkout_url;
                     this.modalOpen = true;
                 } else {

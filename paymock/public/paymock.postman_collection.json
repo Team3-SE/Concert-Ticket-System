@@ -72,7 +72,7 @@
       "name": "1. Standard Payment Flow",
       "item": [
         {
-          "name": "Create Card Payment",
+          "name": "Create Card Payment (Hosted Checkout)",
           "event": [
             {
               "listen": "test",
@@ -100,7 +100,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"card_number\": \"4242424242424242\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/123\",\n  \"expires_in\": 600\n}"
             },
             "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
           }
@@ -172,7 +172,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"card_number\": \"4242424242424242\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/123\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
           }
@@ -210,22 +210,22 @@
       ]
     },
     {
-      "name": "2. Card Payment – Magic Numbers (POST /v1/payments)",
-      "description": "ส่ง payment_id + card_number ใน body → ประมวลผลทันทีใน request เดียว. แต่ละคำขอใช้ Idempotency-Key ไม่ซ้ำกัน",
+      "name": "2. Hosted Card Checkout Redirect",
+      "description": "สร้าง Card payment ให้เป็น PENDING ก่อนด้วย POST /v1/payments แล้วเปิด checkout_url ในเบราว์เซอร์ ผู้ใช้กรอกบัตรบน Hosted Checkout และ form จะ POST /payments/{publicId} เพื่อชำระ payment เดิม ก่อน redirect ไป return_url พร้อม ?payment_id={publicId}",
       "item": [
         {
-          "name": "Card: PENDING only (ไม่ส่ง card_number)",
+          "name": "Step 1 – Create Card Payment (PENDING + checkout_url)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "var jsonData = pm.response.json();",
-                  "if (jsonData.id) { pm.collectionVariables.set('paymentId', jsonData.id); }",
-                  "pm.test('PENDING and payment_id set', function () {",
+                  "if (jsonData.id) { pm.collectionVariables.set('hostedCardId', jsonData.id); }",
+                  "pm.test('PENDING and hosted checkout URL returned', function () {",
                   "  pm.expect(jsonData.status).to.eql('PENDING');",
                   "  pm.expect(jsonData.payment_id).to.not.equal(null);",
-                  "  pm.expect(jsonData.paid_at).to.equal(null);",
+                  "  pm.expect(jsonData.checkout_url).to.include('/checkout/');",
                   "});"
                 ]
               }
@@ -239,25 +239,22 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+              "raw": "{\n  \"payment_id\": \"HOSTED_CARD_{{$timestamp}}\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/123\",\n  \"expires_in\": 600\n}"
             },
             "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] },
-            "description": "คาดหวัง: status=PENDING, payment_id ไม่เป็น null, paid_at=null"
+            "description": "คัดลอก checkout_url ไปเปิดใน browser หรือรัน request ถัดไปเพื่อจำลองการ submit form จาก hosted checkout"
           }
         },
         {
-          "name": "Card: 4242…4242 → COMPLETED",
+          "name": "Step 2 – Submit card to POST /payments/{publicId}",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "var jsonData = pm.response.json();",
-                  "if (jsonData.id) { pm.collectionVariables.set('paymentId', jsonData.id); }",
-                  "pm.test('COMPLETED and payment_id set', function () {",
-                  "  pm.expect(jsonData.status).to.eql('COMPLETED');",
-                  "  pm.expect(jsonData.payment_id).to.not.equal(null);",
-                  "  pm.expect(jsonData.paid_at).to.be.a('string');",
+                  "pm.test('Redirects to the merchant return URL', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([302, 303]);",
+                  "  pm.expect(pm.response.headers.get('Location')).to.include('payment_id=');",
                   "});"
                 ]
               }
@@ -265,29 +262,31 @@
           ],
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Idempotency-Key", "value": "CARD_OK_{{$timestamp}}" }
-            ],
+            "header": [],
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"card_number\": \"4242424242424242\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "card_number", "value": "4242 4242 4242 4242" },
+                { "key": "expiry", "value": "12/28" },
+                { "key": "cvc", "value": "123" },
+                { "key": "cardholder", "value": "SUCCESS USER" },
+                { "key": "redirect_to_return", "value": "1" }
+              ]
             },
-            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] },
-            "description": "คาดหวัง: status=COMPLETED, payment_id ไม่เป็น null, paid_at=เวลาจริงตอนจ่ายสำเร็จ"
+            "url": { "raw": "{{baseUrl}}/payments/{{hostedCardId}}", "host": ["{{baseUrl}}"], "path": ["payments", "{{hostedCardId}}"] },
+            "description": "route ของ Hosted Checkout ที่ใช้ settle payment เดิม; ส่ง form fields จากหน้า checkout เท่านั้น ไม่ส่ง API key"
           }
         },
         {
-          "name": "Card: 4000…0002 → FAILED (card_declined)",
+          "name": "Deprecated native-card case — use Hosted Card Flow above",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "var jsonData = pm.response.json();",
-                  "pm.test('FAILED card_declined, payment_id set', function () {",
-                  "  pm.expect(jsonData.status).to.eql('FAILED');",
-                  "  pm.expect(jsonData.failure_code).to.eql('card_declined');",
+                  "pm.test('Card creation is PENDING until Hosted Checkout', function () {",
+                  "  pm.expect(jsonData.status).to.eql('PENDING');",
                   "  pm.expect(jsonData.payment_id).to.not.equal(null);",
                   "});"
                 ]
@@ -302,13 +301,13 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4000000000000002\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"return_url\": \"{{concertUrl}}/booking/123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
           }
         },
         {
-          "name": "Card: 4000…9995 → FAILED (insufficient_funds)",
+          "name": "Card: create PENDING for Hosted Checkout (funds case)",
           "event": [
             {
               "listen": "test",
@@ -328,13 +327,13 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4000000000009995\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"return_url\": \"{{concertUrl}}/booking/123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
           }
         },
         {
-          "name": "Card: 4000…0069 → FAILED (expired_card)",
+          "name": "Card: create PENDING for Hosted Checkout (expiry case)",
           "request": {
             "method": "POST",
             "header": [
@@ -343,13 +342,13 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4000000000000069\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"return_url\": \"{{concertUrl}}/booking/123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
           }
         },
         {
-          "name": "Card: 4000…0127 → FAILED (incorrect_cvc)",
+          "name": "Card: create PENDING for Hosted Checkout (CVC case)",
           "request": {
             "method": "POST",
             "header": [
@@ -358,13 +357,13 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4000000000000127\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"return_url\": \"{{concertUrl}}/booking/123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
           }
         },
         {
-          "name": "Card: 4000…0119 → FAILED (processing_error)",
+          "name": "Card: create PENDING for Hosted Checkout (processing case)",
           "request": {
             "method": "POST",
             "header": [
@@ -373,13 +372,13 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4000000000000119\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"return_url\": \"{{concertUrl}}/booking/123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
           }
         },
         {
-          "name": "Card: 4100…0019 → FAILED (fraud_suspected)",
+          "name": "Card: create PENDING for Hosted Checkout (fraud case)",
           "request": {
             "method": "POST",
             "header": [
@@ -388,13 +387,13 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4100000000000019\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"return_url\": \"{{concertUrl}}/booking/123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
           }
         },
         {
-          "name": "Card: 4000…0341 → COMPLETED",
+          "name": "Card: create PENDING for Hosted Checkout (delayed webhook case)",
           "request": {
             "method": "POST",
             "header": [
@@ -403,7 +402,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4000000000000341\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1500.00,\n  \"method\": \"card\",\n  \"return_url\": \"{{concertUrl}}/booking/123\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] },
             "description": "จ่ายสำเร็จทันที; ความผิดปกติของ webhook ตั้งจาก PayMock Admin Webhook Mode เท่านั้น"
@@ -681,18 +680,18 @@
       ]
     },
     {
-      "name": "5. Concert Backend — ใช้ payment_id (บัตร + PromptPay)",
-      "description": "create-booking สร้าง booking + Concert payment แรก. หาก FAILED/EXPIRED ให้สร้าง Concert payment ใหม่ใน booking เดิมด้วย POST /api/bookings/{bookingId}/payments. ทุก call หลังสร้างใช้ response.payment_id (txn_…) เป็น provider transaction ID.",
+      "name": "5. Concert Backend — Hosted Card Redirect + PromptPay",
+      "description": "create-booking สร้าง booking + Concert payment แรก. เมื่อ method=card ระบบคืน checkout_url เพื่อเปิด Hosted Checkout (/checkout/{publicId}) และหลังจ่าย Gateway กลับ /booking/{bookingId}?payment_id={publicId}; หน้าจองเรียก booking-status เพื่ออ่าน DB ใหม่. หาก FAILED/EXPIRED ให้สร้าง Concert payment ใหม่ใน booking เดิมด้วย POST /api/bookings/{bookingId}/payments.",
       "item": [
         {
           "name": "POST create-booking",
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["var j = pm.response.json();", "pm.test('booking and payment created', function () { pm.expect(j.ok).to.eql(true); pm.expect(j.booking_id).to.be.a('number'); });", "if (j.ok) { pm.collectionVariables.set('bookingId', String(j.booking_id)); pm.collectionVariables.set('paymentId', j.payment_id); }"] } }],
-          "request": { "method": "POST", "auth": { "type": "noauth" }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"seat\": \"VIP-A1\",\n  \"amount\": 3500.00,\n  \"method\": \"card\",\n  \"card_number\": \"4000000000000002\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\"\n}" }, "url": { "raw": "{{concertUrl}}/api/create-booking", "host": ["{{concertUrl}}"], "path": ["api", "create-booking"] } }
+          "request": { "method": "POST", "auth": { "type": "noauth" }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"seat\": \"VIP-A1\",\n  \"amount\": 3500.00,\n  \"method\": \"card\"\n}" }, "url": { "raw": "{{concertUrl}}/api/create-booking", "host": ["{{concertUrl}}"], "path": ["api", "create-booking"] } }
         },
         {
           "name": "POST /api/bookings/{bookingId}/payments — Payment ใหม่ใน Booking เดิม",
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["var j = pm.response.json();", "pm.test('same booking, new Concert payment', function () { pm.expect(j.ok).to.eql(true); pm.expect(String(j.booking_id)).to.eql(pm.collectionVariables.get('bookingId')); pm.expect(j.concert_payment_id).to.be.a('number'); });", "if (j.ok) pm.collectionVariables.set('paymentId', j.payment_id);"] } }],
-          "request": { "method": "POST", "auth": { "type": "noauth" }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"method\": \"card\",\n  \"card_number\": \"4242424242424242\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"28\",\n  \"cvc\": \"123\"\n}" }, "url": { "raw": "{{concertUrl}}/api/bookings/{{bookingId}}/payments", "host": ["{{concertUrl}}"], "path": ["api", "bookings", "{{bookingId}}", "payments"] } }
+          "request": { "method": "POST", "auth": { "type": "noauth" }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"method\": \"card\"\n}" }, "url": { "raw": "{{concertUrl}}/api/bookings/{{bookingId}}/payments", "host": ["{{concertUrl}}"], "path": ["api", "bookings", "{{bookingId}}", "payments"] } }
         },
         {
           "name": "GET booking-status ?payment_id=",

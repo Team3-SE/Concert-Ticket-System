@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Checkout')
+@section('title', 'Hosted Card Checkout')
 
 @section('content')
 <div class="bg-white rounded-xl shadow-lg overflow-hidden" x-data="checkoutPage()">
@@ -7,7 +7,10 @@
     <div class="bg-indigo-600 text-white px-6 py-4">
         <div class="flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <h1 class="text-xl font-bold">💳 PayMock Checkout</h1>
+                <div>
+                    <h1 class="text-xl font-bold">💳 PayMock Secure Checkout</h1>
+                    <p class="text-[11px] text-indigo-100 mt-0.5">Hosted payment gateway demo</p>
+                </div>
                 <button type="button"
                         id="iframeCloseHeaderBtn"
                         style="display: none;"
@@ -89,10 +92,11 @@
         @else
             <!-- Card Section -->
             <h2 class="text-lg font-semibold text-gray-700 mb-1">💳 Credit / Debit Card</h2>
-            <p class="text-xs text-gray-500 mb-4">กรอกข้อมูลบัตร หรือคลิกเลือก "เลขบัตรวิเศษ" จากตารางด้านล่าง</p>
+            <p class="text-xs text-gray-500 mb-4">กรอกข้อมูลบัตรบนหน้า Hosted Checkout นี้ หรือคลิกเลือก "เลขบัตรวิเศษ" จากตารางด้านล่าง</p>
 
-            <form action="{{ route('checkout.card', $payment->public_id) }}" method="POST" class="space-y-4">
+            <form action="{{ route('payments.process', $payment->public_id) }}" method="POST" class="space-y-4">
                 @csrf
+                <input type="hidden" name="redirect_to_return" value="1">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
                     <input type="text"
