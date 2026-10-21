@@ -4,167 +4,215 @@
  * ใช้กับ : booking/payment.blade.php
  * Author : 67160434 จิตฏิยากร โสภา
  * Created : 2026-10-13
+ * Updated : 21/10/2569 67160292 ธีรเมธ พลสาย (ปรับตาม Figma frame "Payment")
  */
 
 /* Scoped to <body class="page-payment"> */
 .page-payment{
-  /* Base Reset & Variables */
   /* Typography & Headings */
-  .page-title{
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.025em;
-      color: #111827;
+  .page-title{                      /* Figma: RESERVE SUMMARY 20px SemiBold */
+      font-size: 20px;
+      font-weight: 600;
+      color: #000000;
       text-transform: uppercase;
   }
-  .section-title{
-      font-size: 12px;
+  .section-title{                   /* Figma: 14px Bold #003399 */
+      font-size: 14px;
       font-weight: 700;
-      color: #0B2F61;
+      color: #003399;
   }
-  /* Selection Cards (Radio Options) */
+
+  /* Selection Cards (Radio Options) - Figma: สูง 70 มุม 8 ขอบ #E2E8F0, ที่เลือกขอบส้ม 2px */
   .card-option{
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
+    min-height: 70px;
     background-color: #ffffff;
-    padding: 14px;
-    border-radius: 12px;
-    border: 2px solid transparent;
-    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 17px;
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+    transition: border-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   }
   .card-option:hover{
-      border-color: #E5E7EB;
+      border-color: #CBD5E1;
   }
   .card-option.active{
-      border-color: #F47B1F;
+      padding: 16px;                /* ขอบหนาขึ้น 1px จึงลด padding ให้ขนาดเท่าเดิม */
+      border: 2px solid #F47B1F;
   }
   .radio-btn{
-      width: 16px;
-      height: 16px;
-      color: #F47B1F;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      accent-color: #0075FF;        /* Figma: วงกลมสีน้ำเงิน */
   }
   .radio-btn:focus{
       outline: none;
   }
-  .radio-label{
-      font-size: 12px;
+  .radio-label{                     /* Figma: 14px Medium #333 */
+      font-size: 14px;
       font-weight: 500;
-      color: #1F2937;
+      color: #333333;
   }
-  /* Dark Price Summary Card */
+
+  /* Dark Price Summary Card - Figma: #091A36 มุม 6 padding 24/22 */
   .summary-card{
-    background-color: #061838;
+    background-color: #091A36;
     color: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 24px 22px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    gap: 10px;
   }
-  .summary-card-body{
-      padding: 20px;
-  }
-  .summary-header{
+  .summary-header{                  /* Figma: 16px Bold ขาว เส้นใต้ #333 */
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 12px;
+      font-size: 16px;
       font-weight: 700;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding-bottom: 12px;
+      border-bottom: 1px solid #333333;
+      padding-bottom: 9px;
   }
-  .summary-row{
+  .summary-row{                     /* Figma: 16px Regular #B3B3B3 */
       display: flex;
       justify-content: space-between;
-      font-size: 12px;
-      color: #D1D5DB;
+      font-size: 16px;
+      color: #B3B3B3;
   }
-  .summary-total-row{
+  .summary-total-row{               /* Figma: 16px SemiBold ส้ม เส้นบน #333 */
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-top: 12px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      font-size: 12px;
-      font-weight: 700;
+      padding-top: 15px;
+      border-top: 1px solid #333333;
+      font-size: 16px;
+      font-weight: 600;
+      color: #F47B20;
   }
-  .summary-timer-bar{
-      background-color: #121E36;
-      padding: 12px 0;
+  .summary-timer-bar{               /* Figma: กล่องส้มจางในการ์ด 14px SemiBold */
+      background-color: rgba(242, 101, 34, 0.1);
+      border: 1px solid rgba(242, 101, 34, 0.3);
+      border-radius: 8px;
+      padding: 12px;
       text-align: center;
-      font-size: 12px;
-      color: #F47B1F;
-      font-weight: 500;
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 14px;
+      font-weight: 600;
+      color: #F26522;
   }
-  /* Form Inputs & Content Cards */
+
+  /* Content Cards - Figma: ขาว มุม 16 เงาจาง */
   .info-card{
       background-color: #ffffff;
-      padding: 24px;
-      border-radius: 12px;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      border: 1px solid #F3F4F6;
+      padding: 32px 32px 16px;
+      border-radius: 16px;
+      box-shadow: 0 4px 10px 0 rgba(11, 27, 61, 0.05);
+  }
+  .event-header{
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #EAECF0;
+  }
+  .event-title{                     /* Figma: 18px Bold #101828 */
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 26px;
+      color: #101828;
+  }
+  .event-meta{                      /* Figma: 14px Regular #667085 */
+      font-size: 14px;
+      color: #667085;
+  }
+  .detail-heading{                  /* Figma: 16px SemiBold #0B1B3D */
+      font-size: 16px;
+      font-weight: 600;
+      color: #0B1B3D;
   }
   .input-label{
       font-weight: 600;
       color: #4B5563;
-      font-size: 11px;
+      font-size: 14px;
   }
   .input-control{
       width: 100%;
-      padding: 10px;
+      padding: 12px;
       background-color: #F9FAFB;
-      border: 1px solid #E5E7EB;
+      border: 1px solid #E2E8F0;
       border-radius: 8px;
-      font-size: 12px;
+      font-size: 14px;
   }
   .input-control:focus{
       outline: none;
       border-color: #F47B1F;
   }
-  /* Detail Tables */
+
+  /* Detail Tables - Figma: แถว py 12 เส้นประ #EAECF0 */
   .detail-row{
       display: flex;
       justify-content: space-between;
-      font-size: 12px;
+      padding: 12px 0;
+      font-size: 14px;
+      border-bottom: 1px dashed #EAECF0;
   }
-  .detail-label{
-      color: #9CA3AF;
+  .detail-row:last-child{
+      border-bottom: none;
   }
-  .detail-value{
-      font-weight: 700;
-      color: #1F2937;
+  .detail-label{                    /* Figma: 14px Regular #667085 */
+      color: #667085;
   }
-  /* Footer Buttons */
+  .detail-value{                    /* Figma: 14px SemiBold #101828 */
+      font-weight: 600;
+      color: #101828;
+  }
+
+  /* Organizer contact - Figma: กล่องขาว opacity 80% padding 20 มุม 12 */
+  .contact-box{
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      color: #565656;
+  }
+  .contact-box .contact-title{
+      color: #F47B20;
+      font-weight: 500;
+      margin-right: 12px;
+  }
+  .contact-box .contact-item{
+      margin-right: 16px;
+      white-space: nowrap;
+  }
+
+  /* Footer Buttons - Figma: ย้อนกลับ #E4E9F4 / ชำระเงิน #F47B1F สูง 55 */
   .btn-back{
-      padding: 10px 28px;
+      padding: 15px 55px 16px;
       border-radius: 8px;
-      background-color: #E8EEF7;
-      color: #4B5563;
-      font-size: 12px;
+      background-color: #E4E9F4;
+      color: #5B6580;
+      font-size: 16px;
       font-weight: 600;
       border: none;
       cursor: pointer;
       transition: background 150ms;
   }
   .btn-back:hover{
-      background-color: #E5E7EB;
+      background-color: #D9E0EE;
   }
   .btn-submit{
-      padding: 10px 32px;
+      min-width: 166px;
+      height: 55px;
+      padding: 0 32px;
       border-radius: 8px;
       background-color: #F47B1F;
       color: #ffffff;
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 16px;
+      font-weight: 700;
       border: none;
       cursor: pointer;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
       transition: background 150ms;
    }
   .btn-submit:hover{

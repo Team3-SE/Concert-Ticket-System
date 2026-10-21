@@ -13,8 +13,8 @@
       {{-- LEFT: LOGO & ABOUT --}}
       <div class="space-y-2.5 max-w-sm">
         <div class="flex items-center space-x-2">
-          <img src="{{ asset('images/logo.png') }}" alt="TEAM 3 Ticket Logo" class="w-6 h-6 object-contain" style="mix-blend-mode:screen;">
-          <span class="font-bold text-base tracking-wide">TEAM <span class="text-[#F47B1F]">3</span> Ticket</span>
+          <img src="{{ asset('images/logo.png') }}" alt="TEAM 3 Ticket Logo" class="w-10 h-10 object-contain" style="mix-blend-mode:screen;">
+          <span class="font-bold text-[22px] tracking-wide">TEAM <span class="text-[#F47B1F]">3</span> Ticket</span>
         </div>
         <p class="text-gray-300 text-[11px] leading-relaxed">
           ระบบจองตั๋วคอนเสิร์ตสะดวก รวดเร็ว ปลอดภัย<br>

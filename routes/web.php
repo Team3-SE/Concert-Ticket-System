@@ -74,6 +74,19 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/orders/history', [OrderController::class, 'history'])->name('orders.history');
 
+    // ===== BOOKING & PAYMENT =====
+
+    // สร้างการจองจากที่นั่งที่เลือก (ล็อกที่นั่ง) แล้วไปหน้าชำระเงิน
+    Route::post('/bookings', [\App\Http\Controllers\BookingController::class, 'store'])->name('bookings.store');
+
+    // สร้างรายการชำระเงิน + ออกหมายเลขคำสั่งซื้อ (แสดงในหน้าต่าง QR)
+    Route::post('/payments', [\App\Http\Controllers\PaymentController::class, 'store'])->name('payments.store');
+
+    // จำลองการชำระเงินสำเร็จ (เฉพาะ APP_ENV=local)
+    Route::post('/payments/{paymentId}/mock-complete', [\App\Http\Controllers\PaymentController::class, 'mockComplete'])
+        ->whereNumber('paymentId')
+        ->name('payments.mock-complete');
+
 });
 
 // ===== AUTH (สมัครสมาชิก / เข้าสู่ระบบ / ออกจากระบบ) =====

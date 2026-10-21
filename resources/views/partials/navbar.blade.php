@@ -23,8 +23,8 @@
   {{-- LOGO SECTION --}}
   @if($showLogo)
   <a href="{{ url('/') }}" class="team-logo">
-    <img src="{{ asset('images/logo.png') }}" alt="TEAM 3 Ticket Logo" class="w-7 h-7 object-contain" style="mix-blend-mode:screen;">
-    <span class="font-bold text-base tracking-wide">TEAM <span class="text-[#F47B1F]">3</span> Ticket</span>
+    <img src="{{ asset('images/logo.png') }}" alt="TEAM 3 Ticket Logo" class="object-contain" style="mix-blend-mode:screen;">
+    <span class="font-bold tracking-wide">TEAM <span class="text-[#F47B1F]">3</span> Ticket</span>
   </a>
   @endif
 

@@ -5,6 +5,7 @@
  * การจองบัตรคอนเสิร์ต (ตาราง booking)
  * Author :
  * Created :
+ * Updated : 21/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -125,6 +126,17 @@ class Booking extends Model
     public function bookingSeats(): HasMany
     {
         return $this->hasMany(BookingSeat::class, 'booking_id', 'booking_id');
+    }
+
+    /**
+     * standingItems()
+     * ความสัมพันธ์กับรายการบัตรโซนยืนของการจอง (จำนวนบัตรต่อโซน)
+     * param : -
+     * return : HasMany BookingStandingItem
+     */
+    public function standingItems(): HasMany
+    {
+        return $this->hasMany(BookingStandingItem::class, 'booking_id', 'booking_id');
     }
 
     /**

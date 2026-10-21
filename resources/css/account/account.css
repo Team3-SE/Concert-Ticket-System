@@ -43,10 +43,10 @@
   main.content{padding:40px 40px 40px;background:#eef2fb;flex:1;}
   .team-header{background:#0b2f61;border-bottom:2px solid #f47b1f;min-height:68px;padding:0 40px;}
   .page-title{
-    font-size:24px;font-weight:700;line-height:1.25;color:var(--text);
-    border-left:6px solid var(--orange);padding-left:8px;
-    margin-bottom:26px;
+    position:relative;font-size:24px;font-weight:600;line-height:1.25;color:var(--text);
+    padding-left:13px;margin-bottom:26px;
   }
+  .page-title::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:5px;height:30px;background-color:#F47B1F;border-radius:2px;}
   .status-msg{
     margin:0 0 16px;padding:10px 16px;
     background:#e9f8ef;border:1px solid #b5e6c8;color:#166534;
@@ -320,8 +320,8 @@
   /* Profile edit page */
   *,*::before,*::after{box-sizing:border-box;}
   .profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
-  .profile-section-title{display:flex;align-items:center;gap:10px;font-size:24px;font-weight:700;color:#111827;line-height:1.2;margin:0 0 16px;}
-  .profile-section-title::before{content:'';display:block;width:6px;height:30px;background:#f47b1f;border-radius:3px;flex-shrink:0;}
+  .profile-section-title{display:flex;align-items:center;gap:10px;font-size:24px;font-weight:600;color:#111827;line-height:1.2;margin:0 0 16px;}
+  .profile-section-title::before{content:"";display:block;width:5px;height:30px;background:#F47B1F;border-radius:2px;flex-shrink:0;}
   .profile-panel{background:#fff;border:1px solid #e3e8f2;border-radius:10px;padding:30px 32px 32px;min-height:427px;box-shadow:0 1px 3px rgba(15,32,65,.04);}
   .profile-panel .field{margin-bottom:24px;}
   .profile-panel .field label{line-height:1.4;font-size:13px;font-weight:500;color:#5b6475;letter-spacing:0;margin-bottom:8px;}
@@ -364,9 +364,10 @@
   position: relative;
   font-size: 24px;
   font-weight: 600;
-  color: #091A36;
+  line-height: 1.25;
+  color: var(--text);
   padding-left: 13px;
-  margin-bottom: 16px;
+  margin-bottom: 26px;
 }
 .heading-text::before {
   content: "";

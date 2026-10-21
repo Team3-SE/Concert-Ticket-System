@@ -13,93 +13,89 @@
 
 @section('content')
   {{-- MAIN BODY CONTENT --}}
-  <main class="flex-1 max-w-6xl mx-auto w-full px-4 md:px-8 py-8 space-y-6">
+  <main class="flex-1 max-w-[1320px] mx-auto w-full px-4 md:px-8 pt-10 pb-8 space-y-6">
 
-    {{-- TOP SECTION: RESERVE SUMMARY & PAYMENT SUMMARY SIDE BY SIDE --}}
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    {{-- TOP SECTION: RESERVE SUMMARY & PAYMENT SUMMARY SIDE BY SIDE (Figma: 2 คอลัมน์เท่ากัน ห่าง 40px) --}}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
 
       {{-- LEFT COLUMN: SELECTION CARDS --}}
-      <div class="lg:col-span-7 space-y-6">
+      <div class="space-y-6">
         <h2 class="page-title">RESERVE SUMMARY</h2>
 
-        {{-- Protection Selection --}}
-        <div class="space-y-2.5">
+        <div class="space-y-4">
+          {{-- Protection Selection --}}
           <h3 class="section-title">ความคุ้มครอง/Ticket Protection</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
             {{-- Option 1: Show Protection --}}
-            <label class="card-option" :class="{ 'active': protection === 'show' }">
+            <label class="card-option">
               <input type="radio" name="protection" value="show" x-model="protection" class="radio-btn">
               <span class="radio-label">ซื้อประกันบัตรการแสดง</span>
             </label>
 
             {{-- Option 2: Travel Protection --}}
-            <label class="card-option" :class="{ 'active': protection === 'travel' }">
+            <label class="card-option">
               <input type="radio" name="protection" value="travel" x-model="protection" class="radio-btn">
               <span class="radio-label">ซื้อประกันการเดินทาง</span>
             </label>
 
           </div>
-        </div>
 
-        {{-- Payment Method Selection --}}
-        <div class="space-y-2.5">
-          <h3 class="section-title">เลือกช่องทางชำระเงิน / Choose Payment Methods</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {{-- Payment Method Selection --}}
+          <div class="space-y-3">
+            <h3 class="section-title">เลือกช่องทางชำระเงิน / Choose Payment Methods</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-            {{-- PromptPay --}}
-            <label class="card-option" :class="{ 'active': paymentMethod === 'promptpay' }">
-              <input type="radio" name="paymentMethod" value="promptpay" x-model="paymentMethod" class="radio-btn">
-              <span class="radio-label">พร้อมเพย์ / Thai QR Payment</span>
-            </label>
+              {{-- PromptPay --}}
+              <label class="card-option" :class="{ 'active': paymentMethod === 'promptpay' }">
+                <input type="radio" name="paymentMethod" value="promptpay" x-model="paymentMethod" class="radio-btn">
+                <span class="radio-label">พร้อมเพย์ / Thai QR Payment</span>
+              </label>
 
-            {{-- Credit Card --}}
-            <label class="card-option" :class="{ 'active': paymentMethod === 'credit' }">
-              <input type="radio" name="paymentMethod" value="credit" x-model="paymentMethod" class="radio-btn">
-              <span class="radio-label">ชำระด้วยบัตรเครดิต / Credit Card</span>
-            </label>
+              {{-- Credit Card --}}
+              <label class="card-option" :class="{ 'active': paymentMethod === 'credit' }">
+                <input type="radio" name="paymentMethod" value="credit" x-model="paymentMethod" class="radio-btn">
+                <span class="radio-label">ชำระด้วยบัตรเครดิต / Credit Card</span>
+              </label>
 
+            </div>
           </div>
         </div>
       </div>
 
       {{-- RIGHT COLUMN: DARK PRICE SUMMARY CARD --}}
-      <div class="lg:col-span-5 summary-card">
-        <div class="summary-card-body space-y-4">
-          {{-- Table Header --}}
-          <div class="summary-header">
-            <span>ประเภท/Type</span>
-            <span>ราคา/Price</span>
-          </div>
-
-          {{-- Price Breakdowns --}}
-          <div class="space-y-2.5">
-            <div class="summary-row flex justify-between">
-              <span x-text="quantity + ' x ' + zoneName"></span>
-              <span x-text="calculateSubtotal().toLocaleString() + ' บ.'"></span>
-            </div>
-            <div class="summary-row flex justify-between">
-              <span>ค่าจัดส่ง/Shipping Fee</span>
-              <span>0 บ.</span>
-            </div>
-            <div class="summary-row flex justify-between">
-              <span>ค่าธรรมเนียมบริการ/Service Fee</span>
-              <span x-text="serviceFee + ' บ.'"></span>
-            </div>
-            <div class="summary-row flex justify-between" x-show="protection !== 'none'">
-              <span>ค่าประกันความคุ้มครอง</span>
-              <span x-text="protectionFee + ' บ.'"></span>
-            </div>
-          </div>
-
-          {{-- Total Price Row --}}
-          <div class="summary-total-row">
-            <span class="text-[#F47B1F]">ยอดที่ต้องชำระ/Total Amount</span>
-            <span class="text-[#F47B1F] text-sm" x-text="calculateTotal() + ' บ.'"></span>
-          </div>
+      <div class="summary-card">
+        {{-- Table Header --}}
+        <div class="summary-header">
+          <span>ประเภท/Type</span>
+          <span>ราคา/Price</span>
         </div>
 
-        {{-- Timer Bar at Bottom --}}
+        {{-- Price Breakdowns --}}
+        <div class="summary-row pt-0.5">
+          <span x-text="quantity + ' x ' + zoneName"></span>
+          <span x-text="calculateSubtotal().toLocaleString() + ' บาท'"></span>
+        </div>
+        <div class="summary-row">
+          <span>ค่าจัดส่ง/Shipping Fee</span>
+          <span>0 บาท</span>
+        </div>
+        <div class="summary-row">
+          <span>ค่าธรรมเนียมบริการ/Service Fee</span>
+          <span x-text="serviceFee.toLocaleString() + ' บาท'"></span>
+        </div>
+        <div class="summary-row" x-show="protection !== 'none'">
+          <span>ค่าประกันความคุ้มครอง</span>
+          <span x-text="protectionFee.toLocaleString() + ' บาท'"></span>
+        </div>
+
+        {{-- Total Price Row --}}
+        <div class="summary-total-row">
+          <span>ยอดที่ต้องชำระ/Total Amount</span>
+          <span x-text="calculateTotal() + ' บาท'"></span>
+        </div>
+
+        {{-- Timer (Figma: กล่องส้มจางอยู่ในการ์ด) --}}
         <div class="summary-timer-bar">
           ระยะเวลาที่เหลือในการชำระเงิน <span x-text="formattedTime">10:00</span> นาที
         </div>
@@ -112,9 +108,9 @@
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 transform -translate-y-2"
          x-transition:enter-end="opacity-100 transform translate-y-0"
-         class="info-card space-y-4">
-      <h3 class="text-xs font-bold text-gray-800">รายละเอียดบัตรเครดิต / เดบิต</h3>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+         class="info-card !pb-8 space-y-4">
+      <h3 class="detail-heading">รายละเอียดบัตรเครดิต / เดบิต</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
         {{-- Card Number --}}
         <div class="space-y-1.5">
@@ -144,80 +140,76 @@
     </div>
 
     {{-- BOTTOM SECTION: TICKET DETAILS & BUYER INFO CARD --}}
-    <div class="info-card space-y-6">
+    <div class="info-card space-y-2">
 
       {{-- Event Header --}}
-      <div class="space-y-1 border-b border-gray-100 pb-4">
-        <h2 class="text-base font-bold text-gray-900">{{ $concert ? strtoupper($concert->name) : '-' }}</h2>
-        <p class="text-[11px] text-gray-400">
+      <div class="event-header">
+        <h2 class="event-title">{{ $concert ? strtoupper($concert->name) : '-' }}</h2>
+        <p class="event-meta">
           วันและเวลา : Show Date :
           {{ $concert ? $concert->event_datetime->thDateTime() : '-' }}
           | สถานที่/Venue : {{ $concert ? $concert->venue : '-' }}
         </p>
       </div>
 
-      {{-- Details Grid --}}
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs">
+      {{-- Details Grid (Figma: 2 คอลัมน์ ห่าง 40px) --}}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4 pt-2">
 
         {{-- Left: Order Details --}}
-        <div class="space-y-3">
-          <h3 class="font-bold text-gray-800 text-xs">รายการซื้อ/Order Details</h3>
-          <div class="space-y-2.5 divide-y divide-gray-50">
-            <div class="detail-row pt-1">
-              <span class="detail-label">จำนวน/Quantity</span>
-              <span class="detail-value" x-text="quantity"></span>
-            </div>
-            <div class="detail-row pt-2">
-              <span class="detail-label">เลขที่นั่ง/Seat No.</span>
-              <span class="detail-value" x-text="seatNo"></span>
-            </div>
-            <div class="detail-row pt-2">
-              <span class="detail-label">โซน/Zone</span>
-              <span class="detail-value" x-text="zoneName"></span>
-            </div>
+        <div>
+          <h3 class="detail-heading">รายการซื้อ/Order Details</h3>
+          <div class="detail-row">
+            <span class="detail-label">จำนวน/Quantity</span>
+            <span class="detail-value" x-text="quantity"></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">เลขที่นั่ง/Seat No.</span>
+            <span class="detail-value" x-text="seatNo"></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">โซน/Zone</span>
+            <span class="detail-value" x-text="zoneName"></span>
           </div>
         </div>
 
         {{-- Right: Buyer Details --}}
-        <div class="space-y-3">
-          <h3 class="font-bold text-gray-800 text-xs">ข้อมูลผู้ซื้อ/Buyer Details</h3>
-          <div class="space-y-2.5 divide-y divide-gray-50">
-            <div class="detail-row pt-1">
-              <span class="detail-label">ชื่อ/Name</span>
-              <span class="detail-value">อนิรุธ สุขวิรกาล</span>
-            </div>
-            <div class="detail-row pt-2">
-              <span class="detail-label">อีเมล/Email - Address</span>
-              <span class="detail-value">anitun007@gmail.com</span>
-            </div>
-            <div class="detail-row pt-2">
-              <span class="detail-label">เบอร์โทรศัพท์/Mobile No</span>
-              <span class="detail-value">0867676767</span>
-            </div>
+        <div>
+          <h3 class="detail-heading">ข้อมูลผู้ซื้อ/Buyer Details</h3>
+          <div class="detail-row">
+            <span class="detail-label">ชื่อ/Name</span>
+            <span class="detail-value" x-text="buyer.name || '-'">-</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">อีเมล/Email - Address</span>
+            <span class="detail-value" x-text="buyer.email || '-'">-</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">เบอร์โทรศัพท์/Mobile No</span>
+            <span class="detail-value" x-text="buyer.phone || '-'">-</span>
           </div>
         </div>
 
       </div>
 
-      {{-- Action Footer --}}
-      <div class="pt-4 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+      {{-- Action Footer (Figma: กล่องติดต่อผู้จัด + ปุ่มชิดขวา ห่าง 16px) --}}
+      <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
 
         {{-- Organizer Support Contact --}}
-        <div class="text-[11px] text-gray-400 space-x-2">
-          <span class="text-[#F47B1F] font-semibold">มีปัญหา ต้องการติดต่อผู้จัดงาน</span>
+        <div class="contact-box">
+          <span class="contact-title">มีปัญหา ต้องการติดต่อผู้จัดงาน</span>
           {{-- schema v3.1.0: ช่องทางติดต่ออยู่ในตาราง organization --}}
-          <span>โทร: {{ $organization?->phone ?: '-' }}</span>
-          <span>LINE: {{ $organization?->line ?: '-' }}</span>
-          <span>Facebook: {{ $organization?->facebook ?: '-' }}</span>
-          <span>Email: {{ $organization?->email ?: '-' }}</span>
+          <span class="contact-item">โทร : {{ $organization?->phone ?: '-' }}</span>
+          <span class="contact-item">LINE : {{ $organization?->line ?: '-' }}</span>
+          <span class="contact-item">Facebook : {{ $organization?->facebook ?: '-' }}</span>
+          <span class="contact-item">Email : {{ $organization?->email ?: '-' }}</span>
         </div>
 
         {{-- Back & Payment Action Buttons --}}
-        <div class="flex items-center gap-3 w-full md:w-auto">
-          <button @click="goBack()" class="btn-back flex-1 md:flex-initial">
+        <div class="flex items-center gap-4 w-full lg:w-auto">
+          <button @click="goBack()" class="btn-back flex-1 lg:flex-initial">
             ย้อนกลับ
           </button>
-          <button @click="processPayment()" class="btn-submit flex-1 md:flex-initial">
+          <button @click="processPayment()" :disabled="isSubmitting" class="btn-submit flex-1 lg:flex-initial disabled:opacity-60">
             ชำระเงิน
           </button>
         </div>
@@ -234,33 +226,49 @@
 
 @push('scripts')
 <script>
+    /**
+     * paymentApp()
+     * Alpine.js component หน้าชำระเงิน
+     * ถ้ามี checkout (มาจากการจองจริง) ใช้ข้อมูลจาก server, ถ้าไม่มีใช้ค่าจาก query string แบบเดิม
+     */
     function paymentApp() {
+      const checkout = @json($checkout ?? null);
+      const concertId = @json($concert?->concert_id);
+      const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+
       return {
         protection: 'show',
         paymentMethod: 'promptpay',
 
-        zoneName: 'ELF-2',
-        seatNo: 'A9',
-        quantity: 1,
-        ticketPrice: 4800,
+        bookingId: checkout?.bookingId ?? null,
+        zoneName: checkout?.zoneName ?? 'ELF-2',
+        seatNo: checkout?.seatNo ?? 'A9',
+        quantity: checkout?.quantity ?? 1,
+        ticketPrice: checkout?.ticketPrice ?? 4800,
+        subtotal: checkout?.subtotal ?? null,
+        buyer: checkout?.buyer ?? { name: '', email: '', phone: '' },
 
-        serviceFee: 30,
-        protectionFee: 144,
+        serviceFee: checkout?.serviceFee ?? 30,
+        protectionFee: checkout?.protectionFee ?? 144,
 
         // Modal & Timer State
         showQrModal: false,
+        isSubmitting: false,
         countdownTimer: null,
-        timeLeft: 597,
-        invoiceNo: '81001269340014456372',
+        timeLeft: checkout?.secondsLeft ?? 597,
+        orderCode: checkout?.orderCode ?? null,
+        paymentId: checkout?.paymentId ?? null,
         currentDate: '',
 
         init() {
-          const params = new URLSearchParams(window.location.search);
+          if (!checkout) {
+            const params = new URLSearchParams(window.location.search);
 
-          if (params.has('zone')) this.zoneName = params.get('zone');
-          if (params.has('seat')) this.seatNo = params.get('seat');
-          if (params.has('quantity')) this.quantity = parseInt(params.get('quantity')) || 1;
-          if (params.has('price')) this.ticketPrice = parseFloat(params.get('price')) || 4800;
+            if (params.has('zone')) this.zoneName = params.get('zone');
+            if (params.has('seat')) this.seatNo = params.get('seat');
+            if (params.has('quantity')) this.quantity = parseInt(params.get('quantity')) || 1;
+            if (params.has('price')) this.ticketPrice = parseFloat(params.get('price')) || 4800;
+          }
 
           // สร้างวันที่ทำรายการอัตโนมัติ (วว/ดด/ปปปป ชช:นน)
           const now = new Date();
@@ -271,7 +279,7 @@
           const minutes = String(now.getMinutes()).padStart(2, '0');
           this.currentDate = `${day}/${month}/${year} ${hours}:${minutes}`;
 
-          // เริ่มนับเวลาถอยหลัง
+          // เริ่มนับเวลาถอยหลัง (การจองจริงนับจาก expiry_time ของ booking)
           this.startCountdown();
         },
 
@@ -290,13 +298,17 @@
             } else {
               clearInterval(this.countdownTimer);
               alert('หมดเวลาทำรายการชำระเงิน ระบบจะนำท่านกลับไปเลือกที่นั่งใหม่');
-              this.goBack();
+              if (this.bookingId && concertId) {
+                window.location.href = `/booking?concert_id=${concertId}`;
+              } else {
+                this.goBack();
+              }
             }
           }, 1000);
         },
 
         calculateSubtotal() {
-          return this.ticketPrice * this.quantity;
+          return this.subtotal ?? this.ticketPrice * this.quantity;
         },
 
         calculateTotal() {
@@ -315,17 +327,64 @@
           this.showQrModal = false;
         },
 
-        processPayment() {
-          if (this.paymentMethod === 'promptpay') {
+        /**
+         * processPayment()
+         * การจองจริง: สร้างรายการชำระเงิน (ได้หมายเลขคำสั่งซื้อ) แล้วเปิดหน้าต่าง QR
+         */
+        async processPayment() {
+          if (this.paymentMethod !== 'promptpay') {
+            alert('ระบบชำระด้วยบัตรเครดิตยังไม่เชื่อมต่อ กรุณาเลือกพร้อมเพย์');
+            return;
+          }
+          if (!this.bookingId) {
+            this.showQrModal = true;   // หน้าตัวอย่าง (ไม่มีการจองจริง)
+            return;
+          }
+          if (this.isSubmitting) return;
+          this.isSubmitting = true;
+
+          try {
+            const res = await fetch('/payments', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf() },
+              body: JSON.stringify({ booking_id: this.bookingId, method: this.paymentMethod, protection: this.protection }),
+            });
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+              alert(data.message || 'สร้างรายการชำระเงินไม่สำเร็จ');
+              if (res.status === 410 && concertId) window.location.href = `/booking?concert_id=${concertId}`;
+              return;
+            }
+
+            this.paymentId = data.payment_id;
+            this.orderCode = data.order_code;
             this.showQrModal = true;
-          } else {
-            alert('กำลังดำเนินการชำระเงินผ่านบัตรเครดิต...');
+          } catch (e) {
+            alert('เชื่อมต่อระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+          } finally {
+            this.isSubmitting = false;
           }
         },
 
-        confirmModalPayment() {
-          alert('ชำระเงินสำเร็จแล้ว!');
-          // window.location.href = '/booking/success';
+        /**
+         * confirmModalPayment()
+         * จำลองการชำระเงินสำเร็จ (ปุ่มนี้แสดงเฉพาะ APP_ENV=local) แล้วไปหน้าประวัติคำสั่งซื้อ
+         */
+        async confirmModalPayment() {
+          if (!this.paymentId) return;
+
+          const res = await fetch(`/payments/${this.paymentId}/mock-complete`, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf() },
+          });
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            alert(data.message || 'ยืนยันการชำระเงินไม่สำเร็จ');
+            return;
+          }
+          window.location.href = data.redirect;
         }
       }
     }

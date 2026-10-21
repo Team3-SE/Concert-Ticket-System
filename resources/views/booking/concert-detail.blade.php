@@ -89,54 +89,9 @@
           <a href="{{ url('/concerts') }}" class="btn-clean-submit mt-5 inline-block">กลับไปหน้าคอนเสิร์ต</a>
         </section>
       @else
-        <section class="space-y-2" aria-labelledby="ticket-zones-title">
-          <div class="grid grid-cols-1 gap-5 md:grid-cols-12">
-            <div class="md:col-span-5 flex min-h-40 items-center justify-center rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
-              @if($concert->seat_map_image_path)
-                <img
-                  src="{{ asset('storage/' . $concert->seat_map_image_path) }}"
-                  alt="ผังที่นั่ง {{ $concert->name }}"
-                  class="h-auto max-h-[360px] w-full rounded-lg object-contain"
-                  onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'py-10 text-xs text-gray-400',textContent:'ไม่พบรูปผังที่นั่ง'}))">
-              @else
-                <span class="py-10 text-xs text-gray-400">ยังไม่มีรูปผังโซนที่นั่ง</span>
-              @endif
-            </div>
-
-            <div class="md:col-span-7 flex flex-col justify-center rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-              <div class="overflow-x-auto">
-                <table class="w-full min-w-[360px] text-left text-xs">
-                  <thead>
-                    <tr class="border-b border-gray-100 text-gray-400">
-                      <th class="pb-3 font-medium">โซน</th>
-                      <th class="pb-3 text-center font-medium">ราคา</th>
-                      <th class="pb-3 text-right font-medium">ที่นั่งว่าง</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    @forelse($zones as $zone)
-                      <tr>
-                        <td class="py-3">
-                          <span class="mr-2 inline-block h-2 w-2 rounded-sm" style="background-color: {{ $zone['color'] ?: '#4D7EE0' }}"></span>
-                          <span class="font-semibold text-gray-700">{{ $zone['name'] }}</span>
-                        </td>
-                        <td class="text-center text-gray-600">{{ number_format($zone['price']) }} บาท</td>
-                        <td class="text-right">
-                          <span class="inline-block min-w-[60px] rounded-full px-3 py-1 text-center text-[10px] font-bold text-white {{ $zone['seats'] === 0 ? 'bg-[#E6483C]' : ($zone['seats'] < 50 ? 'bg-[#E79B1F]' : 'bg-[#1FA855]') }}">
-                            {{ $zone['seats'] === 0 ? 'Sold out' : number_format($zone['seats']) }}
-                          </span>
-                        </td>
-                      </tr>
-                    @empty
-                      <tr>
-                        <td colspan="3" class="py-8 text-center text-gray-400">ยังไม่มีข้อมูลโซนบัตร</td>
-                      </tr>
-                    @endforelse
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+        <section aria-label="โซนทั้งหมด">
+          {{-- ใช้ส่วนเดียวกับหน้า booking (partials/zone-overview) --}}
+          @include('partials.zone-overview', ['concert' => $concert, 'zones' => $zones])
         </section>
 
         <section class="ticket-info-full-card">

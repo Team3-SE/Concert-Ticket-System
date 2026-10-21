@@ -101,9 +101,9 @@
   .section{max-width:1580px;margin:0 auto;padding:0 32px 40px;}
   .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
   .section-title{
-    font-size:16px;font-weight:700;
-    border-left:4px solid var(--orange);padding-left:10px;
+    position:relative;font-size:20px;font-weight:700;padding-left:13px;
   }
+  .section-title::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:5px;height:30px;background-color:#F47B1F;border-radius:2px;}
   .show-all{color:var(--navy-700);font-size:13px;font-weight:600;text-decoration:underline;}
   .grid{
     display:grid;grid-template-columns:repeat(6,1fr);gap:16px;
@@ -149,7 +149,7 @@
   .tag-default{background:var(--orange);}
   .card-body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;flex:1;}
   .card-body .title{font-size:12px;font-weight:700;line-height:1.4;min-height:32px;}
-  .card-body .date{font-size:11px;color:var(--gray-500);}
+  .card-body .date{font-size:12px;color:var(--gray-500);}
   .card-btn{
     margin-top:auto;text-align:center;font-size:12px;font-weight:600;
     padding:7px;border-radius:16px;border:none;cursor:pointer;

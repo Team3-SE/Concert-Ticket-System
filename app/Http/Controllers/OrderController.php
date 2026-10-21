@@ -5,6 +5,7 @@
  * แสดงประวัติการสั่งซื้อของผู้ใช้ที่เข้าสู่ระบบ
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 16/10/2569
+ * Updated : 21/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers;
@@ -30,6 +31,7 @@ class OrderController extends Controller
         $orders = CustomerOrder::with([
                 'booking.concert',
                 'booking.bookingSeats',
+                'booking.standingItems',
                 'tickets.zone',
                 'tickets.seat',
                 'payment',

@@ -11,8 +11,8 @@
   /* จอกว้างเกิน 1920px (หรือซูมออก): ไม่ให้โลโก้/ชื่อผู้ใช้วิ่งไปชิดขอบจอ */
   padding-left:max(32px, calc((100% - 1920px) / 2 + 32px));padding-right:max(32px, calc((100% - 1920px) / 2 + 32px));}
 .team-header.no-logo{justify-content:flex-end;}
-.team-logo{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;font-size:18px;text-decoration:none;}
-.team-logo img{width:36px;height:36px;object-fit:contain;mix-blend-mode:screen;}
+.team-logo{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;font-size:22px;text-decoration:none;}
+.team-logo img{width:40px;height:40px;object-fit:contain;mix-blend-mode:screen;}
 .profile-trigger{display:flex;align-items:center;gap:12px;background:none;border:0;color:#fff;font:500 13px inherit;cursor:pointer;padding:0;}
 .profile-name{font-size:15px;font-weight:500;}
 .profile-avatar{width:42px;height:42px;box-sizing:border-box;border-radius:50%;border:2px solid rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:22px;line-height:1;overflow:hidden;flex-shrink:0;}

@@ -5,6 +5,7 @@
  * สร้างและดึงข้อมูลบัตร (E-Ticket) ของคำสั่งซื้อ
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 18/20.2569
+ * Updated : 21/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers;
@@ -49,9 +50,18 @@ class TicketController extends Controller
      */
     public function generateTickets(int $orderId): \Illuminate\Support\Collection
     {
-        $order   = CustomerOrder::with(['booking.bookingSeats.seat.zone', 'booking.concert'])->findOrFail($orderId);
+        $order   = CustomerOrder::with(['booking.bookingSeats.seat.zone', 'booking.standingItems', 'booking.concert'])->findOrFail($orderId);
         $booking = $order->booking;
         $tickets = collect();
+
+        // รหัสบัตร TKT-[รหัสคอนเสิร์ต]-[ปีเดือนวัน]-[ลำดับ 5 หลัก] เช่น TKT-C0024-260901-00187 (ลำดับนับต่อคอนเสิร์ตต่อวัน)
+        // ล็อกแถวคอนเสิร์ตไว้ระหว่างออกเลข (เรียกจากใน transaction ของ completePayment) กันเลขลำดับซ้ำ
+        $concert = \App\Models\Concert::whereKey($booking->concert_id)->lockForUpdate()->firstOrFail();
+        $concertCode = $concert->concert_code ?: 'C' . str_pad((string) $concert->concert_id, 4, '0', STR_PAD_LEFT);
+        $ticketPrefix = 'TKT-' . $concertCode . '-' . now()->format('ymd') . '-';
+        $ticketSeq = (int) Ticket::where('ticket_code', 'like', $ticketPrefix . '%')
+            ->selectRaw("MAX(CAST(SUBSTRING_INDEX(ticket_code, '-', -1) AS UNSIGNED)) AS seq")
+            ->value('seq');
 
         // ── SEATED tickets ──────────────────────────────────────
         foreach ($booking->bookingSeats as $bookingSeat) {
@@ -64,7 +74,7 @@ class TicketController extends Controller
                 'seat_id'              => $seat->seat_id,
                 'qr_code'              => hash('sha256', $orderId . $seat->seat_id . Str::uuid()),
                 'is_used'              => false,
-                'ticket_code'          => 'TKT-' . strtoupper(Str::random(10)),
+                'ticket_code'          => $ticketPrefix . str_pad((string) ++$ticketSeq, 5, '0', STR_PAD_LEFT),
                 'quantity'             => null,
                 'zone_name_snapshot'   => $bookingSeat->zone_name_snapshot,
                 'seat_label_snapshot'  => $bookingSeat->seat_label_snapshot,
@@ -79,10 +89,24 @@ class TicketController extends Controller
         }
 
         // ── STANDING tickets ────────────────────────────────────
-        // Standing zones ไม่มี BookingSeat แต่ดูจาก zone ที่เป็น STANDING ใน concert
-        // quantity เก็บไว้ใน Ticket โดยตรง (1 Ticket = หลายใบ STANDING)
-        // *** Logic นี้ต้องได้รับ standingItems จาก Booking metadata / session ***
-        // TODO: pass standing items explicitly when calling generateTickets in production
+        // อ่านจำนวนบัตรจาก booking_standing_item แล้วออกบัตร 1 ใบต่อ 1 คน (แต่ละใบมี QR ของตัวเอง สแกนเข้างานทีละคน)
+        foreach ($booking->standingItems as $standingItem) {
+            for ($i = 0; $i < (int) $standingItem->quantity; $i++) {
+                $tickets->push(Ticket::create([
+                    'order_id'             => $orderId,
+                    'zone_id'              => $standingItem->zone_id,
+                    'seat_id'              => null,
+                    'qr_code'              => hash('sha256', $orderId . $standingItem->zone_id . $i . Str::uuid()),
+                    'is_used'              => false,
+                    'ticket_code'          => $ticketPrefix . str_pad((string) ++$ticketSeq, 5, '0', STR_PAD_LEFT),
+                    'quantity'             => 1,
+                    'zone_name_snapshot'   => $standingItem->zone_name_snapshot,
+                    'seat_label_snapshot'  => 'บัตรยืน',
+                    'unit_price_snapshot'  => $standingItem->unit_price_snapshot,
+                    'created_at'           => now(),
+                ]));
+            }
+        }
 
         return $tickets;
     }

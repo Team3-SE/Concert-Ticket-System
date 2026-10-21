@@ -23,7 +23,7 @@
 .search-bar input{
   flex:1;min-width:0;height:100%;
   border:0;outline:0;background:transparent;
-  font-family:inherit;font-size:15px;color:#1c2138;
+  font-family:inherit;font-size:16px;color:#1c2138;
 }
 .search-bar input::placeholder{color:#a0a4b5;}
 .search-bar input::-webkit-search-cancel-button{cursor:pointer;}

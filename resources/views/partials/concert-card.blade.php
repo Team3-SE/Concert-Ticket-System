@@ -30,7 +30,7 @@
   </div>
   <div class="card-body">
     <div class="title">{{ $concert->name }}</div>
-    <div class="date">{{ $concertDate?->thDate() ?? '-' }}</div>
+    <div class="date">{{ $concertDate?->thDateLong() ?? '-' }}</div>
     @if($detailed)
       @if($concert->venue)
         <div class="card-venue" title="{{ $concert->venue }}">{{ $concert->venue }}</div>

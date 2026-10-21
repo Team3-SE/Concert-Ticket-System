@@ -50,6 +50,9 @@
             // โซนและที่นั่ง: จัดกลุ่มตามโซนจาก BookingSeat snapshots เช่น "โซน B4 : F05, F06"
             $seatGroups = $seats->groupBy(fn($s) => $s->zone_name_snapshot ?? '–');
 
+            // โซนยืน: ไม่มีเลขที่นั่ง แสดงเป็น "โซน Standing : บัตรยืน x 2"
+            $standingItems = $booking?->standingItems ?? collect();
+
             // ยอดรวม: จาก payment ถ้ามี ไม่งั้น booking
             $totalAmount = $order->payment?->amount ?? $booking?->total_amount ?? 0;
 
@@ -64,14 +67,22 @@
             </td>
             <td>{{ $thDate($eventDate) }}</td>
             <td>
-              @forelse($seatGroups as $zoneName => $zoneSeats)
+              @foreach($seatGroups as $zoneName => $zoneSeats)
                 <div>
                   {{ \Illuminate\Support\Str::startsWith($zoneName, 'โซน') ? $zoneName : 'โซน ' . $zoneName }}
                   : <strong>{{ $zoneSeats->pluck('seat_label_snapshot')->filter()->join(', ') ?: '–' }}</strong>
                 </div>
-              @empty
+              @endforeach
+              @foreach($standingItems as $standingItem)
+                @php $zoneName = $standingItem->zone_name_snapshot ?? '–'; @endphp
+                <div>
+                  {{ \Illuminate\Support\Str::startsWith($zoneName, 'โซน') ? $zoneName : 'โซน ' . $zoneName }}
+                  : <strong>บัตรยืน x {{ $standingItem->quantity }}</strong>
+                </div>
+              @endforeach
+              @if($seatGroups->isEmpty() && $standingItems->isEmpty())
                 –
-              @endforelse
+              @endif
             </td>
             <td><span class="qty-badge">{{ $ticketCount }} ใบ</span></td>
             <td>{{ $thDate($order->order_date) }}</td>
