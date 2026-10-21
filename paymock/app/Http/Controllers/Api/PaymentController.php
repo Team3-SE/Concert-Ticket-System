@@ -128,14 +128,14 @@ class PaymentController extends Controller
             'expires_at'   => $payment->expires_at?->toIso8601String(),
             'paid_at'      => $payment->paid_at?->toIso8601String(),
             'created_at'   => $payment->created_at?->toIso8601String(),
-            'checkout_url' => url("/checkout/{$payment->public_id}"),
             'return_url'   => $payment->return_url,
         ];
 
-        // สำหรับ PromptPay ส่งคืน URL แสดงภาพ QR Code และ URL จำลองแอปธนาคาร
         if ($payment->method === 'promptpay') {
             $data['qrcode_url']         = url("/v1/payments/{$payment->public_id}/qr.svg");
             $data['bank_simulator_url'] = url("/bank-simulate/{$payment->public_id}");
+        } elseif ($payment->method === 'card') {
+            $data['checkout_url'] = url("/checkout/{$payment->public_id}");
         }
 
         return $data;

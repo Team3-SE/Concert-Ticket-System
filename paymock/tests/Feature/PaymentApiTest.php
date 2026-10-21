@@ -19,7 +19,7 @@ class PaymentApiTest extends TestCase
         $this->apiKey = config('paymock.api_key');
     }
 
-    /** Test: สร้าง payment สำเร็จ คืน 201 พร้อม checkout_url */
+    /** Test: สร้าง card payment สำเร็จ คืน checkout_url */
     public function test_can_create_payment(): void
     {
         $response = $this->withHeaders([
@@ -48,6 +48,8 @@ class PaymentApiTest extends TestCase
             ]);
 
         $this->assertNull($response->json('provider_transaction_id'));
+        $response->assertJsonMissingPath('qrcode_url')
+            ->assertJsonMissingPath('bank_simulator_url');
         $this->assertDatabaseHas('payments', [
             'payment_id'      => '101',
             'order_ref'       => 'TK-BOOKING-101',
@@ -83,6 +85,7 @@ class PaymentApiTest extends TestCase
             'Idempotency-Key' => 'PP_PENDING_001',
         ])->postJson('/v1/payments', [
             'payment_id'   => '555',
+            'booking_ref'  => 'TK-PP-555',
             'amount'       => 2200.00,
             'method'       => 'promptpay',
             'callback_url' => 'http://concert/webhooks/payment',
@@ -92,11 +95,14 @@ class PaymentApiTest extends TestCase
         $response->assertStatus(201)
             ->assertJson([
                 'payment_id' => '555',
+                'booking_ref' => 'TK-PP-555',
                 'method'     => 'promptpay',
                 'status'     => 'PENDING',
             ]);
         $this->assertNotNull($response->json('payment_id'));
         $this->assertNotEmpty($response->json('qrcode_url'));
+        $this->assertNotEmpty($response->json('bank_simulator_url'));
+        $response->assertJsonMissingPath('checkout_url');
     }
 
     /** Test: payment_id เป็นฟิลด์บังคับ */
@@ -137,6 +143,32 @@ class PaymentApiTest extends TestCase
 
         $this->assertEquals(1, Payment::count());
         $this->assertEquals($res1->json('id'), $res2->json('id'));
+    }
+
+    public function test_payment_id_is_idempotency_fallback_without_header(): void
+    {
+        $payload = [
+            'payment_id'   => 'BODY_KEY_202',
+            'amount'       => 2000.00,
+            'method'       => 'promptpay',
+            'callback_url' => 'http://concert/webhooks/payment',
+        ];
+
+        $first = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey,
+        ])->postJson('/v1/payments', $payload);
+
+        $second = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey,
+        ])->postJson('/v1/payments', $payload);
+
+        $first->assertCreated();
+        $second->assertCreated()->assertJsonPath('id', $first->json('id'));
+        $this->assertSame(1, Payment::count());
+        $this->assertDatabaseHas('payments', [
+            'payment_id'      => 'BODY_KEY_202',
+            'idempotency_key' => 'BODY_KEY_202',
+        ]);
     }
 
     /** Test: GET /v1/payments/{id} คืนสถานะถูกต้อง */

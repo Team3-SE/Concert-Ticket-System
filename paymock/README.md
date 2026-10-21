@@ -38,7 +38,7 @@ php artisan schedule:work
 | ส่วน | URL | รายละเอียด |
 |---|---|---|
 | **API Base** | `http://localhost:8081/v1` | ใช้คุยกับระบบคอนเสิร์ต |
-| **Hosted Card Checkout** | `http://localhost:8081/checkout/{public_id}` | หน้ากรอกบัตรของ PayMock แล้ว redirect กลับ `return_url` |
+| **Hosted Card Checkout** | `http://localhost:8081/checkout/{id}` | หน้ากรอกบัตรของ PayMock แล้ว redirect กลับ `return_url` |
 | **Admin Panel** | `http://localhost:8081/admin` | ชั้น 1 Chaos + ชั้น 2 Webhook (global), ดูรายการ, ส่ง Webhook ซ้ำ |
 | **Health Check** | `http://localhost:8081/up` | Docker healthcheck |
 
@@ -67,11 +67,11 @@ php artisan schedule:work
 ```http
 POST /v1/payments
 Authorization: Bearer {API_KEY}
-Idempotency-Key: 12
 Content-Type: application/json
 
 {
   "payment_id": "12",
+  "booking_ref": "TK-260101-ABCDE",
   "amount": 1500.00,
   "currency": "THB",
   "method": "card",           // "card" หรือ "promptpay"
@@ -80,6 +80,8 @@ Content-Type: application/json
   "expires_in": 600           // วินาที (default 600)
 }
 ```
+
+สำหรับ PromptPay ให้ส่ง `booking_ref` ของ booking จริงมาด้วย เพื่อให้ `booking_ref` ใน response ตรงกับ booking นั้น หากไม่ส่ง ระบบจะใช้ `payment_id` แทน.
 
 **Response (201 Created):**
 ```json
@@ -99,11 +101,11 @@ Content-Type: application/json
 }
 ```
 
-> **Idempotency:** Merchant ทั่วไปใช้เลขเดียวกันได้ เช่น `payment_id: "12"` และ `Idempotency-Key: 12`, แล้วส่งซ้ำเฉพาะ retry หลัง timeout. Concert backend สร้าง Concert payment ก่อนเรียก PayMock และใช้เลขนั้นเป็นทั้ง `payment_id`/key; เมื่อ FAILED/EXPIRED จึงสร้าง Concert payment ใหม่ใต้ booking เดิม. ข้อจำกัดปัจจุบัน: timeout ระหว่าง Concert → PayMock ยังไม่ resend อัตโนมัติ จึงต้อง retry/reconcile attempt เดิมด้วย key เดิมก่อนสร้าง attempt ใหม่.
+> **Idempotency:** `payment_id` ใน body เป็น key fallback จึงไม่ต้องส่ง `Idempotency-Key` ซ้ำ. หากส่ง header ระบบใช้ header แทน body `payment_id` เป็น key; ค่าที่เลือกต้องคงเดิมเมื่อ retry attempt เดิม. ไม่มีการอ่าน `idempotency_key` จาก JSON body. Concert backend ปัจจุบันส่งเลข Concert payment เป็นทั้ง `payment_id` และ header; เมื่อ FAILED/EXPIRED จึงสร้าง Concert payment ใหม่ใต้ booking เดิม. ข้อจำกัดปัจจุบัน: timeout ระหว่าง Concert → PayMock ยังไม่ resend อัตโนมัติ จึงต้อง retry/reconcile attempt เดิมด้วย key เดิมที่เลือกใช้ก่อนสร้าง attempt ใหม่.
 
-> **Identifier:** `id` (`txn_...`) คือ provider transaction ID เพียงค่าเดียวสำหรับ GET/cancel/QR/polling; `payment_id` คือเลขอ้างอิงของ merchant. ไม่มี `provider_transaction_id` เพราะซ้ำกับ `id`.
+> **Payment fields:** `POST /v1/payments` ใช้ `payment_id` และ `booking_ref` ใน body. เส้นทางดูสถานะ, cancel, QR และ checkout ใช้ `id` ใน path. Webhook ส่ง field `id`, `payment_id` และ `booking_ref`.
 
-> **Hosted card flow:** Card payment สร้างเป็น `PENDING` ก่อน แล้วให้ browser redirect ไปยัง `checkout_url` (`/checkout/{public_id}`). ผู้ใช้กรอกบัตรในหน้า PayMock และฟอร์มจะ `POST /payments/{public_id}` เพื่อ settle payment เดิม จากนั้น Gateway redirect กลับ `return_url` โดยไม่เติม payment ID ลงใน URL. ส่ง `booking_ref` เป็น booking code เพื่อแสดงบนหน้า checkout/receipt และใช้สร้าง return path เช่น `/booking/{booking_ref}`; ระบบร้านค้าควรอ่านสถานะจากฐานข้อมูลหรือ webhook โดยใช้ mapping ที่บันทึกไว้. Demo ใช้ return path `/demo/bookings/{public_id}` ซึ่งอ่านสถานะล่าสุดจากฐานข้อมูลก่อนแสดง booking.
+> **Hosted card flow:** Card payment สร้างเป็น `PENDING` ก่อน แล้วให้ browser redirect ไปยัง `checkout_url` (`/checkout/{id}`). ผู้ใช้กรอกบัตรในหน้า PayMock และฟอร์มจะ `POST /payments/{id}` เพื่อ settle payment เดิม จากนั้น Gateway redirect กลับ `return_url` โดยไม่เติม payment ID ลงใน URL. ส่ง `booking_ref` เป็น booking code เพื่อแสดงบนหน้า checkout/receipt และใช้สร้าง return path เช่น `/booking/{booking_ref}`. Demo ใช้ return path `/demo/bookings/{id}` ซึ่งอ่านสถานะล่าสุดจากฐานข้อมูลก่อนแสดง booking.
 
 Public API ใช้ `booking_ref` เป็น booking code; request เก่าที่ยังส่ง `order_ref` รองรับเพื่อ backward compatibility แต่ response จะส่ง `booking_ref` เท่านั้น.
 

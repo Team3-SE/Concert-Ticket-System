@@ -1,59 +1,109 @@
 {
   "info": {
     "name": "PayMock Gateway API Collection",
-    "description": "Merchant API ของ PayMock + Concert Backend\n\nPOST /v1/payments ต้องส่ง payment_id ทุกครั้ง; ตัวอย่าง merchant ทั่วไปใช้เลขล้วน เช่น 12 และตั้ง Idempotency-Key เป็น 12. Concert backend สร้าง Concert payment ใหม่ใต้ booking เดิมเมื่อ FAILED/EXPIRED และใช้เลข Concert payment นั้นเป็น payment_id.\nResponse: id = txn_… คือ provider transaction ID ตัวเดียวสำหรับ GET / cancel / QR / concert; payment_id คือรหัสที่ merchant ส่งมา\n\nChaos / Webhook ผิดปกติตั้งที่ PayMock Admin (ชั้น 1 chaos_mode, ชั้น 2 webhook_mode)\n\nเวลา: created_at = สร้างรายการ | paid_at = จ่ายสำเร็จ (เฉพาะ COMPLETED) | ไม่มี completed_at",
+    "description": "PayMock merchant and Concert backend API collection. POST /v1/payments requires body.payment_id. Idempotency key selection: if Idempotency-Key header is present, it is used; otherwise body.payment_id is used. No idempotency_key JSON body field is read. Keep the selected key unchanged when retrying an attempt. PayMock payment routes use id in the path; POST /v1/payments uses body.payment_id and booking_ref. Concert demo requests use query/body.payment_id. PromptPay responses include qrcode_url and bank_simulator_url but omit checkout_url. Card responses include checkout_url but omit PromptPay URLs.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8081", "type": "string" },
-    { "key": "apiKey", "value": "pm_test_key_concert_system_2024", "type": "string" },
-    { "key": "bookingCode", "value": "101", "type": "string" },
-    { "key": "bookingId", "value": "", "type": "string" },
-    { "key": "paymentId", "value": "txn_test", "type": "string" },
-    { "key": "promptPayId", "value": "txn_test", "type": "string" },
-    { "key": "concertUrl", "value": "http://localhost:5000", "type": "string" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "pm_test_key_concert_system_2024",
+      "type": "string"
+    },
+    {
+      "key": "bookingId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "paymockId",
+      "value": "txn_test",
+      "type": "string",
+      "description": "Use in the path parameter named id."
+    },
+    {
+      "key": "promptPayId",
+      "value": "txn_test",
+      "type": "string",
+      "description": "Use in PromptPay path parameters named id."
+    },
+    {
+      "key": "concertUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "cardPaymentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "hostedCardId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "csrfToken",
+      "value": "",
+      "type": "string",
+      "description": "CSRF token extracted from the hosted checkout page before submitting the card form."
+    },
+    {
+      "key": "promptPayFailId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "promptPayBankId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "promptPayCancelId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cardMerchantPaymentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cardIdempotencyKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bodyOnlyMerchantPaymentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bodyOnlyPaymockId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "concertPaymentId",
+      "value": "",
+      "type": "string"
+    }
   ],
   "auth": {
     "type": "bearer",
     "bearer": [
-      { "key": "token", "value": "{{apiKey}}", "type": "string" }
+      {
+        "key": "token",
+        "value": "{{apiKey}}",
+        "type": "string"
+      }
     ]
   },
-  "event": [
-    {
-      "listen": "prerequest",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          "// Every direct gateway request uses one stable key for that payment.",
-          "if (pm.request.method === 'POST' && /\\/v1\\/payments$/.test(pm.request.url.toString()) && pm.request.body && pm.request.body.raw) {",
-          "  var body = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
-          "  if (body.payment_id) pm.request.headers.upsert({ key: 'Idempotency-Key', value: String(body.payment_id) });",
-          "}"
-        ]
-      }
-    },
-    {
-      "listen": "test",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          "function saveGatewayIds(jsonData) {",
-          "  if (!jsonData || !jsonData.id) return;",
-          "  pm.collectionVariables.set('paymentId', jsonData.id);",
-          "}",
-          "function assertMerchantPaymentId(jsonData) {",
-          "  if (!jsonData || jsonData.error) return;",
-          "  if (jsonData.payment_id === undefined) return;",
-          "  pm.test('payment_id is not null', function () {",
-          "    pm.expect(jsonData.payment_id).to.not.equal(null);",
-          "    pm.expect(String(jsonData.payment_id).length).to.be.above(0);",
-          "  });",
-          "}"
-        ]
-      }
-    }
-  ],
   "item": [
     {
       "name": "0. System Health",
@@ -62,8 +112,18 @@
           "name": "Health Check (Docker /up)",
           "request": {
             "method": "GET",
-            "auth": { "type": "noauth" },
-            "url": { "raw": "{{baseUrl}}/up", "host": ["{{baseUrl}}"], "path": ["up"] }
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/up",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "up"
+              ]
+            }
           }
         }
       ]
@@ -75,18 +135,39 @@
           "name": "Create Card Payment (Hosted Checkout)",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var attemptId = 'CARD_' + pm.variables.replaceIn('{{$guid}}');",
+                  "var idempotencyKey = 'IDEM_' + pm.variables.replaceIn('{{$guid}}');",
+                  "pm.collectionVariables.set('cardMerchantPaymentId', attemptId);",
+                  "pm.collectionVariables.set('cardIdempotencyKey', idempotencyKey);"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "exec": [
                   "var jsonData = pm.response.json();",
-                  "if (jsonData.id) { pm.collectionVariables.set('paymentId', jsonData.id); }",
+                  "if (jsonData.id) { pm.collectionVariables.set('paymockId', jsonData.id); }",
+                  "if (jsonData.id) { pm.collectionVariables.set('cardPaymentId', jsonData.id); }",
                   "pm.test('status 201', function () { pm.response.to.have.status(201); });",
                   "pm.test('payment_id is merchant id, not null', function () {",
-                  "  pm.expect(jsonData.payment_id).to.eql('12');",
+                  "  pm.expect(jsonData.payment_id).to.eql(pm.collectionVariables.get('cardMerchantPaymentId'));",
                   "  pm.expect(jsonData.payment_id).to.not.equal(null);",
                   "});",
                   "pm.test('id is gateway txn', function () {",
                   "  pm.expect(jsonData.id).to.be.a('string').and.match(/^txn_/);",
+                  "});",
+                  "pm.test('return_url is returned', function () {",
+                  "  pm.expect(jsonData.return_url).to.be.a('string').and.include('/booking/TK-260101-ABCDE');",
+                  "});",
+                  "pm.test('Card has checkout_url only', function () {",
+                  "  pm.expect(jsonData.checkout_url).to.be.a('string').and.include('/checkout/');",
+                  "  pm.expect(jsonData).to.not.have.property('qrcode_url');",
+                  "  pm.expect(jsonData).to.not.have.property('bank_simulator_url');",
                   "});"
                 ]
               }
@@ -95,27 +176,53 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Idempotency-Key", "value": "12" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{cardIdempotencyKey}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"expires_in\": 600\n}"
+              "raw": "{\n  \"payment_id\": \"{{cardMerchantPaymentId}}\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"expires_in\": 600\n}"
             },
-            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
           }
         },
         {
           "name": "Create PromptPay Payment",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var attemptId = 'PP_' + pm.variables.replaceIn('{{$guid}}');",
+                  "pm.collectionVariables.set('bodyOnlyMerchantPaymentId', attemptId);"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "exec": [
                   "var jsonData = pm.response.json();",
+                  "if (jsonData.id) pm.collectionVariables.set('bodyOnlyPaymockId', jsonData.id);",
                   "if (jsonData.id) {",
                   "  pm.collectionVariables.set('promptPayId', jsonData.id);",
-                  "  pm.collectionVariables.set('paymentId', jsonData.id);",
+                  "  pm.collectionVariables.set('paymockId', jsonData.id);",
                   "}",
                   "pm.test('status 201 PENDING', function () {",
                   "  pm.response.to.have.status(201);",
@@ -123,11 +230,15 @@
                   "});",
                   "pm.test('payment_id is not null', function () {",
                   "  pm.expect(jsonData.payment_id).to.not.equal(null);",
-                  "  pm.expect(jsonData.payment_id).to.eql('202');",
+                  "  pm.expect(jsonData.payment_id).to.eql(pm.collectionVariables.get('bodyOnlyMerchantPaymentId'));",
                   "});",
                   "pm.test('PromptPay URLs present', function () {",
                   "  pm.expect(jsonData.qrcode_url).to.be.a('string').and.include('/qr.svg');",
                   "  pm.expect(jsonData.bank_simulator_url).to.be.a('string');",
+                  "  pm.expect(jsonData).to.not.have.property('checkout_url');",
+                  "});",
+                  "pm.test('booking_ref echoed from request', function () {",
+                  "  pm.expect(pm.response.json().booking_ref).to.eql('TK-POSTMAN-PP-BODY');",
                   "});"
                 ]
               }
@@ -136,18 +247,76 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Idempotency-Key", "value": "PP-{{$timestamp}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"202\",\n  \"amount\": 2200.00,\n  \"currency\": \"THB\",\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+              "raw": "{\n  \"payment_id\": \"{{bodyOnlyMerchantPaymentId}}\",\n  \"booking_ref\": \"TK-POSTMAN-PP-BODY\",\n  \"amount\": 2200,\n  \"currency\": \"THB\",\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
             },
-            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            },
+            "description": "Request body sends booking_ref; response.booking_ref should match it."
           }
         },
         {
-          "name": "Idempotency Test (Send duplicate Idempotency-Key)",
+          "name": "Body-only Idempotency Retry (payment_id fallback)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.test('same PayMock id for same body payment_id', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('bodyOnlyPaymockId'));",
+                  "  pm.expect(jsonData.payment_id).to.eql(pm.collectionVariables.get('bodyOnlyMerchantPaymentId'));",
+                  "});",
+                  "pm.test('booking_ref echoed from request', function () {",
+                  "  pm.expect(pm.response.json().booking_ref).to.eql('TK-POSTMAN-PP-BODY');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"{{bodyOnlyMerchantPaymentId}}\",\n  \"booking_ref\": \"TK-POSTMAN-PP-BODY\",\n  \"amount\": 2200,\n  \"currency\": \"THB\",\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            },
+            "description": "Reuses the same body payment_id without an Idempotency-Key header; the controller falls back to payment_id as the key. Request body sends booking_ref; response.booking_ref should match it."
+          }
+        },
+        {
+          "name": "Header Idempotency Retry (Idempotency-Key header)",
           "event": [
             {
               "listen": "test",
@@ -155,10 +324,16 @@
                 "exec": [
                   "var jsonData = pm.response.json();",
                   "pm.test('same gateway id as first create', function () {",
-                  "  pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('paymentId'));",
+                  "  pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('cardPaymentId'));",
                   "});",
                   "pm.test('payment_id still present', function () {",
                   "  pm.expect(jsonData.payment_id).to.not.equal(null);",
+                  "});",
+                  "pm.test('Card response has no PromptPay URLs', function () {",
+                  "  pm.expect(jsonData).to.have.property('checkout_url');",
+                  "  pm.expect(jsonData).to.not.have.property('qrcode_url');",
+                  "  pm.expect(jsonData).to.not.have.property('bank_simulator_url');",
+                  "  pm.expect(jsonData.return_url).to.be.a('string').and.include('/booking/TK-260101-ABCDE');",
                   "});"
                 ]
               }
@@ -167,14 +342,30 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Idempotency-Key", "value": "{{bookingCode}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{cardIdempotencyKey}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\"\n}"
+              "raw": "{\n  \"payment_id\": \"{{cardMerchantPaymentId}}\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"expires_in\": 600\n}"
             },
-            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            },
+            "description": "Repeat the exact original body with the same Idempotency-Key header; the API uses this header value as the idempotency key."
           }
         },
         {
@@ -188,7 +379,7 @@
                   "pm.test('payment_id is not null', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(jsonData.payment_id).to.not.equal(null);",
-                  "  pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('paymentId'));",
+                  "  pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('paymockId'));",
                   "});"
                 ]
               }
@@ -196,22 +387,43 @@
           ],
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/v1/payments/{{paymentId}}", "host": ["{{baseUrl}}"], "path": ["v1", "payments", "{{paymentId}}"] },
-            "description": "path ใช้ response.id (txn_…) ไม่ใช่ payment_id ของร้านค้า"
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments/{{paymockId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments",
+                "{{paymockId}}"
+              ]
+            },
+            "description": "ใช้ id ใน path"
           }
         },
         {
           "name": "Cancel Payment (Before Paid)",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/v1/payments/{{paymentId}}/cancel", "host": ["{{baseUrl}}"], "path": ["v1", "payments", "{{paymentId}}", "cancel"] }
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments/{{paymockId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments",
+                "{{paymockId}}",
+                "cancel"
+              ]
+            }
           }
         }
       ]
     },
     {
       "name": "2. Hosted Card Checkout Redirect",
-      "description": "สร้าง Card payment ให้เป็น PENDING ก่อนด้วย POST /v1/payments แล้วเปิด checkout_url ในเบราว์เซอร์ ผู้ใช้กรอกบัตรบน Hosted Checkout และ form จะ POST /payments/{publicId} เพื่อชำระ payment เดิม ก่อน redirect กลับไปยัง return_url โดยไม่มี payment ID ใน URL",
+      "description": "สร้าง Card payment ให้เป็น PENDING ก่อนด้วย POST /v1/payments แล้วเปิด checkout_url ในเบราว์เซอร์ ผู้ใช้กรอกบัตรบน Hosted Checkout และ form จะ POST /payments/{id} เพื่อชำระ payment เดิม ก่อน redirect กลับไปยัง return_url โดยไม่มี payment ID ใน URL",
       "item": [
         {
           "name": "Step 1 – Create Card Payment (PENDING + checkout_url)",
@@ -226,6 +438,9 @@
                   "  pm.expect(jsonData.status).to.eql('PENDING');",
                   "  pm.expect(jsonData.payment_id).to.not.equal(null);",
                   "  pm.expect(jsonData.checkout_url).to.include('/checkout/');",
+                  "  pm.expect(jsonData).to.not.have.property('qrcode_url');",
+                  "  pm.expect(jsonData).to.not.have.property('bank_simulator_url');",
+                  "  pm.expect(jsonData.return_url).to.be.a('string').and.include('/booking/TK-260101-ABCDE');",
                   "});"
                 ]
               }
@@ -234,19 +449,73 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Idempotency-Key", "value": "CARD_PENDING_{{$timestamp}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"HOSTED_CARD_{{$timestamp}}\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"expires_in\": 600\n}"
+              "raw": "{\n  \"payment_id\": \"CARD_{{$guid}}\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"expires_in\": 600\n}"
             },
-            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            },
             "description": "คัดลอก checkout_url ไปเปิดใน browser หรือรัน request ถัดไปเพื่อจำลองการ submit form จาก hosted checkout"
           }
         },
         {
-          "name": "Step 2 – Submit card to POST /payments/{publicId}",
+          "name": "Step 1.5 ? GET checkout page and extract CSRF token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var html = pm.response.text();",
+                  "var csrfToken = null;",
+                  "var inputs = html.match(/<input\\b[^>]*>/gi) || [];",
+                  "inputs.some(function (input) {",
+                  "  var nameMatch = input.match(/\\bname=['\"]_token['\"]/i);",
+                  "  var valueMatch = input.match(/\\bvalue=['\"]([^'\"]+)['\"]/i);",
+                  "  if (nameMatch && valueMatch) { csrfToken = valueMatch[1]; return true; }",
+                  "  return false;",
+                  "});",
+                  "pm.test('Checkout page returns successfully', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('CSRF token found in checkout form', function () {",
+                  "  pm.expect(csrfToken, 'checkout form _token').to.be.a('string').and.not.empty;",
+                  "});",
+                  "if (csrfToken) pm.collectionVariables.set('csrfToken', csrfToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/checkout/{{hostedCardId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "checkout",
+                "{{hostedCardId}}"
+              ]
+            },
+            "description": "Run after Step 1 and before Step 2. GET the checkout HTML to establish the session cookie and save the hidden _token field as {{csrfToken}}."
+          }
+        },
+        {
+          "name": "Step 2 – Submit card to POST /payments/{id}",
           "event": [
             {
               "listen": "test",
@@ -254,7 +523,8 @@
                 "exec": [
                   "pm.test('Redirects to the merchant return URL', function () {",
                   "  pm.expect(pm.response.code).to.be.oneOf([302, 303]);",
-                  "  pm.expect(pm.response.headers.get('Location')).to.include('payment_id=');",
+                  "  pm.expect(pm.response.headers.get('Location')).to.include('/booking/TK-260101-ABCDE');",
+                  "  pm.expect(pm.response.headers.get('Location')).to.not.include('payment_id=');",
                   "});"
                 ]
               }
@@ -266,22 +536,51 @@
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
-                { "key": "card_number", "value": "4242 4242 4242 4242" },
-                { "key": "expiry", "value": "12/28" },
-                { "key": "cvc", "value": "123" },
-                { "key": "cardholder", "value": "SUCCESS USER" },
-                { "key": "redirect_to_return", "value": "1" }
+                {
+                  "key": "_token",
+                  "value": "{{csrfToken}}"
+                },
+                {
+                  "key": "card_number",
+                  "value": "4242 4242 4242 4242"
+                },
+                {
+                  "key": "expiry",
+                  "value": "12/28"
+                },
+                {
+                  "key": "cvc",
+                  "value": "123"
+                },
+                {
+                  "key": "cardholder",
+                  "value": "SUCCESS USER"
+                },
+                {
+                  "key": "redirect_to_return",
+                  "value": "1"
+                }
               ]
             },
-            "url": { "raw": "{{baseUrl}}/payments/{{hostedCardId}}", "host": ["{{baseUrl}}"], "path": ["payments", "{{hostedCardId}}"] },
+            "url": {
+              "raw": "{{baseUrl}}/payments/{{hostedCardId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "{{hostedCardId}}"
+              ]
+            },
             "description": "route ของ Hosted Checkout ที่ใช้ settle payment เดิม; ส่ง form fields จากหน้า checkout เท่านั้น ไม่ส่ง API key"
-          }
+          },
+          "description": "Submit the checkout form using the session cookie from Step 1.5 and the extracted CSRF token."
         }
       ]
     },
     {
       "name": "3. PromptPay – All Cases",
-      "description": "สร้างด้วย POST /v1/payments (method=promptpay, body.payment_id) → ได้ PENDING + payment_id แล้วจบด้วย simulate, bank-simulate หรือ cancel โดยใช้ response.id",
+      "description": "สร้างด้วย POST /v1/payments โดยส่ง body.payment_id (method=promptpay); response มี qrcode_url และ bank_simulator_url แต่ไม่มี checkout_url. เส้นทาง simulate, bank-simulate, GET และ cancel ใช้ id ใน path.",
       "item": [
         {
           "name": "PromptPay: Create (PENDING + QR URLs)",
@@ -293,7 +592,7 @@
                   "var jsonData = pm.response.json();",
                   "if (jsonData.id) {",
                   "  pm.collectionVariables.set('promptPayId', jsonData.id);",
-                  "  pm.collectionVariables.set('paymentId', jsonData.id);",
+                  "  pm.collectionVariables.set('paymockId', jsonData.id);",
                   "}",
                   "pm.test('PENDING PromptPay has payment_id', function () {",
                   "  pm.response.to.have.status(201);",
@@ -301,6 +600,11 @@
                   "  pm.expect(jsonData.payment_id).to.not.equal(null);",
                   "  pm.expect(jsonData.paid_at).to.equal(null);",
                   "  pm.expect(jsonData.qrcode_url).to.include('/qr.svg');",
+                  "  pm.expect(jsonData.bank_simulator_url).to.be.a('string');",
+                  "  pm.expect(jsonData).to.not.have.property('checkout_url');",
+                  "});",
+                  "pm.test('booking_ref echoed from request', function () {",
+                  "  pm.expect(pm.response.json().booking_ref).to.eql('TK-POSTMAN-PP-MAIN');",
                   "});"
                 ]
               }
@@ -309,37 +613,78 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Idempotency-Key", "value": "PP_CREATE_{{$timestamp}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 2200.00,\n  \"currency\": \"THB\",\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+              "raw": "{\n  \"payment_id\": \"PP_{{$guid}}\",\n  \"booking_ref\": \"TK-POSTMAN-PP-MAIN\",\n  \"amount\": 2200,\n  \"currency\": \"THB\",\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
             },
-            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] },
-            "description": "คาดหวัง: status=PENDING, payment_id ไม่เป็น null, paid_at=null, qrcode_url, bank_simulator_url"
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            },
+            "description": "คาดหวัง: status=PENDING, payment_id ไม่เป็น null, paid_at=null, qrcode_url, bank_simulator_url Request body sends booking_ref; response.booking_ref should match it."
           }
         },
         {
           "name": "PromptPay: GET QR SVG (no auth)",
           "request": {
             "method": "GET",
-            "auth": { "type": "noauth" },
-            "url": { "raw": "{{baseUrl}}/v1/payments/{{promptPayId}}/qr.svg", "host": ["{{baseUrl}}"], "path": ["v1", "payments", "{{promptPayId}}", "qr.svg"] }
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments/{{promptPayId}}/qr.svg",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments",
+                "{{promptPayId}}",
+                "qr.svg"
+              ]
+            }
           }
         },
         {
           "name": "PromptPay: Simulate COMPLETED (POST /checkout/.../simulate)",
           "request": {
             "method": "POST",
-            "auth": { "type": "noauth" },
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"status\": \"COMPLETED\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/checkout/{{promptPayId}}/simulate", "host": ["{{baseUrl}}"], "path": ["checkout", "{{promptPayId}}", "simulate"] },
-            "description": "รันหลัง Create — ใช้ {{promptPayId}} = response.id | ตั้ง paid_at=now(), ยิง webhook payment.completed"
+            "url": {
+              "raw": "{{baseUrl}}/checkout/{{promptPayId}}/simulate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "checkout",
+                "{{promptPayId}}",
+                "simulate"
+              ]
+            },
+            "description": "รันหลัง Create โดยใช้ payment id ใน path | ตั้ง paid_at=now(), ยิง webhook payment.completed"
           }
         },
         {
@@ -357,6 +702,12 @@
                       "pm.test('payment_id is not null', function () {",
                       "  pm.expect(j.payment_id).to.not.equal(null);",
                       "  pm.expect(j.status).to.eql('PENDING');",
+                      "  pm.expect(j.qrcode_url).to.include('/qr.svg');",
+                      "  pm.expect(j.bank_simulator_url).to.be.a('string');",
+                      "  pm.expect(j).to.not.have.property('checkout_url');",
+                      "});",
+                      "pm.test('booking_ref echoed from request', function () {",
+                      "  pm.expect(pm.response.json().booking_ref).to.eql('TK-POSTMAN-PP-FAIL');",
                       "});"
                     ]
                   }
@@ -365,27 +716,56 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "PP_FAIL_{{$timestamp}}" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 900.00,\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+                  "raw": "{\n  \"payment_id\": \"PP_{{$guid}}\",\n  \"booking_ref\": \"TK-POSTMAN-PP-FAIL\",\n  \"amount\": 900,\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
                 },
-                "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+                "url": {
+                  "raw": "{{baseUrl}}/v1/payments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "payments"
+                  ]
+                },
+                "description": "Request body sends booking_ref; response.booking_ref should match it."
               }
             },
             {
               "name": "Step 2 – Simulate FAILED",
               "request": {
                 "method": "POST",
-                "auth": { "type": "noauth" },
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"status\": \"FAILED\",\n  \"failure_code\": \"payment_declined\"\n}"
                 },
-                "url": { "raw": "{{baseUrl}}/checkout/{{promptPayFailId}}/simulate", "host": ["{{baseUrl}}"], "path": ["checkout", "{{promptPayFailId}}", "simulate"] }
+                "url": {
+                  "raw": "{{baseUrl}}/checkout/{{promptPayFailId}}/simulate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "checkout",
+                    "{{promptPayFailId}}",
+                    "simulate"
+                  ]
+                }
               }
             }
           ]
@@ -405,6 +785,12 @@
                       "pm.test('payment_id is not null', function () {",
                       "  pm.expect(j.payment_id).to.not.equal(null);",
                       "  pm.expect(j.status).to.eql('PENDING');",
+                      "  pm.expect(j.qrcode_url).to.include('/qr.svg');",
+                      "  pm.expect(j.bank_simulator_url).to.be.a('string');",
+                      "  pm.expect(j).to.not.have.property('checkout_url');",
+                      "});",
+                      "pm.test('booking_ref echoed from request', function () {",
+                      "  pm.expect(pm.response.json().booking_ref).to.eql('TK-POSTMAN-PP-BANK');",
                       "});"
                     ]
                   }
@@ -413,22 +799,46 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "PP_BANK_{{$timestamp}}" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 1800.00,\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+                  "raw": "{\n  \"payment_id\": \"PP_{{$guid}}\",\n  \"booking_ref\": \"TK-POSTMAN-PP-BANK\",\n  \"amount\": 1800,\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
                 },
-                "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+                "url": {
+                  "raw": "{{baseUrl}}/v1/payments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "payments"
+                  ]
+                },
+                "description": "Request body sends booking_ref; response.booking_ref should match it."
               }
             },
             {
               "name": "Step 2 – Bank simulate pay (redirect 302)",
               "request": {
                 "method": "POST",
-                "auth": { "type": "noauth" },
-                "url": { "raw": "{{baseUrl}}/bank-simulate/{{promptPayBankId}}/pay", "host": ["{{baseUrl}}"], "path": ["bank-simulate", "{{promptPayBankId}}", "pay"] },
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/bank-simulate/{{promptPayBankId}}/pay",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "bank-simulate",
+                    "{{promptPayBankId}}",
+                    "pay"
+                  ]
+                },
                 "description": "เทียบเท่ากดยืนยันในแอปธนาคาร → COMPLETED + paid_at"
               }
             },
@@ -450,7 +860,17 @@
               ],
               "request": {
                 "method": "GET",
-                "url": { "raw": "{{baseUrl}}/v1/payments/{{promptPayBankId}}", "host": ["{{baseUrl}}"], "path": ["v1", "payments", "{{promptPayBankId}}"] }
+                "url": {
+                  "raw": "{{baseUrl}}/v1/payments/{{promptPayBankId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "payments",
+                    "{{promptPayBankId}}"
+                  ]
+                }
               }
             }
           ]
@@ -469,6 +889,12 @@
                       "if (j.id) pm.collectionVariables.set('promptPayCancelId', j.id);",
                       "pm.test('payment_id is not null', function () {",
                       "  pm.expect(j.payment_id).to.not.equal(null);",
+                      "  pm.expect(j.qrcode_url).to.include('/qr.svg');",
+                      "  pm.expect(j.bank_simulator_url).to.be.a('string');",
+                      "  pm.expect(j).to.not.have.property('checkout_url');",
+                      "});",
+                      "pm.test('booking_ref echoed from request', function () {",
+                      "  pm.expect(pm.response.json().booking_ref).to.eql('TK-POSTMAN-PP-CANCEL');",
                       "});"
                     ]
                   }
@@ -477,22 +903,45 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "PP_CANCEL_{{$timestamp}}" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"payment_id\": \"12\",\n  \"amount\": 500.00,\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+                  "raw": "{\n  \"payment_id\": \"PP_{{$guid}}\",\n  \"booking_ref\": \"TK-POSTMAN-PP-CANCEL\",\n  \"amount\": 500,\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
                 },
-                "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] }
+                "url": {
+                  "raw": "{{baseUrl}}/v1/payments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "payments"
+                  ]
+                },
+                "description": "Request body sends booking_ref; response.booking_ref should match it."
               }
             },
             {
               "name": "Step 2 – POST /v1/payments/{id}/cancel",
               "request": {
                 "method": "POST",
-                "url": { "raw": "{{baseUrl}}/v1/payments/{{promptPayCancelId}}/cancel", "host": ["{{baseUrl}}"], "path": ["v1", "payments", "{{promptPayCancelId}}", "cancel"] },
-                "description": "path ใช้ response.id | คาดหวัง: ok=true, status=FAILED, failure_code=cancelled"
+                "url": {
+                  "raw": "{{baseUrl}}/v1/payments/{{promptPayCancelId}}/cancel",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "payments",
+                    "{{promptPayCancelId}}",
+                    "cancel"
+                  ]
+                },
+                "description": "ใช้ id ใน path | คาดหวัง: ok=true, status=FAILED, failure_code=cancelled"
               }
             }
           ]
@@ -514,7 +963,17 @@
           ],
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/v1/payments/{{promptPayId}}", "host": ["{{baseUrl}}"], "path": ["v1", "payments", "{{promptPayId}}"] }
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments/{{promptPayId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments",
+                "{{promptPayId}}"
+              ]
+            }
           }
         }
       ]
@@ -542,7 +1001,16 @@
           ],
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/v1/payments", "host": ["{{baseUrl}}"], "path": ["v1", "payments"] },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            },
             "description": "ดูว่า Admin ตั้ง chaos_mode / webhook_mode อะไรอยู่ — recent[].payment_id ต้องไม่เป็น null"
           }
         }
@@ -550,53 +1018,116 @@
     },
     {
       "name": "5. Concert Backend — Hosted Card Redirect + PromptPay",
-      "description": "create-booking สร้าง booking + Concert payment แรก. เมื่อ method=card ระบบคืน checkout_url เพื่อเปิด Hosted Checkout (/checkout/{publicId}) และหลังจ่าย Gateway กลับ /booking/{bookingId}?payment_id={publicId}; หน้าจองเรียก booking-status เพื่ออ่าน DB ใหม่. หาก FAILED/EXPIRED ให้สร้าง Concert payment ใหม่ใน booking เดิมด้วย POST /api/bookings/{bookingId}/payments.",
+      "description": "create-booking สร้าง booking + Concert payment แรก. เมื่อ method=card ระบบคืน checkout_url เพื่อเปิด Hosted Checkout (/checkout/{id}) และหลังจ่าย Gateway กลับ /booking/{booking_ref} โดยไม่มี payment ID ใน URL; หน้าจองอ่านสถานะจาก DB ใหม่. Concert demo API ใช้ query/body.payment_id. หาก FAILED/EXPIRED ให้สร้าง Concert payment ใหม่ใน booking เดิมด้วย POST /api/bookings/{bookingId}/payments.",
       "item": [
         {
           "name": "POST create-booking",
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "var j = pm.response.json();",
-              "pm.test('booking and payment created', function () { pm.expect(j.ok).to.eql(true); pm.expect(j.booking_id).to.be.a('number'); });",
-              "if (j.ok) { pm.collectionVariables.set('bookingId', String(j.booking_id)); pm.collectionVariables.set('paymentId', j.payment_id); }"
-            ] }
-          }],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json();",
+                  "pm.test('booking and payment created', function () { pm.expect(j.ok).to.eql(true); pm.expect(j.booking_id).to.be.a('number'); });",
+                  "if (j.ok) { pm.collectionVariables.set('bookingId', String(j.booking_id)); pm.collectionVariables.set('concertPaymentId', j.payment_id); }"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
-            "auth": { "type": "noauth" },
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"seat\": \"VIP-A1\",\n  \"amount\": 3500.00,\n  \"method\": \"card\"\n}" },
-            "url": { "raw": "{{concertUrl}}/api/create-booking", "host": ["{{concertUrl}}"], "path": ["api", "create-booking"] }
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seat\": \"VIP-A1\",\n  \"amount\": 3500.00,\n  \"method\": \"card\"\n}"
+            },
+            "url": {
+              "raw": "{{concertUrl}}/api/create-booking",
+              "host": [
+                "{{concertUrl}}"
+              ],
+              "path": [
+                "api",
+                "create-booking"
+              ]
+            }
           }
         },
         {
           "name": "POST /api/bookings/{bookingId}/payments — Payment ใหม่ใน Booking เดิม",
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "var j = pm.response.json();",
-              "pm.test('same booking, new Concert payment', function () { pm.expect(j.ok).to.eql(true); pm.expect(String(j.booking_id)).to.eql(pm.collectionVariables.get('bookingId')); pm.expect(j.concert_payment_id).to.be.a('number'); });",
-              "if (j.ok) pm.collectionVariables.set('paymentId', j.payment_id);"
-            ] }
-          }],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json();",
+                  "pm.test('same booking, new Concert payment', function () { pm.expect(j.ok).to.eql(true); pm.expect(String(j.booking_id)).to.eql(pm.collectionVariables.get('bookingId')); pm.expect(j.concert_payment_id).to.be.a('number'); });",
+                  "if (j.ok) pm.collectionVariables.set('concertPaymentId', j.payment_id);"
+                ]
+              }
+            }
+          ],
           "request": {
-            "method": "POST", "auth": { "type": "noauth" },
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"method\": \"card\"\n}" },
-            "url": { "raw": "{{concertUrl}}/api/bookings/{{bookingId}}/payments", "host": ["{{concertUrl}}"], "path": ["api", "bookings", "{{bookingId}}", "payments"] }
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"card\"\n}"
+            },
+            "url": {
+              "raw": "{{concertUrl}}/api/bookings/{{bookingId}}/payments",
+              "host": [
+                "{{concertUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "{{bookingId}}",
+                "payments"
+              ]
+            }
           }
         },
         {
           "name": "GET booking-status ?payment_id=",
           "request": {
             "method": "GET",
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "url": {
-              "raw": "{{concertUrl}}/api/booking-status?payment_id={{paymentId}}",
-              "host": ["{{concertUrl}}"],
-              "path": ["api", "booking-status"],
-              "query": [{ "key": "payment_id", "value": "{{paymentId}}" }]
+              "raw": "{{concertUrl}}/api/booking-status?payment_id={{concertPaymentId}}",
+              "host": [
+                "{{concertUrl}}"
+              ],
+              "path": [
+                "api",
+                "booking-status"
+              ],
+              "query": [
+                {
+                  "key": "payment_id",
+                  "value": "{{concertPaymentId}}"
+                }
+              ]
             }
           }
         },
@@ -604,26 +1135,58 @@
           "name": "POST reconcile-booking { payment_id }",
           "request": {
             "method": "POST",
-            "auth": { "type": "noauth" },
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"{{paymentId}}\"\n}"
+              "raw": "{\n  \"payment_id\": \"{{concertPaymentId}}\"\n}"
             },
-            "url": { "raw": "{{concertUrl}}/api/reconcile-booking", "host": ["{{concertUrl}}"], "path": ["api", "reconcile-booking"] }
+            "url": {
+              "raw": "{{concertUrl}}/api/reconcile-booking",
+              "host": [
+                "{{concertUrl}}"
+              ],
+              "path": [
+                "api",
+                "reconcile-booking"
+              ]
+            }
           }
         },
         {
           "name": "POST cancel-booking { payment_id }",
           "request": {
             "method": "POST",
-            "auth": { "type": "noauth" },
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": \"{{paymentId}}\"\n}"
+              "raw": "{\n  \"payment_id\": \"{{concertPaymentId}}\"\n}"
             },
-            "url": { "raw": "{{concertUrl}}/api/cancel-booking", "host": ["{{concertUrl}}"], "path": ["api", "cancel-booking"] }
+            "url": {
+              "raw": "{{concertUrl}}/api/cancel-booking",
+              "host": [
+                "{{concertUrl}}"
+              ],
+              "path": [
+                "api",
+                "cancel-booking"
+              ]
+            }
           }
         }
       ]
