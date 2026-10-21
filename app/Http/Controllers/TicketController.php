@@ -5,11 +5,12 @@
  * สร้างและดึงข้อมูลบัตร (E-Ticket) ของคำสั่งซื้อ
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 18/20.2569
- * Updated : 21/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 21/10/2569 67160279 กนกพล แซ่ตั๊น
  */
 
 namespace App\Http\Controllers;
 
+use App\Models\Concert;
 use App\Models\CustomerOrder;
 use App\Models\Ticket;
 use Endroid\QrCode\Encoding\Encoding;
@@ -18,15 +19,23 @@ use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use RuntimeException;
+use Throwable;
 
 class TicketController extends Controller
 {
     /* จำนวนคำสั่งซื้อต่อหน้าในหน้าประวัติการสั่งซื้อ */
     private const ORDERS_PER_PAGE = 10;
+
     private const TICKETS_PER_PAGE = 10;
+
     private const QR_CODE_SIZE = 320;
+
     private const THAI_MONTHS = [
         1 => 'ม.ค.',
         2 => 'ก.พ.',
@@ -48,38 +57,56 @@ class TicketController extends Controller
      * param : orderId
      * return : Collection ของ Ticket
      */
-    public function generateTickets(int $orderId): \Illuminate\Support\Collection
+    public function generateTickets(int $orderId): Collection
     {
-        $order   = CustomerOrder::with(['booking.bookingSeats.seat.zone', 'booking.standingItems', 'booking.concert'])->findOrFail($orderId);
-        $booking = $order->booking;
-        $tickets = collect();
+        return DB::transaction(fn () => $this->createTicketsForOrder($orderId));
+    }
 
-        // รหัสบัตร TKT-[รหัสคอนเสิร์ต]-[ปีเดือนวัน]-[ลำดับ 5 หลัก] เช่น TKT-C0024-260901-00187 (ลำดับนับต่อคอนเสิร์ตต่อวัน)
-        // ล็อกแถวคอนเสิร์ตไว้ระหว่างออกเลข (เรียกจากใน transaction ของ completePayment) กันเลขลำดับซ้ำ
-        $concert = \App\Models\Concert::whereKey($booking->concert_id)->lockForUpdate()->firstOrFail();
-        $concertCode = $concert->concert_code ?: 'C' . str_pad((string) $concert->concert_id, 4, '0', STR_PAD_LEFT);
-        $ticketPrefix = 'TKT-' . $concertCode . '-' . now()->format('ymd') . '-';
-        $ticketSeq = (int) Ticket::where('ticket_code', 'like', $ticketPrefix . '%')
-            ->selectRaw("MAX(CAST(SUBSTRING_INDEX(ticket_code, '-', -1) AS UNSIGNED)) AS seq")
-            ->value('seq');
+    /**
+     * createTicketsForOrder(orderId)
+     * สร้างตั๋วและเลขลำดับขณะล็อกคอนเสิร์ตใน transaction
+     * param : orderId
+     * return : Collection ของ Ticket
+     */
+    private function createTicketsForOrder(int $orderId): Collection
+    {
+        $order = CustomerOrder::with([
+            'booking.bookingSeats.seat.zone',
+            'booking.bookingStandingItems.zone',
+            'booking.concert',
+        ])->findOrFail($orderId);
+        $booking = $order->booking;
+        $concert = Concert::query()
+            ->whereKey($booking->concert_id)
+            ->lockForUpdate()
+            ->firstOrFail();
+        $concertCode = $this->normalizeConcertPublicCode($concert->concert_code);
+        $lastSequence = $this->findLastTicketSequence($concertCode);
+
+        $tickets = collect();
 
         // ── SEATED tickets ──────────────────────────────────────
         foreach ($booking->bookingSeats as $bookingSeat) {
             $seat = $bookingSeat->seat;
             $zone = $seat->zone;
+            $lastSequence++;
+
+            if ($lastSequence > 999999) {
+                throw new RuntimeException("Ticket sequence is exhausted for concert {$concertCode}.");
+            }
 
             $ticket = Ticket::create([
-                'order_id'             => $orderId,
-                'zone_id'              => $zone->zone_id,
-                'seat_id'              => $seat->seat_id,
-                'qr_code'              => hash('sha256', $orderId . $seat->seat_id . Str::uuid()),
-                'is_used'              => false,
-                'ticket_code'          => $ticketPrefix . str_pad((string) ++$ticketSeq, 5, '0', STR_PAD_LEFT),
-                'quantity'             => null,
-                'zone_name_snapshot'   => $bookingSeat->zone_name_snapshot,
-                'seat_label_snapshot'  => $bookingSeat->seat_label_snapshot,
-                'unit_price_snapshot'  => $bookingSeat->unit_price_snapshot,
-                'created_at'           => now(),
+                'order_id' => $orderId,
+                'zone_id' => $zone->zone_id,
+                'seat_id' => $seat->seat_id,
+                'qr_code' => hash('sha256', $orderId.$seat->seat_id.Str::uuid()),
+                'is_used' => false,
+                'ticket_code' => sprintf('TKT-%s-%06d', $concertCode, $lastSequence),
+                'quantity' => null,
+                'zone_name_snapshot' => $bookingSeat->zone_name_snapshot,
+                'seat_label_snapshot' => $bookingSeat->seat_label_snapshot,
+                'unit_price_snapshot' => $bookingSeat->unit_price_snapshot,
+                'created_at' => now(),
             ]);
 
             // mark seat as SOLD
@@ -88,27 +115,77 @@ class TicketController extends Controller
             $tickets->push($ticket);
         }
 
-        // ── STANDING tickets ────────────────────────────────────
-        // อ่านจำนวนบัตรจาก booking_standing_item แล้วออกบัตร 1 ใบต่อ 1 คน (แต่ละใบมี QR ของตัวเอง สแกนเข้างานทีละคน)
-        foreach ($booking->standingItems as $standingItem) {
-            for ($i = 0; $i < (int) $standingItem->quantity; $i++) {
-                $tickets->push(Ticket::create([
-                    'order_id'             => $orderId,
-                    'zone_id'              => $standingItem->zone_id,
-                    'seat_id'              => null,
-                    'qr_code'              => hash('sha256', $orderId . $standingItem->zone_id . $i . Str::uuid()),
-                    'is_used'              => false,
-                    'ticket_code'          => $ticketPrefix . str_pad((string) ++$ticketSeq, 5, '0', STR_PAD_LEFT),
-                    'quantity'             => 1,
-                    'zone_name_snapshot'   => $standingItem->zone_name_snapshot,
-                    'seat_label_snapshot'  => 'บัตรยืน',
-                    'unit_price_snapshot'  => $standingItem->unit_price_snapshot,
-                    'created_at'           => now(),
-                ]));
+        foreach ($booking->bookingStandingItems as $bookingStandingItem) {
+            $zone = $bookingStandingItem->zone;
+
+            if (! $zone || $zone->zone_type !== 'STANDING') {
+                throw new RuntimeException('A standing booking references an invalid zone.');
+            }
+
+            for ($ticketIndex = 0; $ticketIndex < $bookingStandingItem->quantity; $ticketIndex++) {
+                $lastSequence++;
+
+                if ($lastSequence > 999999) {
+                    throw new RuntimeException("Ticket sequence is exhausted for concert {$concertCode}.");
+                }
+
+                $ticket = Ticket::create([
+                    'order_id' => $orderId,
+                    'zone_id' => $zone->zone_id,
+                    'seat_id' => null,
+                    'qr_code' => hash('sha256', $orderId.$zone->zone_id.Str::uuid()),
+                    'is_used' => false,
+                    'ticket_code' => sprintf('TKT-%s-%06d', $concertCode, $lastSequence),
+                    'quantity' => 1,
+                    'zone_name_snapshot' => $bookingStandingItem->zone_name_snapshot,
+                    'seat_label_snapshot' => 'บัตรยืน',
+                    'unit_price_snapshot' => $bookingStandingItem->unit_price_snapshot,
+                    'created_at' => now(),
+                ]);
+
+                $tickets->push($ticket);
             }
         }
 
         return $tickets;
+    }
+
+    /**
+     * normalizeConcertPublicCode(concertCode)
+     * จัดรูป concert_code แบบเดิมให้เป็น 1 ตัวอักษรตามด้วยตัวเลข 6 หลัก
+     * param : concertCode
+     * return : string
+     */
+    private function normalizeConcertPublicCode(string $concertCode): string
+    {
+        if (! preg_match('/^([A-Z])([0-9]{1,6})$/i', $concertCode, $matches) || (int) $matches[2] === 0) {
+            throw new RuntimeException("Concert code [{$concertCode}] cannot be used in a ticket code.");
+        }
+
+        return strtoupper($matches[1]).str_pad($matches[2], 6, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * findLastTicketSequence(concertCode)
+     * หาเลข ticket sequence ล่าสุดเพื่อเริ่ม counter สำหรับคอนเสิร์ตนี้
+     * param : concertCode
+     * return : int
+     */
+    private function findLastTicketSequence(string $concertCode): int
+    {
+        $pattern = '/^TKT-'.preg_quote($concertCode, '/').'-([0-9]{6})$/i';
+        $ticketCodes = Ticket::query()
+            ->where('ticket_code', 'like', "TKT-{$concertCode}-%")
+            ->pluck('ticket_code');
+        $lastSequence = 0;
+
+        foreach ($ticketCodes as $ticketCode) {
+            if (preg_match($pattern, $ticketCode, $matches)) {
+                $lastSequence = max($lastSequence, (int) $matches[1]);
+            }
+        }
+
+        return $lastSequence;
     }
 
     /**
@@ -117,12 +194,12 @@ class TicketController extends Controller
      * param : customerId
      * return : Collection ของ Ticket
      */
-    public function getTickets(int $customerId): \Illuminate\Support\Collection
+    public function getTickets(int $customerId): Collection
     {
         return Ticket::with(['zone', 'seat', 'order.booking.concert'])
             ->whereHas('order.booking', function ($q) use ($customerId) {
                 $q->where('user_id', $customerId)
-                  ->where('status', 'CONFIRMED');
+                    ->where('status', 'CONFIRMED');
             })
             ->get();
     }
@@ -158,7 +235,7 @@ class TicketController extends Controller
                     'venue' => $order?->venue_snapshot ?: $concert?->venue ?: 'ไม่ระบุสถานที่',
                     'zone' => $ticket->zone_name_snapshot ?: $ticket->zone?->name ?: 'ไม่ระบุโซน',
                     'seat' => $ticket->seat_label_snapshot
-                        ?: ($ticket->seat ? $ticket->seat->row . $ticket->seat->number : 'บัตรยืน'),
+                        ?: ($ticket->seat ? $ticket->seat->row.$ticket->seat->number : 'บัตรยืน'),
                 ];
             });
 
@@ -187,6 +264,16 @@ class TicketController extends Controller
         $eventDate = $concert?->event_datetime ?? $order?->event_datetime_snapshot;
         $organization = $concert?->organization;
 
+        try {
+            $qrCode = $this->generateTicketQrCode($ticket->ticket_code);
+        } catch (Throwable $exception) {
+            Log::error('Unable to generate ticket QR code.', [
+                'ticket_id' => $ticket->ticket_id,
+                'exception' => $exception,
+            ]);
+            $qrCode = null;
+        }
+
         return response()->json([
             'ticket_code' => $ticket->ticket_code,
             'concert_name' => $order?->concert_name_snapshot ?: $concert?->name ?: 'ไม่ระบุชื่อคอนเสิร์ต',
@@ -194,8 +281,8 @@ class TicketController extends Controller
             'event_time' => $eventDate?->format('H:i') ?? 'ไม่ระบุเวลา',
             'zone' => $ticket->zone_name_snapshot ?: $ticket->zone?->name ?: 'ไม่ระบุโซน',
             'seat' => $ticket->seat_label_snapshot
-                ?: ($ticket->seat ? $ticket->seat->row . $ticket->seat->number : 'บัตรยืน'),
-            'qr_code' => $this->generateTicketQrCode($ticket->ticket_code),
+                ?: ($ticket->seat ? $ticket->seat->row.$ticket->seat->number : 'บัตรยืน'),
+            'qr_code' => $qrCode,
             'contact' => [
                 'phone' => $organization?->phone ?: '-',
                 'line' => $organization?->line ?: '-',
@@ -219,7 +306,7 @@ class TicketController extends Controller
             ->setSize(self::QR_CODE_SIZE)
             ->setMargin(12);
 
-        return (new PngWriter())->write($qrCode)->getDataUri();
+        return (new PngWriter)->write($qrCode)->getDataUri();
     }
 
     /**
@@ -233,12 +320,12 @@ class TicketController extends Controller
         $userId = Auth::id();
 
         $orders = CustomerOrder::with([
-                'booking.concert',
-                'booking.bookingSeats',
-                'tickets',
-                'payment',
-            ])
-            ->whereHas('booking', fn($q) => $q->where('user_id', $userId))
+            'booking.concert',
+            'booking.bookingSeats',
+            'tickets',
+            'payment',
+        ])
+            ->whereHas('booking', fn ($q) => $q->where('user_id', $userId))
             ->orderBy('order_date', 'desc')
             ->paginate(self::ORDERS_PER_PAGE);
 
