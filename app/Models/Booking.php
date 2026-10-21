@@ -17,9 +17,13 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Booking extends Model
 {
     protected $table = 'booking';
+
     protected $primaryKey = 'booking_id';
+
     public $incrementing = true;
+
     protected $keyType = 'int';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -35,8 +39,8 @@ class Booking extends Model
 
     protected $casts = [
         'booking_date' => 'datetime',
-        'expiry_time'  => 'datetime',
-        'updated_at'   => 'datetime',
+        'expiry_time' => 'datetime',
+        'updated_at' => 'datetime',
         'total_amount' => 'decimal:2',
     ];
 
@@ -125,6 +129,17 @@ class Booking extends Model
     public function bookingSeats(): HasMany
     {
         return $this->hasMany(BookingSeat::class, 'booking_id', 'booking_id');
+    }
+
+    /**
+     * bookingStandingItems()
+     * ความสัมพันธ์กับจำนวนบัตรยืนที่จองไว้
+     * param : -
+     * return : HasMany BookingStandingItem
+     */
+    public function bookingStandingItems(): HasMany
+    {
+        return $this->hasMany(BookingStandingItem::class, 'booking_id', 'booking_id');
     }
 
     /**
