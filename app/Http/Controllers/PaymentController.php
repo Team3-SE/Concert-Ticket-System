@@ -35,8 +35,11 @@ class PaymentController extends Controller
     /* ตัวเลือกประกันที่รับได้ */
     private const PROTECTION_OPTIONS = ['show', 'travel', 'none'];
 
-    /* รูปแบบหมายเลขคำสั่งซื้อ ORD-[รหัสคอนเสิร์ต]-[ปีเดือนวัน]-[ลำดับ 5 หลัก] */
-    private const ORDER_CODE_PATTERN = '/^ORD-[A-Z0-9]+-\d{6}-\d{5}$/';
+    /* รูปแบบหมายเลขคำสั่งซื้อตาม Public Code Format Specification V2.0.0: ORD-[A-Z][0-9]{6}-[0-9]{6} */
+    private const ORDER_CODE_PATTERN = '/^ORD-[A-Z][0-9]{6}-[0-9]{6}$/';
+
+    /* ลำดับสูงสุดของรหัสต่อคอนเสิร์ต (6 หลัก) */
+    private const MAX_CODE_SEQUENCE = 999999;
 
     /* แปลงช่องทางชำระเงินจากหน้าเว็บเป็นค่าที่เก็บในตาราง payment */
     private const METHOD_MAP = ['promptpay' => 'PROMPTPAY', 'credit' => 'CREDIT_CARD'];
@@ -57,7 +60,7 @@ class PaymentController extends Controller
             }
 
             $booking = $this->findOwnBooking($request, $bookingId);
-            $booking->loadMissing(['bookingSeats', 'standingItems', 'concert.organization']);
+            $booking->loadMissing(['bookingSeats', 'bookingStandingItems', 'concert.organization']);
 
             if ($booking->status !== 'PENDING_PAYMENT') {
                 return redirect()->route('orders.history');
@@ -71,7 +74,7 @@ class PaymentController extends Controller
             $concert = $booking->concert;
             $user = $request->user();
             $seats = $booking->bookingSeats;
-            $standing = $booking->standingItems;
+            $standing = $booking->bookingStandingItems;
             $pendingPayment = $booking->payments()->where('status', 'PENDING')->latest('payment_id')->first();
 
             $checkout = [
@@ -154,7 +157,7 @@ class PaymentController extends Controller
                 'protectionFee' => $data['protection'] === 'none' ? 0 : self::PROTECTION_FEE,
             ]);
 
-            // รายการที่ออกเลขไว้ก่อนเปลี่ยนรูปแบบ (เช่น ORD-ZISQRXU9) ให้ออกเลขใหม่เป็น ORD-C0024-261021-00001
+            // รายการที่ออกเลขไว้ก่อนเปลี่ยนรูปแบบ (เช่น ORD-ZISQRXU9, ORD-C0024-261021-00001) ให้ออกเลขใหม่เป็น ORD-C000024-000001
             if (!preg_match(self::ORDER_CODE_PATTERN, (string) ($metadata['orderCode'] ?? ''))) {
                 $metadata['orderCode'] = \Illuminate\Support\Facades\DB::transaction(function () use ($booking) {
                     $concert = Concert::whereKey($booking->concert_id)->lockForUpdate()->firstOrFail();
@@ -341,29 +344,37 @@ class PaymentController extends Controller
 
     /**
      * generateOrderCode(concert)
-     * สร้างหมายเลขคำสั่งซื้อ ORD-[รหัสคอนเสิร์ต]-[ปีเดือนวัน]-[ลำดับ 5 หลัก] เช่น ORD-C0024-260901-00038
-     * ลำดับนับต่อคอนเสิร์ตต่อวัน รวมเลขที่ออกไว้แล้วในรายการชำระเงินที่ยังรอชำระด้วย จึงไม่ซ้ำกัน
+     * สร้างหมายเลขคำสั่งซื้อ ORD-[รหัสคอนเสิร์ต 7 ตัว]-[ลำดับ 6 หลัก] เช่น ORD-C000024-000038 (Public Code Format Specification V2.0.0)
+     * ลำดับนับต่อคอนเสิร์ต ไม่ผูกกับวันที่ รวมเลขที่ออกไว้แล้วในรายการชำระเงินทุกรายการ จึงไม่ออกเลขซ้ำกับที่เคยแสดงให้ผู้ใช้เห็น
+     * ต้องเรียกระหว่างที่ล็อกแถวคอนเสิร์ต (lockForUpdate ใน transaction) เพื่อให้ออกเลขแบบ atomic
      * param : concert
      * return : string หมายเลขคำสั่งซื้อ
      */
     private function generateOrderCode(Concert $concert): string
     {
-        $concertCode = $concert->concert_code ?: 'C' . str_pad((string) $concert->concert_id, 4, '0', STR_PAD_LEFT);
-        $prefix = 'ORD-' . $concertCode . '-' . now()->format('ymd') . '-';
-        $lastSeq = "CAST(SUBSTRING_INDEX(%s, '-', -1) AS UNSIGNED)";
+        $prefix = 'ORD-' . $concert->publicCode() . '-';
+        $pattern = '/^' . preg_quote($prefix, '/') . '([0-9]{6})$/';
 
-        $maxOrderSeq = (int) CustomerOrder::where('order_code', 'like', $prefix . '%')
-            ->selectRaw('MAX(' . sprintf($lastSeq, 'order_code') . ') AS seq')
-            ->value('seq');
+        $orderCodes = CustomerOrder::where('order_code', 'like', $prefix . '%')->pluck('order_code');
 
         $metaCode = "JSON_UNQUOTE(JSON_EXTRACT(payment_metadata, '$.orderCode'))";
-        $maxPendingSeq = (int) Payment::whereRaw("{$metaCode} LIKE ?", [$prefix . '%'])
-            ->selectRaw('MAX(' . sprintf($lastSeq, $metaCode) . ') AS seq')
-            ->value('seq');
+        $issuedCodes = Payment::whereRaw("{$metaCode} LIKE ?", [$prefix . '%'])
+            ->selectRaw("{$metaCode} AS order_code")
+            ->pluck('order_code');
 
-        $next = max($maxOrderSeq, $maxPendingSeq) + 1;
+        $lastSequence = 0;
+        foreach ($orderCodes->merge($issuedCodes) as $code) {
+            if (preg_match($pattern, (string) $code, $matches)) {
+                $lastSequence = max($lastSequence, (int) $matches[1]);
+            }
+        }
 
-        return $prefix . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
+        $next = $lastSequence + 1;
+        if ($next > self::MAX_CODE_SEQUENCE) {
+            throw new \RuntimeException("Order sequence is exhausted for concert {$concert->publicCode()}.");
+        }
+
+        return $prefix . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
     }
 
     /**

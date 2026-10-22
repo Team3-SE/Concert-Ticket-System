@@ -31,7 +31,7 @@ class OrderController extends Controller
         $orders = CustomerOrder::with([
                 'booking.concert',
                 'booking.bookingSeats',
-                'booking.standingItems',
+                'booking.bookingStandingItems',
                 'tickets.zone',
                 'tickets.seat',
                 'payment',

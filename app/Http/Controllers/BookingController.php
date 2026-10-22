@@ -66,6 +66,7 @@ class BookingController extends Controller
             $rows = [];
             $cols = [];
             $occupied = [];
+            $capacity = (int) $zone->capacity;   // โซนยืน: ความจุตามที่ตั้งไว้ในโซน (โซนนั่งนับจากจำนวนที่นั่งด้านล่าง)
             if (! $isStanding) {
                 $seats = $zone->seats()->get(['row', 'number', 'seat_booking_status']);
                 $rows = $seats->pluck('row')->unique()->sort()->values()->all();

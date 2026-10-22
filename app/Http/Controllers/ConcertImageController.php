@@ -107,7 +107,8 @@ class ConcertImageController extends Controller
 
         $rules = [
             'organization_id'      => ['required', 'integer', 'exists:organization,organization_id'],
-            'concert_code'         => ['required', 'string', 'max:100', Rule::unique('concert', 'concert_code')->ignore($concert->concert_id, 'concert_id')],
+            // Public Code Format Specification V2.0.0: ตัวอักษร 1 ตัว + ตัวเลข (ระบบเติม 0 ให้ครบ 6 หลักตอนออกรหัส)
+            'concert_code'         => ['required', 'string', 'max:100', 'regex:' . Concert::CODE_INPUT_PATTERN, Rule::unique('concert', 'concert_code')->ignore($concert->concert_id, 'concert_id')],
             'name'                 => ['required', 'string', 'max:255'],
             'artist'               => ['nullable', 'string', 'max:255'],
             'venue'                => ['nullable', 'string', 'max:255'],
@@ -142,6 +143,13 @@ class ConcertImageController extends Controller
         }
 
         $data = $request->validate($rules, $this->validationMessages(), $this->validationAttributes());
+
+        // รหัสคอนเสิร์ตอยู่ในรหัสคำสั่งซื้อ/บัตรที่ออกไปแล้ว (ห้ามเปลี่ยนตามเอกสาร Public Code) จึงแก้ไม่ได้เมื่อมีการจองแล้ว
+        if (strcasecmp((string) $data['concert_code'], (string) $concert->concert_code) !== 0 && $concert->bookings()->exists()) {
+            return back()->withInput()->withErrors([
+                'concert_code' => 'เปลี่ยนรหัสคอนเสิร์ตไม่ได้ เพราะคอนเสิร์ตนี้มีการจองแล้ว',
+            ]);
+        }
 
         // ตรวจเงื่อนไขของโซนก่อนเริ่มบันทึก (โซนที่มีการจองแล้ว แก้โครงสร้าง/ลบไม่ได้)
         [$zoneOps, $zoneErrors] = $this->planZoneChanges($concert, $data['zones'] ?? []);
@@ -562,6 +570,7 @@ class ConcertImageController extends Controller
             'image'        => ':attribute ต้องเป็นไฟล์รูปภาพ',
             'mimes'        => ':attribute รองรับเฉพาะ JPEG, PNG, WEBP',
             'sale_end_datetime.after_or_equal' => 'วันปิดขายต้องไม่ก่อนวันเปิดขาย',
+            'concert_code.regex' => 'รหัสคอนเสิร์ตต้องเป็นตัวอักษรภาษาอังกฤษ 1 ตัวตามด้วยตัวเลข 1–6 หลัก เช่น C000024',
         ];
     }
 

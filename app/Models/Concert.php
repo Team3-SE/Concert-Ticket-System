@@ -5,6 +5,7 @@
  * คอนเสิร์ต (ตาราง concert)
  * Author :
  * Created :
+ * Updated : 21/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -54,6 +55,36 @@ class Concert extends Model
     // Methods from Specification
     // ==========================================
 
+
+    /* รูปแบบ concert_code ที่แปลงเป็น Public Code ได้: ตัวอักษร 1 ตัว + ตัวเลข 1-6 หลัก (เช่น C0024, C000024) */
+    public const CODE_INPUT_PATTERN = '/^[A-Za-z](?!0+$)[0-9]{1,6}$/';
+
+    /**
+     * publicCode()
+     * รหัสคอนเสิร์ตแบบ Public Code (ตัวอักษร 1 ตัว + ตัวเลข 6 หลัก เช่น C0024 -> C000024)
+     * ใช้เป็นส่วน CONCERT ของรหัส ORD / TKT / ERR ตามเอกสาร Public Code Format Specification V2.0.0
+     * param : -
+     * return : string
+     */
+    public function publicCode(): string
+    {
+        return self::normalizePublicCode((string) $this->concert_code);
+    }
+
+    /**
+     * normalizePublicCode(concertCode)
+     * แปลง concert_code เป็นรูปแบบ [A-Z][0-9]{6} (เลข 000000 ใช้ไม่ได้ตามเอกสาร)
+     * param : concertCode
+     * return : string
+     */
+    public static function normalizePublicCode(string $concertCode): string
+    {
+        if (!preg_match('/^([A-Z])([0-9]{1,6})$/i', trim($concertCode), $matches) || (int) $matches[2] === 0) {
+            throw new \RuntimeException("Concert code [{$concertCode}] cannot be used in a public code.");
+        }
+
+        return strtoupper($matches[1]) . str_pad($matches[2], 6, '0', STR_PAD_LEFT);
+    }
     /**
      * getDetails()
      * สรุปรายละเอียดคอนเสิร์ต (รหัส ศิลปิน สถานที่ วันเวลา ช่วงขายบัตร สถานะ)

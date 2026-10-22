@@ -51,7 +51,7 @@
             $seatGroups = $seats->groupBy(fn($s) => $s->zone_name_snapshot ?? '–');
 
             // โซนยืน: ไม่มีเลขที่นั่ง แสดงเป็น "โซน Standing : บัตรยืน x 2"
-            $standingItems = $booking?->standingItems ?? collect();
+            $standingItems = $booking?->bookingStandingItems ?? collect();
 
             // ยอดรวม: จาก payment ถ้ามี ไม่งั้น booking
             $totalAmount = $order->payment?->amount ?? $booking?->total_amount ?? 0;

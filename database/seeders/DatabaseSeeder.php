@@ -171,7 +171,7 @@ class DatabaseSeeder extends Seeder
         $vipSeats = DB::table('seat')->where('zone_id', $rockVipZoneId)->orderBy('row')->orderBy('number')->take(2)->get();
         
         $seatBookingId = DB::table('booking')->insertGetId([
-            'booking_code' => $this->makeCode('BKG', 'C024'),
+            'booking_code' => $this->makeCode('BKG'),   // booking_code เป็นรหัสภายใน (ไม่ใช่ Public Code)
             'user_id' => $user1Id,
             'concert_id' => $concertRockId,
             'booking_date' => $now->copy()->subMinutes(30),
@@ -331,12 +331,12 @@ class DatabaseSeeder extends Seeder
     {
         $parts = [$prefix];
 
+        // Public Code Format Specification V2.0.0: {TYPE}-{CONCERT 7 ตัว}-{ลำดับ 6 หลัก} นับแยกตาม TYPE + คอนเสิร์ต ไม่มีวันที่
         if ($concertCode) {
-            $parts[] = $concertCode;
-            $parts[] = now()->format('ymd');
+            $parts[] = \App\Models\Concert::normalizePublicCode($concertCode);
             $sequenceKey = implode('-', $parts);
             $this->codeSequences[$sequenceKey] = ($this->codeSequences[$sequenceKey] ?? 0) + 1;
-            $parts[] = str_pad((string) $this->codeSequences[$sequenceKey], 4, '0', STR_PAD_LEFT);
+            $parts[] = str_pad((string) $this->codeSequences[$sequenceKey], 6, '0', STR_PAD_LEFT);
 
             return implode('-', $parts);
         }

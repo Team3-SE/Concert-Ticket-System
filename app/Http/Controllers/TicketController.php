@@ -6,6 +6,7 @@
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 18/20.2569
  * Updated : 21/10/2569 67160279 กนกพล แซ่ตั๊น
+ * Updated : 21/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers;
@@ -80,7 +81,7 @@ class TicketController extends Controller
             ->whereKey($booking->concert_id)
             ->lockForUpdate()
             ->firstOrFail();
-        $concertCode = $this->normalizeConcertPublicCode($concert->concert_code);
+        $concertCode = $concert->publicCode();   // C0024 -> C000024 (Concert::publicCode)
         $lastSequence = $this->findLastTicketSequence($concertCode);
 
         $tickets = collect();
@@ -148,21 +149,6 @@ class TicketController extends Controller
         }
 
         return $tickets;
-    }
-
-    /**
-     * normalizeConcertPublicCode(concertCode)
-     * จัดรูป concert_code แบบเดิมให้เป็น 1 ตัวอักษรตามด้วยตัวเลข 6 หลัก
-     * param : concertCode
-     * return : string
-     */
-    private function normalizeConcertPublicCode(string $concertCode): string
-    {
-        if (! preg_match('/^([A-Z])([0-9]{1,6})$/i', $concertCode, $matches) || (int) $matches[2] === 0) {
-            throw new RuntimeException("Concert code [{$concertCode}] cannot be used in a ticket code.");
-        }
-
-        return strtoupper($matches[1]).str_pad($matches[2], 6, '0', STR_PAD_LEFT);
     }
 
     /**
