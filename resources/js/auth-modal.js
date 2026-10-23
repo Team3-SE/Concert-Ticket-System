@@ -5,8 +5,11 @@
  * - ลิงก์/ปุ่มที่มี data-login-required → เปิดหน้าต่าง login แทนการไปหน้านั้น, login เสร็จไปหน้านั้นต่อ
  *   (ใส่ค่าใน data-login-required ได้ ถ้าไม่ใช่ลิงก์ เช่น data-login-required="/booking?concert_id=1")
  * - window.openLoginModal(url) ให้ script อื่นเรียกเปิดได้
+ * - ช่องเบอร์โทรในฟอร์มสมัครสมาชิก: ใส่ได้เฉพาะตัวเลข สูงสุด 10 ตัว
+ * - ปุ่มรูปตาในช่องรหัสผ่าน (data-toggle-password): แสดง/ซ่อนรหัสผ่าน
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 23/10/2569
+ * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 (() => {
@@ -76,4 +79,20 @@
     btn.addEventListener('click', closeAll);
   });
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeAll(); });
+
+  // ปุ่มตา: สลับช่องรหัสผ่านระหว่างแสดง/ซ่อน
+  document.querySelectorAll('.auth-overlay [data-toggle-password]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const input = btn.parentElement.querySelector('input');
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.classList.toggle('is-on', show);
+    });
+  });
+
+  // ช่องเบอร์โทร: ตัดตัวที่ไม่ใช่ตัวเลขออก (รวมถึงตอนวาง) และไม่ให้เกิน 10 ตัว
+  const phoneInput = registerOverlay.querySelector('input[name="phone"]');
+  phoneInput?.addEventListener('input', () => {
+    phoneInput.value = phoneInput.value.replace(/\D/g, '').slice(0, 10);
+  });
 })();
