@@ -5,6 +5,7 @@
  *          account/my-ticket.blade.php
  * Author : ธีรเมธ พลสาย
  * Created : 07/10/2569
+ * Updated : 23/10/2569 67160279 กนกพล แซ่ตั๊น (ปรับตาม Figma frame "My Tickets", "Edit personal", "Order History")
  */
 
 /* layouts/app (sidebar) + views/account pages. Scoped to <body class="page-account"> */
@@ -165,11 +166,11 @@
   }
   table.orders thead th{
     text-align:left;
-    font-size:14px;font-weight:500;color:#6b7694;
+    font-size:16px;font-weight:600;color:#475569;
     padding:18px 12px;
     border-bottom:1px solid var(--gray-border);
     white-space:nowrap;
-    background:#fff;
+    background:#F8FAFC;
   }
   table.orders tbody td{
     padding:26px 12px;
@@ -284,12 +285,12 @@
   }
   .my-ticket-action{
     flex:0 0 auto;
-    padding:8px 18px;
+    padding:8px 16px;
     border:0;
-    border-radius:6px;
+    border-radius:8px;
     background:var(--orange);
     color:#fff;
-    font:inherit;
+    font-family:inherit;
     font-size:16px;
     cursor:pointer;
   }
@@ -367,7 +368,7 @@
   line-height: 1.25;
   color: var(--text);
   padding-left: 13px;
-  margin-bottom: 26px;
+  margin-bottom: 24px;
 }
 .heading-text::before {
   content: "";

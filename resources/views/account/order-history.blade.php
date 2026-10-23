@@ -10,7 +10,7 @@
 
 @section('content')
 
-  <div class="page-title">ประวัติการสั่งซื้อ</div>
+  <div class="heading-text">ประวัติการสั่งซื้อ</div>
 
   <div class="table-card">
 
