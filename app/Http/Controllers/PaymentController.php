@@ -5,7 +5,7 @@
  * จัดการการชำระเงิน: หน้าชำระเงิน ตรวจ rate limit สร้าง/ยืนยันการชำระเงิน และสร้างคำสั่งซื้อ
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 04/09/2569
- * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 24/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers;
@@ -299,6 +299,12 @@ class PaymentController extends Controller
         return \Illuminate\Support\Facades\DB::transaction(function () use ($paymentId) {
             $payment = \App\Models\Payment::with('booking.concert.organization')->findOrFail($paymentId);
             $booking = $payment->booking;
+
+            // การจองหมดเวลา/ถูกยกเลิกแล้ว (ที่นั่งถูกปล่อยไปแล้ว) ห้ามยืนยันการชำระเงิน
+            if ($booking->status !== 'PENDING_PAYMENT') {
+                abort(409, 'การจองนี้หมดเวลาหรือถูกยกเลิกแล้ว');
+            }
+
             $concert = $booking->concert;
             $customer = \App\Models\AppUser::find($booking->user_id);
 
@@ -329,6 +335,22 @@ class PaymentController extends Controller
 
             return $order;
         });
+    }
+
+    /**
+     * status(request, bookingId)
+     * ตรวจสถานะการจองกับ server (หน้าชำระเงินเรียกตอนตัวนับเวลาถึง 0 ก่อนแจ้งว่าไม่สำเร็จ)
+     * param : request, bookingId
+     * return : JsonResponse { status, seconds_left }
+     */
+    public function status(Request $request, int $bookingId): JsonResponse
+    {
+        $booking = $this->findOwnBooking($request, $bookingId);
+
+        return response()->json([
+            'status'       => $booking->status,
+            'seconds_left' => $booking->expiry_time ? max(0, (int) now()->diffInSeconds($booking->expiry_time, false)) : 0,
+        ]);
     }
 
     /**

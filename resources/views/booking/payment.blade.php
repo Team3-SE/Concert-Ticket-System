@@ -3,7 +3,7 @@
  * หน้าชำระเงิน
  * @Author 67160434 จิตฏิยากร โสภา
  * @Create Date 2026-10-13
- * @Update Date 23/10/2569 67160292 ธีรเมธ พลสาย
+ * @Update Date 24/10/2569 67160292 ธีรเมธ พลสาย
 --}}
 @extends('layouts.main')
 
@@ -215,7 +215,7 @@
           <button @click="goBack()" class="btn-back flex-1 lg:flex-initial">
             ย้อนกลับ
           </button>
-          <button @click="processPayment()" :disabled="isSubmitting" class="btn-submit flex-1 lg:flex-initial disabled:opacity-60">
+          <button @click="requestPayment()" :disabled="isSubmitting" class="btn-submit flex-1 lg:flex-initial disabled:opacity-60">
             ชำระเงิน
           </button>
         </div>
@@ -228,6 +228,9 @@
 
   {{-- INCLUDE POP-UP FROM DEV FOLDER --}}
   @include('booking.qr-modal')
+
+  {{-- POP-UP ยืนยันการชำระเงิน / ชำระเงินสำเร็จ --}}
+  @include('booking.payment-popups')
 @endsection
 
 @push('scripts')
@@ -259,6 +262,14 @@
 
         // Modal & Timer State
         showQrModal: false,
+        showConfirmModal: false,   // popup ยืนยันการชำระเงิน
+        showSuccessModal: false,   // popup ชำระเงินสำเร็จ
+        showFailModal: false,      // popup ชำระเงินไม่สำเร็จ
+        failReason: 'error',       // 'timeout' = หมดเวลา/การจองใช้ไม่ได้แล้ว, 'error' = ระบบทำรายการไม่ได้ (ลองใหม่ได้)
+        failMessage: '',
+        expiresAt: 0,              // เวลาหมดอายุจริง (ms) ใช้คำนวณเวลาที่เหลือ ไม่ลบทีละวินาที กันตัวนับเพี้ยนตอนแท็บอยู่เบื้องหลัง
+        paidTotal: '',             // ยอดที่ชำระแล้ว (แสดงใน popup สำเร็จ)
+        redirectUrl: '/orders/history',
         isSubmitting: false,
         countdownTimer: null,
         timeLeft: checkout?.secondsLeft ?? 597,
@@ -286,6 +297,7 @@
           this.currentDate = `${day}/${month}/${year} ${hours}:${minutes}`;
 
           // เริ่มนับเวลาถอยหลัง (การจองจริงนับจาก expiry_time ของ booking)
+          this.expiresAt = Date.now() + this.timeLeft * 1000;
           this.startCountdown();
         },
 
@@ -299,22 +311,84 @@
         startCountdown() {
           clearInterval(this.countdownTimer);
           this.countdownTimer = setInterval(() => {
-            if (this.timeLeft > 0) {
-              this.timeLeft--;
-            } else {
+            this.timeLeft = Math.max(0, Math.ceil((this.expiresAt - Date.now()) / 1000));
+            if (this.timeLeft <= 0) {
               clearInterval(this.countdownTimer);
-              alert('หมดเวลาทำรายการชำระเงิน ระบบจะนำท่านกลับไปเลือกที่นั่งใหม่');
-              if (this.bookingId && concertId) {
-                window.location.href = `/booking?concert_id=${concertId}`;
-              } else {
-                this.goBack();
-              }
+              this.handleTimeout();
             }
           }, 1000);
         },
 
+        /**
+         * handleTimeout()
+         * ตัวนับเวลาถึง 0: ถาม server ก่อนว่าจ่ายสำเร็จไปแล้วหรือยัง ถ้ายังจึงแจ้งว่าไม่สำเร็จ
+         */
+        async handleTimeout() {
+          if (!this.bookingId) {
+            this.showFail('timeout');
+            return;
+          }
+          try {
+            const res = await fetch(`/bookings/${this.bookingId}/status`, { headers: { 'Accept': 'application/json' } });
+            const data = await res.json().catch(() => ({}));
+
+            if (data.status === 'CONFIRMED') {
+              // จ่ายสำเร็จก่อนหมดเวลา (ผลมาถึงหลังตัวนับ 0) แจ้งว่าสำเร็จ
+              this.paidTotal = this.calculateTotal();
+              this.showQrModal = false;
+              this.showConfirmModal = false;
+              this.showSuccessModal = true;
+              return;
+            }
+            if (data.status === 'PENDING_PAYMENT' && data.seconds_left > 2) {
+              // นาฬิกาเครื่องเพี้ยน: server ยังมีเวลาเหลือ นับต่อ
+              this.expiresAt = Date.now() + data.seconds_left * 1000;
+              this.startCountdown();
+              return;
+            }
+          } catch (e) {
+            // ตรวจกับ server ไม่ได้ ถือว่าหมดเวลา
+          }
+          this.showFail('timeout');
+        },
+
+        /**
+         * showFail(reason, message)
+         * เปิด popup ชำระเงินไม่สำเร็จ (ปิด popup อื่นที่เปิดอยู่ก่อน)
+         */
+        showFail(reason, message = '') {
+          clearInterval(this.countdownTimer);
+          this.failReason = reason;
+          this.failMessage = message;
+          this.showQrModal = false;
+          this.showConfirmModal = false;
+          this.showFailModal = true;
+        },
+
+        /**
+         * retryPayment()
+         * หมดเวลา: ไปเลือกที่นั่งใหม่ / ระบบขัดข้อง: ลองสร้างรายการชำระเงินอีกครั้ง
+         */
+        retryPayment() {
+          if (this.failReason === 'timeout') {
+            if (this.bookingId && concertId) {
+              window.location.href = `/booking?concert_id=${concertId}`;
+            } else {
+              window.history.back();
+            }
+            return;
+          }
+          this.showFailModal = false;
+          this.processPayment();
+        },
+
         calculateSubtotal() {
           return this.subtotal ?? this.ticketPrice * this.quantity;
+        },
+
+        // ชื่อช่องทางชำระเงินที่แสดงใน popup
+        get methodLabel() {
+          return this.paymentMethod === 'credit' ? 'Credit Card' : 'Thai QR Payment';
         },
 
         // ค่าประกันต่อหนึ่งประกัน (ปัดเป็นสตางค์ ให้ตรงกับที่ server คำนวณ)
@@ -352,14 +426,39 @@
         },
 
         /**
-         * processPayment()
-         * การจองจริง: สร้างรายการชำระเงิน (ได้หมายเลขคำสั่งซื้อ) แล้วเปิดหน้าต่าง QR
+         * requestPayment()
+         * กดปุ่มชำระเงิน: เปิด popup ให้ยืนยันก่อน (ยังไม่สร้างรายการชำระเงิน)
          */
-        async processPayment() {
+        requestPayment() {
           if (this.paymentMethod !== 'promptpay') {
             alert('ระบบชำระด้วยบัตรเครดิตยังไม่เชื่อมต่อ กรุณาเลือกพร้อมเพย์');
             return;
           }
+          this.showConfirmModal = true;
+        },
+
+        /**
+         * confirmPay()
+         * กดตกลง/ยืนยันใน popup: ปิด popup แล้วสร้างรายการชำระเงินต่อ
+         */
+        async confirmPay() {
+          this.showConfirmModal = false;
+          await this.processPayment();
+        },
+
+        /**
+         * finishPayment()
+         * กดตกลงใน popup ชำระเงินสำเร็จ: ไปหน้าประวัติคำสั่งซื้อ
+         */
+        finishPayment() {
+          window.location.href = this.redirectUrl;
+        },
+
+        /**
+         * processPayment()
+         * การจองจริง: สร้างรายการชำระเงิน (ได้หมายเลขคำสั่งซื้อ) แล้วเปิดหน้าต่าง QR
+         */
+        async processPayment() {
           if (!this.bookingId) {
             this.showQrModal = true;   // หน้าตัวอย่าง (ไม่มีการจองจริง)
             return;
@@ -376,8 +475,9 @@
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-              alert(data.message || 'สร้างรายการชำระเงินไม่สำเร็จ');
-              if (res.status === 410 && concertId) window.location.href = `/booking?concert_id=${concertId}`;
+              // 410/409 = การจองหมดเวลาหรือถูกยกเลิกแล้ว ใช้ต่อไม่ได้, อย่างอื่น = ระบบทำรายการไม่ได้ ลองใหม่ได้
+              const unusable = res.status === 410 || res.status === 409;
+              this.showFail(unusable ? 'timeout' : 'error', unusable ? '' : (data.message || ''));
               return;
             }
 
@@ -385,7 +485,7 @@
             this.orderCode = data.order_code;
             this.showQrModal = true;
           } catch (e) {
-            alert('เชื่อมต่อระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+            this.showFail('error', 'เชื่อมต่อระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
           } finally {
             this.isSubmitting = false;
           }
@@ -405,10 +505,16 @@
           const data = await res.json().catch(() => ({}));
 
           if (!res.ok) {
-            alert(data.message || 'ยืนยันการชำระเงินไม่สำเร็จ');
+            // 409 = การจองหมดเวลา/ถูกยกเลิกไปแล้ว
+            this.showFail(res.status === 409 ? 'timeout' : 'error', res.status === 409 ? '' : (data.message || ''));
             return;
           }
-          window.location.href = data.redirect;
+          // ชำระเงินสำเร็จ: ปิดหน้าต่าง QR แล้วแจ้งผลด้วย popup (กดตกลงแล้วไปหน้าประวัติคำสั่งซื้อ)
+          this.redirectUrl = data.redirect || this.redirectUrl;
+          this.paidTotal = this.calculateTotal();
+          clearInterval(this.countdownTimer);
+          this.showQrModal = false;
+          this.showSuccessModal = true;
         }
       }
     }

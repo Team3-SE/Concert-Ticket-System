@@ -24,6 +24,7 @@
 @import './booking/booking.css';
 @import './booking/payment.css';
 @import './booking/qr-modal.css';
+@import './booking/payment-popups.css';
 
 /* account/  layouts/app + views/account/* */
 @import './account/account.css';

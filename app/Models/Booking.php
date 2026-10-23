@@ -5,7 +5,7 @@
  * การจองบัตรคอนเสิร์ต (ตาราง booking)
  * Author :
  * Created :
- * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 24/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -17,6 +17,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Booking extends Model
 {
+    /* การจองที่มีรายการชำระเงินรอยืนยันอยู่ จะรอเพิ่มอีกกี่นาทีหลังหมดเวลา ก่อนปล่อยที่นั่ง (กันกรณีจ่ายเงินตอนใกล้หมดเวลา) */
+    public const PAYMENT_GRACE_MINUTES = 2;
+
     protected $table = 'booking';
 
     protected $primaryKey = 'booking_id';
@@ -113,6 +116,8 @@ class Booking extends Model
                 'status'      => 'EXPIRED',
                 'released_at' => now(),
             ]);
+            // รายการชำระเงินที่ยังรอยืนยันของการจองนี้ ถือว่าไม่สำเร็จ
+            $this->payments()->where('status', 'PENDING')->update(['status' => 'FAILED']);
             $this->cancelBooking();
         });
     }
@@ -120,6 +125,7 @@ class Booking extends Model
     /**
      * releaseExpired(concertId)
      * ปล่อยที่นั่งของทุกการจองที่รอชำระเงินและเลยเวลา (10 นาที) แล้ว
+     * การจองที่มีรายการชำระเงินรอยืนยันอยู่ จะรอเพิ่มอีก PAYMENT_GRACE_MINUTES นาที
      * param : concertId (ไม่ระบุ = ทุกคอนเสิร์ต)
      * return : int จำนวนการจองที่ถูกปล่อย
      */
@@ -129,6 +135,10 @@ class Booking extends Model
             ->where('status', 'PENDING_PAYMENT')
             ->whereNotNull('expiry_time')
             ->where('expiry_time', '<=', now())
+            ->where(function ($q) {
+                $q->whereDoesntHave('payments', fn ($p) => $p->where('status', 'PENDING'))
+                    ->orWhere('expiry_time', '<=', now()->subMinutes(self::PAYMENT_GRACE_MINUTES));
+            })
             ->when($concertId, fn ($q) => $q->where('concert_id', $concertId))
             ->get();
 
