@@ -83,6 +83,10 @@
   background:none;border:none;padding:0;color:#6b7a99;cursor:pointer;
 }
 .auth-overlay .pw-toggle.is-on{color:var(--auth-orange);}
+/* ซ่อนรหัสอยู่ = รูปตาปิด, กดแล้วแสดงรหัส = รูปตาเปิด */
+.auth-overlay .pw-toggle .eye-open{display:none;}
+.auth-overlay .pw-toggle.is-on .eye-open{display:block;}
+.auth-overlay .pw-toggle.is-on .eye-closed{display:none;}
 
 /* ข้อความแนะนำรหัสผ่าน */
 .auth-overlay .pw-hint{margin:10px 0 0;padding-left:18px;font-size:11px;line-height:1.7;color:var(--auth-text);list-style:disc;}
