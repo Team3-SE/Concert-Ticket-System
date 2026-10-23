@@ -2,9 +2,10 @@
  * concert-card.blade.php
  * การ์ดคอนเสิร์ต ใช้ในหน้า Home และหน้าคอนเสิร์ตทั้งหมด
  * @include('partials.concert-card', ['concert' => $concert, 'index' => $loop->index, 'detailed' => true])
- * detailed = แสดงสถานที่ + ราคาเริ่มต้น (ต้อง query ด้วย withMin('zones', 'price'))
+ * detailed = แสดงสถานที่
  * @Author 67160292 ธีรเมธ พลสาย
  * @Create Date 09-10-2569
+ * @Update Date 23/10/2569 67160292 ธีรเมธ พลสาย
 --}}
 @php
   $detailed = $detailed ?? false;
@@ -17,8 +18,6 @@
       'sold_out' => ['sold-out', 'Sold out'],
       default    => ['soon', 'Coming Soon'],
   };
-
-  $minPrice = $concert->zones_min_price ?? null;
 @endphp
 <div class="card">
   <div class="card-img {{ $colorClass }}">
@@ -34,9 +33,6 @@
     @if($detailed)
       @if($concert->venue)
         <div class="card-venue" title="{{ $concert->venue }}">{{ $concert->venue }}</div>
-      @endif
-      @if($minPrice !== null)
-        <div class="card-price">เริ่มต้น <strong>฿{{ number_format((float) $minPrice) }}</strong></div>
       @endif
     @endif
     @if($btnClass === 'buy')
