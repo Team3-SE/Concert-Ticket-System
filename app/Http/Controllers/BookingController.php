@@ -5,7 +5,7 @@
  * จัดการการจองบัตรของลูกค้า: หน้าเลือกที่นั่ง ตรวจความปลอดภัย สร้างการจอง และประวัติการจอง
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 04/09/2569
- * Updated : 21/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers;
@@ -46,6 +46,11 @@ class BookingController extends Controller
                 ->where('is_deleted', 0)
                 ->orderBy('event_datetime', 'asc')
                 ->first();
+
+        // คอนเสิร์ตที่ไม่ได้เปิดขาย (ยังไม่เปิด/ขายหมด/ยกเลิก) เข้าหน้าจองไม่ได้ → กลับไปหน้ารายละเอียด
+        if ($concert && $concert->status !== 'ON_SALE') {
+            return redirect('/concert-detail?concert_id=' . $concert->concert_id);
+        }
 
         if (! $concert) {
             return view('booking.booking', [
@@ -301,6 +306,11 @@ class BookingController extends Controller
 
         if (!$concert || !$zone) {
             return response()->json(['message' => 'ไม่พบคอนเสิร์ตหรือโซนที่เลือก'], 404);
+        }
+
+        // จองได้เฉพาะคอนเสิร์ตที่เปิดขายอยู่
+        if ($concert->status !== 'ON_SALE') {
+            return response()->json(['message' => 'คอนเสิร์ตนี้ยังไม่เปิดขายบัตร'], 422);
         }
 
         $maxTickets = (int) ($concert->max_ticket_per_order ?: 4);

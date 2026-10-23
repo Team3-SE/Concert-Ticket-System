@@ -44,6 +44,8 @@
   color:#1c2138;text-decoration:none;cursor:pointer;
 }
 .suggest-item.active{background:#f1f4fb;}
+/* คอนเสิร์ตที่ยังไม่เปิดขาย/ขายหมด: กดไม่ได้ */
+.suggest-item.is-disabled{cursor:default;opacity:.6;}
 .suggest-thumb{
   width:42px;height:56px;flex-shrink:0;border-radius:8px;overflow:hidden;
   display:flex;align-items:center;justify-content:center;

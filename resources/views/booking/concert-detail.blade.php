@@ -109,10 +109,17 @@
               </p>
             </div>
             <div class="mt-2 flex justify-center">
-              {{-- ยังไม่ login: เปิดหน้าต่างเข้าสู่ระบบแทน แล้ว login เสร็จพาไปหน้าจองบัตรต่อ (resources/js/auth-modal.js) --}}
-              <a href="{{ url('/booking?concert_id=' . $concert->concert_id) }}" @guest data-login-required @endguest class="btn-clean-submit !text-[16px] block w-full max-w-[660px] text-center">
-                ซื้อบัตรการแสดง
-              </a>
+              @if($concert->status === 'ON_SALE')
+                {{-- ยังไม่ login: เปิดหน้าต่างเข้าสู่ระบบแทน แล้ว login เสร็จพาไปหน้าจองบัตรต่อ (resources/js/auth-modal.js) --}}
+                <a href="{{ url('/booking?concert_id=' . $concert->concert_id) }}" @guest data-login-required @endguest class="btn-clean-submit !text-[16px] block w-full max-w-[660px] text-center">
+                  ซื้อบัตรการแสดง
+                </a>
+              @else
+                {{-- สถานะที่ไม่ใช่ ON_SALE: กดจองไม่ได้ --}}
+                <button type="button" disabled class="btn-clean-submit !text-[16px] block w-full max-w-[660px] text-center">
+                  {{ $concert->status === 'SOLD_OUT' ? 'บัตรหมดแล้ว' : 'ยังไม่เปิดขายบัตร' }}
+                </button>
+              @endif
             </div>
           </div>
         </section>

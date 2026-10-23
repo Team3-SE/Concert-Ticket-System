@@ -2,8 +2,10 @@
  * concert-search.js
  * ช่องค้นหาที่แสดงคอนเสิร์ตที่ใกล้เคียงขณะพิมพ์ (concerts/home, concerts/index)
  * ใช้ route concerts.suggest, ปุ่มลูกศร ↑ ↓ เลือก, Enter เปิดคอนเสิร์ต (หรือค้นหาทั้งหมดถ้ายังไม่ได้เลือก), Esc ปิด
+ * คอนเสิร์ตที่สถานะไม่ใช่ ON_SALE (ยังไม่เปิดขาย/ขายหมด ฯลฯ) แสดงในรายการได้ แต่กดเข้าไปไม่ได้
  * Author : ธีรเมธ พลสาย
  * Created : 08/10/2569
+ * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 (() => {
@@ -24,6 +26,7 @@
 
   const STATUS = {
     ON_SALE:   ['เปิดขาย', 'is-on-sale'],
+    SCHEDULED: ['เร็ว ๆ นี้', ''],
     SOLD_OUT:  ['ขายหมด', 'is-closed'],
     CANCELLED: ['ยกเลิก', 'is-closed'],
     COMPLETED: ['จบแล้ว', ''],
@@ -139,9 +142,15 @@
         ? `<img src="${esc(r.poster)}" alt="" loading="lazy" data-fallback="${initial}">`
         : initial;
       const meta = [r.artist, r.venue].filter(Boolean).map((v) => highlight(v, terms)).join(' · ');
+      // กดได้เฉพาะคอนเสิร์ตที่เปิดขายแล้ว ที่เหลือแสดงเป็นรายการธรรมดา (ไม่ใช่ลิงก์)
+      const canOpen = r.status === 'ON_SALE';
+      const openTag = canOpen
+        ? `<a class="suggest-item" id="suggest-${i}" role="option" href="${esc(r.url)}">`
+        : '<div class="suggest-item is-disabled" aria-disabled="true">';
+      const closeTag = canOpen ? '</a>' : '</div>';
 
       return `
-        <a class="suggest-item" id="suggest-${i}" role="option" href="${esc(r.url)}">
+        ${openTag}
           <span class="suggest-thumb">${thumb}</span>
           <span class="suggest-text">
             <span class="suggest-name">${highlight(r.name, terms)}</span>
@@ -151,7 +160,7 @@
             ${r.date ? `<span class="suggest-date">${esc(r.date)}</span>` : ''}
             <span class="suggest-status ${cls}">${label}</span>
           </span>
-        </a>`;
+        ${closeTag}`;
     }).join('');
 
     box.innerHTML = `
@@ -166,7 +175,7 @@
       img.addEventListener('error', () => { img.parentElement.textContent = img.dataset.fallback; }, { once: true });
     });
 
-    options = [...box.querySelectorAll('.suggest-item, .suggest-all')];
+    options = [...box.querySelectorAll('a.suggest-item, .suggest-all')];
     setActive(-1);
     open();
   };
@@ -256,7 +265,7 @@
   });
 
   box.addEventListener('mousemove', (e) => {
-    const el = e.target.closest('.suggest-item, .suggest-all');
+    const el = e.target.closest('a.suggest-item, .suggest-all');
     if (el) setActive(options.indexOf(el), false);
   });
 
