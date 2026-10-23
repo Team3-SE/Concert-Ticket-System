@@ -14,7 +14,7 @@
 
     {{-- แก้ไขข้อมูลส่วนตัว --}}
     <section>
-      <h1 class="profile-section-title">แก้ไขข้อมูลส่วนตัว</h1>
+      <h1 class="heading-text">แก้ไขข้อมูลส่วนตัว</h1>
       <div class="profile-panel profile-panel--info">
 
       <form action="{{ route('profile.update') }}" method="POST">
@@ -63,7 +63,7 @@
 
     {{-- เปลี่ยนรหัสผ่าน --}}
     <section>
-      <h1 class="profile-section-title">เปลี่ยนรหัสผ่าน</h1>
+      <h1 class="heading-text">เปลี่ยนรหัสผ่าน</h1>
       <div class="profile-panel profile-panel--password">
 
       <form action="{{ route('profile.password.update') }}" method="POST">
