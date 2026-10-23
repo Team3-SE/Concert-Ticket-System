@@ -435,17 +435,6 @@ class PaymentController extends Controller
      */
     private function expireBooking(Booking $booking): void
     {
-        \Illuminate\Support\Facades\DB::transaction(function () use ($booking) {
-            foreach ($booking->bookingSeats()->with('seat')->get() as $bookingSeat) {
-                if ($bookingSeat->seat?->seat_booking_status === 'LOCKED') {
-                    $bookingSeat->seat->unlockSeat();
-                }
-            }
-            $booking->seatLockLogs()->where('status', 'LOCKED')->update([
-                'status'      => 'EXPIRED',
-                'released_at' => now(),
-            ]);
-            $booking->cancelBooking();
-        });
+        $booking->releaseSeats();
     }
 }

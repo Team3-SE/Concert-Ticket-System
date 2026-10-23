@@ -60,6 +60,9 @@ class BookingController extends Controller
             ]);
         }
 
+        // ครบ 10 นาทีแล้วไม่ชำระ: ปล่อยที่นั่งกลับเป็นว่างก่อนแสดงผังที่นั่ง
+        Booking::releaseExpired($concert->concert_id);
+
         // ที่นั่งที่ผู้ใช้คนนี้ล็อกไว้เองและยังไม่ชำระ: ไม่นับเป็น "คนอื่นกำลังชำระเงิน" (สีส้ม) แต่ยังเลือกซ้ำไม่ได้
         $ownLockedSeatIds = $request->user()
             ? BookingSeat::whereHas('booking', function ($q) use ($request, $concert) {
@@ -321,6 +324,9 @@ class BookingController extends Controller
         if (!$concert || !$zone) {
             return response()->json(['message' => 'ไม่พบคอนเสิร์ตหรือโซนที่เลือก'], 404);
         }
+
+        // ปล่อยที่นั่งที่หมดเวลาก่อน เพื่อให้จองที่นั่งเดิมได้ทันทีที่ครบเวลา
+        Booking::releaseExpired($concert->concert_id);
 
         // จองได้เฉพาะคอนเสิร์ตที่เปิดขายอยู่
         if ($concert->status !== 'ON_SALE') {

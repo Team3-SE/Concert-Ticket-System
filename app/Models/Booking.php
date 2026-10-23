@@ -5,7 +5,7 @@
  * การจองบัตรคอนเสิร์ต (ตาราง booking)
  * Author :
  * Created :
- * Updated : 21/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -93,6 +93,50 @@ class Booking extends Model
         return $this->status === 'PENDING_PAYMENT'
             && $this->expiry_time !== null
             && $this->expiry_time->isPast();
+    }
+
+    /**
+     * releaseSeats()
+     * ยกเลิกการจองที่หมดเวลา/ถูกยกเลิก: ปลดล็อกที่นั่งกลับเป็น AVAILABLE, ปิด SeatLockLog เป็น EXPIRED, ตั้งการจองเป็น CANCELLED
+     * param : -
+     * return : void
+     */
+    public function releaseSeats(): void
+    {
+        \Illuminate\Support\Facades\DB::transaction(function () {
+            foreach ($this->bookingSeats()->with('seat')->get() as $bookingSeat) {
+                if ($bookingSeat->seat?->seat_booking_status === 'LOCKED') {
+                    $bookingSeat->seat->unlockSeat();
+                }
+            }
+            $this->seatLockLogs()->where('status', 'LOCKED')->update([
+                'status'      => 'EXPIRED',
+                'released_at' => now(),
+            ]);
+            $this->cancelBooking();
+        });
+    }
+
+    /**
+     * releaseExpired(concertId)
+     * ปล่อยที่นั่งของทุกการจองที่รอชำระเงินและเลยเวลา (10 นาที) แล้ว
+     * param : concertId (ไม่ระบุ = ทุกคอนเสิร์ต)
+     * return : int จำนวนการจองที่ถูกปล่อย
+     */
+    public static function releaseExpired(?int $concertId = null): int
+    {
+        $expired = static::query()
+            ->where('status', 'PENDING_PAYMENT')
+            ->whereNotNull('expiry_time')
+            ->where('expiry_time', '<=', now())
+            ->when($concertId, fn ($q) => $q->where('concert_id', $concertId))
+            ->get();
+
+        foreach ($expired as $booking) {
+            $booking->releaseSeats();
+        }
+
+        return $expired->count();
     }
 
     // ==========================================
