@@ -3,6 +3,7 @@
  * หน้าเลือกโซนและที่นั่งของคอนเสิร์ต
  * @Author 67160434 จิตฏิยากร โสภา
  * @Create Date 2026-10-13
+ * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
 --}}
 @extends('layouts.main')
 
@@ -102,7 +103,7 @@
 
       {{-- zone-overview start --}}
       {{-- ZONE OVERVIEW MAP & TABLE (ใช้ร่วมกับหน้า concert-detail) --}}
-      @include('partials.zone-overview', ['concert' => $concert, 'zones' => $zones, 'selectable' => true])
+      @include('partials.zone-overview', ['concert' => $concert, 'zones' => $zones, 'selectable' => false])
       {{-- zone-overview end --}}
 
       {{-- zone-selector start --}}
