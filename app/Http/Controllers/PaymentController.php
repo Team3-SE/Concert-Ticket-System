@@ -29,11 +29,11 @@ class PaymentController extends Controller
     /* ค่าธรรมเนียมบริการต่อคำสั่งซื้อ (บาท) */
     private const SERVICE_FEE = 30;
 
-    /* ค่าประกันความคุ้มครอง (บาท) เมื่อเลือกประกันบัตรหรือประกันการเดินทาง */
-    private const PROTECTION_FEE = 144;
+    /* ค่าประกันต่อ 1 ตัวเลือก = 5% ของราคาบัตรรวม (เลือกได้ทั้งสองอย่าง คิดค่าประกันแยกกันแล้วรวมกัน) */
+    private const PROTECTION_RATE = 0.05;
 
-    /* ตัวเลือกประกันที่รับได้ */
-    private const PROTECTION_OPTIONS = ['show', 'travel', 'none'];
+    /* ตัวเลือกประกันที่รับได้ (ไม่เลือกเลยก็ได้) */
+    private const PROTECTION_OPTIONS = ['show', 'travel'];
 
     /* รูปแบบหมายเลขคำสั่งซื้อตาม Public Code Format Specification V2.0.0: ORD-[A-Z][0-9]{6}-[0-9]{6} */
     private const ORDER_CODE_PATTERN = '/^ORD-[A-Z][0-9]{6}-[0-9]{6}$/';
@@ -88,7 +88,7 @@ class PaymentController extends Controller
                 'ticketPrice'   => (float) ($seats->first()?->unit_price_snapshot ?? $standing->first()?->unit_price_snapshot ?? 0),
                 'subtotal'      => (float) $booking->total_amount,
                 'serviceFee'    => self::SERVICE_FEE,
-                'protectionFee' => self::PROTECTION_FEE,
+                'protectionRate' => self::PROTECTION_RATE,
                 'secondsLeft'   => max(0, (int) now()->diffInSeconds($booking->expiry_time, false)),
                 'orderCode'     => $pendingPayment?->payment_metadata['orderCode'] ?? null,
                 'paymentId'     => $pendingPayment?->payment_id,
@@ -124,7 +124,7 @@ class PaymentController extends Controller
      * store(request)
      * สร้างรายการชำระเงินของการจอง และออกหมายเลขคำสั่งซื้อไว้แสดงในหน้าต่าง QR
      * (ถ้ามีรายการชำระเงินที่รออยู่แล้ว จะใช้รายการเดิม หมายเลขคำสั่งซื้อจึงไม่เปลี่ยน)
-     * param : request (booking_id, method, protection)
+     * param : request (booking_id, method, protection = array ของ show/travel จะว่างก็ได้)
      * return : JsonResponse { payment_id, order_code, amount }
      */
     public function store(Request $request): JsonResponse
@@ -132,8 +132,10 @@ class PaymentController extends Controller
         $data = $request->validate([
             'booking_id' => ['required', 'integer'],
             'method'     => ['required', 'in:' . implode(',', array_keys(self::METHOD_MAP))],
-            'protection' => ['required', 'in:' . implode(',', self::PROTECTION_OPTIONS)],
+            'protection'   => ['nullable', 'array', 'max:' . count(self::PROTECTION_OPTIONS)],
+            'protection.*' => ['string', 'distinct', 'in:' . implode(',', self::PROTECTION_OPTIONS)],
         ]);
+        $protection = array_values($data['protection'] ?? []);
 
         $booking = $this->findOwnBooking($request, (int) $data['booking_id']);
 
@@ -147,14 +149,14 @@ class PaymentController extends Controller
 
         $payment = $booking->payments()->where('status', 'PENDING')->latest('payment_id')->first();
         $method = self::METHOD_MAP[$data['method']];
-        $amount = $this->calculateAmount($booking, $data['protection']);
+        $amount = $this->calculateAmount($booking, $protection);
 
         if ($payment) {
             // เปลี่ยนช่องทาง/ประกันได้ แต่หมายเลขคำสั่งซื้อเดิมยังคงอยู่
             $metadata = array_merge($payment->payment_metadata ?? [], [
-                'protection'    => $data['protection'],
+                'protection'    => $protection,
                 'serviceFee'    => self::SERVICE_FEE,
-                'protectionFee' => $data['protection'] === 'none' ? 0 : self::PROTECTION_FEE,
+                'protectionFee' => $this->calculateProtectionFee($booking, $protection),
             ]);
 
             // รายการที่ออกเลขไว้ก่อนเปลี่ยนรูปแบบ (เช่น ORD-ZISQRXU9, ORD-C0024-261021-00001) ให้ออกเลขใหม่เป็น ORD-C000024-000001
@@ -172,7 +174,7 @@ class PaymentController extends Controller
             ]);
         } else {
             $request->merge(['method' => $method]);
-            $payment = $this->processPayment($request, $booking->booking_id, $data['protection']);
+            $payment = $this->processPayment($request, $booking->booking_id, $protection);
         }
 
         return response()->json([
@@ -232,10 +234,10 @@ class PaymentController extends Controller
     /**
      * processPayment(request, bookingId, protection)
      * ตรวจ rate limit แล้วสร้างรายการชำระเงิน (บันทึก IP, device fingerprint, ค่าธรรมเนียม และหมายเลขคำสั่งซื้อใน payment_metadata)
-     * param : request, bookingId, protection
+     * param : request, bookingId, protection (array ของ show/travel)
      * return : Payment ที่สร้างขึ้น
      */
-    public function processPayment(Request $request, int $bookingId, string $protection = 'none'): \App\Models\Payment
+    public function processPayment(Request $request, int $bookingId, array $protection = []): \App\Models\Payment
     {
         $request->validate([
             'method' => ['required', 'in:PROMPTPAY,CREDIT_CARD'],
@@ -265,7 +267,7 @@ class PaymentController extends Controller
                     'orderCode'         => $this->generateOrderCode($concert),
                     'protection'        => $protection,
                     'serviceFee'        => self::SERVICE_FEE,
-                    'protectionFee'     => $protection === 'none' ? 0 : self::PROTECTION_FEE,
+                    'protectionFee'     => $this->calculateProtectionFee($booking, $protection),
                 ],
                 'created_at'       => now(),
             ]);
@@ -330,16 +332,27 @@ class PaymentController extends Controller
     }
 
     /**
+     * calculateProtectionFee(booking, protection)
+     * คำนวณค่าประกัน = 5% ของราคาบัตรรวม ต่อประกัน 1 ตัวเลือกที่เลือก (เลือกทั้งสองอย่างจะคิดสองเท่า)
+     * param : booking, protection (array ของ show/travel)
+     * return : float ค่าประกันรวม
+     */
+    private function calculateProtectionFee(Booking $booking, array $protection): float
+    {
+        $perOption = round((float) $booking->total_amount * self::PROTECTION_RATE, 2);
+
+        return $perOption * count($protection);
+    }
+
+    /**
      * calculateAmount(booking, protection)
      * คำนวณยอดที่ต้องชำระ = ราคาบัตร + ค่าธรรมเนียมบริการ + ค่าประกัน (ถ้าเลือก)
-     * param : booking, protection
+     * param : booking, protection (array ของ show/travel)
      * return : float ยอดที่ต้องชำระ
      */
-    private function calculateAmount(Booking $booking, string $protection): float
+    private function calculateAmount(Booking $booking, array $protection): float
     {
-        $protectionFee = $protection === 'none' ? 0 : self::PROTECTION_FEE;
-
-        return (float) $booking->total_amount + self::SERVICE_FEE + $protectionFee;
+        return (float) $booking->total_amount + self::SERVICE_FEE + $this->calculateProtectionFee($booking, $protection);
     }
 
     /**

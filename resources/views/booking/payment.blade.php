@@ -27,15 +27,16 @@
           <h3 class="section-title">ความคุ้มครอง/Ticket Protection</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
+            {{-- ประกัน: ไม่บังคับ เลือกได้ทั้งสองอย่างหรือไม่เลือกเลยก็ได้ (ค่าประกัน 5% ของราคาบัตรต่อหนึ่งประกัน) --}}
             {{-- Option 1: Show Protection --}}
-            <label class="card-option">
-              <input type="radio" name="protection" value="show" x-model="protection" class="radio-btn">
+            <label class="card-option" :class="{ 'active': protection.includes('show') }">
+              <input type="checkbox" name="protection" value="show" x-model="protection" class="radio-btn">
               <span class="radio-label">ซื้อประกันบัตรการแสดง</span>
             </label>
 
             {{-- Option 2: Travel Protection --}}
-            <label class="card-option">
-              <input type="radio" name="protection" value="travel" x-model="protection" class="radio-btn">
+            <label class="card-option" :class="{ 'active': protection.includes('travel') }">
+              <input type="checkbox" name="protection" value="travel" x-model="protection" class="radio-btn">
               <span class="radio-label">ซื้อประกันการเดินทาง</span>
             </label>
 
@@ -84,9 +85,13 @@
           <span>ค่าธรรมเนียมบริการ/Service Fee</span>
           <span x-text="serviceFee.toLocaleString() + ' บาท'"></span>
         </div>
-        <div class="summary-row" x-show="protection !== 'none'">
-          <span>ค่าประกันความคุ้มครอง</span>
-          <span x-text="protectionFee.toLocaleString() + ' บาท'"></span>
+        <div class="summary-row" x-show="protection.includes('show')">
+          <span>ค่าประกันบัตรการแสดง</span>
+          <span x-text="protectionFeeEach().toLocaleString() + ' บาท'"></span>
+        </div>
+        <div class="summary-row" x-show="protection.includes('travel')">
+          <span>ค่าประกันการเดินทาง</span>
+          <span x-text="protectionFeeEach().toLocaleString() + ' บาท'"></span>
         </div>
 
         {{-- Total Price Row --}}
@@ -237,7 +242,7 @@
       const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 
       return {
-        protection: 'show',
+        protection: [],   // ไม่เลือกประกันไว้ก่อน: 'show' (ประกันบัตรการแสดง), 'travel' (ประกันการเดินทาง) เลือกได้ทั้งสอง
         paymentMethod: 'promptpay',
 
         bookingId: checkout?.bookingId ?? null,
@@ -249,7 +254,7 @@
         buyer: checkout?.buyer ?? { name: '', email: '', phone: '' },
 
         serviceFee: checkout?.serviceFee ?? 30,
-        protectionFee: checkout?.protectionFee ?? 144,
+        protectionRate: checkout?.protectionRate ?? 0.05,   // ค่าประกันต่อหนึ่งประกัน = 5% ของราคาบัตรรวม
 
         // Modal & Timer State
         showQrModal: false,
@@ -311,11 +316,13 @@
           return this.subtotal ?? this.ticketPrice * this.quantity;
         },
 
+        // ค่าประกันต่อหนึ่งประกัน (ปัดเป็นสตางค์ ให้ตรงกับที่ server คำนวณ)
+        protectionFeeEach() {
+          return Math.round(this.calculateSubtotal() * this.protectionRate * 100) / 100;
+        },
+
         calculateTotal() {
-          let total = this.calculateSubtotal() + this.serviceFee;
-          if (this.protection !== 'none') {
-            total += this.protectionFee;
-          }
+          let total = this.calculateSubtotal() + this.serviceFee + this.protectionFeeEach() * this.protection.length;
           return total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
 
