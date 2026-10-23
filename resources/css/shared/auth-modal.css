@@ -4,7 +4,7 @@
  * ใช้กับ : partials/auth-modals.blade.php (layouts/main ใส่ให้ตอนยังไม่ login)
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 23/10/2569
- * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 24/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 /* ครอบทุก rule ด้วย .auth-overlay กันชนกับ .field / .btn-orange ของหน้าอื่น */
@@ -62,7 +62,6 @@
 .auth-overlay .modal-login .sub{margin-bottom:34px;}
 .auth-overlay .modal-login .field{margin-bottom:22px;}
 .auth-overlay .modal-login .field input{height:50px;border-radius:10px;font-size:14px;}
-.auth-overlay .modal-login .pw-wrap input{padding-right:48px;}
 .auth-overlay .modal-login .btn-orange{height:56px;font-size:18px;}
 
 /* ลิงก์สลับไปสมัครสมาชิกใต้ปุ่มเข้าสู่ระบบ */
@@ -70,23 +69,7 @@
 .auth-overlay .switch-text a{color:var(--auth-navy);font-weight:700;text-decoration:none;}
 .auth-overlay .switch-text a:hover{text-decoration:underline;}
 
-/* ช่องรหัสผ่านพร้อมปุ่มตา */
-.auth-overlay .pw-wrap{position:relative;}
-.auth-overlay .pw-wrap input{padding-right:42px;}
-/* ซ่อนปุ่มตาที่ Edge/IE ใส่ให้ในช่องรหัสผ่านเอง เหลือปุ่มตาของเราปุ่มเดียว */
-.auth-overlay input::-ms-reveal,
-.auth-overlay input::-ms-clear{display:none;}
-.auth-overlay input::-webkit-credentials-auto-fill-button{display:none !important;}
-.auth-overlay .pw-toggle{
-  position:absolute;top:0;right:0;height:100%;width:40px;
-  display:flex;align-items:center;justify-content:center;
-  background:none;border:none;padding:0;color:#6b7a99;cursor:pointer;
-}
-.auth-overlay .pw-toggle.is-on{color:var(--auth-orange);}
-/* ซ่อนรหัสอยู่ = รูปตาปิด, กดแล้วแสดงรหัส = รูปตาเปิด */
-.auth-overlay .pw-toggle .eye-open{display:none;}
-.auth-overlay .pw-toggle.is-on .eye-open{display:block;}
-.auth-overlay .pw-toggle.is-on .eye-closed{display:none;}
+/* ปุ่มตาในช่องรหัสผ่าน: สไตล์อยู่ที่ shared/password-toggle.css */
 
 /* ข้อความแนะนำรหัสผ่าน */
 .auth-overlay .pw-hint{margin:10px 0 0;padding-left:18px;font-size:11px;line-height:1.7;color:var(--auth-text);list-style:disc;}
