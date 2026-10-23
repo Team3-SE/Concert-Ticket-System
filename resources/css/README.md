@@ -24,6 +24,7 @@
 | `shared/navbar.css` | `partials/navbar` | แถบด้านบน ชื่อ/รูปโปรไฟล์ |
 | `shared/sidebar.css` | `partials/sidebar` | เมนูซ้าย (หน้า account) |
 | `shared/pagination.css` | `partials/pagination` | ตัวแบ่งหน้า (คอนเสิร์ตทั้งหมด, ประวัติการสั่งซื้อ) |
+| `shared/auth-modal.css` | `partials/auth-modals` | หน้าต่างเข้าสู่ระบบ/สมัครสมาชิก (ทุกหน้า ตอนยังไม่ login) |
 | `concerts/home.css` | `concerts/home`, `partials/concert-card` | หน้า Home + การ์ดคอนเสิร์ต |
 | `concerts/index.css` | `concerts/index` | หน้าคอนเสิร์ตทั้งหมด (Show All) |
 | `concerts/search.css` | `concerts/home`, `concerts/index` | ช่องค้นหา + รายการแนะนำ |
@@ -51,5 +52,6 @@
 | ไฟล์ | ใช้กับ |
 |---|---|
 | `navbar.js` | เมนูโปรไฟล์, จัดตัวอักษรในวงกลมโปรไฟล์, ปุ่มเข้าสู่ระบบ |
+| `auth-modal.js` | หน้าต่างเข้าสู่ระบบ/สมัครสมาชิก, ลิงก์ที่มี `data-login-required` (ต้อง login ก่อน) |
 | `pagination.js` | ปุ่ม "…" ในตัวแบ่งหน้า |
 | `concert-search.js` | ช่องค้นหาที่มีรายการแนะนำ |

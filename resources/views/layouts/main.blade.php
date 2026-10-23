@@ -42,6 +42,11 @@
     @include('partials.footer')
   @endif
 
+  {{-- หน้าต่างเข้าสู่ระบบ/สมัครสมาชิก: ใช้ได้ทุกหน้าตอนยังไม่ login (partials/auth-modals + resources/js/auth-modal.js) --}}
+  @guest
+    @include('partials.auth-modals')
+  @endguest
+
   @stack('scripts')
 </body>
 </html>

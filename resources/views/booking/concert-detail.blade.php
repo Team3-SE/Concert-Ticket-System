@@ -3,6 +3,7 @@
   * หน้ารายละเอียดคอนเสิร์ตและข้อมูลบัตร
   * @Author 67160279 กนกพล แซ่ตั๊น
   * @Create Date 18-10-2026
+  * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
 *@--}}
 
 @extends('layouts.main')
@@ -108,7 +109,8 @@
               </p>
             </div>
             <div class="mt-2 flex justify-center">
-              <a href="{{ url('/booking?concert_id=' . $concert->concert_id) }}" class="btn-clean-submit !text-[16px] block w-full max-w-[660px] text-center">
+              {{-- ยังไม่ login: เปิดหน้าต่างเข้าสู่ระบบแทน แล้ว login เสร็จพาไปหน้าจองบัตรต่อ (resources/js/auth-modal.js) --}}
+              <a href="{{ url('/booking?concert_id=' . $concert->concert_id) }}" @guest data-login-required @endguest class="btn-clean-submit !text-[16px] block w-full max-w-[660px] text-center">
                 ซื้อบัตรการแสดง
               </a>
             </div>

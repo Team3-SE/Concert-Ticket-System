@@ -1,8 +1,9 @@
 {{--
  * home.blade.php
- * หน้า Home: ช่องค้นหา แบนเนอร์ไฮไลต์ คอนเสิร์ตแนะนำ และหน้าต่างเข้าสู่ระบบ/สมัครสมาชิก
+ * หน้า Home: ช่องค้นหา แบนเนอร์ไฮไลต์ และคอนเสิร์ตแนะนำ (หน้าต่างเข้าสู่ระบบ/สมัครสมาชิกย้ายไป partials/auth-modals)
  * @Author
  * @Create Date
+ * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
 --}}
 @extends('layouts.main')
 
@@ -105,90 +106,6 @@
   </div>
 </div>
 
-{{-- Login Modal --}}
-<div class="overlay" id="loginOverlay">
-  <div class="modal">
-    <button class="modal-close" data-close>✕</button>
-    <h2>เข้าสู่ระบบ</h2>
-    <p class="sub">ยินดีต้อนรับกลับมาอีกครั้ง</p>
-
-    {{-- แสดง error --}}
-    @if(session('open_modal') === 'login' && $errors->any())
-      <div class="modal-error">{{ $errors->first() }}</div>
-    @endif
-
-    <form id="loginForm" method="POST" action="{{ route('auth.login') }}">
-      @csrf
-      <div class="field">
-        <label>อีเมล</label>
-        <input type="email" name="email" placeholder="example@email.com"
-               value="{{ old('email') }}" required>
-      </div>
-      <div class="field">
-        <label>รหัสผ่าน</label>
-        <input type="password" name="password" placeholder="••••••••" required>
-      </div>
-      <div class="options-row">
-        <label><input type="checkbox" name="remember" style="width:auto;"> จดจำฉัน</label>
-        <a href="#">ลืมรหัสผ่าน?</a>
-      </div>
-      <button type="submit" class="btn-orange">เข้าสู่ระบบ</button>
-    </form>
-    <p class="switch-text">ยังไม่มีบัญชี? <a href="#" id="toRegister">สมัครสมาชิก</a></p>
-  </div>
-</div>
-
-{{-- Register Modal --}}
-<div class="overlay" id="registerOverlay">
-  <div class="modal">
-    <button class="modal-close" data-close>✕</button>
-    <h2>สมัครสมาชิก</h2>
-    <p class="sub">เป็นสมาชิกอยู่แล้ว? <a href="#" id="toLoginFromSub" style="color:var(--orange-dark);font-weight:700;text-decoration:none;">เข้าสู่ระบบ</a></p>
-
-    {{-- แสดง error --}}
-    @if(session('open_modal') === 'register' && $errors->any())
-      <div class="modal-error">{{ $errors->first() }}</div>
-    @endif
-
-    <form id="registerForm" method="POST" action="{{ route('auth.register') }}">
-      @csrf
-      <div class="field">
-        <label>อีเมล <span class="req">*</span></label>
-        <input type="email" name="email" placeholder="example@email.com"
-               value="{{ old('email') }}" required>
-      </div>
-      <div class="field">
-        <label>รหัสผ่าน <span class="req">*</span></label>
-        <input type="password" name="password" placeholder="••••••••" required>
-      </div>
-      <div class="field">
-        <label>ยืนยันรหัสผ่าน <span class="req">*</span></label>
-        <input type="password" name="password_confirmation" placeholder="••••••••" required>
-      </div>
-      <div class="row-2">
-        <div class="field">
-          <label>ชื่อ <span class="req">*</span></label>
-          <input type="text" name="first_name" placeholder="ชื่อจริงตามบัตรประชาชน"
-                 value="{{ old('first_name') }}" required>
-        </div>
-        <div class="field">
-          <label>นามสกุล <span class="req">*</span></label>
-          <input type="text" name="last_name" placeholder="นามสกุลตามบัตรประชาชน"
-                 value="{{ old('last_name') }}" required>
-        </div>
-      </div>
-      <div class="field">
-        <label>เบอร์โทรศัพท์ <span class="req">*</span></label>
-        <div class="phone-field">
-          <span class="phone-prefix">🇹🇭 +66</span>
-          <input type="tel" name="phone" placeholder="0XXXXXXXX"
-                 value="{{ old('phone') }}" required>
-        </div>
-      </div>
-      <button type="submit" class="btn-orange" style="margin-top:6px;">สมัครสมาชิก</button>
-    </form>
-  </div>
-</div>
 @endsection
 
 @push('scripts')
@@ -218,40 +135,6 @@
     setInterval(() => showSlide(currentSlide + 1), 5000);
   }
 
-  // ----- Modal logic -----
-  const loginOverlay    = document.getElementById('loginOverlay');
-  const registerOverlay = document.getElementById('registerOverlay');
-
-  function openModal(el)  { el.classList.add('open'); }
-  function closeModal(el) { el.classList.remove('open'); }
-  function closeAll()     { closeModal(loginOverlay); closeModal(registerOverlay); }
-
-  const openLoginBtn = document.getElementById('openLogin');
-  if (openLoginBtn) {
-    openLoginBtn.addEventListener('click', () => openModal(loginOverlay));
-  }
-
-  document.getElementById('toRegister').addEventListener('click', (e) => {
-    e.preventDefault(); closeModal(loginOverlay); openModal(registerOverlay);
-  });
-  document.getElementById('toLoginFromSub').addEventListener('click', (e) => {
-    e.preventDefault(); closeModal(registerOverlay); openModal(loginOverlay);
-  });
-
-  document.querySelectorAll('[data-close]').forEach(btn => {
-    btn.addEventListener('click', closeAll);
-  });
-
-  document.addEventListener('keydown', (e) => { if(e.key==='Escape') closeAll(); });
-
-  // ----- เปิด modal อัตโนมัติเมื่อ server ส่ง error กลับมา -----
-  // มาจากปุ่ม "เข้าสู่ระบบ" ของหน้าอื่น (/?login=1)
-  if (new URLSearchParams(window.location.search).get('login') === '1') openModal(loginOverlay);
-
-  @if(session('open_modal') === 'login')
-    openModal(loginOverlay);
-  @elseif(session('open_modal') === 'register')
-    openModal(registerOverlay);
-  @endif
+  // หน้าต่างเข้าสู่ระบบ/สมัครสมาชิก: ดู resources/js/auth-modal.js
 </script>
 @endpush

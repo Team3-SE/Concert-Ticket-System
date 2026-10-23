@@ -21,7 +21,7 @@ class AuthController extends Controller
      * register(request)
      * ตรวจสอบข้อมูลสมัครสมาชิก สร้างบัญชีผู้ใช้ (role = USER ตรงกับ app_user.role ใน database) แล้วเข้าสู่ระบบให้ทันที
      * param : request
-     * return : RedirectResponse ไปหน้าแรก (ถ้าข้อมูลไม่ถูกต้องจะกลับหน้าเดิมพร้อม error)
+     * return : RedirectResponse ไปหน้าที่ส่งมาใน redirect (ไม่มี = หน้าแรก) ถ้าข้อมูลไม่ถูกต้องจะกลับหน้าเดิมพร้อม error
      */
     public function register(Request $request)
     {
@@ -68,14 +68,14 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect('/')->with('status', 'ยินดีต้อนรับ! สมัครสมาชิกสำเร็จแล้ว 🎉');
+        return redirect($this->redirectTarget($request))->with('status', 'ยินดีต้อนรับ! สมัครสมาชิกสำเร็จแล้ว 🎉');
     }
 
     /**
      * login(request)
      * ตรวจสอบอีเมล รหัสผ่าน และสถานะบัญชี (ถูกระงับหรือไม่) แล้วเข้าสู่ระบบ
      * param : request
-     * return : RedirectResponse ไปหน้าแรก (ถ้าไม่ผ่านจะกลับหน้าเดิมพร้อม error)
+     * return : RedirectResponse ไปหน้าที่ส่งมาใน redirect (ไม่มี = หน้าแรก) ถ้าไม่ผ่านจะกลับหน้าเดิมพร้อม error
      */
     public function login(Request $request)
     {
@@ -93,28 +93,28 @@ class AuthController extends Controller
         if (!$user) {
             return back()
                 ->withErrors(['email' => 'ไม่พบบัญชีนี้ในระบบ'])
-                ->withInput($request->only('email'))
+                ->withInput($request->only('email', 'redirect'))
                 ->with('open_modal', 'login');
         }
 
         if ($user->isBanned()) {
             return back()
                 ->withErrors(['email' => 'บัญชีนี้ถูกระงับการใช้งาน'])
-                ->withInput($request->only('email'))
+                ->withInput($request->only('email', 'redirect'))
                 ->with('open_modal', 'login');
         }
 
         if (!Hash::check($request->password, $user->password_hash)) {
             return back()
                 ->withErrors(['password' => 'รหัสผ่านไม่ถูกต้อง'])
-                ->withInput($request->only('email'))
+                ->withInput($request->only('email', 'redirect'))
                 ->with('open_modal', 'login');
         }
 
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
-        return redirect('/');
+        return redirect($this->redirectTarget($request));
     }
 
     /**
@@ -130,5 +130,27 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/');
+    }
+
+    /**
+     * redirectTarget(request)
+     * หน้าที่จะพาไปหลัง login/สมัครสมาชิกสำเร็จ จากช่อง redirect ในหน้าต่าง (เช่น /booking?concert_id=1)
+     * รับเฉพาะ path ภายในเว็บ (ขึ้นต้นด้วย / ตัวเดียว) กันการพาออกไปเว็บอื่น (open redirect)
+     * param : request
+     * return : path (string) ถ้าไม่มีหรือไม่ถูกต้อง = '/'
+     */
+    private function redirectTarget(Request $request): string
+    {
+        $target = $request->input('redirect');
+
+        $isLocalPath = is_string($target)
+            && $target !== ''
+            && strlen($target) <= 2048
+            && str_starts_with($target, '/')
+            && !str_starts_with($target, '//')
+            && !str_contains($target, '\\')
+            && !preg_match('/[\x00-\x1F\x7F]/', $target);
+
+        return $isLocalPath ? $target : '/';
     }
 }

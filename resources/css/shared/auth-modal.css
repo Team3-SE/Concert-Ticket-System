@@ -1,0 +1,86 @@
+/*
+ * resources/css/shared/auth-modal.css
+ * หน้าที่ : หน้าต่างเข้าสู่ระบบ / สมัครสมาชิก (ย้ายมาจาก concerts/home.css ให้ใช้ได้ทุกหน้า)
+ * ใช้กับ : partials/auth-modals.blade.php (layouts/main ใส่ให้ตอนยังไม่ login)
+ * Author : 67160292 ธีรเมธ พลสาย
+ * Created : 23/10/2569
+ */
+
+/* ครอบทุก rule ด้วย .auth-overlay กันชนกับ .field / .row-2 / .btn-orange ของหน้าอื่น */
+@keyframes auth-pop{from{opacity:0;transform:translateY(8px) scale(.98);}to{opacity:1;transform:none;}}
+
+.auth-overlay{
+  --navy-800:#0e2166;
+  --navy-700:#12297d;
+  --gray-100:#f1f2f5;
+  --gray-300:#dfe1e7;
+  --gray-500:#8b8fa3;
+  --gray-700:#4b4f63;
+  position:fixed;inset:0;background:rgba(10,16,50,.55);
+  display:none;align-items:center;justify-content:center;
+  z-index:100;padding:20px;
+  backdrop-filter:blur(2px);
+  color:var(--text);
+}
+.auth-overlay.open{display:flex;}
+
+.auth-overlay .modal{
+  background:#fff;border-radius:14px;width:100%;max-width:380px;
+  max-height:100%;overflow-y:auto;
+  padding:28px 26px 24px;position:relative;
+  box-shadow:0 20px 60px rgba(10,16,50,.35);
+  animation:auth-pop .18s ease;
+}
+.auth-overlay .modal-close{
+  position:absolute;top:14px;right:16px;background:none;border:none;
+  font-size:16px;color:var(--gray-500);cursor:pointer;
+}
+.auth-overlay .modal-error{
+  background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;
+  border-radius:8px;padding:9px 13px;font-size:12px;margin-bottom:14px;
+}
+.auth-overlay .modal h2{
+  text-align:center;color:var(--navy-800);font-size:19px;font-weight:800;margin-bottom:4px;
+}
+.auth-overlay .modal .sub{text-align:center;font-size:12px;color:var(--gray-500);margin-bottom:20px;}
+.auth-overlay .sub-link{color:var(--orange-dark);font-weight:700;text-decoration:none;}
+
+.auth-overlay .field{margin-bottom:14px;}
+.auth-overlay .field label{display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:6px;}
+.auth-overlay .field label .req{color:#e8503c;}
+.auth-overlay .field input{
+  width:100%;padding:10px 12px;border:1px solid var(--gray-300);
+  border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);
+  outline:none;transition:border-color .15s;
+}
+.auth-overlay .field input:focus{border-color:var(--navy-700);}
+.auth-overlay .field input::placeholder{color:#b7bad0;}
+.auth-overlay .row-2{display:flex;gap:10px;}
+.auth-overlay .row-2 .field{flex:1;}
+
+.auth-overlay .options-row{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:12px;margin-bottom:18px;color:var(--gray-700);
+}
+.auth-overlay .options-row label{display:flex;align-items:center;gap:6px;cursor:pointer;}
+.auth-overlay .options-row a{color:var(--orange-dark);text-decoration:none;font-weight:600;}
+
+.auth-overlay .modal .btn-orange{
+  width:100%;padding:11px;border-radius:24px;
+  background:var(--orange);color:#fff;border:none;
+  font-weight:600;font-family:inherit;font-size:14px;cursor:pointer;
+  transition:background .15s ease, transform .1s ease;
+}
+.auth-overlay .modal .btn-orange:hover{background:var(--orange-dark);transform:translateY(-1px);}
+
+.auth-overlay .switch-text{text-align:center;font-size:12px;color:var(--gray-700);margin-top:16px;}
+.auth-overlay .switch-text a{color:var(--orange-dark);font-weight:700;text-decoration:none;}
+
+.auth-overlay .phone-field{
+  display:flex;align-items:stretch;border:1px solid var(--gray-300);border-radius:8px;overflow:hidden;
+}
+.auth-overlay .phone-prefix{
+  background:var(--gray-100);display:flex;align-items:center;padding:0 10px;font-size:13px;color:var(--gray-700);border-right:1px solid var(--gray-300);
+}
+.auth-overlay .phone-field input{border:none;border-radius:0;}
+.auth-overlay .phone-field input:focus{border:none;}

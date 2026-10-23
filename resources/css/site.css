@@ -11,6 +11,7 @@
 @import './shared/navbar.css';
 @import './shared/sidebar.css';
 @import './shared/pagination.css';
+@import './shared/auth-modal.css';
 
 /* concerts/ views/concerts/* */
 @import './concerts/home.css';
