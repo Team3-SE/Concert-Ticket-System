@@ -661,7 +661,11 @@
          * @return {boolean}
          */
         isPending(seatId) {
-          return Array.isArray(this.pendingSeats) && this.pendingSeats.includes(seatId) && !this.selectedSeats.includes(seatId);
+          // ที่นั่งที่คนอื่นกำลังชำระเงิน (ล็อก 10 นาที) ของโซนที่เลือก
+          const list = (this.selectedZone && Array.isArray(this.selectedZone.pending))
+            ? this.selectedZone.pending
+            : this.pendingSeats;
+          return Array.isArray(list) && list.includes(seatId) && !this.selectedSeats.includes(seatId);
         },
 
         /**

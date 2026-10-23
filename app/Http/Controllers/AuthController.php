@@ -74,22 +74,36 @@ class AuthController extends Controller
 
     /**
      * login(request)
-     * ตรวจสอบอีเมล รหัสผ่าน และสถานะบัญชี (ถูกระงับหรือไม่) แล้วเข้าสู่ระบบ
+     * ตรวจสอบอีเมลหรือเบอร์โทร (ช่อง email ใส่ได้ทั้งสองแบบ) รหัสผ่าน และสถานะบัญชี (ถูกระงับหรือไม่) แล้วเข้าสู่ระบบ
      * param : request
      * return : RedirectResponse ไปหน้าที่ส่งมาใน redirect (ไม่มี = หน้าแรก) ถ้าไม่ผ่านจะกลับหน้าเดิมพร้อม error
      */
     public function login(Request $request)
     {
-        $request->validate([
-            'email'    => ['required', 'email'],
+        // ช่อง email รับได้ทั้งอีเมลและเบอร์โทร: มี @ = อีเมล ไม่มี = เบอร์โทร 10 หลัก
+        $identifier = trim((string) $request->input('email'));
+        $byEmail = str_contains($identifier, '@');
+
+        $request->merge(['email' => $identifier]);
+        $validator = Validator::make($request->all(), [
+            'email'    => ['required', 'string', 'max:255', $byEmail ? 'email' : 'regex:/^0[0-9]{9}$/'],
             'password' => ['required'],
         ], [
-            'email.required'    => 'กรุณากรอกอีเมล',
+            'email.required'    => 'กรุณากรอกอีเมลหรือเบอร์โทรศัพท์',
             'email.email'       => 'รูปแบบอีเมลไม่ถูกต้อง',
+            'email.regex'       => 'กรุณากรอกอีเมล หรือเบอร์โทรศัพท์ 10 หลักที่ขึ้นต้นด้วย 0',
             'password.required' => 'กรุณากรอกรหัสผ่าน',
         ]);
 
-        $user = AppUser::where('email', $request->email)->first();
+        // ข้อมูลไม่ครบ/รูปแบบผิด: กลับมาเปิดหน้าต่างเข้าสู่ระบบพร้อมข้อความ
+        if ($validator->fails()) {
+            return back()
+                ->withErrors($validator)
+                ->withInput($request->only('email', 'redirect'))
+                ->with('open_modal', 'login');
+        }
+
+        $user = AppUser::where($byEmail ? 'email' : 'phone', $identifier)->first();
 
         if (!$user) {
             return back()

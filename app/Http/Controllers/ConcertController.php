@@ -145,7 +145,7 @@ class ConcertController extends Controller
                     : null,
                 'status'       => strtoupper((string) $concert->status),
                 'poster'       => $concert->poster_path ? asset('storage/' . $concert->poster_path) : null,
-                'url'          => url('/booking?concert_id=' . $concert->concert_id),
+                'url'          => url('/concert-detail?concert_id=' . $concert->concert_id),
             ])->values(),
         ]);
     }

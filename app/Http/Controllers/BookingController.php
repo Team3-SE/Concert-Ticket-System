@@ -60,8 +60,17 @@ class BookingController extends Controller
             ]);
         }
 
+        // ที่นั่งที่ผู้ใช้คนนี้ล็อกไว้เองและยังไม่ชำระ: ไม่นับเป็น "คนอื่นกำลังชำระเงิน" (สีส้ม) แต่ยังเลือกซ้ำไม่ได้
+        $ownLockedSeatIds = $request->user()
+            ? BookingSeat::whereHas('booking', function ($q) use ($request, $concert) {
+                $q->where('user_id', $request->user()->user_id)
+                    ->where('concert_id', $concert->concert_id)
+                    ->where('status', 'PENDING_PAYMENT');
+            })->pluck('seat_id')->all()
+            : [];
+
         $occupiedSeats = [];
-        $zones = $concert->zones->map(function ($zone) use (&$occupiedSeats) {
+        $zones = $concert->zones->map(function ($zone) use (&$occupiedSeats, $ownLockedSeatIds) {
             $isStanding = $zone->zone_type === 'STANDING';
             $availableCount = ! $isStanding
                 ? $zone->getAvailableSeats()->count()
@@ -71,16 +80,20 @@ class BookingController extends Controller
             $rows = [];
             $cols = [];
             $occupied = [];
+            $pending = [];   // ที่นั่งที่คนอื่นล็อกไว้ระหว่างชำระเงิน (LOCKED) แสดงเป็นสีส้ม
             $capacity = (int) $zone->capacity;   // โซนยืน: ความจุตามที่ตั้งไว้ในโซน (โซนนั่งนับจากจำนวนที่นั่งด้านล่าง)
             if (! $isStanding) {
-                $seats = $zone->seats()->get(['row', 'number', 'seat_booking_status']);
+                $seats = $zone->seats()->get(['seat_id', 'row', 'number', 'seat_booking_status']);
                 $rows = $seats->pluck('row')->unique()->sort()->values()->all();
                 $cols = $seats->pluck('number')->unique()->sort()->values()->all();
                 $capacity = $seats->count();   // โซนนั่ง: ความจุ = จำนวนที่นั่งทั้งหมด
                 foreach ($seats as $seat) {
-                    if (in_array($seat->seat_booking_status, ['LOCKED', 'RESERVED', 'SOLD'], true)) {
-                        $occupied[] = $seat->row.$seat->number;
-                        $occupiedSeats[] = $seat->row.$seat->number;
+                    $label = $seat->row.$seat->number;
+                    if ($seat->seat_booking_status === 'LOCKED' && ! in_array($seat->seat_id, $ownLockedSeatIds, true)) {
+                        $pending[] = $label;
+                    } elseif (in_array($seat->seat_booking_status, ['LOCKED', 'RESERVED', 'SOLD'], true)) {
+                        $occupied[] = $label;
+                        $occupiedSeats[] = $label;
                     }
                 }
             }
@@ -96,6 +109,7 @@ class BookingController extends Controller
                 'rows'      => $rows,
                 'cols'      => $cols,
                 'occupied'  => $occupied,
+                'pending'   => $pending,
             ];
         });
 

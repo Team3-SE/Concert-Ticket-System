@@ -11,12 +11,12 @@
 
 {{-- Login Modal --}}
 <div @class(['overlay', 'auth-overlay', 'open' => $openModal === 'login']) id="loginOverlay">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+  <div class="modal modal-login" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
     <button type="button" class="modal-close" data-close aria-label="ปิด">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
     <h2 id="loginTitle">เข้าสู่ระบบ</h2>
-    <p class="sub">ยังไม่มีบัญชีใช่ไหม? <a href="#" id="toRegister" class="sub-link">สมัครสมาชิก</a></p>
+    <p class="sub">กรุณากรอกข้อมูลเพื่อใช้งานต่อ</p>
 
     {{-- แสดง error --}}
     @if(session('open_modal') === 'login' && $errors->any())
@@ -27,23 +27,24 @@
       @csrf
       <input type="hidden" name="redirect" value="{{ old('redirect') }}">
       <div class="field">
-        <label>อีเมล <span class="req">*</span></label>
-        <input type="email" name="email" placeholder="example@email.com"
+        <label>อีเมล / เบอร์โทรศัพท์</label>
+        <input type="text" name="email" placeholder="example@email.com" autocomplete="username"
                value="{{ old('email') }}" required>
       </div>
       <div class="field">
-        <label>รหัสผ่าน <span class="req">*</span></label>
+        <label>รหัสผ่าน</label>
         <div class="pw-wrap">
           <input type="password" name="password" placeholder="••••••••" required>
           <button type="button" class="pw-toggle" data-toggle-password aria-label="แสดง/ซ่อนรหัสผ่าน"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
       </div>
       <div class="options-row">
-        <label><input type="checkbox" name="remember"> จดจำฉัน</label>
+        <label><input type="checkbox" name="remember"> จำฉันไว้</label>
         <a href="#">ลืมรหัสผ่าน?</a>
       </div>
       <button type="submit" class="btn-orange">เข้าสู่ระบบ</button>
     </form>
+    <p class="switch-text">ยังไม่มีบัญชี? <a href="#" id="toRegister">สมัครสมาชิก</a></p>
   </div>
 </div>
 
