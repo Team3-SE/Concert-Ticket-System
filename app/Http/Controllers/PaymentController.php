@@ -5,7 +5,7 @@
  * จัดการการชำระเงิน: หน้าชำระเงิน ตรวจ rate limit สร้าง/ยืนยันการชำระเงิน และสร้างคำสั่งซื้อ
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 04/09/2569
- * Updated : 21/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers;
@@ -329,6 +329,30 @@ class PaymentController extends Controller
 
             return $order;
         });
+    }
+
+    /**
+     * cancel(request, bookingId)
+     * ยกเลิกการจองที่ยังรอชำระเงิน (กดย้อนกลับจากหน้าชำระเงิน) แล้วปลดล็อกที่นั่งกลับเป็น AVAILABLE
+     * ไม่ยกเลิกถ้าการจองไม่ได้อยู่ในสถานะรอชำระ หรือมีรายการชำระเงินที่รอยืนยันอยู่ (เปิด QR แล้ว)
+     * param : request, bookingId
+     * return : JsonResponse { cancelled }
+     */
+    public function cancel(Request $request, int $bookingId): JsonResponse
+    {
+        $booking = $this->findOwnBooking($request, $bookingId);
+
+        if ($booking->status !== 'PENDING_PAYMENT') {
+            return response()->json(['cancelled' => false, 'message' => 'การจองนี้ไม่ได้อยู่ในสถานะรอชำระเงิน'], 409);
+        }
+
+        if ($booking->payments()->where('status', 'PENDING')->exists()) {
+            return response()->json(['cancelled' => false, 'message' => 'มีรายการชำระเงินที่รอยืนยันอยู่'], 409);
+        }
+
+        $this->expireBooking($booking);
+
+        return response()->json(['cancelled' => true]);
     }
 
     /**

@@ -82,6 +82,11 @@ Route::middleware('auth')->group(function () {
     // สร้างรายการชำระเงิน + ออกหมายเลขคำสั่งซื้อ (แสดงในหน้าต่าง QR)
     Route::post('/payments', [\App\Http\Controllers\PaymentController::class, 'store'])->name('payments.store');
 
+    // ยกเลิกการจองที่ยังไม่ชำระเงิน (ปุ่มย้อนกลับหน้าชำระเงิน) ปลดล็อกที่นั่งทันที
+    Route::post('/bookings/{bookingId}/cancel', [\App\Http\Controllers\PaymentController::class, 'cancel'])
+        ->whereNumber('bookingId')
+        ->name('bookings.cancel');
+
     // จำลองการชำระเงินสำเร็จ (เฉพาะ APP_ENV=local)
     Route::post('/payments/{paymentId}/mock-complete', [\App\Http\Controllers\PaymentController::class, 'mockComplete'])
         ->whereNumber('paymentId')

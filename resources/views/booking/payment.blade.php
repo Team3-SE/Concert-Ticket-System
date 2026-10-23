@@ -3,6 +3,7 @@
  * หน้าชำระเงิน
  * @Author 67160434 จิตฏิยากร โสภา
  * @Create Date 2026-10-13
+ * @Update Date 23/10/2569 67160292 ธีรเมธ พลสาย
 --}}
 @extends('layouts.main')
 
@@ -326,7 +327,23 @@
           return total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
 
-        goBack() {
+        /**
+         * goBack()
+         * ย้อนกลับ: ถ้ามาจากการจองจริงและยังไม่ได้เปิด QR ให้ยกเลิกการจองก่อน (ปลดล็อกที่นั่ง) แล้วกลับหน้าเลือกที่นั่ง
+         */
+        async goBack() {
+          if (this.bookingId && concertId) {
+            try {
+              await fetch(`/bookings/${this.bookingId}/cancel`, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf() },
+              });
+            } catch (e) {
+              // ยกเลิกไม่สำเร็จก็ยังกลับได้ ที่นั่งจะถูกปลดเมื่อหมดเวลา
+            }
+            window.location.href = `/booking?concert_id=${concertId}`;
+            return;
+          }
           window.history.back();
         },
 
