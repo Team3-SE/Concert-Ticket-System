@@ -73,6 +73,10 @@
 /* ช่องรหัสผ่านพร้อมปุ่มตา */
 .auth-overlay .pw-wrap{position:relative;}
 .auth-overlay .pw-wrap input{padding-right:42px;}
+/* ซ่อนปุ่มตาที่ Edge/IE ใส่ให้ในช่องรหัสผ่านเอง เหลือปุ่มตาของเราปุ่มเดียว */
+.auth-overlay input::-ms-reveal,
+.auth-overlay input::-ms-clear{display:none;}
+.auth-overlay input::-webkit-credentials-auto-fill-button{display:none !important;}
 .auth-overlay .pw-toggle{
   position:absolute;top:0;right:0;height:100%;width:40px;
   display:flex;align-items:center;justify-content:center;
