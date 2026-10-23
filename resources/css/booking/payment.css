@@ -4,7 +4,7 @@
  * ใช้กับ : booking/payment.blade.php
  * Author : 67160434 จิตฏิยากร โสภา
  * Created : 2026-10-13
- * Updated : 21/10/2569 67160292 ธีรเมธ พลสาย (ปรับตาม Figma frame "Payment")
+ * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย (ปุ่มย้อนกลับไม่ตัดบรรทัด)
  */
 
 /* Scoped to <body class="page-payment"> */
@@ -197,6 +197,8 @@
       font-weight: 600;
       border: none;
       cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
       transition: background 150ms;
   }
   .btn-back:hover{
