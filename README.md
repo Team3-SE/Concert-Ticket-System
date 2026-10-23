@@ -57,8 +57,8 @@ docker exec concert_app php artisan migrate --seed
 docker exec concert_app php artisan storage:link
 docker exec concert_app chmod -R 775 storage bootstrap/cache
 ```
-
-**เสร็จแล้ว!** เปิดเบราว์เซอร์ไปที่ http://localhost:8080
+http://localhost:8080
+**เสร็จแล้ว!** เปิดเบราว์เซอร์ไปที่ 
 **สำหรับคนทำmodel** เปิดเบราว์เซอร์ไปที่ http://localhost:8080/dev/models
 ---
 ### (ด้านล่างลงไปเป็นข้อมูลเพิ่มเติม ไม่เกี่ยวกับsetup ไปโค้ดกันได้เลยจ่ะ)
