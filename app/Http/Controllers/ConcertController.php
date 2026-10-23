@@ -5,6 +5,7 @@
  * จัดการข้อมูลคอนเสิร์ตฝั่งลูกค้า: รายการ ค้นหา รายการแนะนำขณะพิมพ์ และรายละเอียดคอนเสิร์ต
  * Author :
  * Created :
+ * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers;
@@ -140,7 +141,7 @@ class ConcertController extends Controller
                 'venue'        => $concert->venue,
                 'organization' => $concert->organization?->name,
                 'date'         => $concert->event_datetime
-                    ? Carbon::parse($concert->event_datetime)->thDateTime() . ' น.'
+                    ? Carbon::parse($concert->event_datetime)->thDateLong() . ' ' . Carbon::parse($concert->event_datetime)->format('H:i') . ' น.'
                     : null,
                 'status'       => strtoupper((string) $concert->status),
                 'poster'       => $concert->poster_path ? asset('storage/' . $concert->poster_path) : null,
