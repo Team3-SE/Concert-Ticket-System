@@ -48,7 +48,8 @@
             </div>
             <input type="tel" id="phone" name="phone"
                    value="{{ old('phone', $user->phone ?? '') }}"
-                   placeholder="081-234-5678">
+                   placeholder="0812345678" maxlength="10" inputmode="numeric" pattern="0[0-9]{9}"
+                   oninput="this.value = this.value.replace(/\D/g, '').slice(0, 10)">
           </div>
           @error('phone')<p class="field-error">{{ $message }}</p>@enderror
         </div>

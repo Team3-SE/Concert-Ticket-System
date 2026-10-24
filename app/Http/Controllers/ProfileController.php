@@ -61,6 +61,6 @@ class ProfileController extends Controller
     public function updatePassword(Request $request)
     {
         $this->userController->changePassword($request, Auth::id());
-        return redirect()->route('profile.edit')->with('status', 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว ✅');
+        return redirect()->route('profile.edit')->with('status', 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว');
     }
 }
