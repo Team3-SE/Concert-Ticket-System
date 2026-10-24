@@ -26,7 +26,7 @@ use Illuminate\Support\Str;
 class BookingController extends Controller
 {
     /* เวลาที่ล็อกที่นั่งไว้ให้ชำระเงิน (นาที) */
-    private const SEAT_LOCK_MINUTES = 10;
+    private const SEAT_LOCK_MINUTES = 1;   // TODO: ทดสอบหมดเวลา ชั่วคราว 1 นาที (ปกติ 10)
 
     /**
      * index(request)

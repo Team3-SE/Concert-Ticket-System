@@ -3,7 +3,7 @@
   * หน้ารายละเอียดคอนเสิร์ตและข้อมูลบัตร
   * @Author 67160279 กนกพล แซ่ตั๊น
   * @Create Date 18-10-2026
-  * @Update Date 23/10/2569 67160292 ธีรเมธ พลสาย
+  * @Update Date 24/10/2569 67160292 ธีรเมธ พลสาย
 *@--}}
 
 @extends('layouts.main')
@@ -102,7 +102,7 @@
               <p class="body-text text-gray-600">
                 @if($concert->sale_start_datetime && $concert->sale_end_datetime)
                   @php($thaiWeekdays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'])
-                  รอบการแสดง {{ $thaiWeekdays[$concert->event_datetime->dayOfWeek] }}ที่ {{ $concert->event_datetime->thDateLong() }} ({{ $concert->event_datetime->format('H:i') }} น.)<br>
+                  รอบการแสดง วัน{{ $thaiWeekdays[$concert->event_datetime->dayOfWeek] }}ที่ {{ $concert->event_datetime->thDateLong() }} ({{ $concert->event_datetime->format('H:i') }} น.)<br>
                 @else
                   เลือกโซนที่นั่งและตรวจสอบจำนวนบัตรว่างก่อนเริ่มทำรายการ
                 @endif
