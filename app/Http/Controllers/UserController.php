@@ -67,11 +67,11 @@ class UserController extends Controller
 
         $request->validate([
             'current_password' => ['required'],
-            'new_password'     => ['required', 'confirmed', 'regex:/^(?=.*[A-Za-z])(?=.*\d)\S{6,}$/'],
+            'new_password'     => ['required', 'confirmed', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)\S{8,}$/'],
         ], [
             'current_password.required' => 'กรุณากรอกรหัสผ่านปัจจุบัน',
             'new_password.required'     => 'กรุณากรอกรหัสผ่านใหม่',
-            'new_password.regex'        => 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร มีตัวอักษรและตัวเลขอย่างน้อยอย่างละ 1 ตัว',
+            'new_password.regex'        => 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร และมีตัวอักษรอังกฤษพิมพ์เล็ก พิมพ์ใหญ่ และตัวเลข',
             'new_password.confirmed'    => 'รหัสผ่านยืนยันไม่ตรงกัน',
         ]);
 
