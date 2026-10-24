@@ -14,26 +14,19 @@ class PaymentService
      */
     public function createOrFind(array $data): Payment
     {
-        $existing = Payment::where('idempotency_key', $data['idempotency_key'])->first();
-        if ($existing) {
-            return $existing;
-        }
-
-        $merchantPaymentId = (string) $data['payment_id'];
-
-        return Payment::create([
-            'payment_id'      => $merchantPaymentId,
-            'order_ref'       => $data['booking_ref'] ?? $data['order_ref'] ?? $merchantPaymentId,
-            'amount'          => $data['amount'],
-            'currency'        => $data['currency'] ?? 'THB',
-            'method'          => $data['method'],
-            'status'          => 'PENDING',
-            'callback_url'    => $data['callback_url'],
-            'return_url'      => $data['return_url'] ?? null,
-            'idempotency_key' => $data['idempotency_key'],
-            'expires_at'      => now()->addSeconds($data['expires_in'] ?? config('paymock.default_expires_in')),
-            'metadata'        => $data['metadata'] ?? null,
-        ]);
+        return Payment::firstOrCreate(
+            ['idempotency_key' => $data['idempotency_key']],
+            [
+                'amount'       => $data['amount'],
+                'currency'     => $data['currency'] ?? 'THB',
+                'method'       => $data['method'],
+                'status'       => 'PENDING',
+                'callback_url' => $data['callback_url'],
+                'return_url'   => $data['return_url'] ?? null,
+                'expires_at'   => now()->addSeconds($data['expires_in'] ?? config('paymock.default_expires_in')),
+                'metadata'     => $data['metadata'] ?? null,
+            ]
+        );
     }
 
     /**

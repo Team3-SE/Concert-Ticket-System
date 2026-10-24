@@ -23,8 +23,8 @@
         <!-- Transaction Details Box -->
         <div class="mt-6 p-4 bg-gray-50 rounded-xl text-sm text-left space-y-2 border border-gray-100">
             <div class="flex justify-between">
-                <span class="text-gray-500">Booking Code:</span>
-                <span class="font-mono font-bold text-indigo-700">{{ $payment->order_ref }}</span>
+                <span class="text-gray-500">Transaction ID:</span>
+                <span class="font-mono font-bold text-indigo-700">{{ $payment->public_id }}</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-gray-500">ยอดชำระ:</span>
@@ -86,7 +86,7 @@
             <!-- ปุ่มปิดหน้าต่าง (แสดงเฉพาะเมื่อเปิดใน iframe Modal) -->
             <div id="iframeCloseBtnWrapper" style="display: none;" class="w-full sm:w-auto">
                 <button type="button"
-                        onclick="window.parent.postMessage({ type: 'paymock:close_modal', payment_id: '{{ $payment->public_id }}', status: '{{ $payment->status }}' }, '*')"
+                        onclick="window.parent.postMessage({ type: 'paymock:close_modal', id: '{{ $payment->public_id }}', status: '{{ $payment->status }}' }, '*')"
                         class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition shadow cursor-pointer">
                     ✕ ปิดหน้าต่างนี้
                 </button>
@@ -127,7 +127,6 @@ document.addEventListener('DOMContentLoaded', function() {
         window.parent.postMessage({
             type: 'paymock:payment_result',
             status: @json($payment->status),
-            payment_id: @json($payment->payment_id),
             id: @json($payment->public_id),
             amount: {{ (float) $payment->amount }}
         }, '*');

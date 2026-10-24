@@ -12,8 +12,6 @@ class Payment extends Model
 
     protected $fillable = [
         'public_id',
-        'payment_id',
-        'order_ref',
         'amount',
         'currency',
         'method',
@@ -52,12 +50,9 @@ class Payment extends Model
         return $this->status === 'PENDING';
     }
 
-    /** รหัส payment ฝั่งร้านค้า โดยรองรับรายการเก่าที่ไม่มี payment_id */
-    public function merchantPaymentId(): string
+    public function responseMetadata(): mixed
     {
-        $id = $this->attributes['payment_id'] ?? null;
-
-        return (string) ($id !== null && $id !== '' ? $id : ($this->order_ref ?? ''));
+        return $this->metadata;
     }
 
 }

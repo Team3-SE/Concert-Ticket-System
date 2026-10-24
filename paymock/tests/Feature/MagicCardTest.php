@@ -15,13 +15,11 @@ class MagicCardTest extends TestCase
     private function createPendingPayment(): Payment
     {
         return Payment::create([
-            'payment_id'      => (string) random_int(1000, 999999),
-            'order_ref'       => 'TK-TEST-42',
             'amount'          => 1200,
             'method'          => 'card',
             'status'          => 'PENDING',
             'callback_url'    => 'http://concert/webhooks/payment',
-            'return_url'      => 'http://concert.local/booking/TK-TEST-42',
+            'return_url'      => 'http://concert.local/booking/return',
             'idempotency_key' => 'IDEMP_' . uniqid(),
         ]);
     }
@@ -40,7 +38,7 @@ class MagicCardTest extends TestCase
             'redirect_to_return' => '1',
         ]);
 
-        $response->assertRedirect('http://concert.local/booking/TK-TEST-42');
+        $response->assertRedirect('http://concert.local/booking/return');
 
         $this->assertEquals('COMPLETED', $payment->fresh()->status);
         $this->assertNotNull($payment->fresh()->paid_at);
@@ -50,15 +48,15 @@ class MagicCardTest extends TestCase
         ]);
     }
 
-    public function test_checkout_displays_booking_code_without_payment_identifiers(): void
+    public function test_checkout_displays_provider_transaction_id(): void
     {
         $payment = $this->createPendingPayment();
 
         $response = $this->get(route('checkout.show', $payment->public_id));
 
         $response->assertOk()
-            ->assertSee('Booking Code:')
-            ->assertSee('TK-TEST-42')
+            ->assertSee('Transaction ID:')
+            ->assertSee($payment->public_id)
             ->assertDontSee('Provider Txn:')
             ->assertDontSee('Payment ID:');
     }

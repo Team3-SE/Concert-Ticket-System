@@ -70,50 +70,60 @@ Authorization: Bearer {API_KEY}
 Content-Type: application/json
 
 {
-  "payment_id": "12",
-  "booking_ref": "TK-260101-ABCDE",
   "amount": 1500.00,
   "currency": "THB",
   "method": "card",           // "card" หรือ "promptpay"
   "callback_url": "http://your-concert-domain/webhooks/payment",
   "return_url": "http://your-concert-domain/payment/return",
-  "expires_in": 600           // วินาที (default 600)
+    "expires_in": 600,          // วินาที (default 600)
+    "metadata": {
+        "source": "concert-app",
+        "context": {
+            "campaign": "summer"
+        }
+    }
 }
 ```
 
-สำหรับ PromptPay ให้ส่ง `booking_ref` ของ booking จริงมาด้วย เพื่อให้ `booking_ref` ใน response ตรงกับ booking นั้น หากไม่ส่ง ระบบจะใช้ `payment_id` แทน.
+`expires_in` ใช้กำหนดอายุรายการได้ทั้ง `card` และ `promptpay` (default 600 วินาที). `metadata` เป็น optional JSON value ใดก็ได้; Gateway ไม่ตรวจค่าภายในและส่งกลับตามที่รับมา.
 
 **Response (201 Created):**
 ```json
 {
   "id": "txn_01h...",
-  "payment_id": "12",
-  "amount": 1500.00,
-  "currency": "THB",
-  "method": "card",
-  "status": "PENDING",
-  "failure_code": null,
-  "checkout_url": "http://localhost:8081/checkout/txn_01h...",
-  "return_url": "http://your-concert-domain/payment/return",
-  "expires_at": "2024-10-13T12:00:00Z",
-  "paid_at": null,
-  "created_at": "2024-10-13T11:50:00Z"
+    "amount": 1500.00,
+    "currency": "THB",
+    "method": "card",
+    "status": "PENDING",
+    "failure_code": null,
+    "checkout_url": "http://localhost:8081/checkout/txn_01h...",
+    "return_url": "http://your-concert-domain/payment/return",
+    "expires_at": "2024-10-13T12:00:00Z",
+    "paid_at": null,
+    "created_at": "2024-10-13T11:50:00Z",
+    "metadata": {
+        "source": "concert-app",
+        "context": {
+            "campaign": "summer"
+        }
+    }
 }
 ```
 
-> **Idempotency:** `payment_id` ใน body เป็น key fallback จึงไม่ต้องส่ง `Idempotency-Key` ซ้ำ. หากส่ง header ระบบใช้ header แทน body `payment_id` เป็น key; ค่าที่เลือกต้องคงเดิมเมื่อ retry attempt เดิม. ไม่มีการอ่าน `idempotency_key` จาก JSON body. Concert backend ปัจจุบันส่งเลข Concert payment เป็นทั้ง `payment_id` และ header; เมื่อ FAILED/EXPIRED จึงสร้าง Concert payment ใหม่ใต้ booking เดิม. ข้อจำกัดปัจจุบัน: timeout ระหว่าง Concert → PayMock ยังไม่ resend อัตโนมัติ จึงต้อง retry/reconcile attempt เดิมด้วย key เดิมที่เลือกใช้ก่อนสร้าง attempt ใหม่.
+`id` ที่ขึ้นต้นด้วย `txn_` คือ provider transaction ID ให้บันทึกไว้ใช้กับ GET, cancel, polling/reconciliation และ deduplicate webhook. `metadata` ที่ส่งมาใน request จะอยู่ใน response และ webhook โดย Gateway ไม่แปลงหรือเติม fields ลงไป.
 
-> **Payment fields:** `POST /v1/payments` ใช้ `payment_id` และ `booking_ref` ใน body. เส้นทางดูสถานะ, cancel, QR และ checkout ใช้ `id` ใน path. Webhook ส่ง field `id`, `payment_id` และ `booking_ref`.
+> **Idempotency:** `Idempotency-Key` เป็น optional และเป็นวิธีเดียวที่ใช้ deduplicate POST. หากไม่ส่ง header ทุก POST จะสร้างรายการใหม่. Header นี้ใช้ภายใน gateway และไม่ถูกส่งกลับใน API response หรือ webhook body. หลัง response ให้ใช้ `id` (`txn_...`) เป็น provider transaction ID สำหรับ GET/reconcile และ idempotent processing; txn ถูกสร้างหลัง POST จึงใช้ deduplicate POST ครั้งแรกไม่ได้.
 
-> **Hosted card flow:** Card payment สร้างเป็น `PENDING` ก่อน แล้วให้ browser redirect ไปยัง `checkout_url` (`/checkout/{id}`). ผู้ใช้กรอกบัตรในหน้า PayMock และฟอร์มจะ `POST /payments/{id}` เพื่อ settle payment เดิม จากนั้น Gateway redirect กลับ `return_url` โดยไม่เติม payment ID ลงใน URL. ส่ง `booking_ref` เป็น booking code เพื่อแสดงบนหน้า checkout/receipt และใช้สร้าง return path เช่น `/booking/{booking_ref}`. Demo ใช้ return path `/demo/bookings/{id}` ซึ่งอ่านสถานะล่าสุดจากฐานข้อมูลก่อนแสดง booking.
 
-Public API ใช้ `booking_ref` เป็น booking code; request เก่าที่ยังส่ง `order_ref` รองรับเพื่อ backward compatibility แต่ response จะส่ง `booking_ref` เท่านั้น.
+> **Hosted card flow:** Card payment สร้างเป็น `PENDING` ก่อน แล้วให้ browser redirect ไปยัง `checkout_url` (`/checkout/{id}`). ผู้ใช้กรอกบัตรในหน้า PayMock และฟอร์มจะ `POST /payments/{id}` เพื่อ settle payment เดิม จากนั้น Gateway redirect กลับ `return_url` โดยไม่เติม payment ID ลงใน URL. Demo ใช้ return path `/demo/bookings/{id}` ซึ่งอ่านสถานะล่าสุดจากฐานข้อมูลก่อนแสดง booking.
+
+Public API รับ `metadata` เป็น optional JSON value สำหรับข้อมูลเพิ่มเติม; Gateway ไม่ตรวจค่าภายใน. Merchant reference fields ไม่ใช่ส่วนหนึ่งของ API contract. `Idempotency-Key` header เป็นวิธีเดียวที่ใช้ deduplicate POST. Response และ webhook ส่ง metadata กลับตามที่รับมา.
 
 ---
 
 ### 2. ตรวจสอบสถานะการชำระเงิน (Polling / Reconcile)
 ```http
-GET /v1/payments/{payment_id}
+GET /v1/payments/{id}
 Authorization: Bearer {API_KEY}
 ```
 
@@ -121,7 +131,7 @@ Authorization: Bearer {API_KEY}
 
 ### 3. ยกเลิกรายการชำระเงินก่อนจ่าย
 ```http
-POST /v1/payments/{payment_id}/cancel
+POST /v1/payments/{id}/cancel
 Authorization: Bearer {API_KEY}
 ```
 
@@ -140,7 +150,6 @@ Authorization: Bearer {API_KEY}
 | `4000 0000 0000 0069` | ❌ บัตรหมดอายุ | `expired_card` | เหมือนข้างบน |
 | `4000 0000 0000 0127` | ❌ CVC ผิด | `incorrect_cvc` | เหมือนข้างบน |
 | `4000 0000 0000 0119` | ⚠️ ระบบขัดข้อง | `processing_error` | ไม่ใช่ความผิดผู้ใช้ ให้ retry ได้ |
-| `4000 0000 0000 3220` | 🔐 ต้อง OTP (3DS) | `3ds_required` | ค้าง PENDING ไม่ปลดล็อกที่นั่งทันที |
 | `4100 0000 0000 0019` | 🚨 สงสัย Fraud | `fraud_suspected` | บันทึก `system_anomaly` (PAYMENT_FRAUD_CARD_TESTING) |
 | `4000 0000 0000 0341` | ✅ สำเร็จ | - | ความผิดปกติของ Webhook ตั้งจาก Admin |
 
@@ -175,7 +184,6 @@ Authorization: Bearer {API_KEY}
 | `webhook_delay:N` | หน่วงเวลา N วินาทีก่อนส่ง | e.g. `webhook_delay:660` (11 นาที = เกินเวลาล็อก) |
 | `webhook_dup:N` | ส่งซ้ำ N ครั้ง | e.g. `webhook_dup:3` ต้องประมวลผลครั้งเดียว |
 | `webhook_bad_sig` | ส่ง Signature เป็น 0 หมด | ระบบหลักต้องตอบ 401 |
-| `webhook_replay` | ส่ง timestamp เก่า 1 ชั่วโมง | ระบบหลักต้องปฏิเสธ (replay attack) |
 
 ---
 
@@ -189,21 +197,23 @@ $concertPayment = ConcertPayment::create([
     'method' => $method,
     'status' => 'PENDING',
 ]);
-$merchantPaymentId = (string) $concertPayment->id;
+$idempotencyKey = (string) $concertPayment->id; // optional header key; keep this attempt ID for every retry
+$headers = [];
+if ($idempotencyKey !== null) {
+    $headers['Idempotency-Key'] = $idempotencyKey;
+}
 
 try {
     $response = Http::withToken(config('services.paymock.key'))
-        ->withHeaders([
-            'Idempotency-Key' => $merchantPaymentId,
-        ])
+        ->withHeaders($headers)
         ->timeout(8)
         ->retry(2, 500, throw: false)
         ->post(config('services.paymock.url') . '/v1/payments', [
-            'payment_id'   => $merchantPaymentId,
             'amount'       => (float) $booking->b_total_amount,
             'method'       => $method, // 'card' or 'promptpay'
             'callback_url' => route('webhooks.payment'),
             'return_url'   => route('payment.return'),
+            'metadata'     => ['source' => 'concert-app'],
         ]);
 
     $response->throw();
@@ -211,7 +221,7 @@ try {
 
 } catch (\Illuminate\Http\Client\ConnectionException|\Illuminate\Http\Client\RequestException $e) {
     // ห้ามสร้าง Concert payment ใหม่จาก timeout เพียงอย่างเดียว
-    // enqueue retry/reconcile ของ $concertPayment โดยใช้ body และ key เดิม
+    // enqueue retry/reconcile ของ $concertPayment โดยใช้ key เดิมถ้ามี
     $concertPayment->update(['status' => 'GATEWAY_ERROR']);
     return back()->with('error', 'กำลังตรวจสอบสถานะการชำระเงิน');
 }

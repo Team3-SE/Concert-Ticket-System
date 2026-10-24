@@ -252,7 +252,7 @@ function demoModalApp() {
                 });
                 const data = await res.json();
                 if (data.ok) {
-                    this.addLog(`สร้าง Payment สำเร็จ! ID: ${data.payment_id}`, 'text-green-400', data);
+                    this.addLog(`สร้าง Payment สำเร็จ! ID: ${data.id}`, 'text-green-400', data);
                     if (this.method === 'card') {
                         window.location.assign(data.redirect_url);
                         return;

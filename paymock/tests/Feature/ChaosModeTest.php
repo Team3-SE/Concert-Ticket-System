@@ -24,7 +24,6 @@ class ChaosModeTest extends TestCase
             'Authorization'   => 'Bearer ' . $this->apiKey,
             'Idempotency-Key' => 'KEY_' . uniqid(),
         ], $headers))->postJson('/v1/payments', [
-            'payment_id'   => (string) random_int(1000, 999999),
             'amount'       => 1000,
             'method'       => 'card',
             'callback_url' => 'http://test/cb',
@@ -79,5 +78,15 @@ class ChaosModeTest extends TestCase
         Setting::set('chaos_mode', 'down');
         $this->postPayment(['X-Mock-Scenario' => 'normal'])
             ->assertStatus(503);
+    }
+
+    public function test_retired_webhook_replay_mode_is_reported_as_normal(): void
+    {
+        Setting::set('webhook_mode', 'webhook_replay');
+
+        $this->withHeader('Authorization', 'Bearer ' . $this->apiKey)
+            ->getJson('/v1/payments')
+            ->assertOk()
+            ->assertJsonPath('webhook_mode', 'normal');
     }
 }

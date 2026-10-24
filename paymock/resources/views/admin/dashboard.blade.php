@@ -112,7 +112,7 @@
                 <div>
                     <div class="font-bold text-sm">WEBHOOK MODE (ชั้นรอง): <span class="font-mono bg-purple-900 px-2 py-0.5 rounded text-white">{{ strtoupper($webhookMode) }}</span></div>
                     <div class="text-xs opacity-90 mt-0.5">
-                        ทุกรายการจะถูกจำลอง webhook ตามโหมดนี้ (lost / delay / dup / bad_sig / replay)
+                        ทุกรายการจะถูกจำลอง webhook ตามโหมดนี้ (lost / delay / dup / bad_sig)
                     </div>
                 </div>
             </div>
@@ -176,7 +176,6 @@
                     <option value="webhook_lost" {{ $webhookMode === 'webhook_lost' ? 'selected' : '' }}>🟡 Lost (ไม่ส่งเลย — ทดสอบ reconcile)</option>
                     <option value="webhook_dup:3" {{ $webhookMode === 'webhook_dup:3' ? 'selected' : '' }}>🟣 Duplicate ×3</option>
                     <option value="webhook_bad_sig" {{ $webhookMode === 'webhook_bad_sig' ? 'selected' : '' }}>🔴 Bad Signature</option>
-                    <option value="webhook_replay" {{ $webhookMode === 'webhook_replay' ? 'selected' : '' }}>🟤 Replay (timestamp เก่า 1 ชม.)</option>
                 </select>
                 <button type="submit"
                         class="w-full bg-purple-700 hover:bg-purple-800 text-white font-bold py-2 rounded-lg text-sm transition shadow">
@@ -297,7 +296,7 @@
                 <thead>
                     <tr class="text-left text-gray-500 border-b text-xs">
                         <th class="pb-2 pr-4">Provider Txn (txn_…)</th>
-                        <th class="pb-2 pr-4">Payment ID</th>
+                        <th class="pb-2 pr-4">รายละเอียด</th>
                         <th class="pb-2 pr-4">ยอดเงิน</th>
                         <th class="pb-2 pr-4">ช่องทาง</th>
                         <th class="pb-2 pr-4">สถานะ</th>
@@ -314,7 +313,27 @@
                                 {{ $p->public_id }} ↗
                             </a>
                         </td>
-                        <td class="py-2.5 pr-4">{{ $p->payment_id ?? $p->order_ref }}</td>
+                        <td class="py-2.5 pr-4 font-sans">
+                            <button type="button"
+                                    @click="selectedPayment = {{ \Illuminate\Support\Js::from([
+                                        'id' => $p->public_id,
+                                        'amount' => (float) $p->amount,
+                                        'currency' => $p->currency,
+                                        'method' => $p->method,
+                                        'status' => $p->status,
+                                        'failure_code' => $p->failure_code,
+                                        'idempotency_key' => $p->idempotency_key,
+                                        'created_at' => $p->created_at?->toIso8601String(),
+                                        'expires_at' => $p->expires_at?->toIso8601String(),
+                                        'paid_at' => $p->paid_at?->toIso8601String(),
+                                        'callback_url' => $p->callback_url,
+                                        'return_url' => $p->return_url,
+                                        'metadata' => $p->responseMetadata(),
+                                    ]) }}"
+                                    class="text-indigo-600 hover:text-indigo-800 font-semibold text-xs underline underline-offset-2">
+                                🔍 ดูรายละเอียด
+                            </button>
+                        </td>
                         <td class="py-2.5 pr-4 font-bold font-sans text-sm text-gray-800">฿{{ number_format($p->amount, 2) }}</td>
                         <td class="py-2.5 pr-4 font-sans">
                             <span class="px-2 py-0.5 rounded text-[11px] font-semibold {{ $p->method === 'promptpay' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700' }}">
@@ -371,6 +390,46 @@
         <div class="mt-4">
             {{ $payments->links() }}
         </div>
+    </div>
+
+    <!-- ═══ MODAL: PAYMENT DETAILS ═══ -->
+    <div x-show="selectedPayment" x-cloak
+         class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+         @click.self="selectedPayment = null"
+         @keydown.escape.window="selectedPayment = null">
+        <dialog open aria-modal="true" aria-labelledby="payment-detail-title"
+            class="m-0 relative bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 border border-gray-200 max-h-[90vh] overflow-y-auto"
+            @click.stop>
+            <div class="flex justify-between items-center mb-5">
+                <div>
+                    <h3 id="payment-detail-title" class="font-bold text-lg text-gray-900">รายละเอียดการชำระเงิน</h3>
+                    <p class="text-xs text-gray-500 font-mono mt-1" x-text="selectedPayment?.id"></p>
+                </div>
+                <button type="button" @click="selectedPayment = null" aria-label="ปิดรายละเอียด"
+                        class="text-gray-500 hover:text-gray-900 text-2xl leading-none">&times;</button>
+            </div>
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                <div><dt class="text-xs text-gray-500">Transaction ID</dt><dd class="mt-1 font-mono break-all" x-text="selectedPayment?.id || '—'"></dd></div>
+                <div><dt class="text-xs text-gray-500">ยอดชำระ</dt><dd class="mt-1 font-semibold" x-text="selectedPayment ? `${selectedPayment.currency} ${Number(selectedPayment.amount).toFixed(2)}` : '—'"></dd></div>
+                <div><dt class="text-xs text-gray-500">ช่องทาง / สถานะ</dt><dd class="mt-1" x-text="selectedPayment ? `${selectedPayment.method} / ${selectedPayment.status}` : '—'"></dd></div>
+                <div><dt class="text-xs text-gray-500">Failure Code</dt><dd class="mt-1 font-mono" x-text="selectedPayment?.failure_code || '—'"></dd></div>
+                <div><dt class="text-xs text-gray-500">Idempotency Key</dt><dd class="mt-1 font-mono break-all" x-text="selectedPayment?.idempotency_key || '—'"></dd></div>
+                <div><dt class="text-xs text-gray-500">สร้างเมื่อ</dt><dd class="mt-1 font-mono text-xs break-all" x-text="selectedPayment?.created_at || '—'"></dd></div>
+                <div><dt class="text-xs text-gray-500">หมดอายุ</dt><dd class="mt-1 font-mono text-xs break-all" x-text="selectedPayment?.expires_at || '—'"></dd></div>
+                <div><dt class="text-xs text-gray-500">ชำระเมื่อ</dt><dd class="mt-1 font-mono text-xs break-all" x-text="selectedPayment?.paid_at || '—'"></dd></div>
+                <div><dt class="text-xs text-gray-500">Callback URL</dt><dd class="mt-1 font-mono text-xs break-all" x-text="selectedPayment?.callback_url || '—'"></dd></div>
+                <div class="sm:col-span-2"><dt class="text-xs text-gray-500">Return URL</dt><dd class="mt-1 font-mono text-xs break-all" x-text="selectedPayment?.return_url || '—'"></dd></div>
+            </dl>
+            <div class="mt-5">
+                <h4 class="text-xs font-semibold text-gray-600 mb-2">Metadata</h4>
+                <pre class="bg-gray-900 text-green-300 p-4 rounded-lg text-xs font-mono overflow-x-auto max-h-56"
+                     x-text="selectedPayment ? JSON.stringify(selectedPayment.metadata, null, 2) : ''"></pre>
+            </div>
+            <div class="mt-5 pt-4 border-t border-gray-200 text-right">
+                <button type="button" @click="selectedPayment = null"
+                        class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-xs font-semibold">ปิด</button>
+            </div>
+        </dialog>
     </div>
 
     <!-- ═══ WEBHOOK DELIVERIES ═══ -->
@@ -477,7 +536,6 @@
                 <select x-model="whScenario" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-xs">
                     <option value="normal">normal (ลายเซ็นถูกต้อง)</option>
                     <option value="webhook_bad_sig">webhook_bad_sig (ลายเซ็นปลอม)</option>
-                    <option value="webhook_replay">webhook_replay (เวลาหมดอายุ -1hr)</option>
                 </select>
             </div>
         </div>
@@ -533,6 +591,7 @@
 function adminDashboard() {
     return {
         selectedDelivery: null,
+        selectedPayment: null,
         testing: false,
         testResult: null,
         async testApi(url, method) {
@@ -551,7 +610,6 @@ function adminDashboard() {
                 };
                 if (method === 'POST') {
                     options.body = JSON.stringify({
-                        payment_id: String(Date.now()),
                         amount: 1500.00,
                         method: 'card',
                         callback_url: 'http://concert_backend:5000/api/webhook'

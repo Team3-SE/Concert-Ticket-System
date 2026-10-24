@@ -3,7 +3,7 @@
 
 **Base URL:** `http://localhost:8081`  
 **API Prefix:** `/v1`  
-**Content-Type:** `application/json` (ทั้ง request และ response)
+**Content-Type:** `application/json` สำหรับ JSON requests/responses; QR response ใช้ `image/svg+xml`
 
 ---
 
@@ -15,6 +15,7 @@
 4. [POST /v1/payments — สร้างรายการจ่ายเงิน](#4-post-v1payments--สร้างรายการจ่ายเงิน)
 5. [GET /v1/payments/{id} — ดูสถานะรายการ](#5-get-v1paymentsid--ดูสถานะรายการ)
 6. [POST /v1/payments/{id}/cancel — ยกเลิกรายการ](#6-post-v1paymentsidcancel--ยกเลิกรายการ)
+6.1 [GET /v1/payments/{id}/qr.svg — ดู QR Code](#qr-code-route)
 7. [Webhook — สิ่งที่ PayMock ส่งมาหาคุณ](#7-webhook--สิ่งที่-paymock-ส่งมาหาคุณ)
 8. [Chaos และ Webhook Mode (PayMock Admin)](#8-chaos-และ-webhook-mode-paymock-admin)
 9. [Error Response Format](#9-error-response-format)
@@ -25,7 +26,7 @@
 
 ## 1. Authentication
 
-ทุก request ต้องส่ง `Authorization` header:
+ทุก protected API request ต้องส่ง `Authorization` header ยกเว้น public QR endpoint `GET /v1/payments/{id}/qr.svg`:
 
 ```
 Authorization: Bearer pm_test_key_concert_system_2024
@@ -41,11 +42,12 @@ Authorization: Bearer pm_test_key_concert_system_2024
 
 | Header | Required | ค่า | หมายเหตุ |
 |--------|----------|-----|----------|
-| `Authorization` | ✅ ทุก request | `Bearer pm_test_key_concert_system_2024` | API Key |
-| `Content-Type` | ✅ POST | `application/json` | |
-| `Idempotency-Key` | ไม่บังคับ | เช่น `attempt-12` | หากส่ง จะใช้ค่า header เป็น idempotency key; หากไม่ส่ง ระบบใช้ `body.payment_id` แทน |
+| `Authorization` | Required for protected routes | `******` | Excluded for public QR endpoint |
+| `Accept` | แนะนำ | `application/json` | QR endpoint ใช้ `image/svg+xml` |
+| `Content-Type` | ✅ POST ที่มี JSON body | `application/json` | cancel ไม่มี request body |
+| `Idempotency-Key` | ไม่บังคับ | เช่น `attempt-12` | ใช้ deduplicate เมื่อส่ง key เดิมซ้ำ; หากไม่ส่งแต่ละครั้งจะเป็น request ใหม่ |
 
-สำหรับ `POST /v1/payments` ต้องส่ง `payment_id` ใน body เสมอ แต่ไม่จำเป็นต้องส่ง `Idempotency-Key` ซ้ำอีกครั้ง หากมี header ระบบจะตรวจ header; หากไม่มี header ระบบ fallback ไปตรวจ `payment_id`. ค่าที่เลือกใช้เป็น key ต้องคงเดิมเมื่อ retry attempt เดิม.
+`POST /v1/payments` ไม่ใช้หรือจัดเก็บ merchant reference fields เช่น `payment_id`, `booking_ref` หรือ `order_ref`; fields เหล่านี้ไม่อยู่ใน API contract. `metadata` เป็น optional JSON value สำหรับข้อมูลเพิ่มเติม; Gateway ไม่ตรวจหรืออ่านค่าใดภายใน. `Idempotency-Key` เป็น optional และเป็นวิธีเดียวสำหรับ idempotency; หากไม่ส่ง แต่ละ request จะสร้างรายการใหม่.
 
 ---
 
@@ -57,10 +59,16 @@ Authorization: Bearer pm_test_key_concert_system_2024
 
 ```http
 GET /v1/payments HTTP/1.1
+Accept: application/json
 Authorization: Bearer pm_test_key_concert_system_2024
 ```
 
 ### Response 200 OK
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
 
 ```json
 {
@@ -70,9 +78,11 @@ Authorization: Bearer pm_test_key_concert_system_2024
   "webhook_mode": "normal",
   "recent": [
     {
-      "id": "01JCXYZ...",
-      "payment_id": "12",
-      "booking_ref": "TK-260101-ABCDE",
+      "id": "txn_01JCXYZ...",
+      "metadata": {
+        "source": "concert-app",
+        "context": {"campaign": "summer"}
+      },
       "amount": 1200.00,
       "currency": "THB",
       "method": "promptpay",
@@ -101,26 +111,28 @@ Authorization: Bearer pm_test_key_concert_system_2024
 
 ### Request (PromptPay)
 
-ส่ง `booking_ref` จาก booking จริงใน request body เพื่อให้ response ใช้ booking code เดียวกัน; หากละ field นี้ ระบบจะใช้ `payment_id` แทน.
+`metadata` เป็น optional JSON value สำหรับข้อมูลเพิ่มเติม; Gateway จะไม่ตรวจชนิดหรือค่าใดภายใน และจะส่งค่ากลับใน response/webhook.
 
 ```http
 POST /v1/payments HTTP/1.1
 Authorization: Bearer pm_test_key_concert_system_2024
 Content-Type: application/json
+Accept: application/json
+Idempotency-Key: attempt-12
 ```
 
 ```json
 {
-  "payment_id":   "12",
-  "booking_ref":  "TK-260101-ABCDE",
   "amount":       1200.00,
   "method":       "promptpay",
   "callback_url": "http://localhost:8080/webhooks/paymock",
   "expires_in":   600,
   "currency":     "THB",
   "metadata": {
-    "booking_id": 42,
-    "user_id": 7
+    "source": "concert-app",
+    "context": {
+      "campaign": "summer"
+    }
   }
 }
 ```
@@ -129,12 +141,17 @@ Content-Type: application/json
 
 ```json
 {
-  "payment_id":   "13",
-  "booking_ref":    "TK-260101-ABCDE",
   "amount":       1200.00,
   "method":       "card",
   "callback_url": "http://localhost:8080/webhooks/paymock",
-  "return_url":   "http://localhost:5000/booking/TK-260101-ABCDE"
+  "return_url":   "http://localhost:5000/booking/TK-260101-ABCDE",
+  "expires_in":   600,
+  "metadata": {
+    "source": "concert-app",
+    "context": {
+      "campaign": "summer"
+    }
+  }
 }
 ```
 
@@ -142,58 +159,59 @@ Content-Type: application/json
 
 | Field | Type | Required | ค่าที่ยอมรับ | Default | คำอธิบาย |
 |-------|------|----------|-------------|---------|----------|
-| `payment_id` | string | ✅ | max 255 chars | — | รหัสรายการจากระบบคอนเสิร์ต ต้องส่งทุกครั้ง |
-| `booking_ref` | string | ❌ | max 255 chars | ค่าเดียวกับ `payment_id` | Booking code ที่ใช้แสดงแก่ผู้ใช้และใช้เป็น path สำหรับกลับมาหน้า booking; หากต้องการให้ response คืน booking code จริง ต้องส่ง field นี้มา |
 | `amount` | number | ✅ | min 1 | — | ยอดเงิน (บาท, ทศนิยมได้) |
 | `method` | string | ✅ | `"card"` หรือ `"promptpay"` | — | วิธีชำระ |
 | `callback_url` | string | ✅ | URL ที่ถูกต้อง | — | URL ที่ PayMock จะ POST Webhook มาหา |
 | `return_url` | string | ❌ | URL ที่ถูกต้อง | `null` | หน้าที่ Gateway redirect กลับหลัง submit บัตร |
-| `expires_in` | integer | ❌ | min 60 (วินาที) | 600 | อายุรายการก่อนหมดเวลา |
+| `expires_in` | integer | ❌ | min 60 (วินาที) | 600 | อายุรายการก่อนหมดเวลา ใช้ได้ทั้งบัตรและ PromptPay |
 | `currency` | string | ❌ | 3 ตัวอักษร | `"THB"` | สกุลเงิน (default: `"THB"`) |
-| `metadata` | object | ❌ | JSON object ใดก็ได้ | `null` | ข้อมูลเพิ่มเติม (ไม่ส่งใน webhook) |
+| `metadata` | JSON value | ❌ | JSON value ใดก็ได้ | ไม่ส่ง | ข้อมูลเพิ่มเติม; Gateway ไม่ตรวจ metadata และ response/webhook ส่งค่ากลับตามที่รับมา |
 
-เพื่อ backward compatibility ยังรับ `order_ref` ใน request เก่าได้ แต่ response ใช้ชื่อ `booking_ref` เสมอ; integration ใหม่ควรส่ง `booking_ref`. ชื่อคอลัมน์ persistence ภายในยังคงเดิม จึงไม่ต้อง migrate ข้อมูล.
+Gateway ตรวจรูปแบบของ fields ปกติใน request แต่ไม่ตรวจหรืออ่านค่าใดภายใน `metadata`; nested values และ custom keys จะถูกส่งกลับตามเดิมใน response/webhook.
 
 ### Idempotency
 
-- ระบบเลือก idempotency key จาก `Idempotency-Key` header ก่อน; ถ้าไม่ส่ง header จะใช้ `body.payment_id` เป็น key อัตโนมัติ
-- ดังนั้น request ปกติส่ง `payment_id` ใน body อย่างเดียวได้ ไม่ต้องส่ง field `idempotency_key` หรือ header ซ้ำ
-- หากเลือกส่ง `Idempotency-Key` ให้ส่ง header เดิมทุกครั้งที่ retry attempt นั้น; ค่า header ไม่จำเป็นต้องเท่ากับ `payment_id` แต่ต้องไม่เปลี่ยนระหว่าง retry
-- retry เพราะ timeout ของ attempt เดิม ต้องส่ง `payment_id` เดิม และถ้าใช้ header ต้องส่ง key เดิมด้วย → **คืน payment เดิม** (ไม่สร้างใหม่)
-- ไม่มีการอ่าน `idempotency_key` จาก JSON body; body field ที่เป็น fallback คือ `payment_id` เท่านั้น
+- ระบบใช้ `Idempotency-Key` header เท่านั้น; หากไม่ส่ง ระบบสร้าง key ภายในใหม่ทุก request
+- `Idempotency-Key` ใช้ภายใน gateway เท่านั้น; จะไม่ถูกส่งกลับใน API response หรือ webhook body
+- หากไม่ส่ง header การ retry POST จะสร้าง payment ใหม่
+- ส่ง `Idempotency-Key` เดิมทุกครั้งที่ retry attempt เดิม; ใช้ key ใหม่เมื่อต้องการสร้าง payment attempt ใหม่
+- หลังสร้างสำเร็จ ให้ใช้ response `id` ที่ขึ้นต้นด้วย `txn_` เป็น provider transaction ID สำหรับ GET, cancel, polling/reconciliation และจับคู่/deduplicate webhook
+- ไม่มีการอ่าน `idempotency_key` จาก JSON body และไม่มี fallback จาก metadata
 - บัตรถูกปฏิเสธ/PromptPay หมดอายุแล้วต้องการจ่ายใหม่ ให้สร้าง Concert payment ใหม่ใต้ booking เดิม
 
 #### Concert-PayMock flow
 
-Concert ส่ง `body.payment_id` และ `body.booking_ref` ไปยัง `POST /v1/payments`. `Idempotency-Key` header ไม่บังคับ; หากไม่ส่ง ระบบใช้ `body.payment_id`. สำหรับ Concert demo ให้ใช้ `payment_id` ใน query หรือ body ตาม endpoint.
+Concert ส่ง `metadata` เป็นข้อมูลเพิ่มเติมใด ๆ ได้โดย Gateway ไม่อ่านหรือ validate keys/values ภายใน; `Idempotency-Key` เป็น optional. หากไม่ส่ง header แต่ละ POST จะสร้าง payment ใหม่ ดังนั้นการ retry attempt เดิมต้องส่ง header เดิมทุกครั้ง.
 
-**ข้อจำกัดที่มีอยู่จริง:** Concert ตั้ง cURL timeout 10 วินาที. หาก PayMock สร้างรายการแล้วแต่ Concert ไม่ได้รับ response, PayMock รองรับการ resend ด้วย `payment_id`/key เดิมอยู่แล้ว แต่ Concert ยังไม่มี route หรือ worker ที่ resend แถวเดิมอัตโนมัติ และบันทึก attempt นั้นเป็น `GATEWAY_ERROR`. จึงห้ามสร้าง Concert payment ใหม่เพียงเพราะ timeout; ต้อง retry/reconcile attempt เดิมด้วย key เดิมก่อน และสร้าง payment ใหม่เมื่อยืนยันว่า `FAILED` หรือ `EXPIRED` เท่านั้น.
+**ข้อจำกัดที่มีอยู่จริง:** Concert ตั้ง cURL timeout 10 วินาที. หาก PayMock สร้างรายการแล้วแต่ Concert ไม่ได้รับ response, ให้ retry attempt เดิมด้วย `Idempotency-Key` เดิม; Concert ยังไม่มี route หรือ worker ที่ resend แถวเดิมอัตโนมัติ และบันทึก attempt นั้นเป็น `GATEWAY_ERROR`. จึงห้ามสร้าง Concert payment ใหม่เพียงเพราะ timeout; ต้อง retry/reconcile attempt เดิมด้วย key เดิมก่อน และสร้าง payment ใหม่เมื่อยืนยันว่า `FAILED` หรือ `EXPIRED` เท่านั้น.
 
 ### ต้องส่ง ID ตัวไหนในแต่ละ API?
 
 | API / จุดที่ส่งค่า | ชื่อ field / path | ค่าที่ต้องใช้ |
 |---|---|---|
 | `GET /v1/payments` | ไม่มี | ไม่ต้องส่ง ID |
-| `POST /v1/payments` | `body.payment_id` | รหัส payment attempt ฝั่ง merchant; Concert ใช้เลข `id` ของแถว `concert_payments` |
-| `POST /v1/payments` | `body.booking_ref` | Booking code เช่น `TK-260101-ABCDE`; คงเดิมตลอด booking |
-| `POST /v1/payments` | `Idempotency-Key` | ถ้าส่ง ใช้ header เป็น key; ถ้าไม่ส่ง ระบบใช้ `body.payment_id` |
+| `POST /v1/payments` | `body.metadata` | Optional JSON value; Gateway ไม่ตรวจ metadata |
+| `POST /v1/payments` | `Idempotency-Key` | Optional; ใช้ deduplicate เมื่อส่ง key เดิมซ้ำ |
 | `GET /v1/payments/{id}` | path `{id}` | ส่ง `id` ของรายการที่ต้องการดู |
 | `POST /v1/payments/{id}/cancel` | path `{id}` | ส่ง `id` ของรายการที่ต้องการยกเลิก |
 | `GET /v1/payments/{id}/qr.svg` | path `{id}` | ส่ง `id` ของรายการที่ต้องการแสดง QR |
 | `GET /checkout/{id}`, `POST /payments/{id}` | path `{id}` | ส่ง `id` ของรายการที่จะเปิด checkout หรือชำระด้วยบัตร |
 | `/checkout/{id}/...`, `/bank-simulate/{id}/...` | path `{id}` | ส่ง `id` ของรายการที่ต้องการดำเนินการ |
-| Webhook จาก PayMock | `body.id`, `body.payment_id`, `body.booking_ref` | ใช้ชื่อ field ตามที่ส่งมา: `id`, `payment_id` และ `booking_ref` |
+| Webhook จาก PayMock | `body.id`, `body.metadata` (ถ้ามี) | ใช้ `body.id` (`txn_...`) เป็น provider transaction ID; metadata เป็นข้อมูลเพิ่มเติมจาก request |
 | ตัวอย่าง Concert: `/api/booking-status`, `/api/cancel-booking`, `/api/reconcile-booking` | query/body `payment_id` | ใช้ชื่อ field `payment_id` |
 
 ### Response 201 Created (PromptPay)
 
-Response จะมี URL เฉพาะช่องทางที่เลือก: PromptPay คืน `qrcode_url` และ `bank_simulator_url` โดยไม่คืน `checkout_url`; บัตรคืน `checkout_url` โดยไม่คืน `qrcode_url` หรือ `bank_simulator_url`.
+Response จะมี URL เฉพาะช่องทางที่เลือก: PromptPay คืน `qrcode_url` และ `bank_simulator_url` โดยไม่คืน `checkout_url`; บัตรคืน `checkout_url` โดยไม่คืน `qrcode_url` หรือ `bank_simulator_url`. `metadata` เป็น optional และจะไม่ปรากฏใน response หากไม่ได้ส่ง metadata.
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+```
 
 ```json
 {
-  "id":                 "01JCXYZ1234567890ABCDEFGH",
-  "payment_id":         "12",
-  "booking_ref":          "TK-260101-ABCDE",
+  "id":                 "txn_01JCXYZ1234567890ABCDEFGH",
   "amount":             1200.00,
   "currency":           "THB",
   "method":             "promptpay",
@@ -203,7 +221,13 @@ Response จะมี URL เฉพาะช่องทางที่เลื
   "paid_at":            null,
   "created_at":         "2026-10-13T10:00:00+07:00",
   "qrcode_url":         "http://localhost:8081/v1/payments/01JCXYZ1234567890ABCDEFGH/qr.svg",
-  "bank_simulator_url": "http://localhost:8081/bank-simulate/01JCXYZ1234567890ABCDEFGH"
+  "bank_simulator_url": "http://localhost:8081/bank-simulate/txn_01JCXYZ1234567890ABCDEFGH",
+  "metadata": {
+    "source": "concert-app",
+    "context": {
+      "campaign": "summer"
+    }
+  }
 }
 ```
 
@@ -211,9 +235,8 @@ Response จะมี URL เฉพาะช่องทางที่เลื
 
 | Field | Type | ความหมาย |
 |-------|------|----------|
-| `id` | string (ULID) | ใช้ใน path ของ GET, cancel, QR และ checkout |
-| `payment_id` | string | รหัสรายการที่ merchant ส่งมาใน request |
-| `booking_ref` | string | Booking code ที่ merchant ส่งมา (ใช้แสดงให้ผู้ใช้และจับคู่หน้า return) |
+| `id` | string (`txn_...`) | Provider transaction ID; ใช้ใน path ของ GET, cancel, QR และ checkout รวมถึงจับคู่/deduplicate webhook |
+| `metadata` | JSON value | Optional; metadata จาก request โดย Gateway ไม่ตรวจหรือแก้ไข |
 | `amount` | float | ยอดเงิน |
 | `currency` | string | สกุลเงิน |
 | `method` | string | `card` หรือ `promptpay` |
@@ -228,11 +251,14 @@ Response จะมี URL เฉพาะช่องทางที่เลื
 
 ตัวอย่าง Response 201 สำหรับบัตร (ไม่มี `qrcode_url` และ `bank_simulator_url`):
 
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+```
+
 ```json
 {
   "id": "txn_01JCXYZ1234567890ABCDEFGH",
-  "payment_id": "13",
-  "booking_ref": "TK-260101-ABCDE",
   "amount": 1200.00,
   "currency": "THB",
   "method": "card",
@@ -242,7 +268,11 @@ Response จะมี URL เฉพาะช่องทางที่เลื
   "paid_at": null,
   "created_at": "2026-10-13T10:00:00+07:00",
   "checkout_url": "http://localhost:8081/checkout/txn_01JCXYZ1234567890ABCDEFGH",
-  "return_url": "http://localhost:5000/booking/TK-260101-ABCDE"
+  "return_url": "http://localhost:5000/booking/TK-260101-ABCDE",
+  "metadata": {
+    "source": "concert-app",
+    "context": {"campaign": "summer"}
+  }
 }
 ```
 
@@ -288,15 +318,20 @@ Response จะมี URL เฉพาะช่องทางที่เลื
 
 ```http
 GET /v1/payments/01JCXYZ1234567890ABCDEFGH HTTP/1.1
+Accept: application/json
 Authorization: Bearer pm_test_key_concert_system_2024
 ```
 
 ### Response 200 OK
 
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
 ```json
 {
-  "id":                 "01JCXYZ1234567890ABCDEFGH",
-  "payment_id":         "12",
+  "id":                 "txn_01JCXYZ1234567890ABCDEFGH",
   "amount":             1200.00,
   "currency":           "THB",
   "method":             "promptpay",
@@ -306,11 +341,17 @@ Authorization: Bearer pm_test_key_concert_system_2024
   "bank_simulator_url": "http://localhost:8081/bank-simulate/01JCXYZ1234567890ABCDEFGH",
   "expires_at":         "2026-10-13T10:10:00+07:00",
   "paid_at":            "2026-10-13T10:05:32+07:00",
-  "created_at":         "2026-10-13T10:00:00+07:00"
+  "created_at":         "2026-10-13T10:00:00+07:00",
+  "metadata": {
+    "source": "concert-app",
+    "context": {
+      "campaign": "summer"
+    }
+  }
 }
 ```
 
-> **หมายเหตุ:** Schema เหมือนกับ POST response ทุกประการ
+> **หมายเหตุ:** Schema เหมือนกับ POST response ทุกประการ โดย `metadata` เป็น optional และอาจไม่มีใน response
 
 ### Error Responses
 
@@ -330,12 +371,18 @@ Authorization: Bearer pm_test_key_concert_system_2024
 
 ```http
 POST /v1/payments/01JCXYZ1234567890ABCDEFGH/cancel HTTP/1.1
+Accept: application/json
 Authorization: Bearer pm_test_key_concert_system_2024
 ```
 
 > ไม่ต้องส่ง Body
 
 ### Response 200 OK
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
 
 ```json
 {
@@ -352,6 +399,30 @@ Authorization: Bearer pm_test_key_concert_system_2024
 | `401` | `unauthorized` | API Key ผิด |
 | `404` | — | ไม่พบ payment ID |
 | `409` | `cannot_cancel` | รายการ settle แล้ว (COMPLETED/FAILED/EXPIRED) ยกเลิกไม่ได้ |
+
+---
+
+<a id="qr-code-route"></a>
+### GET /v1/payments/{id}/qr.svg — ดู QR Code
+
+Route นี้เป็น public เพื่อให้หน้าเว็บโหลด URL ใน `<img>` ได้โดยตรง ไม่ต้องส่ง `Authorization`.
+
+#### Request headers
+
+```http
+GET /v1/payments/txn_01JCXYZ1234567890ABCDEFGH/qr.svg HTTP/1.1
+Accept: image/svg+xml
+```
+
+#### Response headers
+
+```http
+HTTP/1.1 200 OK
+Content-Type: image/svg+xml
+Cache-Control: must-revalidate, no-cache, no-store, private
+```
+
+Response body เป็น SVG; หากไม่พบรายการจะได้ `404 Not Found`.
 
 ---
 
@@ -374,21 +445,38 @@ X-Event-Id: 01JCABC9876543210ZYXWVUTS
 | `X-Signature` | ลายเซ็น HMAC-SHA256 ใช้ยืนยันว่า webhook มาจาก PayMock จริง |
 | `X-Event-Id` | ULID ไม่ซ้ำกันของแต่ละ delivery ใช้ป้องกัน duplicate |
 
-### 7.2 Webhook Body
+### 7.2 Response จาก Webhook Receiver
+
+Receiver ควรตอบ `2xx` เมื่อรับ webhook แล้ว; PayMock ไม่ใช้ response body เพื่อตีความสถานะ payment.
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{ "ok": true }
+```
+
+### 7.3 Webhook Body
 
 ```json
 {
   "id":           "txn_01JCXYZ1234567890ABCDEFGH",
   "event":        "payment.completed",
-  "payment_id":   "12",
-  "booking_ref":  "TK-260101-ABCDE",
   "amount":       1200.00,
   "currency":     "THB",
   "method":       "promptpay",
   "status":       "COMPLETED",
   "failure_code": null,
   "paid_at":      "2026-10-13T10:05:32+07:00",
-  "created_at":   "2026-10-13T10:00:00+07:00"
+  "created_at":   "2026-10-13T10:00:00+07:00",
+  "metadata": {
+    "source": "concert-app",
+    "context": {
+      "campaign": "summer"
+    }
+  }
 }
 ```
 
@@ -396,10 +484,9 @@ X-Event-Id: 01JCABC9876543210ZYXWVUTS
 
 | Field | Type | ความหมาย |
 |-------|------|----------|
-| `id` | string (ULID) | Payment ID (ขึ้นต้นด้วย `txn_` ใช้ call `GET /v1/payments/{id}` เพื่อยืนยันได้) |
+| `id` | string (`txn_...`) | Provider transaction ID; ใช้เรียก `GET /v1/payments/{id}` และเป็น key สำหรับจับคู่/deduplicate webhook |
 | `event` | string | ชื่อ event ดู [ตาราง events](#webhook-events) |
-| `payment_id` | string | รหัสรายการจาก merchant ที่ส่งในตอนสร้าง payment |
-| `booking_ref` | string | Booking code จาก merchant ใช้จับคู่กับ booking |
+| `metadata` | JSON value | Optional; metadata จาก request โดย Gateway ไม่ตรวจหรือแก้ไข |
 | `amount` | float | ยอดเงินที่ชำระ |
 | `currency` | string | สกุลเงิน (เช่น `THB`) |
 | `method` | string | ช่องทางชำระเงิน: `promptpay` หรือ `card` |
@@ -418,13 +505,13 @@ X-Event-Id: 01JCABC9876543210ZYXWVUTS
 
 ### 7.3 การตรวจ Signature (สำคัญมาก!)
 
-**ต้องทำก่อน process webhook ทุกครั้ง** เพื่อป้องกัน Replay Attack และ Forgery
+ตรวจ HMAC signature ก่อน process webhook เพื่อยืนยันว่า payload มาจาก Gateway และไม่ถูกแก้ไข
 
 > **ใครเป็นคนตรวจสอบ และใครเป็นคนปฏิเสธกรณี Invalid Signature?**
 > - **Gateway ส่งมา:** PayMock จะส่ง Payload พร้อมแนบ Header `X-Signature: t={timestamp},v1={hmac}` มาเสมอ
 > - **Backend ของคุณเป็นผู้ตรวจ:** Backend ของระบบคอนเสิร์ตมีหน้าที่คำนวณ HMAC-SHA256 ด้วยตัวเองโดยใช้ Webhook Secret ที่เก็บไว้เป็นความลับ
 > - **หาก Signature ปลอม (Invalid Signature):** Gateway หรือ Hacker ไม่ได้ส่งข้อความบอกว่า "ไม่ผ่านนะ" แต่ส่ง Payload แกล้งบอกว่า `status: COMPLETED`! **Backend ของคุณเองมีหน้าที่สั่ง "ไม่ให้ผ่าน"** โดยการ **(1) ตอบกลับ HTTP 401 Unauthorized** และ **(2) ไม่ออกตั๋วเด็ดขาด (ตั๋วต้องไม่เป็น PAID)**
-> - **หาก Replay Attack:** หาก Timestamp ห่างเกิน 5 นาที (300 วินาที) Backend ของคุณต้องปฏิเสธด้วย HTTP 401 เช่นกัน
+> - นโยบายตรวจจับการส่งซ้ำหรือ timestamp เก่าเป็นความรับผิดชอบของระบบคอนเสิร์ต ไม่ใช่การตรวจสถานะ payment ของ Gateway
 
 #### ขั้นตอน:
 
@@ -435,28 +522,21 @@ X-Event-Id: 01JCABC9876543210ZYXWVUTS
    → signature = a3f9c2...
    ```
 
-2. ตรวจว่า timestamp ไม่เก่าเกิน 5 นาที (300 วินาที):
-   ```php
-   if (abs(time() - $timestamp) > 300) {
-       return response('Timestamp expired', 400);
-   }
-   ```
-
-3. คำนวณ HMAC ด้วย **raw request body** (ก่อน decode JSON):
+2. คำนวณ HMAC ด้วย **raw request body** (ก่อน decode JSON) โดยใช้ timestamp จาก header:
    ```php
    $secret    = 'whsec_concert_super_secret_2024';
    $rawBody   = $request->getContent();   // raw bytes
    $expected  = hash_hmac('sha256', "$timestamp.$rawBody", $secret);
    ```
 
-4. เปรียบเทียบแบบ constant-time:
+3. เปรียบเทียบแบบ constant-time:
    ```php
    if (! hash_equals($expected, $signature)) {
        return response('Invalid signature', 401);
    }
    ```
 
-#### ตัวอย่าง PHP ครบถ้วน:
+#### ตัวอย่าง PHP (ตรวจลายเซ็น):
 
 ```php
 public function handleWebhook(Request $request): Response
@@ -466,13 +546,7 @@ public function handleWebhook(Request $request): Response
     preg_match('/t=(\d+),v1=([a-f0-9]+)/', $sigHeader, $m);
     [$timestamp, $signature] = [$m[1] ?? 0, $m[2] ?? ''];
 
-    // 2. ตรวจ timestamp (replay attack protection)
-    if (abs(time() - $timestamp) > 300) {
-        Log::warning('Webhook: timestamp expired');
-        return response('Expired', 400);
-    }
-
-    // 3. คำนวณและตรวจ HMAC
+    // 2. คำนวณและตรวจ HMAC
     $secret   = config('services.paymock.webhook_secret');
     $rawBody  = $request->getContent();
     $expected = hash_hmac('sha256', "{$timestamp}.{$rawBody}", $secret);
@@ -481,14 +555,14 @@ public function handleWebhook(Request $request): Response
         return response('Unauthorized', 401);
     }
 
-    // 4. ตรวจ idempotency ด้วย X-Event-Id
+    // 3. ระบบคอนเสิร์ตจัดการ event ซ้ำตามนโยบายของตน
     $eventId = $request->header('X-Event-Id');
     if (WebhookLog::where('event_id', $eventId)->exists()) {
         return response('OK', 200); // รับแล้ว ไม่ต้อง process ซ้ำ
     }
     WebhookLog::create(['event_id' => $eventId]);
 
-    // 5. process ตาม event
+    // 4. process ตาม event
     $payload = $request->json()->all();
     match($payload['event']) {
         'payment.completed' => $this->handleCompleted($payload),
@@ -504,7 +578,7 @@ public function handleWebhook(Request $request): Response
 
 ### 7.4 Retry Policy ของ PayMock
 
-PayMock จะ retry webhook ถ้าได้รับ response ที่ **ไม่ใช่ 2xx** หรือ timeout
+PayMock จะ retry webhook ถ้าได้รับ response ที่ **ไม่ใช่ 2xx** หรือเกิด connection error ตาม backoff ด้านล่าง รวมสูงสุด 6 attempts. เมื่อ retry แต่ละครั้ง Gateway สร้าง `X-Signature` timestamp ใหม่และใช้ `X-Event-Id` เดิม.
 
 | ครั้งที่ | หน่วง (วินาที) |
 |---------|--------------|
@@ -517,6 +591,8 @@ PayMock จะ retry webhook ถ้าได้รับ response ที่ **�
 
 > **แนะนำ:** endpoint ของคุณควรตอบ `200 OK` เร็วที่สุด แล้วค่อย process ใน background
 
+Gateway บันทึกผลล่าสุดใน `webhook_deliveries`: `attempts` คือจำนวนครั้งที่พยายามส่ง, `last_status_code` คือ HTTP status ล่าสุด (เป็น `null` เมื่อการเชื่อมต่อล้มเหลวก่อนมี response), `last_error` เก็บข้อความ error เมื่อส่งไม่สำเร็จ และ `delivered_at` จะถูกตั้งเมื่อได้รับ 2xx เท่านั้น. เมื่อ retry สำเร็จ `last_status_code` จะเป็น status 2xx ล่าสุด, `last_error` ถูกล้าง และ `delivered_at` ถูกตั้ง; response body ของ Concert และผลครั้งก่อนหน้าไม่ได้เก็บเป็นประวัติใน record นี้.
+
 ---
 
 ## 8. Chaos และ Webhook Mode (PayMock Admin)
@@ -527,7 +603,7 @@ PayMock จะ retry webhook ถ้าได้รับ response ที่ **�
 | ชั้น | Setting | เมื่อไหร่มีผล |
 |------|---------|----------------|
 | 1 (ใหญ่สุด) | Chaos Mode | คำขอเข้า `/v1/*` และ `/checkout/*` (ล่ม, ช้า, 429, 500, …) |
-| 2 (รอง) | Webhook Mode | ตอนยิง webhook หลัง settle (lost, delay, dup, bad_sig, replay) |
+| 2 (รอง) | Webhook Mode | ตอนยิง webhook หลัง settle (lost, delay, dup, bad_sig) |
 
 `webhook_mode` เป็นค่า global เดียวจาก Admin และมีผลกับทุกรายการ ไม่มี override ต่อ payment
 
@@ -542,29 +618,24 @@ PayMock จะ retry webhook ถ้าได้รับ response ที่ **�
 | `webhook_delay:N` | หน่วงเวลา N วินาทีก่อนส่ง Webhook | `200 OK` (เมื่อมาถึง) | `PENDING` → `PAID` หลัง N วิ | ทดสอบว่าหน้าเว็บรองรับช่วงรอยต่อระหว่างรอ Webhook หรือไม่ |
 | `webhook_dup:N` | ส่ง Webhook ซ้ำกัน N รอบ (Payload เดิม) | `200 OK` ทุกรอบ | ออกตั๋ว 1 ใบเท่านั้น (`PAID`) | ทดสอบ Idempotency: รอบที่ 2-N ต้องตอบ 200 แต่ไม่ออกตั๋วซ้ำเด็ดขาด |
 | `webhook_bad_sig` | ส่ง Body อ้างว่า `COMPLETED` แต่ลายเซ็นปลอม (`0000...`) | **`401 Unauthorized`** | **ปฏิเสธไม่ออกตั๋ว (`REJECTED`)** | ทดสอบ Security: ป้องกัน Hacker ส่ง Webhook ปลอมมาหลอกออกตั๋ว |
-| `webhook_replay` | ส่ง Body ถูกต้อง แต่ Timestamp เก่าเกิน 5 นาที | **`401 Unauthorized`** | **ปฏิเสธไม่ออกตั๋ว (`REJECTED`)** | ทดสอบ Replay Attack: ป้องกันการดักจับ Webhook เก่ามายิงซ้ำ |
 
 #### รายละเอียดเชิงลึกของแต่ละ Webhook Scenario:
 
 1. **`webhook_lost` (Webhook สูญหายระหว่างทาง)**
    - **พฤติกรรม:** Gateway ตัดเงินสำเร็จจริง (ในฐานข้อมูลของ PayMock เป็น `COMPLETED`) แต่เกิดปัญหาเน็ตหลุด ทำให้ Webhook ไปไม่ถึง Backend ของคุณ
    - **ผลกระทบ:** ฝั่งคอนเสิร์ตไม่ได้รับ Webhook ทำให้ตั๋วยังคงค้างสถานะ `PENDING`
-   - **วิธีรับมือที่ถูกต้อง:** ระบบคอนเสิร์ตต้องมีปุ่ม *"ตรวจสอบสถานะกับ Gateway"* หรือตั้ง Scheduler คอยเรียก `GET /v1/payments/{payment_id}` เพื่อนำสถานะจริงมา Reconcile
+   - **วิธีรับมือที่ถูกต้อง:** ระบบคอนเสิร์ตต้องมีปุ่ม *"ตรวจสอบสถานะกับ Gateway"* หรือตั้ง Scheduler คอยเรียก `GET /v1/payments/{id}` เพื่อนำสถานะจริงมา Reconcile
 
 2. **`webhook_bad_sig` (ลายเซ็นปลอม / Security Attack)**
    - **พฤติกรรม:** Payload ใน Body อ้างว่า `"status": "COMPLETED"` แต่ Header `X-Signature` ถูกส่งเป็น `v1=00000000000000000000...` (จำลอง Hacker แกล้งส่งข้อมูลมาหลอก)
    - **การตรวจสอบ:** Backend ต้องนำ Secret Key มาคำนวณ HMAC-SHA256 ด้วยตัวเอง เมื่อพบว่าไม่ตรงกัน ต้องสั่ง *"ไม่ให้ผ่าน"*
    - **สิ่งที่ Backend ต้องทำ:** ตอบกลับ `HTTP 401 Unauthorized` ทันที และห้ามอัปเดตสถานะตั๋วเป็น `PAID` โดยเด็ดขาด!
 
-3. **`webhook_replay` (Replay Attack / ข้อมูลเก่าเกินเวลา)**
-   - **พฤติกรรม:** ข้อมูลใน Body ถูกต้อง และลายเซ็นถูกต้อง แต่ timestamp (`t`) ใน Header เก่ากว่าเวลาปัจจุบันเกิน 5 นาที (300 วินาที)
-   - **สิ่งที่ Backend ต้องทำ:** ตรวจสอบ `abs(time() - $timestamp) > 300` หากเกิน 5 นาที ต้องตอบกลับ `HTTP 401 Unauthorized` และปฏิเสธการออกตั๋ว
-
-4. **`webhook_dup:N` (ส่ง Webhook ซ้ำหลายครั้ง)**
+3. **`webhook_dup:N` (ส่ง Webhook ซ้ำหลายครั้ง)**
    - **พฤติกรรม:** PayMock จะยิง Webhook ข้อมูลเดิมเข้ามาติดกัน N ครั้ง (เช่น 3 ครั้ง)
-   - **สิ่งที่ Backend ต้องทำ:** ตรวจสอบ `X-Event-Id` หรือ `payment_id` หากเคยประมวลผลไปแล้วในครั้งแรก ครั้งต่อไปต้องตอบ `HTTP 200 OK` ทันทีโดยไม่รันคำสั่งออกตั๋วซ้ำ
+   - **สิ่งที่ Backend ต้องทำ:** ตรวจสอบ `X-Event-Id` หรือ provider transaction ID จาก `body.id` หากเคยประมวลผลแล้ว ครั้งต่อไปต้องตอบ `HTTP 200 OK` โดยไม่รันคำสั่งออกตั๋วซ้ำ
 
-5. **`webhook_delay:N` (หน่วงเวลาส่ง Webhook)**
+4. **`webhook_delay:N` (หน่วงเวลาส่ง Webhook)**
    - **พฤติกรรม:** รายการถูกตัดเงินสำเร็จทันที แต่ Gateway จะหน่วงเวลาก่อนส่ง Webhook ออกไปเป็นเวลา N วินาที
    - **สิ่งที่ Backend ต้องทำ:** ในระหว่างที่ยังไม่ได้รับ Webhook ตั๋วต้องค้าง `PENDING` และเมื่อ Webhook มาถึงจึงเปลี่ยนเป็น `PAID` อย่างราบรื่น
 
@@ -595,8 +666,8 @@ Content-Type: application/json
 ```json
 {
   "id": "txn_example",
-  "payment_id": "12",
-  "booking_ref": "TK-260101-ABCDE",
+  "source": "concert-app",
+  "context": {"campaign": "summer"},
   "amount": 1200,
   "currency": "THB",
   "method": "promptpay",
@@ -719,15 +790,14 @@ Error response ทุกชนิดมี format เดียวกัน:
 | `POST /v1/payments` | 503 | `service_unavailable` | Gateway unavailable | แจ้ง `Gateway มีปัญหา โปรดลองอีกครั้ง` |
 | `GET /v1/payments/{id}` | 404 | `not_found` | ไม่พบ Payment ID นี้ | ตรวจสอบ ID ว่าส่งมาถูกต้องหรือไม่ |
 | `POST /v1/payments/{id}/cancel` | 409 | `cannot_cancel` | รายการจ่ายสำเร็จไปแล้ว | ห้ามยกเลิก ปล่อยผ่านเป็น COMPLETED |
-| `Webhook (POST callback)` | 400 | `expired` | Timestamp เก่าเกิน 5 นาที | ระวัง Replay Attack ปฏิเสธทันที |
 | `Webhook (POST callback)` | 401 | `unauthorized` | HMAC Signature ไม่ตรง | ข้อมูลถูกดัดแปลง ปฏิเสธทันที |
 
 ### 9.3 Hierarchy ลำดับชั้นการตรวจสอบในระบบ PayMock
 
 1. **Layer 1 Chaos (ใหญ่สุด):** Admin `chaos_mode` ครอบคำขอเข้า `/v1/*` และ checkout ด้วย 503, slow หรือ rate limit
-2. **Layer 2 Request & Idempotency:** ใช้ `Idempotency-Key` header ถ้ามี; หากไม่มีใช้ `body.payment_id` (ถ้าซ้ำ คืนรายการเดิม)
+2. **Layer 2 Request & Idempotency:** deduplicate เฉพาะเมื่อส่ง `Idempotency-Key` header; หากไม่มี header แต่ละ request จะสร้างรายการใหม่
 3. **Layer 3 การชำระเงิน:** Magic Card / PromptPay confirm / cancel
-4. **Layer 4 Webhook (รอง):** Admin `webhook_mode` แบบ global — lost / delay / dup / bad_sig / replay
+4. **Layer 4 Webhook (รอง):** Admin `webhook_mode` แบบ global — lost / delay / dup / bad_sig
 
 ---
 
@@ -758,8 +828,8 @@ Error response ทุกชนิดมี format เดียวกัน:
 ระบบคอนเสิร์ต                          PayMock
      │                                     │
      │  1. POST /v1/payments               │
-     │     payment_id, amount, method,     │
-     │     callback_url, Idempotency-Key   │
+     │     amount, method, callback_url,    │
+     │     Idempotency-Key                  │
      │ ─────────────────────────────────► │
      │                                     │  สร้าง payment (PENDING หรือประมวลผลบัตร)
      │  ◄───────────────────────────────── │
@@ -783,17 +853,14 @@ Error response ทุกชนิดมี format เดียวกัน:
      │ ─────────────────────────────────► │
 ```
 
-### PayMock: Worker ตรวจรายการหมดอายุ
+### PayMock: ตรวจสถานะและทำให้รายการหมดอายุ
 
-PayMock แยก scheduler สำหรับหมดอายุออกจาก queue worker ที่ส่ง webhook:
+1. เมื่อสร้าง payment สถานะเริ่มต้นเป็น `PENDING`; `expires_in` กำหนดอายุเป็นวินาที (ค่าเริ่มต้น 600 วินาที/10 นาที) และ PayMock บันทึกเวลา `expires_at`.
+2. container `paymock_scheduler` รัน Laravel `schedule:work`; schedule เรียก `payments:expire` ทุก 10 วินาที (ประมาณ 0.17 นาที).
+3. แต่ละรอบ คำสั่งค้นหาเฉพาะรายการที่ยัง `PENDING` และ `expires_at < เวลาปัจจุบัน` แล้วเปลี่ยนสถานะผ่าน `PaymentService::transition` เป็น `EXPIRED`. รายการที่ชำระหรือยกเลิกแล้วจะไม่ถูกเปลี่ยนซ้ำ.
+4. เมื่อหมดอายุ ค่า `failure_code` และ `paid_at` เป็น `null`; PayMock สร้าง webhook `payment.expired` แล้วส่งผ่าน `paymock_queue` ไปยัง `callback_url`. หาก callback ล้มเหลว ระบบ queue retry ตาม backoff 5, 30, 120, 300 และ 600 วินาที (สูงสุด 6 attempts).
 
-1. เมื่อสร้าง payment จะตั้ง `expires_at` และสถานะเริ่มต้นเป็น `PENDING`.
-2. `paymock_scheduler` รัน Laravel `schedule:work`; schedule เรียกคำสั่ง `payments:expire` ทุก 10 วินาที.
-3. คำสั่งค้นหาเฉพาะรายการ `PENDING` ที่ `expires_at < เวลาปัจจุบัน` แล้วเปลี่ยนสถานะเป็น `EXPIRED` ผ่าน `PaymentService::transition`.
-4. การเปลี่ยนสถานะบันทึก `status`, `failure_code` และ `paid_at` ลงฐานข้อมูล PayMock; สำหรับ `EXPIRED` ค่า `failure_code` และ `paid_at` เป็น `null`. รายการที่ไม่ใช่ `PENDING` จะไม่ถูกเปลี่ยนซ้ำ.
-5. หลังอัปเดต PayMock จะสร้าง webhook delivery ของ `payment.expired` และ dispatch ไปยัง queue. `paymock_queue` ส่ง callback ไปยัง `callback_url`; หากปลายทางตอบ non-2xx หรือการเชื่อมต่อล้มเหลว จะ retry ตาม backoff ที่กำหนด (สูงสุด 6 attempts).
-
-ดังนั้น queue worker มีหน้าที่ส่ง webhook ไม่ได้เป็นตัวค้นหารายการหมดอายุ. การตั้ง `expires_at` ผ่านไปอย่างเดียวไม่ได้เปลี่ยน status ทันที; โดยปกติ scheduler จะเปลี่ยนสถานะในรอบถัดไป. อีกกรณีหนึ่ง `GET /checkout/{id}` จะตรวจเวลาและเปลี่ยนรายการที่ยัง `PENDING` เป็น `EXPIRED` เมื่อมีการเปิดหน้า Checkout. ส่วน `GET /v1/payments/{id}` อ่าน status ที่บันทึกอยู่เท่านั้น ไม่ได้สั่ง expire รายการเอง.
+`GET /v1/payments/{id}` ใช้ตรวจสถานะที่บันทึกไว้และ **ไม่** เป็นตัวสั่งหมดอายุเอง; ถ้า `expires_at` ผ่านแล้วแต่ scheduler ยังไม่ถึงรอบ รายการอาจแสดง `PENDING` ชั่วคราวได้ (ปกติไม่เกินประมาณ 10 วินาทีเมื่อ scheduler ทำงาน). การเปิด `GET /checkout/{id}` เป็นอีกกรณีที่ตรวจเวลาและเปลี่ยนรายการ `PENDING` ที่เลยกำหนดเป็น `EXPIRED` ทันที. Scheduler เป็นตัวค้นหารายการตามรอบ ส่วน queue worker มีหน้าที่ส่ง webhook และ retry เท่านั้น.
 
 ### Flow Reconcile (Webhook หายหรือมาช้า)
 
@@ -818,14 +885,14 @@ PayMock แยก scheduler สำหรับหมดอายุออกจ�
 ### Flow Retry หลัง Timeout
 
 ```
-1. ส่ง POST /v1/payments พร้อม body.payment_id = `b_TK2024001` (ไม่ต้องส่ง header)
+1. ส่ง POST /v1/payments พร้อม Idempotency-Key header เช่น `attempt-b_TK2024001`; ส่ง `metadata` ได้หากมีข้อมูลเพิ่มเติม
 2. หมดเวลา (timeout) ไม่ได้ response
-3. ส่ง POST /v1/payments อีกครั้งด้วย body.payment_id เดิม: `b_TK2024001`
+3. ส่ง POST /v1/payments อีกครั้งด้วย `Idempotency-Key` header เดิม
 4. PayMock คืน payment เดิม (ไม่สร้างซ้ำ)
 5. นำ qrcode_url หรือผลลัพธ์เดิมไปแสดงผลต่อได้ทันที
 ```
 
-หาก request เดิมใช้ `Idempotency-Key` header ให้ส่ง header ค่าเดิมซ้ำตอน retry; header จะมี precedence เหนือ `payment_id`.
+หากไม่ส่ง `Idempotency-Key` จะไม่มี key ที่คงเดิมสำหรับ retry; gateway จะสร้าง payment ใหม่.
 
 ---
 

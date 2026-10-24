@@ -30,7 +30,6 @@ class MockMode
         'webhook_delay',
         'webhook_dup',
         'webhook_bad_sig',
-        'webhook_replay',
     ];
 
     public static function name(?string $mode): string

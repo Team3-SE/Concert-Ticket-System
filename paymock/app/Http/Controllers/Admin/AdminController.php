@@ -133,15 +133,14 @@ class AdminController extends Controller
         $method     = $request->input('method', 'card');
         $cardNumber = $request->input('card_number');
         $amount     = (float) $request->input('amount', 1200.00);
-        $merchantPaymentId = (string) random_int(100000, 999999);
+        $idempotencyKey = 'DEMO_' . \Illuminate\Support\Str::uuid();
 
         $payment = $this->paymentService->createOrFind([
-            'payment_id'      => $merchantPaymentId,
             'amount'          => $amount,
             'method'          => $method,
             'callback_url'    => env('DEFAULT_WEBHOOK_URL', 'http://concert_backend:5000/api/webhook'),
             'return_url'      => null,
-            'idempotency_key' => 'DEMO_' . $merchantPaymentId,
+            'idempotency_key' => $idempotencyKey,
             'expires_in'      => 600,
         ]);
 
@@ -174,8 +173,9 @@ class AdminController extends Controller
     public function webhookTest(Request $request): \Illuminate\Http\JsonResponse
     {
         $request->validate([
-            'url'   => 'required|url',
-            'event' => 'required|string',
+            'url'      => 'required|url',
+            'event'    => 'required|string',
+            'scenario' => 'nullable|in:normal,webhook_bad_sig',
         ]);
 
         $event = $request->input('event', 'payment.completed');
@@ -190,7 +190,6 @@ class AdminController extends Controller
         $txnId = 'txn_TEST_' . strtoupper(substr(uniqid(), -8));
         $body = json_encode([
             'id'           => $txnId,
-            'payment_id'   => '42',
             'event'                   => $event,
             'amount'       => 1200.00,
             'currency'     => 'THB',
@@ -202,7 +201,7 @@ class AdminController extends Controller
         ]);
 
         $scenario = $request->input('scenario', 'normal');
-        $t        = ($scenario === 'webhook_replay') ? (time() - 3600) : time();
+        $t        = time();
         $secret   = config('paymock.webhook_secret');
         $sig      = hash_hmac('sha256', "$t.$body", $secret);
 

@@ -14,7 +14,7 @@
                 <button type="button"
                         id="iframeCloseHeaderBtn"
                         style="display: none;"
-                        onclick="window.parent.postMessage({ type: 'paymock:close_modal', payment_id: '{{ $payment->public_id }}', status: 'PENDING' }, '*')"
+                        onclick="window.parent.postMessage({ type: 'paymock:close_modal', id: '{{ $payment->public_id }}', status: 'PENDING' }, '*')"
                         class="bg-indigo-700 hover:bg-rose-600 text-xs text-white px-2.5 py-1 rounded-md transition border border-indigo-400 font-semibold cursor-pointer">
                     ✕ ปิดหน้าต่าง
                 </button>
@@ -25,7 +25,7 @@
             </div>
         </div>
         <div class="mt-2 text-sm opacity-70">
-            Booking Code: <span class="font-mono font-semibold">{{ $payment->order_ref }}</span>
+            Transaction ID: <span class="font-mono font-semibold">{{ $payment->public_id }}</span>
         </div>
     </div>
 

@@ -29,8 +29,6 @@ class WebhookEmitter
         $payload = [
             // `id` is the canonical provider transaction ID in webhooks too.
             'id'           => $payment->public_id,
-            'payment_id'   => $payment->merchantPaymentId(),
-            'booking_ref'  => $payment->order_ref,
             'event'                   => $event,
             'amount'                  => (float) $payment->amount,
             'currency'     => $payment->currency,
@@ -40,6 +38,11 @@ class WebhookEmitter
             'paid_at'      => $payment->paid_at?->toIso8601String(),
             'created_at'   => $payment->created_at?->toIso8601String(),
         ];
+
+        $metadata = $payment->responseMetadata();
+        if ($metadata !== null) {
+            $payload['metadata'] = $metadata;
+        }
 
         for ($i = 0; $i < $copies; $i++) {
             $delivery = WebhookDelivery::create([

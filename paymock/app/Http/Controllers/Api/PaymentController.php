@@ -7,6 +7,7 @@ use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 
 class PaymentController extends Controller
@@ -37,16 +38,12 @@ class PaymentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'payment_id'   => 'required|string|max:255',
-            'booking_ref'  => 'nullable|string|max:255',
-            'order_ref'    => 'nullable|string|max:255',
             'amount'       => 'required|numeric|min:1',
             'method'       => 'required|in:card,promptpay',
             'callback_url' => 'required|url',
             'return_url'   => 'nullable|url',
             'expires_in'   => 'nullable|integer|min:60',
             'currency'     => 'nullable|string|size:3',
-            'metadata'     => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
@@ -57,9 +54,12 @@ class PaymentController extends Controller
         }
 
         $validated = $validator->validated();
-        $validated['booking_ref'] = $validated['booking_ref'] ?? $validated['order_ref'] ?? null;
-        $merchantPaymentId = (string) $validated['payment_id'];
-        $idempotencyKey = $request->header('Idempotency-Key') ?? $merchantPaymentId;
+        $validated['metadata'] = $request->input('metadata');
+
+        $idempotencyKey = trim((string) $request->header('Idempotency-Key', ''));
+        if ($idempotencyKey === '') {
+            $idempotencyKey = (string) Str::uuid();
+        }
 
         $payment = $this->service->createOrFind(
             array_merge($validated, ['idempotency_key' => $idempotencyKey])
@@ -118,8 +118,6 @@ class PaymentController extends Controller
             // return a second alias for it; use this value for GET, cancel,
             // QR, polling and reconciliation.
             'id'           => $payment->public_id,
-            'payment_id'   => $payment->merchantPaymentId(),
-            'booking_ref'  => $payment->order_ref,
             'amount'       => (float) $payment->amount,
             'currency'     => $payment->currency,
             'method'       => $payment->method,
@@ -130,6 +128,11 @@ class PaymentController extends Controller
             'created_at'   => $payment->created_at?->toIso8601String(),
             'return_url'   => $payment->return_url,
         ];
+
+        $metadata = $payment->responseMetadata();
+        if ($metadata !== null) {
+            $data['metadata'] = $metadata;
+        }
 
         if ($payment->method === 'promptpay') {
             $data['qrcode_url']         = url("/v1/payments/{$payment->public_id}/qr.svg");

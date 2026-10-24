@@ -19,13 +19,12 @@ class WebhookTest extends TestCase
     private function createPayment(string $status = 'COMPLETED'): Payment
     {
         return Payment::create([
-            'payment_id'      => (string) random_int(1000, 999999),
-            'order_ref'       => 'BOOK_' . uniqid(),
             'amount'          => 1500,
             'method'          => 'promptpay',
             'status'          => $status,
             'callback_url'    => 'http://concert/webhooks/payment',
             'idempotency_key' => 'ID_' . uniqid(),
+            'metadata'        => ['booking_id' => 42],
         ]);
     }
 
@@ -37,7 +36,48 @@ class WebhookTest extends TestCase
         app(WebhookEmitter::class)->emit($payment, 'payment.completed');
 
         Queue::assertPushed(SendWebhookJob::class, 1);
-        $this->assertSame($payment->order_ref, WebhookDelivery::firstOrFail()->payload['booking_ref']);
+        $payload = WebhookDelivery::firstOrFail()->payload;
+        $this->assertStringStartsWith('txn_', $payload['id']);
+        $this->assertSame(['booking_id' => 42], $payload['metadata']);
+        $this->assertArrayNotHasKey('payment_id', $payload);
+        $this->assertArrayNotHasKey('booking_ref', $payload);
+        $this->assertArrayNotHasKey('idempotency_key', $payload);
+    }
+
+    public function test_webhook_omits_metadata_when_none_was_provided(): void
+    {
+        Queue::fake();
+        $payment = Payment::create([
+            'amount'          => 1500,
+            'method'          => 'promptpay',
+            'status'          => 'COMPLETED',
+            'callback_url'    => 'http://concert/webhooks/payment',
+            'idempotency_key' => 'ID_WITHOUT_METADATA',
+            'metadata'        => null,
+        ]);
+
+        app(WebhookEmitter::class)->emit($payment, 'payment.completed');
+
+        $payload = WebhookDelivery::firstOrFail()->payload;
+        $this->assertArrayNotHasKey('metadata', $payload);
+    }
+
+    public function test_webhook_preserves_non_object_metadata(): void
+    {
+        Queue::fake();
+        $payment = Payment::create([
+            'amount'          => 1500,
+            'method'          => 'promptpay',
+            'status'          => 'COMPLETED',
+            'callback_url'    => 'http://concert/webhooks/payment',
+            'idempotency_key' => 'ID_' . uniqid(),
+            'metadata'        => 'unstructured merchant metadata',
+        ]);
+
+        app(WebhookEmitter::class)->emit($payment, 'payment.completed');
+
+        $payload = WebhookDelivery::firstOrFail()->payload;
+        $this->assertSame('unstructured merchant metadata', $payload['metadata']);
     }
 
     /** Webhook lost: ไม่ dispatch job เลย */
@@ -116,5 +156,42 @@ class WebhookTest extends TestCase
             $sigHeader = $req->header('X-Signature')[0] ?? '';
             return str_contains($sigHeader, 'v1=' . str_repeat('0', 64));
         });
+    }
+
+    public function test_non_2xx_webhook_response_is_recorded_and_retried(): void
+    {
+        Http::fake([
+            '*' => Http::sequence()
+                ->push('Webhook timestamp expired', 400)
+                ->push(['ok' => true], 200),
+        ]);
+
+        $payment  = $this->createPayment();
+        $delivery = WebhookDelivery::create([
+            'payment_id' => $payment->id,
+            'event'      => 'payment.completed',
+            'payload'    => ['id' => $payment->public_id, 'status' => 'COMPLETED'],
+        ]);
+        $job = new SendWebhookJob($delivery->id);
+
+        try {
+            $job->handle();
+            $this->fail('A non-2xx response should be thrown so the queue retries the job.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Webhook receiver responded with HTTP 400', $exception->getMessage());
+        }
+
+        $this->assertSame(1, $delivery->fresh()->attempts);
+        $this->assertSame(400, $delivery->fresh()->last_status_code);
+        $this->assertSame('Webhook receiver responded with HTTP 400', $delivery->fresh()->last_error);
+        $this->assertNull($delivery->fresh()->delivered_at);
+        $this->assertSame([5, 30, 120, 300, 600], $job->backoff());
+
+        $job->handle();
+
+        $this->assertSame(2, $delivery->fresh()->attempts);
+        $this->assertSame(200, $delivery->fresh()->last_status_code);
+        $this->assertNull($delivery->fresh()->last_error);
+        $this->assertNotNull($delivery->fresh()->delivered_at);
     }
 }

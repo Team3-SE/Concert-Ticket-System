@@ -10,6 +10,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 class SendWebhookJob implements ShouldQueue
 {
@@ -35,8 +36,7 @@ class SendWebhookJob implements ShouldQueue
 
         $body = json_encode($delivery->payload);
 
-        // webhook_replay: ส่ง timestamp เก่ากว่า 1 ชั่วโมง (ควรถูกปฏิเสธโดย receiver)
-        $t = ($this->scenario === 'webhook_replay') ? (time() - 3600) : time();
+        $t = time();
 
         // คำนวณ signature
         $secret = config('paymock.webhook_secret');
@@ -57,31 +57,41 @@ class SendWebhookJob implements ShouldQueue
                 ])
                 ->withBody($body, 'application/json')
                 ->post($payment->callback_url);
-
-            $delivery->increment('attempts');
-            $delivery->update([
-                'last_status_code' => $response->status(),
-                'last_error'       => null,
-            ]);
-
-            if ($response->successful()) {
-                $delivery->update(['delivered_at' => now()]);
-                Log::info('Webhook delivered', [
-                    'delivery_id' => $this->deliveryId,
-                    'status'      => $response->status(),
-                ]);
-            } else {
-                // ไม่ 2xx → queue จะ retry ตาม backoff
-                $this->fail(new \Exception("Webhook receiver responded {$response->status()}"));
-            }
         } catch (\Exception $e) {
             $delivery->increment('attempts');
-            $delivery->update(['last_error' => $e->getMessage()]);
+            $delivery->update([
+                'last_status_code' => null,
+                'last_error'       => $e->getMessage(),
+            ]);
             Log::warning('Webhook delivery failed', [
                 'delivery_id' => $this->deliveryId,
                 'error'       => $e->getMessage(),
             ]);
-            throw $e; // re-throw เพื่อให้ queue retry
+            throw $e;
         }
+
+        $delivery->increment('attempts');
+        $delivery->update([
+            'last_status_code' => $response->status(),
+            'last_error'       => $response->successful()
+                ? null
+                : "Webhook receiver responded with HTTP {$response->status()}",
+        ]);
+
+        if ($response->successful()) {
+            $delivery->update(['delivered_at' => now()]);
+            Log::info('Webhook delivered', [
+                'delivery_id' => $this->deliveryId,
+                'status'      => $response->status(),
+            ]);
+            return;
+        }
+
+        Log::warning('Webhook receiver returned a non-2xx response', [
+            'delivery_id' => $this->deliveryId,
+            'status'      => $response->status(),
+        ]);
+
+        throw new RuntimeException("Webhook receiver responded with HTTP {$response->status()}");
     }
 }

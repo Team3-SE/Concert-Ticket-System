@@ -26,33 +26,35 @@ class PaymentApiTest extends TestCase
             'Authorization'   => 'Bearer ' . $this->apiKey,
             'Idempotency-Key' => 'BOOKING_001',
         ])->postJson('/v1/payments', [
-            'payment_id'   => '101',
-            'booking_ref'  => 'TK-BOOKING-101',
             'amount'       => 1500.00,
             'method'       => 'card',
             'callback_url' => 'http://concert/webhooks/payment',
             'return_url'   => 'http://localhost:8080/return',
             'expires_in'   => 600,
+            'metadata'     => ['booking_id' => 42],
         ]);
 
         $response->assertStatus(201)
             ->assertJsonStructure([
-                'id', 'payment_id', 'booking_ref', 'amount', 'method', 'status',
+                'id', 'amount', 'method', 'status', 'metadata' => ['booking_id'],
                 'checkout_url', 'return_url', 'expires_at', 'created_at',
             ])
             ->assertJson([
-                'payment_id' => '101',
-                'booking_ref' => 'TK-BOOKING-101',
-                'amount'     => 1500.0,
+                'amount'     => 1500,
                 'status'     => 'PENDING',
-            ]);
+                'metadata'   => [
+                    'booking_id'  => 42,
+                ],
+            ])
+            ->assertJsonPath('metadata', ['booking_id' => 42]);
 
+        $this->assertStringStartsWith('txn_', $response->json('id'));
         $this->assertNull($response->json('provider_transaction_id'));
         $response->assertJsonMissingPath('qrcode_url')
             ->assertJsonMissingPath('bank_simulator_url');
+        $response->assertJsonMissingPath('payment_id')
+            ->assertJsonMissingPath('booking_ref');
         $this->assertDatabaseHas('payments', [
-            'payment_id'      => '101',
-            'order_ref'       => 'TK-BOOKING-101',
             'idempotency_key' => 'BOOKING_001',
             'status'          => 'PENDING',
             'return_url'      => 'http://localhost:8080/return',
@@ -60,32 +62,37 @@ class PaymentApiTest extends TestCase
         $response->assertJsonMissingPath('order_ref');
     }
 
-    public function test_legacy_order_ref_request_is_returned_as_booking_ref(): void
+    public function test_merchant_reference_columns_are_not_stored_or_returned(): void
     {
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
         ])->postJson('/v1/payments', [
             'payment_id'   => 'LEGACY-101',
             'order_ref'    => 'TK-LEGACY-101',
+            'booking_ref'  => 'TK-LEGACY-101',
             'amount'       => 1500,
             'method'       => 'card',
             'callback_url' => 'http://concert/webhooks/payment',
         ]);
 
         $response->assertCreated()
-            ->assertJsonPath('booking_ref', 'TK-LEGACY-101')
+            ->assertJsonMissingPath('metadata')
+            ->assertJsonMissingPath('payment_id')
+            ->assertJsonMissingPath('booking_ref')
             ->assertJsonMissingPath('order_ref');
+        $this->assertSame(1, Payment::count());
+        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasColumn('payments', 'payment_id'));
+        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasColumn('payments', 'booking_ref'));
+        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasColumn('payments', 'order_ref'));
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('webhook_deliveries', 'payment_id'));
     }
 
-    /** Test: PromptPay PENDING คืน payment_id ของร้านค้า ไม่เป็น null */
-    public function test_promptpay_create_returns_merchant_payment_id(): void
+    public function test_promptpay_create_does_not_add_metadata_when_omitted(): void
     {
         $response = $this->withHeaders([
             'Authorization'   => 'Bearer ' . $this->apiKey,
             'Idempotency-Key' => 'PP_PENDING_001',
         ])->postJson('/v1/payments', [
-            'payment_id'   => '555',
-            'booking_ref'  => 'TK-PP-555',
             'amount'       => 2200.00,
             'method'       => 'promptpay',
             'callback_url' => 'http://concert/webhooks/payment',
@@ -94,38 +101,46 @@ class PaymentApiTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJson([
-                'payment_id' => '555',
-                'booking_ref' => 'TK-PP-555',
                 'method'     => 'promptpay',
                 'status'     => 'PENDING',
-            ]);
-        $this->assertNotNull($response->json('payment_id'));
+            ])
+            ->assertJsonMissingPath('metadata');
+        $this->assertDatabaseHas('payments', ['idempotency_key' => 'PP_PENDING_001']);
+        $this->assertStringStartsWith('txn_', $response->json('id'));
         $this->assertNotEmpty($response->json('qrcode_url'));
         $this->assertNotEmpty($response->json('bank_simulator_url'));
         $response->assertJsonMissingPath('checkout_url');
     }
 
-    /** Test: payment_id เป็นฟิลด์บังคับ */
-    public function test_create_requires_payment_id(): void
+    public function test_create_does_not_require_merchant_references(): void
     {
         $response = $this->withHeaders([
             'Authorization'   => 'Bearer ' . $this->apiKey,
-            'Idempotency-Key' => 'MISSING_PAYMENT_ID',
         ])->postJson('/v1/payments', [
             'amount'       => 1800.00,
             'method'       => 'promptpay',
             'callback_url' => 'http://concert/webhooks/payment',
         ]);
 
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors('payment_id');
+        $response->assertCreated()
+            ->assertJsonMissingPath('metadata');
+        $this->assertStringStartsWith('txn_', $response->json('id'));
+        $this->assertDatabaseHas('payments', [
+            'metadata'   => null,
+        ]);
+
+        $statusResponse = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey,
+        ])->getJson('/v1/payments/' . $response->json('id'));
+
+        $statusResponse->assertOk()
+            ->assertJsonMissingPath('metadata');
     }
 
     /** Test: Idempotency-Key เดิม คืน payment เดิม ไม่สร้างใหม่ */
     public function test_idempotent_creation_returns_same_payment(): void
     {
         $payload = [
-            'payment_id'   => '202',
             'amount'       => 2000.00,
             'method'       => 'promptpay',
             'callback_url' => 'http://concert/webhooks/payment',
@@ -145,10 +160,35 @@ class PaymentApiTest extends TestCase
         $this->assertEquals($res1->json('id'), $res2->json('id'));
     }
 
-    public function test_payment_id_is_idempotency_fallback_without_header(): void
+    public function test_idempotency_header_deduplicates_requests(): void
+    {
+        $first = $this->withHeaders([
+            'Authorization'   => 'Bearer ' . $this->apiKey,
+            'Idempotency-Key' => 'HEADER_KEY_202',
+        ])->postJson('/v1/payments', [
+            'amount'       => 2000,
+            'method'       => 'promptpay',
+            'callback_url' => 'http://concert/webhooks/payment',
+        ]);
+
+        $second = $this->withHeaders([
+            'Authorization'   => 'Bearer ' . $this->apiKey,
+            'Idempotency-Key' => 'HEADER_KEY_202',
+        ])->postJson('/v1/payments', [
+            'amount'       => 2000,
+            'method'       => 'promptpay',
+            'callback_url' => 'http://concert/webhooks/payment',
+        ]);
+
+        $first->assertCreated();
+        $second->assertCreated()->assertJsonPath('id', $first->json('id'));
+        $this->assertSame(1, Payment::count());
+        $this->assertDatabaseHas('payments', ['idempotency_key' => 'HEADER_KEY_202']);
+    }
+
+    public function test_requests_without_idempotency_header_create_new_payments(): void
     {
         $payload = [
-            'payment_id'   => 'BODY_KEY_202',
             'amount'       => 2000.00,
             'method'       => 'promptpay',
             'callback_url' => 'http://concert/webhooks/payment',
@@ -162,21 +202,117 @@ class PaymentApiTest extends TestCase
             'Authorization' => 'Bearer ' . $this->apiKey,
         ])->postJson('/v1/payments', $payload);
 
-        $first->assertCreated();
+        $first->assertCreated()->assertJsonMissingPath('metadata');
+        $second->assertCreated()->assertJsonMissingPath('metadata');
+        $this->assertNotSame($first->json('id'), $second->json('id'));
+        $this->assertSame(2, Payment::count());
+    }
+
+    public function test_metadata_does_not_affect_idempotency(): void
+    {
+        $payload = [
+            'amount'       => 2000,
+            'method'       => 'promptpay',
+            'callback_url' => 'http://concert/webhooks/payment',
+            'metadata'     => [
+                'source'      => 'concert',
+                'custom_context' => ['order' => ['reference' => 'ABC'], 'enabled' => true],
+            ],
+        ];
+
+        $first = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey,
+        ])->postJson('/v1/payments', $payload);
+        $second = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey,
+        ])->postJson('/v1/payments', $payload);
+
+        $first->assertCreated()
+            ->assertJsonPath('metadata.source', 'concert')
+            ->assertJsonPath('metadata.custom_context.order.reference', 'ABC');
+        $second->assertCreated()->assertJsonPath('metadata.source', 'concert');
+        $this->assertNotSame($first->json('id'), $second->json('id'));
+        $this->assertSame(2, Payment::count());
+    }
+
+    public function test_metadata_accepts_custom_fields(): void
+    {
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey,
+        ])->postJson('/v1/payments', [
+            'amount'       => 2000,
+            'method'       => 'promptpay',
+            'callback_url' => 'http://concert/webhooks/payment',
+            'metadata'     => ['custom_context' => ['source' => 'mobile_app']],
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('metadata.custom_context.source', 'mobile_app');
+    }
+
+    public function test_metadata_accepts_non_object_json_values_without_validation(): void
+    {
+        $metadata = 'unstructured merchant metadata';
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey,
+        ])->postJson('/v1/payments', [
+            'amount'       => 2000,
+            'method'       => 'promptpay',
+            'callback_url' => 'http://concert/webhooks/payment',
+            'metadata'     => $metadata,
+        ]);
+
+        $response->assertCreated()->assertJsonPath('metadata', $metadata);
+        $this->assertSame($metadata, Payment::firstOrFail()->metadata);
+    }
+
+    public function test_metadata_is_not_validated_or_rewritten(): void
+    {
+        $metadata = ['custom_value' => ['nested' => str_repeat('X', 300)], 'source' => ['app' => 'mobile']];
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey,
+        ])->postJson('/v1/payments', [
+            'amount'       => 2000,
+            'method'       => 'promptpay',
+            'callback_url' => 'http://concert/webhooks/payment',
+            'metadata'     => $metadata,
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('metadata.custom_value.nested', $metadata['custom_value']['nested'])
+            ->assertJsonPath('metadata.source.app', 'mobile');
+    }
+
+    public function test_header_only_idempotency_works(): void
+    {
+        $payload = [
+            'amount'       => 2000,
+            'method'       => 'promptpay',
+            'callback_url' => 'http://concert/webhooks/payment',
+        ];
+
+        $first = $this->withHeaders([
+            'Authorization'   => 'Bearer ' . $this->apiKey,
+            'Idempotency-Key' => 'HEADER_ONLY_202',
+        ])->postJson('/v1/payments', $payload);
+        $second = $this->withHeaders([
+            'Authorization'   => 'Bearer ' . $this->apiKey,
+            'Idempotency-Key' => 'HEADER_ONLY_202',
+        ])->postJson('/v1/payments', $payload);
+
+        $first->assertCreated()
+            ->assertJsonMissingPath('metadata')
+            ->assertJsonMissingPath('idempotency_key');
         $second->assertCreated()->assertJsonPath('id', $first->json('id'));
         $this->assertSame(1, Payment::count());
-        $this->assertDatabaseHas('payments', [
-            'payment_id'      => 'BODY_KEY_202',
-            'idempotency_key' => 'BODY_KEY_202',
-        ]);
     }
 
     /** Test: GET /v1/payments/{id} คืนสถานะถูกต้อง */
     public function test_can_query_payment_status(): void
     {
         $payment = Payment::create([
-            'payment_id'      => '303',
-            'order_ref'       => 'BOOKING_STATUS',
             'amount'          => 500,
             'method'          => 'card',
             'status'          => 'PENDING',
@@ -191,17 +327,17 @@ class PaymentApiTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'id'         => $payment->public_id,
-                'payment_id' => '303',
                 'status'     => 'PENDING',
                 'amount'     => 500.0,
-            ]);
+            ])
+            ->assertJsonMissingPath('metadata')
+            ->assertJsonMissingPath('payment_id')
+            ->assertJsonMissingPath('booking_ref');
     }
 
-    /** รายการเก่าที่ยังไม่มีคอลัมน์ payment_id ต้อง echo order_ref แทน ไม่คืน null */
-    public function test_legacy_row_without_payment_id_uses_order_ref(): void
+    public function test_payment_without_metadata_does_not_synthesize_metadata(): void
     {
         $payment = Payment::create([
-            'order_ref'       => 'LEGACY_BOOKING',
             'amount'          => 900,
             'method'          => 'promptpay',
             'status'          => 'PENDING',
@@ -209,25 +345,57 @@ class PaymentApiTest extends TestCase
             'idempotency_key' => 'KEY_LEGACY_NULL',
         ]);
 
-        $this->assertNull($payment->getAttributes()['payment_id'] ?? null);
-
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
         ])->getJson('/v1/payments/' . $payment->public_id);
 
         $response->assertStatus(200)
-            ->assertJson([
-                'payment_id' => 'LEGACY_BOOKING',
-                'status'     => 'PENDING',
-            ]);
+            ->assertJsonMissingPath('metadata')
+            ->assertJsonPath('status', 'PENDING');
+    }
+
+    public function test_card_expires_in_is_applied(): void
+    {
+        $createdAt = now();
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey,
+        ])->postJson('/v1/payments', [
+            'amount'       => 1200,
+            'method'       => 'card',
+            'callback_url' => 'http://concert/webhooks/payment',
+            'expires_in'   => 900,
+        ]);
+
+        $response->assertCreated()->assertJsonStructure(['expires_at']);
+        $expiresAt = \Illuminate\Support\Carbon::parse($response->json('expires_at'));
+        $this->assertGreaterThanOrEqual($createdAt->copy()->addSeconds(900)->timestamp, $expiresAt->timestamp);
+        $this->assertLessThanOrEqual(now()->addSeconds(900)->timestamp, $expiresAt->timestamp);
+    }
+
+    public function test_qr_endpoint_is_public_and_returns_svg_headers(): void
+    {
+        $payment = Payment::create([
+            'amount'          => 800,
+            'method'          => 'promptpay',
+            'status'          => 'PENDING',
+            'callback_url'    => 'http://test/cb',
+            'idempotency_key' => 'KEY_QR',
+        ]);
+
+        $response = $this->get('/v1/payments/' . $payment->public_id . '/qr.svg');
+
+        $response->assertOk()
+            ->assertHeader('Content-Type', 'image/svg+xml');
+        $cacheControl = $response->headers->get('Cache-Control');
+        $this->assertStringContainsString('no-cache', $cacheControl);
+        $this->assertStringContainsString('no-store', $cacheControl);
+        $this->assertStringContainsString('must-revalidate', $cacheControl);
     }
 
     /** Test: POST /v1/payments/{id}/cancel ยกเลิกได้ก่อนจ่าย */
     public function test_can_cancel_pending_payment(): void
     {
         $payment = Payment::create([
-            'payment_id'      => '404',
-            'order_ref'       => 'BOOKING_CANCEL',
             'amount'          => 800,
             'method'          => 'card',
             'status'          => 'PENDING',
@@ -269,7 +437,6 @@ class PaymentApiTest extends TestCase
         $response = $this->withHeaders([
             'Authorization' => 'Bearer wrong_token',
         ])->postJson('/v1/payments', [
-            'payment_id'   => '1',
             'amount'       => 100,
             'method'       => 'card',
             'callback_url' => 'http://test/cb',

@@ -65,39 +65,50 @@ class PaymockService
 {
     /**
      * ส่งคำขอสร้าง payment ไปยัง PayMock
-     * ใช้ Idempotency-Key = booking_code เพื่อป้องกันการหักเงินซ้ำเมื่อเกิด retry
+     * Idempotency-Key เป็น optional; ถ้ากำหนด ต้องใช้ค่าเดิมเมื่อ retry POST
      */
-    public function initiatePayment(Booking $booking, string $method = 'card'): string
+    public function initiatePayment(
+        Booking $booking,
+        string $method = 'card',
+        ?string $idempotencyKey = null
+    ): string
     {
         $scenario = config('services.paymock.scenario');
+        $metadata = ['source' => 'concert-app'];
 
         try {
             $headers = [
-                'Idempotency-Key' => $booking->b_booking_code,
+                'Accept' => 'application/json',
             ];
+            if ($idempotencyKey !== null && $idempotencyKey !== '') {
+                $headers['Idempotency-Key'] = $idempotencyKey;
+            }
             if ($scenario) {
                 $headers['X-Mock-Scenario'] = $scenario;
             }
 
-            $response = Http::withToken(config('services.paymock.key'))
+            $gatewayRequest = Http::withToken(config('services.paymock.key'))
                 ->withHeaders($headers)
-                ->timeout(8)          // timeout 8 วินาที
-                ->retry(2, 500, throw: false) // retry 2 ครั้ง ห่างกัน 500ms
-                ->post(config('services.paymock.url') . '/v1/payments', [
-                    'order_ref'    => $booking->b_booking_code,
+                ->timeout(8);         // timeout 8 วินาที
+            if ($idempotencyKey !== null && $idempotencyKey !== '') {
+                $gatewayRequest = $gatewayRequest->retry(2, 500, throw: false);
+            }
+
+            $response = $gatewayRequest->post(config('services.paymock.url') . '/v1/payments', [
                     'amount'       => (float) $booking->b_total_amount,
                     'currency'     => 'THB',
                     'method'       => $method, // 'card' หรือ 'promptpay'
                     'callback_url' => route('webhooks.paymock'),
                     'return_url'   => route('payment.return'),
                     'expires_in'   => 600, // 10 นาที
+                    'metadata'     => $metadata,
                 ]);
 
             $response->throw();
 
             $data = $response->json();
 
-            // บันทึก provider_transaction_id ลงในตาราง payment ของระบบหลัก
+            // `id` (txn_...) เป็น provider transaction ID สำหรับ GET/reconcile และ deduplicate webhook
             $booking->payment()->updateOrCreate(
                 ['booking_id' => $booking->b_booking_id],
                 [
@@ -184,7 +195,7 @@ class PaymockWebhookController extends Controller
 
         // 4. บันทึกและปรับปรุงสถานะ (Idempotent)
         $this->paymentState->apply(
-            providerId:  $request->input('id'),
+            providerId:  $request->input('id'), // txn_... is the provider transaction ID
             status:      $request->input('status'),
             amount:      (float) $request->input('amount'),
             failureCode: $request->input('failure_code')
