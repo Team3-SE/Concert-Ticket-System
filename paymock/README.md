@@ -37,7 +37,7 @@ php artisan schedule:work
 
 | ส่วน | URL | รายละเอียด |
 |---|---|---|
-| **API Base** | `http://localhost:8081/v1` | ใช้คุยกับระบบคอนเสิร์ต |
+| **API Base** | `http://localhost:8081` | ใช้คุยกับระบบคอนเสิร์ต |
 | **Hosted Card Checkout** | `http://localhost:8081/checkout/{id}` | หน้ากรอกบัตรของ PayMock แล้ว redirect กลับ `return_url` |
 | **Admin Panel** | `http://localhost:8081/admin` | ชั้น 1 Chaos + ชั้น 2 Webhook (global), ดูรายการ, ส่ง Webhook ซ้ำ |
 | **Health Check** | `http://localhost:8081/up` | Docker healthcheck |
@@ -65,7 +65,7 @@ php artisan schedule:work
 
 ### 1. สร้างรายการชำระเงิน
 ```http
-POST /v1/payments
+POST /payments
 Authorization: Bearer {API_KEY}
 Content-Type: application/json
 
@@ -123,7 +123,7 @@ Public API รับ `metadata` เป็น optional JSON value สำหรั
 
 ### 2. ตรวจสอบสถานะการชำระเงิน (Polling / Reconcile)
 ```http
-GET /v1/payments/{id}
+GET /payments/{id}
 Authorization: Bearer {API_KEY}
 ```
 
@@ -131,7 +131,7 @@ Authorization: Bearer {API_KEY}
 
 ### 3. ยกเลิกรายการชำระเงินก่อนจ่าย
 ```http
-POST /v1/payments/{id}/cancel
+POST /payments/{id}/cancel
 Authorization: Bearer {API_KEY}
 ```
 
@@ -164,7 +164,7 @@ Authorization: Bearer {API_KEY}
 
 ### หมวด C: Gateway / Network ผิดปกติ (ชั้น 1 — ตั้งที่ PayMock Admin)
 
-ระบบคอนเสิร์ตไม่ส่ง `X-Mock-Scenario` — ตั้ง `chaos_mode` ที่ Admin แล้วทุกคำขอเข้า `/v1/*` และ checkout จะถูกจำลองตามนั้น
+ระบบคอนเสิร์ตไม่ส่ง `X-Mock-Scenario` — ตั้ง `chaos_mode` ที่ Admin แล้วทุกคำขอเข้า `/payments/*` และ checkout จะถูกจำลองตามนั้น
 
 | Scenario | พฤติกรรมที่ลูกค้าเห็น |
 |---|---|
@@ -208,7 +208,7 @@ try {
         ->withHeaders($headers)
         ->timeout(8)
         ->retry(2, 500, throw: false)
-        ->post(config('services.paymock.url') . '/v1/payments', [
+        ->post(config('services.paymock.url') . '/payments', [
             'amount'       => (float) $booking->b_total_amount,
             'method'       => $method, // 'card' or 'promptpay'
             'callback_url' => route('webhooks.payment'),
@@ -267,7 +267,7 @@ Payment::where('p_status', 'PENDING')
     ->where('created_at', '<', now()->subMinute())
     ->each(function (Payment $payment) {
         $res = Http::withToken(config('services.paymock.key'))
-            ->get(config('services.paymock.url') . '/v1/payments/' . $payment->p_provider_transaction_id);
+            ->get(config('services.paymock.url') . '/payments/' . $payment->p_provider_transaction_id);
 
         if ($res->successful()) {
             $this->paymentStateService->apply(

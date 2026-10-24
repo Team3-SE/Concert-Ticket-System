@@ -51,7 +51,7 @@ export default function () {
     };
 
     const startTime = new Date();
-    const res = http.post(`${PAYMOCK_URL}/v1/payments`, payload, params);
+    const res = http.post(`${PAYMOCK_URL}/payments`, payload, params);
     const duration = (new Date() - startTime) / 1000;
 
     // ตรวจสอบ:

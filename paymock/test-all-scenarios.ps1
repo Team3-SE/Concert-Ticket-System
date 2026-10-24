@@ -41,7 +41,7 @@ try {
 Write-Host "`n2. Testing Authentication & Security..." -ForegroundColor Yellow
 try {
     # Bad Auth
-    $badRes = Invoke-WebRequest -Uri "$BaseUrl/v1/payments" -Method Post `
+    $badRes = Invoke-WebRequest -Uri "$BaseUrl/payments" -Method Post `
         -Headers @{ "Authorization" = "Bearer invalid_token" } `
         -Body "{}" -ContentType "application/json" -SkipHttpErrorCheck
     Assert-Result "Rejects invalid API Key with 401" ($badRes.StatusCode -eq 401)
@@ -75,16 +75,16 @@ try {
         "Idempotency-Key" = $idempKey
     }
 
-    $p1 = Invoke-RestMethod -Uri "$BaseUrl/v1/payments" -Method Post -Headers $headers -Body $body -ContentType "application/json"
+    $p1 = Invoke-RestMethod -Uri "$BaseUrl/payments" -Method Post -Headers $headers -Body $body -ContentType "application/json"
     Assert-Result "Create Payment (201 Created)" ($p1.status -eq "PENDING" -and $p1.id -like "txn_*")
 
     # Send again with same Idempotency-Key
-    $p2 = Invoke-RestMethod -Uri "$BaseUrl/v1/payments" -Method Post -Headers $headers -Body $body -ContentType "application/json"
+    $p2 = Invoke-RestMethod -Uri "$BaseUrl/payments" -Method Post -Headers $headers -Body $body -ContentType "application/json"
     Assert-Result "Idempotent Repeat: Returns identical payment ID" ($p1.id -eq $p2.id)
 
-    # Status Query (GET /v1/payments/{id})
-    $stat = Invoke-RestMethod -Uri "$BaseUrl/v1/payments/$($p1.id)" -Method Get -Headers @{ "Authorization" = "Bearer $ApiKey" }
-    Assert-Result "Query Payment Status (GET /v1/payments/{id})" ($stat.id -eq $p1.id -and $stat.status -eq "PENDING")
+    # Status Query (GET /payments/{id})
+    $stat = Invoke-RestMethod -Uri "$BaseUrl/payments/$($p1.id)" -Method Get -Headers @{ "Authorization" = "Bearer $ApiKey" }
+    Assert-Result "Query Payment Status (GET /payments/{id})" ($stat.id -eq $p1.id -and $stat.status -eq "PENDING")
 
 } catch {
     Assert-Result "Create payment failed" $false $_.Exception.Message
@@ -99,7 +99,7 @@ Write-Host "`n4. Testing Chaos Mode..." -ForegroundColor Yellow
 # customer-facing response. This script does not use X-Mock-Scenario because
 # merchants cannot override a system-wide outage mode.
 try {
-    $resDown = Invoke-WebRequest -Uri "$BaseUrl/v1/payments" -Method Post `
+    $resDown = Invoke-WebRequest -Uri "$BaseUrl/payments" -Method Post `
         -Headers @{ "Authorization" = "Bearer $ApiKey" } `
         -Body $body -ContentType "application/json" -SkipHttpErrorCheck
     $gatewayMessage = $resDown.Content | ConvertFrom-Json
@@ -113,7 +113,7 @@ try {
 # ------------------------------------------------------------------------------
 Write-Host "`n5. Testing Payment Cancellation..." -ForegroundColor Yellow
 try {
-    $cancelRes = Invoke-RestMethod -Uri "$BaseUrl/v1/payments/$($p1.id)/cancel" -Method Post `
+    $cancelRes = Invoke-RestMethod -Uri "$BaseUrl/payments/$($p1.id)/cancel" -Method Post `
         -Headers @{ "Authorization" = "Bearer $ApiKey" }
     Assert-Result "Cancel Payment returns FAILED" ($cancelRes.status -eq "FAILED" -and $cancelRes.failure_code -eq "cancelled")
 } catch {

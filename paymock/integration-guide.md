@@ -94,7 +94,7 @@ class PaymockService
                 $gatewayRequest = $gatewayRequest->retry(2, 500, throw: false);
             }
 
-            $response = $gatewayRequest->post(config('services.paymock.url') . '/v1/payments', [
+            $response = $gatewayRequest->post(config('services.paymock.url') . '/payments', [
                     'amount'       => (float) $booking->b_total_amount,
                     'currency'     => 'THB',
                     'method'       => $method, // 'card' หรือ 'promptpay'
@@ -376,7 +376,7 @@ class ReconcilePaymentsCommand extends Command
                 try {
                     $response = Http::withToken(config('services.paymock.key'))
                         ->timeout(5)
-                        ->get(config('services.paymock.url') . '/v1/payments/' . $payment->p_provider_transaction_id);
+                        ->get(config('services.paymock.url') . '/payments/' . $payment->p_provider_transaction_id);
 
                     if ($response->successful()) {
                         $data = $response->json();

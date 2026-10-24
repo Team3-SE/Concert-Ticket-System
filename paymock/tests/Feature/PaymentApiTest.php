@@ -25,7 +25,7 @@ class PaymentApiTest extends TestCase
         $response = $this->withHeaders([
             'Authorization'   => 'Bearer ' . $this->apiKey,
             'Idempotency-Key' => 'BOOKING_001',
-        ])->postJson('/v1/payments', [
+        ])->postJson('/payments', [
             'amount'       => 1500.00,
             'method'       => 'card',
             'callback_url' => 'http://concert/webhooks/payment',
@@ -66,7 +66,7 @@ class PaymentApiTest extends TestCase
     {
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
-        ])->postJson('/v1/payments', [
+        ])->postJson('/payments', [
             'payment_id'   => 'LEGACY-101',
             'order_ref'    => 'TK-LEGACY-101',
             'booking_ref'  => 'TK-LEGACY-101',
@@ -92,7 +92,7 @@ class PaymentApiTest extends TestCase
         $response = $this->withHeaders([
             'Authorization'   => 'Bearer ' . $this->apiKey,
             'Idempotency-Key' => 'PP_PENDING_001',
-        ])->postJson('/v1/payments', [
+        ])->postJson('/payments', [
             'amount'       => 2200.00,
             'method'       => 'promptpay',
             'callback_url' => 'http://concert/webhooks/payment',
@@ -116,7 +116,7 @@ class PaymentApiTest extends TestCase
     {
         $response = $this->withHeaders([
             'Authorization'   => 'Bearer ' . $this->apiKey,
-        ])->postJson('/v1/payments', [
+        ])->postJson('/payments', [
             'amount'       => 1800.00,
             'method'       => 'promptpay',
             'callback_url' => 'http://concert/webhooks/payment',
@@ -131,7 +131,7 @@ class PaymentApiTest extends TestCase
 
         $statusResponse = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
-        ])->getJson('/v1/payments/' . $response->json('id'));
+        ])->getJson('/payments/' . $response->json('id'));
 
         $statusResponse->assertOk()
             ->assertJsonMissingPath('metadata');
@@ -149,12 +149,12 @@ class PaymentApiTest extends TestCase
         $res1 = $this->withHeaders([
             'Authorization'   => 'Bearer ' . $this->apiKey,
             'Idempotency-Key' => 'KEY_SAME',
-        ])->postJson('/v1/payments', $payload);
+        ])->postJson('/payments', $payload);
 
         $res2 = $this->withHeaders([
             'Authorization'   => 'Bearer ' . $this->apiKey,
             'Idempotency-Key' => 'KEY_SAME',
-        ])->postJson('/v1/payments', $payload);
+        ])->postJson('/payments', $payload);
 
         $this->assertEquals(1, Payment::count());
         $this->assertEquals($res1->json('id'), $res2->json('id'));
@@ -165,7 +165,7 @@ class PaymentApiTest extends TestCase
         $first = $this->withHeaders([
             'Authorization'   => 'Bearer ' . $this->apiKey,
             'Idempotency-Key' => 'HEADER_KEY_202',
-        ])->postJson('/v1/payments', [
+        ])->postJson('/payments', [
             'amount'       => 2000,
             'method'       => 'promptpay',
             'callback_url' => 'http://concert/webhooks/payment',
@@ -174,7 +174,7 @@ class PaymentApiTest extends TestCase
         $second = $this->withHeaders([
             'Authorization'   => 'Bearer ' . $this->apiKey,
             'Idempotency-Key' => 'HEADER_KEY_202',
-        ])->postJson('/v1/payments', [
+        ])->postJson('/payments', [
             'amount'       => 2000,
             'method'       => 'promptpay',
             'callback_url' => 'http://concert/webhooks/payment',
@@ -196,11 +196,11 @@ class PaymentApiTest extends TestCase
 
         $first = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
-        ])->postJson('/v1/payments', $payload);
+        ])->postJson('/payments', $payload);
 
         $second = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
-        ])->postJson('/v1/payments', $payload);
+        ])->postJson('/payments', $payload);
 
         $first->assertCreated()->assertJsonMissingPath('metadata');
         $second->assertCreated()->assertJsonMissingPath('metadata');
@@ -222,10 +222,10 @@ class PaymentApiTest extends TestCase
 
         $first = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
-        ])->postJson('/v1/payments', $payload);
+        ])->postJson('/payments', $payload);
         $second = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
-        ])->postJson('/v1/payments', $payload);
+        ])->postJson('/payments', $payload);
 
         $first->assertCreated()
             ->assertJsonPath('metadata.source', 'concert')
@@ -239,7 +239,7 @@ class PaymentApiTest extends TestCase
     {
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
-        ])->postJson('/v1/payments', [
+        ])->postJson('/payments', [
             'amount'       => 2000,
             'method'       => 'promptpay',
             'callback_url' => 'http://concert/webhooks/payment',
@@ -256,7 +256,7 @@ class PaymentApiTest extends TestCase
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
-        ])->postJson('/v1/payments', [
+        ])->postJson('/payments', [
             'amount'       => 2000,
             'method'       => 'promptpay',
             'callback_url' => 'http://concert/webhooks/payment',
@@ -273,7 +273,7 @@ class PaymentApiTest extends TestCase
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
-        ])->postJson('/v1/payments', [
+        ])->postJson('/payments', [
             'amount'       => 2000,
             'method'       => 'promptpay',
             'callback_url' => 'http://concert/webhooks/payment',
@@ -296,11 +296,11 @@ class PaymentApiTest extends TestCase
         $first = $this->withHeaders([
             'Authorization'   => 'Bearer ' . $this->apiKey,
             'Idempotency-Key' => 'HEADER_ONLY_202',
-        ])->postJson('/v1/payments', $payload);
+        ])->postJson('/payments', $payload);
         $second = $this->withHeaders([
             'Authorization'   => 'Bearer ' . $this->apiKey,
             'Idempotency-Key' => 'HEADER_ONLY_202',
-        ])->postJson('/v1/payments', $payload);
+        ])->postJson('/payments', $payload);
 
         $first->assertCreated()
             ->assertJsonMissingPath('metadata')
@@ -309,7 +309,7 @@ class PaymentApiTest extends TestCase
         $this->assertSame(1, Payment::count());
     }
 
-    /** Test: GET /v1/payments/{id} คืนสถานะถูกต้อง */
+    /** Test: GET /payments/{id} คืนสถานะถูกต้อง */
     public function test_can_query_payment_status(): void
     {
         $payment = Payment::create([
@@ -322,7 +322,7 @@ class PaymentApiTest extends TestCase
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
-        ])->getJson('/v1/payments/' . $payment->public_id);
+        ])->getJson('/payments/' . $payment->public_id);
 
         $response->assertStatus(200)
             ->assertJson([
@@ -347,7 +347,7 @@ class PaymentApiTest extends TestCase
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
-        ])->getJson('/v1/payments/' . $payment->public_id);
+        ])->getJson('/payments/' . $payment->public_id);
 
         $response->assertStatus(200)
             ->assertJsonMissingPath('metadata')
@@ -359,7 +359,7 @@ class PaymentApiTest extends TestCase
         $createdAt = now();
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
-        ])->postJson('/v1/payments', [
+        ])->postJson('/payments', [
             'amount'       => 1200,
             'method'       => 'card',
             'callback_url' => 'http://concert/webhooks/payment',
@@ -382,7 +382,7 @@ class PaymentApiTest extends TestCase
             'idempotency_key' => 'KEY_QR',
         ]);
 
-        $response = $this->get('/v1/payments/' . $payment->public_id . '/qr.svg');
+        $response = $this->get('/payments/' . $payment->public_id . '/qr.svg');
 
         $response->assertOk()
             ->assertHeader('Content-Type', 'image/svg+xml');
@@ -392,7 +392,7 @@ class PaymentApiTest extends TestCase
         $this->assertStringContainsString('must-revalidate', $cacheControl);
     }
 
-    /** Test: POST /v1/payments/{id}/cancel ยกเลิกได้ก่อนจ่าย */
+    /** Test: POST /payments/{id}/cancel ยกเลิกได้ก่อนจ่าย */
     public function test_can_cancel_pending_payment(): void
     {
         $payment = Payment::create([
@@ -405,7 +405,7 @@ class PaymentApiTest extends TestCase
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
-        ])->postJson('/v1/payments/' . $payment->public_id . '/cancel');
+        ])->postJson('/payments/' . $payment->public_id . '/cancel');
 
         $response->assertStatus(200)
             ->assertJson(['ok' => true, 'status' => 'FAILED', 'failure_code' => 'cancelled']);
@@ -413,7 +413,7 @@ class PaymentApiTest extends TestCase
         $this->assertEquals('FAILED', $payment->fresh()->status);
     }
 
-    /** GET /v1/payments แสดง chaos_mode และ webhook_mode จาก Admin */
+    /** GET /payments แสดง chaos_mode และ webhook_mode จาก Admin */
     public function test_index_exposes_admin_mock_modes(): void
     {
         Setting::set('chaos_mode', 'normal');
@@ -421,7 +421,7 @@ class PaymentApiTest extends TestCase
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
-        ])->getJson('/v1/payments');
+        ])->getJson('/payments');
 
         $response->assertStatus(200)
             ->assertJson([
@@ -436,7 +436,7 @@ class PaymentApiTest extends TestCase
     {
         $response = $this->withHeaders([
             'Authorization' => 'Bearer wrong_token',
-        ])->postJson('/v1/payments', [
+        ])->postJson('/payments', [
             'amount'       => 100,
             'method'       => 'card',
             'callback_url' => 'http://test/cb',

@@ -23,7 +23,7 @@ class ChaosModeTest extends TestCase
         return $this->withHeaders(array_merge([
             'Authorization'   => 'Bearer ' . $this->apiKey,
             'Idempotency-Key' => 'KEY_' . uniqid(),
-        ], $headers))->postJson('/v1/payments', [
+        ], $headers))->postJson('/payments', [
             'amount'       => 1000,
             'method'       => 'card',
             'callback_url' => 'http://test/cb',
@@ -85,7 +85,7 @@ class ChaosModeTest extends TestCase
         Setting::set('webhook_mode', 'webhook_replay');
 
         $this->withHeader('Authorization', 'Bearer ' . $this->apiKey)
-            ->getJson('/v1/payments')
+            ->getJson('/payments')
             ->assertOk()
             ->assertJsonPath('webhook_mode', 'normal');
     }

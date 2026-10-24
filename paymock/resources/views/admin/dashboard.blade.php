@@ -78,7 +78,7 @@
                 <div>
                     <div class="font-bold text-sm">CHAOS MODE กำลังเปิดทำงาน: <span class="font-mono bg-red-800 px-2 py-0.5 rounded text-white">{{ strtoupper($chaosMode) }}</span></div>
                     <div class="text-xs opacity-90 mt-0.5">
-                        ชั้นใหญ่สุด: ทุกคำขอเข้า Checkout และ API (/v1/*) จะถูกจำลองตามโหมดนี้ก่อนยิง webhook
+                        ชั้นใหญ่สุด: ทุกคำขอเข้า Checkout และ API (/payments/*) จะถูกจำลองตามโหมดนี้ก่อนยิง webhook
                     </div>
                 </div>
             </div>
@@ -253,17 +253,17 @@
 
         <div class="flex flex-wrap gap-3 my-4">
             <button type="button"
-                    @click="testApi('{{ url('/v1/payments') }}', 'POST')"
+                    @click="testApi('{{ url('/payments') }}', 'POST')"
                     :disabled="testing"
                     class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition shadow flex items-center gap-2 disabled:opacity-50">
-                <span x-show="!testing">⚡ ยิงสร้าง Payment (POST /v1/payments)</span>
+                <span x-show="!testing">⚡ ยิงสร้าง Payment (POST /payments)</span>
                 <span x-show="testing">⏳ กำลังส่งคำขอ...</span>
             </button>
             <button type="button"
-                    @click="testApi('{{ url('/v1/payments') }}', 'GET')"
+                    @click="testApi('{{ url('/payments') }}', 'GET')"
                     :disabled="testing"
                     class="bg-gray-800 hover:bg-gray-900 text-white font-bold px-4 py-2 rounded-lg text-xs transition shadow flex items-center gap-2 disabled:opacity-50">
-                <span>🔍 ตรวจสอบบริการ (GET /v1/payments)</span>
+                <span>🔍 ตรวจสอบบริการ (GET /payments)</span>
             </button>
         </div>
 

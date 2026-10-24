@@ -15,7 +15,7 @@ class PaymentController extends Controller
     public function __construct(private readonly PaymentService $service) {}
 
     /**
-     * GET /v1/payments
+     * GET /payments
      * ดูสถานะบริการและรายการล่าสุด
      */
     public function index(): JsonResponse
@@ -31,7 +31,7 @@ class PaymentController extends Controller
     }
 
     /**
-     * POST /v1/payments
+     * POST /payments
      * สร้างรายการจ่ายเงิน (idempotent ด้วย Idempotency-Key)
      * Card จะสร้างเป็น PENDING แล้วให้ redirect ไปยัง hosted checkout เพื่อกรอกบัตร
      */
@@ -69,7 +69,7 @@ class PaymentController extends Controller
     }
 
     /**
-     * GET /v1/payments/{publicId}
+     * GET /payments/{publicId}
      * ดูสถานะ – ใช้ polling/reconcile
      */
     public function show(string $publicId): JsonResponse
@@ -79,7 +79,7 @@ class PaymentController extends Controller
     }
 
     /**
-     * GET /v1/payments/{publicId}/qr.svg
+     * GET /payments/{publicId}/qr.svg
      * ส่งคืนไฟล์ภาพ SVG QR Code สำหรับ PromptPay
      */
     public function qrSvg(string $publicId): \Symfony\Component\HttpFoundation\Response
@@ -95,7 +95,7 @@ class PaymentController extends Controller
     }
 
     /**
-     * POST /v1/payments/{publicId}/cancel
+     * POST /payments/{publicId}/cancel
      */
     public function cancel(string $publicId): JsonResponse
     {
@@ -135,7 +135,7 @@ class PaymentController extends Controller
         }
 
         if ($payment->method === 'promptpay') {
-            $data['qrcode_url']         = url("/v1/payments/{$payment->public_id}/qr.svg");
+            $data['qrcode_url']         = url("/payments/{$payment->public_id}/qr.svg");
             $data['bank_simulator_url'] = url("/bank-simulate/{$payment->public_id}");
         } elseif ($payment->method === 'card') {
             $data['checkout_url'] = url("/checkout/{$payment->public_id}");

@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Chaos ชั้นใหญ่สุด — ครอบคลุม API (/v1/*) และ Checkout UI (/checkout/*)
+ * Chaos ชั้นใหญ่สุด — ครอบคลุม API (/payments/*) และ Checkout UI (/checkout/*)
  *
  * แหล่งที่มา: Admin setting `chaos_mode` เท่านั้น
  * รองรับ Gateway unavailable (503), slow response และ rate limit.
@@ -21,7 +21,7 @@ class ChaosMiddleware
         $mode = MockMode::chaosMode();
         $name = MockMode::name($mode);
 
-        $isJson = $request->expectsJson() || $request->is('v1/*');
+        $isJson = $request->expectsJson() || $request->is('payments*') || $request->is('v1/*');
 
         switch ($name) {
             case 'down':

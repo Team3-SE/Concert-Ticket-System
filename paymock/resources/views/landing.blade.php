@@ -81,12 +81,12 @@
             <div class="text-xs text-indigo-400 group-hover:text-indigo-300 mt-auto">เปิด Admin →</div>
         </a>
 
-        <a href="{{ url('/v1/payments') }}"
+        <a href="{{ url('/payments') }}"
            class="group bg-gray-800 hover:bg-green-900/80 border border-gray-700 hover:border-green-500 rounded-xl p-6 transition flex flex-col gap-2">
             <div class="text-3xl">🔌</div>
             <div class="font-bold text-lg">API Status</div>
             <div class="text-sm text-gray-400">ตรวจสถานะ API · ดูรายการล่าสุด</div>
-            <div class="text-xs text-green-400 group-hover:text-green-300 mt-auto font-mono">GET /v1/payments →</div>
+            <div class="text-xs text-green-400 group-hover:text-green-300 mt-auto font-mono">GET /payments →</div>
         </a>
 
         <a href="{{ asset('PayMock_API_Reference.docx') }}" download
@@ -140,22 +140,22 @@
         <div class="space-y-2 font-mono text-sm">
             <div class="flex items-center gap-3 p-3 bg-gray-900/60 rounded-lg">
                 <span class="bg-blue-600 text-white px-2 py-0.5 rounded text-xs font-bold min-w-[48px] text-center">GET</span>
-                <span class="text-gray-300">/v1/payments</span>
+                <span class="text-gray-300">/payments</span>
                 <span class="ml-auto text-gray-500 text-xs font-sans">ตรวจสถานะ API + รายการล่าสุด</span>
             </div>
             <div class="flex items-center gap-3 p-3 bg-gray-900/60 rounded-lg">
                 <span class="bg-green-600 text-white px-2 py-0.5 rounded text-xs font-bold min-w-[48px] text-center">POST</span>
-                <span class="text-gray-300">/v1/payments</span>
+                <span class="text-gray-300">/payments</span>
                 <span class="ml-auto text-gray-500 text-xs font-sans">สร้างรายการจ่ายเงิน (Idempotent)</span>
             </div>
             <div class="flex items-center gap-3 p-3 bg-gray-900/60 rounded-lg">
                 <span class="bg-blue-600 text-white px-2 py-0.5 rounded text-xs font-bold min-w-[48px] text-center">GET</span>
-                <span class="text-gray-300">/v1/payments/{id}</span>
+                <span class="text-gray-300">/payments/{id}</span>
                 <span class="ml-auto text-gray-500 text-xs font-sans">ดูสถานะรายการ (Polling)</span>
             </div>
             <div class="flex items-center gap-3 p-3 bg-gray-900/60 rounded-lg">
                 <span class="bg-green-600 text-white px-2 py-0.5 rounded text-xs font-bold min-w-[48px] text-center">POST</span>
-                <span class="text-gray-300">/v1/payments/{id}/cancel</span>
+                <span class="text-gray-300">/payments/{id}/cancel</span>
                 <span class="ml-auto text-gray-500 text-xs font-sans">ยกเลิกรายการที่ยัง PENDING</span>
             </div>
             <div class="flex items-center gap-3 p-3 bg-gray-900/60 rounded-lg">
