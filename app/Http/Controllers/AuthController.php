@@ -28,7 +28,7 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'email'      => ['required', 'email', 'unique:app_user,email'],
-            'password'   => ['required', 'confirmed', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)\S{8,}$/'],
+            'password'   => ['required', 'confirmed', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)\S{8,32}$/'],
             'first_name' => ['required', 'regex:/^[\p{Thai}a-zA-Z]{2,30}$/u'],
             'last_name'  => ['required', 'regex:/^[\p{Thai}a-zA-Z]{2,30}$/u'],
             'phone'      => ['required', 'regex:/^0[0-9]{9}$/', 'unique:app_user,phone'],
@@ -37,7 +37,7 @@ class AuthController extends Controller
             'email.email'         => 'รูปแบบอีเมลไม่ถูกต้อง',
             'email.unique'        => 'อีเมลนี้ถูกใช้งานแล้ว',
             'password.required'   => 'กรุณากรอกรหัสผ่าน',
-            'password.regex'      => 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร และมีตัวอักษรอังกฤษพิมพ์เล็ก พิมพ์ใหญ่ และตัวเลข',
+            'password.regex'      => 'รหัสผ่านต้องมี 8–32 ตัวอักษร และมีตัวอักษรอังกฤษพิมพ์เล็ก พิมพ์ใหญ่ และตัวเลข',
             'password.confirmed'  => 'รหัสผ่านยืนยันไม่ตรงกัน',
             'first_name.required' => 'กรุณากรอกชื่อ',
             'first_name.regex'    => 'ชื่อต้องมี 2–30 ตัวอักษร (ภาษาไทยหรืออังกฤษ)',
