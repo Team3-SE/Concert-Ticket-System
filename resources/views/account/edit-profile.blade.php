@@ -26,14 +26,14 @@
           <div class="field">
             <label for="first_name">ชื่อ</label>
             <input type="text" id="first_name" name="first_name"
-                   value="{{ old('first_name', $user->first_name ?? '') }}"
+                   value="{{ old('first_name', $user->first_name ?? '') }}" maxlength="30"
                    class="{{ $errors->has('first_name') ? 'is-error' : '' }}">
             @error('first_name')<p class="field-error">{{ $message }}</p>@enderror
           </div>
           <div class="field">
             <label for="last_name">นามสกุล</label>
             <input type="text" id="last_name" name="last_name"
-                   value="{{ old('last_name', $user->last_name ?? '') }}"
+                   value="{{ old('last_name', $user->last_name ?? '') }}" maxlength="30"
                    class="{{ $errors->has('last_name') ? 'is-error' : '' }}">
             @error('last_name')<p class="field-error">{{ $message }}</p>@enderror
           </div>

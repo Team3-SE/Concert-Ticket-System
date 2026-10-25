@@ -29,8 +29,8 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'email'      => ['required', 'email', 'unique:app_user,email'],
             'password'   => ['required', 'confirmed', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)\S{8,}$/'],
-            'first_name' => ['required', 'regex:/^[\p{Thai}a-zA-Z]{2,50}$/u'],
-            'last_name'  => ['required', 'regex:/^[\p{Thai}a-zA-Z]{2,50}$/u'],
+            'first_name' => ['required', 'regex:/^[\p{Thai}a-zA-Z]{2,30}$/u'],
+            'last_name'  => ['required', 'regex:/^[\p{Thai}a-zA-Z]{2,30}$/u'],
             'phone'      => ['required', 'regex:/^0[0-9]{9}$/', 'unique:app_user,phone'],
         ], [
             'email.required'      => 'กรุณากรอกอีเมล',
@@ -40,9 +40,9 @@ class AuthController extends Controller
             'password.regex'      => 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร และมีตัวอักษรอังกฤษพิมพ์เล็ก พิมพ์ใหญ่ และตัวเลข',
             'password.confirmed'  => 'รหัสผ่านยืนยันไม่ตรงกัน',
             'first_name.required' => 'กรุณากรอกชื่อ',
-            'first_name.regex'    => 'ชื่อต้องมี 2–50 ตัวอักษร (ภาษาไทยหรืออังกฤษ)',
+            'first_name.regex'    => 'ชื่อต้องมี 2–30 ตัวอักษร (ภาษาไทยหรืออังกฤษ)',
             'last_name.required'  => 'กรุณากรอกนามสกุล',
-            'last_name.regex'     => 'นามสกุลต้องมี 2–50 ตัวอักษร (ภาษาไทยหรืออังกฤษ)',
+            'last_name.regex'     => 'นามสกุลต้องมี 2–30 ตัวอักษร (ภาษาไทยหรืออังกฤษ)',
             'phone.required'      => 'กรุณากรอกเบอร์โทรศัพท์',
             'phone.regex'         => 'เบอร์โทรต้องเป็นตัวเลข 10 หลัก และขึ้นต้นด้วย 0',
             'phone.unique'        => 'เบอร์โทรศัพท์นี้ถูกใช้งานแล้ว',

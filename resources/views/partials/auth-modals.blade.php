@@ -94,12 +94,12 @@
       <div class="field">
         <label>ชื่อจริง <span class="req">*</span></label>
         <input type="text" name="first_name" placeholder="กรุณากรอกเป็นภาษาไทยหรือภาษาอังกฤษเท่านั้น"
-               value="{{ old('first_name') }}" required>
+               value="{{ old('first_name') }}" maxlength="30" required>
       </div>
       <div class="field">
         <label>นามสกุล <span class="req">*</span></label>
         <input type="text" name="last_name" placeholder="กรุณากรอกเป็นภาษาไทยหรือภาษาอังกฤษเท่านั้น"
-               value="{{ old('last_name') }}" required>
+               value="{{ old('last_name') }}" maxlength="30" required>
       </div>
       <div class="field">
         <label>หมายเลขโทรศัพท์มือถือ <span class="req">*</span></label>
