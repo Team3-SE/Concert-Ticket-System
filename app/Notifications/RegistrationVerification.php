@@ -5,10 +5,12 @@
  * อีเมลลิงก์ยืนยันการสมัครสมาชิก (ส่งไปยังอีเมลที่ยังไม่มีบัญชี)
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 17/10/2569
+ * Updated : 27/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Notifications;
 
+use App\Services\PendingRegistration;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -34,7 +36,8 @@ class RegistrationVerification extends Notification
 
     /**
      * toMail(notifiable)
-     * สร้างอีเมลภาษาไทยพร้อมปุ่มยืนยัน
+     * สร้างอีเมลภาษาไทยพร้อมปุ่มยืนยัน จาก template ของเราเอง
+     * (HTML: emails/registration-verification, ข้อความล้วน: emails/registration-verification-text)
      * param : notifiable
      * return : MailMessage
      */
@@ -42,10 +45,16 @@ class RegistrationVerification extends Notification
     {
         return (new MailMessage)
             ->subject('ยืนยันอีเมลเพื่อสมัครสมาชิก - TEAM 3 Ticket')
-            ->greeting('สวัสดี ' . $this->firstName)
-            ->line('กรุณากดปุ่มด้านล่างเพื่อยืนยันอีเมลและสร้างบัญชีของคุณ')
-            ->action('ยืนยันอีเมล', $this->url)
-            ->line('ลิงก์นี้ใช้ได้ ' . \App\Services\PendingRegistration::TTL_MINUTES . ' นาที ถ้าคุณไม่ได้สมัครสมาชิก ไม่ต้องทำอะไร')
-            ->salutation('TEAM 3 Ticket');
+            ->view(
+                [
+                    'html' => 'emails.registration-verification',
+                    'text' => 'emails.registration-verification-text',
+                ],
+                [
+                    'url'       => $this->url,
+                    'firstName' => trim($this->firstName),
+                    'ttl'       => PendingRegistration::TTL_MINUTES,
+                ]
+            );
     }
 }

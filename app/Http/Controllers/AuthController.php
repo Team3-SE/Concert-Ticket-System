@@ -93,6 +93,8 @@ class AuthController extends Controller
                 ->with('open_modal', 'register');
         }
 
+        $request->session()->put('verify_sent_at', now()->timestamp);
+
         return redirect()->route('verification.notice');
     }
 

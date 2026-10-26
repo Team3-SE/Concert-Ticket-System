@@ -25,6 +25,7 @@
 | `shared/sidebar.css` | `partials/sidebar` | เมนูซ้าย (หน้า account) |
 | `shared/pagination.css` | `partials/pagination` | ตัวแบ่งหน้า (คอนเสิร์ตทั้งหมด, ประวัติการสั่งซื้อ) |
 | `shared/auth-modal.css` | `partials/auth-modals` | หน้าต่างเข้าสู่ระบบ/สมัครสมาชิก (ทุกหน้า ตอนยังไม่ login) |
+| `auth/verify-notice.css` | `auth/verify-notice` | หน้าแจ้งให้ตรวจอีเมลหลังสมัครสมาชิก |
 | `concerts/home.css` | `concerts/home`, `partials/concert-card` | หน้า Home + การ์ดคอนเสิร์ต |
 | `concerts/index.css` | `concerts/index` | หน้าคอนเสิร์ตทั้งหมด (Show All) |
 | `concerts/search.css` | `concerts/home`, `concerts/index` | ช่องค้นหา + รายการแนะนำ |
@@ -43,6 +44,7 @@
 | body class | ไฟล์ |
 |---|---|
 | `page-home` | `concerts/home.css` |
+| `page-verify` | `auth/verify-notice.css` |
 | `page-concerts` | `concerts/index.css` |
 | `page-payment` | `booking/payment.css` |
 | `page-account` | `account/account.css` |

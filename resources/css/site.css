@@ -15,6 +15,9 @@
 @import './shared/auth-modal.css';
 @import './shared/password-toggle.css';
 
+/* auth/     views/auth/* */
+@import './auth/verify-notice.css';
+
 /* concerts/ views/concerts/* */
 @import './concerts/home.css';
 @import './concerts/index.css';

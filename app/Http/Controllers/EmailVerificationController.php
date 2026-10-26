@@ -17,11 +17,14 @@ use Illuminate\Support\Facades\Auth;
 
 class EmailVerificationController extends Controller
 {
+    /* ต้องรอกี่วินาทีหลังส่งลิงก์ ก่อนกดส่งซ้ำได้ (นับจาก verify_sent_at ใน session) */
+    public const RESEND_COOLDOWN_SECONDS = 60;
+
     /**
      * notice(request)
-     * แสดงหน้า "กรุณาตรวจอีเมลเพื่อยืนยัน" พร้อมปุ่มส่งลิงก์ซ้ำ
+     * แสดงหน้า "กรุณาตรวจอีเมลเพื่อยืนยัน" พร้อมปุ่มเปิดเว็บเมลและปุ่มส่งลิงก์ซ้ำ (นับถอยหลัง)
      * param : request
-     * return : View auth.verify-notice หรือ redirect หน้าแรกถ้าไม่มีอีเมลรอยืนยัน
+     * return : View auth.verify-notice (email, cooldown, ttl, webmail) หรือ redirect หน้าแรกถ้าไม่มีอีเมลรอยืนยัน
      */
     public function notice(Request $request)
     {
@@ -31,7 +34,15 @@ class EmailVerificationController extends Controller
             return redirect('/')->with('open_modal', 'register');
         }
 
-        return view('auth.verify-notice', ['email' => $email]);
+        $sentAt   = (int) $request->session()->get('verify_sent_at', 0);
+        $cooldown = max(0, self::RESEND_COOLDOWN_SECONDS - (now()->timestamp - $sentAt));
+
+        return view('auth.verify-notice', [
+            'email'    => $email,
+            'cooldown' => $cooldown,
+            'ttl'      => PendingRegistration::TTL_MINUTES,
+            'webmail'  => $this->webmailFor($email),
+        ]);
     }
 
     /**
@@ -107,6 +118,13 @@ class EmailVerificationController extends Controller
             'email.email'    => 'รูปแบบอีเมลไม่ถูกต้อง',
         ]);
 
+        // กันกดส่งซ้ำถี่เกินไป (หน้าเว็บนับถอยหลังให้แล้ว อันนี้กันกรณีส่งฟอร์มเอง)
+        $sentAt = (int) $request->session()->get('verify_sent_at', 0);
+        if (now()->timestamp - $sentAt < self::RESEND_COOLDOWN_SECONDS) {
+            return redirect()->route('verification.notice')
+                ->with('error', 'กรุณารอสักครู่ก่อนส่งลิงก์อีกครั้ง');
+        }
+
         $token = PendingRegistration::tokenForEmail($request->email);
         $data  = $token ? PendingRegistration::find($token) : null;
 
@@ -122,9 +140,29 @@ class EmailVerificationController extends Controller
         }
 
         $request->session()->put('verify_email', $request->email);
+        $request->session()->put('verify_sent_at', now()->timestamp);
 
         return redirect()->route('verification.notice')
             ->with('status', 'ส่งลิงก์ยืนยันอีกครั้งแล้ว กรุณาตรวจอีเมล');
+    }
+
+    /**
+     * webmailFor(email)
+     * ลิงก์เปิดเว็บเมลตามโดเมนของอีเมล (ใช้กับปุ่ม "เปิด Gmail" ในหน้าแจ้งตรวจอีเมล)
+     * param : email
+     * return : array|null – ['label' => ชื่อบริการ, 'url' => ลิงก์] หรือ null ถ้าไม่รู้จักโดเมน (ไม่แสดงปุ่ม)
+     */
+    private function webmailFor(string $email): ?array
+    {
+        $domain = mb_strtolower(substr((string) strrchr($email, '@'), 1));
+
+        return match ($domain) {
+            'gmail.com', 'googlemail.com'                      => ['label' => 'Gmail', 'url' => 'https://mail.google.com'],
+            'outlook.com', 'hotmail.com', 'live.com', 'msn.com' => ['label' => 'Outlook', 'url' => 'https://outlook.live.com/mail'],
+            'yahoo.com', 'yahoo.co.th'                          => ['label' => 'Yahoo Mail', 'url' => 'https://mail.yahoo.com'],
+            'icloud.com', 'me.com'                              => ['label' => 'iCloud Mail', 'url' => 'https://www.icloud.com/mail'],
+            default                                             => null,
+        };
     }
 
     /**
