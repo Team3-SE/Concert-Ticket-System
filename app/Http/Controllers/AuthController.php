@@ -5,7 +5,7 @@
  * จัดการการสมัครสมาชิก เข้าสู่ระบบ และออกจากระบบของผู้ใช้
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 04/09/2569
- * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers;
@@ -100,24 +100,32 @@ class AuthController extends Controller
 
     /**
      * login(request)
-     * ตรวจสอบอีเมลหรือเบอร์โทร (ช่อง email ใส่ได้ทั้งสองแบบ) รหัสผ่าน และสถานะบัญชี (ถูกระงับหรือไม่) แล้วเข้าสู่ระบบ
+     * ตรวจสอบอีเมล เบอร์โทร หรือชื่อผู้ใช้ (ช่อง email ใส่ได้ทั้งสามแบบ) รหัสผ่าน และสถานะบัญชี (ถูกระงับหรือไม่) แล้วเข้าสู่ระบบ
+     * ใช้หน้าต่างเข้าสู่ระบบเดียวกันทุก role แล้วพาไปหน้าแรกของ role นั้น (ดู redirectAfterLogin)
      * param : request
-     * return : RedirectResponse ไปหน้าที่ส่งมาใน redirect (ไม่มี = หน้าแรก) ถ้าไม่ผ่านจะกลับหน้าเดิมพร้อม error
+     * return : RedirectResponse ไปหน้าตาม role ถ้าไม่ผ่านจะกลับหน้าเดิมพร้อม error
      */
     public function login(Request $request)
     {
-        // ช่อง email รับได้ทั้งอีเมลและเบอร์โทร: มี @ = อีเมล ไม่มี = เบอร์โทร 10 หลัก
+        // ช่อง email รับได้ 3 แบบ: มี @ = อีเมล, ตัวเลขล้วน = เบอร์โทร 10 หลัก,
+        // นอกนั้น = ชื่อผู้ใช้ (บัญชี Organizer/Staff ที่ไม่มีอีเมล เช่น gmm-gate-1)
         $identifier = trim((string) $request->input('email'));
-        $byEmail = str_contains($identifier, '@');
+        if (str_contains($identifier, '@')) {
+            [$field, $rule, $message] = ['email', 'email', 'รูปแบบอีเมลไม่ถูกต้อง'];
+        } elseif (ctype_digit($identifier)) {
+            [$field, $rule, $message] = ['phone', 'regex:/^0[0-9]{9}$/', 'เบอร์โทรต้องเป็นตัวเลข 10 หลัก และขึ้นต้นด้วย 0'];
+        } else {
+            [$field, $rule, $message] = ['username', 'regex:/^[A-Za-z0-9._-]{3,50}$/', 'ชื่อผู้ใช้ใช้ได้เฉพาะตัวอักษรอังกฤษ ตัวเลข และ . _ -'];
+        }
 
         $request->merge(['email' => $identifier]);
         $validator = Validator::make($request->all(), [
-            'email'    => ['required', 'string', 'max:255', $byEmail ? 'email' : 'regex:/^0[0-9]{9}$/'],
+            'email'    => ['required', 'string', 'max:255', $rule],
             'password' => ['required'],
         ], [
-            'email.required'    => 'กรุณากรอกอีเมลหรือเบอร์โทรศัพท์',
-            'email.email'       => 'รูปแบบอีเมลไม่ถูกต้อง',
-            'email.regex'       => 'กรุณากรอกอีเมล หรือเบอร์โทรศัพท์ 10 หลักที่ขึ้นต้นด้วย 0',
+            'email.required'    => 'กรุณากรอกอีเมล เบอร์โทรศัพท์ หรือชื่อผู้ใช้',
+            'email.email'       => $message,
+            'email.regex'       => $message,
             'password.required' => 'กรุณากรอกรหัสผ่าน',
         ]);
 
@@ -129,7 +137,7 @@ class AuthController extends Controller
                 ->with('open_modal', 'login');
         }
 
-        $user = AppUser::where($byEmail ? 'email' : 'phone', $identifier)->first();
+        $user = AppUser::where($field, $identifier)->first();
 
         if (!$user) {
             return back()
@@ -155,7 +163,7 @@ class AuthController extends Controller
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
-        return redirect($this->redirectTarget($request));
+        return redirect($this->redirectAfterLogin($request, $user));
     }
 
     /**
@@ -171,6 +179,29 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/');
+    }
+
+    /**
+     * redirectAfterLogin(request, user)
+     * หน้าที่จะพาไปหลังเข้าสู่ระบบ
+     * - ลูกค้า (USER): หน้าที่ส่งมาในช่อง redirect เหมือนเดิม (เช่นกลับหน้าจองบัตร) ไม่มี = หน้าแรก
+     * - Organizer / Admin / Staff: หน้าแรกของ role (AppUser::homeUrl) ยกเว้น redirect ชี้ไปหน้าในส่วนของตัวเอง
+     *   (เช่นเปิด /organizer/check-in ไว้ก่อน login) เพราะเปิดหน้าฝั่งลูกค้าไม่ได้
+     * param : request, user
+     * return : path (string)
+     */
+    private function redirectAfterLogin(Request $request, AppUser $user): string
+    {
+        $target = $this->redirectTarget($request);
+        $prefix = $user->areaPrefix();
+
+        if ($prefix === null) {
+            return $target;
+        }
+
+        $path = parse_url($target, PHP_URL_PATH) ?: '/';
+
+        return ($path === $prefix || str_starts_with($path, $prefix . '/')) ? $target : $user->homeUrl();
     }
 
     /**

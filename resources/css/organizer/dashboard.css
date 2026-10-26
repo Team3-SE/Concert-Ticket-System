@@ -1,0 +1,11 @@
+/*
+ * resources/css/organizer/dashboard.css
+ * หน้าที่ : แผงควบคุมของ Organizer: การ์ดสรุปยอดขาย กราฟรายได้รายเดือน สัดส่วนช่องทางชำระเงิน
+ * ใช้กับ : organizer/dashboard.blade.php (<body class="bo page-organizer-dashboard">)
+ * Author : 67160292 ธีรเมธ พลสาย
+ * Created : 27/10/2569
+ */
+
+/* Scoped to <body class="page-organizer-dashboard"> — เขียน rule ของหน้านี้โดยขึ้นต้นด้วย .page-organizer-dashboard */
+
+.page-organizer-dashboard{}

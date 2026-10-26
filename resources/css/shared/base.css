@@ -6,7 +6,7 @@
  * Created : 07/10/2569
  */
 
-/* Shared tokens & base (loaded on every page via layouts/main) */
+/* Shared tokens & base (loaded on every page via layouts/user) */
 :root{
   --orange:#f7941d;
   --orange-dark:#e8820a;

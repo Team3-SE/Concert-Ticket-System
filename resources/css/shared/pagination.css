@@ -1,7 +1,7 @@
 /*
  * resources/css/shared/pagination.css
  * หน้าที่ : ตัวแบ่งหน้า และปุ่ม "…" พิมพ์เลขหน้า
- * ใช้กับ : partials/pagination.blade.php (concerts/index, account/order-history)
+ * ใช้กับ : partials/pagination.blade.php (user/concerts/index, user/account/order-history)
  * Author : ธีรเมธ พลสาย
  * Created : 09/10/2569
  */

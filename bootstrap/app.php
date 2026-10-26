@@ -22,14 +22,21 @@ return Application::configure(basePath: dirname(__DIR__))
         // ไม่มี route ชื่อ login (ฟอร์มเข้าสู่ระบบเป็น modal ในหน้า Home) → ระบุปลายทางเองเพื่อไม่ให้ middleware auth หา route('login') แล้ว error
         // การเปิด modal ทำใน withExceptions ด้านล่าง
         $middleware->redirectGuestsTo('/');
+
+        // role:ORGANIZER, role:GUEST,USER ... จำกัด route ตาม role (app/Http/Middleware/EnsureRole.php)
+        $middleware->alias([
+            'role' => \App\Http\Middleware\EnsureRole::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // เมื่อยังไม่ login แล้วพยายามเข้าหน้า protected → redirect กลับ /
         // พร้อม flash session เพื่อให้ JS เปิด modal login อัตโนมัติ
         $exceptions->render(function (AuthenticationException $e, \Illuminate\Http\Request $request) {
             if (! $request->expectsJson()) {
+                // จำหน้าที่จะเข้า (เช่น /organizer/check-in) ไว้ในช่อง redirect ของหน้าต่าง login → login เสร็จกลับมาหน้านั้น
                 return redirect('/')
                     ->with('open_modal', 'login')
+                    ->withInput($request->isMethod('get') ? ['redirect' => $request->getRequestUri()] : [])
                     ->withErrors(['auth' => 'กรุณาเข้าสู่ระบบก่อนเข้าใช้งาน']);
             }
         });

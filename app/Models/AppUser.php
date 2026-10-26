@@ -260,4 +260,49 @@ class AppUser extends Authenticatable
     {
         return strtoupper((string) $this->role) === self::ROLE_ADMIN;
     }
+
+    /**
+     * homeUrl()
+     * หน้าแรกของแต่ละ role: หลังเข้าสู่ระบบ และเวลาเปิดหน้าที่ role นี้เข้าไม่ได้ (middleware role)
+     * param : -
+     * return : string path เช่น '/', '/organizer/dashboard'
+     */
+    public function homeUrl(): string
+    {
+        return match (strtoupper((string) $this->role)) {
+            self::ROLE_ORGANIZER => route('organizer.dashboard', [], false),
+            self::ROLE_ADMIN     => route('admin.users.index', [], false),
+            self::ROLE_STAFF     => route('staff.check-in', [], false),
+            default              => '/',
+        };
+    }
+
+    /**
+     * areaPrefix()
+     * path ขึ้นต้นของส่วนที่ role นี้ใช้งาน (ใช้ตรวจว่าหน้าที่จะพาไปหลัง login อยู่ในส่วนของตัวเองไหม)
+     * param : -
+     * return : string|null – null = ลูกค้า (ใช้หน้าฝั่ง User)
+     */
+    public function areaPrefix(): ?string
+    {
+        return match (strtoupper((string) $this->role)) {
+            self::ROLE_ORGANIZER => '/organizer',
+            self::ROLE_ADMIN     => '/admin',
+            self::ROLE_STAFF     => '/staff',
+            default              => null,
+        };
+    }
+
+    /**
+     * displayName()
+     * ชื่อที่แสดงบนแถบด้านบน: ชื่อ-นามสกุล ถ้าไม่มี (บัญชี Organizer/Staff) ใช้ username แล้วค่อยอีเมล
+     * param : -
+     * return : string
+     */
+    public function displayName(): string
+    {
+        $fullName = trim($this->first_name . ' ' . $this->last_name);
+
+        return $fullName !== '' ? $fullName : (string) ($this->username ?: $this->email);
+    }
 }

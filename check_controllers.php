@@ -5,11 +5,11 @@ $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
 $controllers = [
-    'ConcertController'  => \App\Http\Controllers\ConcertController::class,
-    'BookingController'  => \App\Http\Controllers\BookingController::class,
-    'PaymentController'  => \App\Http\Controllers\PaymentController::class,
-    'TicketController'   => \App\Http\Controllers\TicketController::class,
-    'UserController'     => \App\Http\Controllers\UserController::class,
+    'ConcertController'  => \App\Http\Controllers\User\ConcertController::class,
+    'BookingController'  => \App\Http\Controllers\User\BookingController::class,
+    'PaymentController'  => \App\Http\Controllers\User\PaymentController::class,
+    'TicketController'   => \App\Http\Controllers\User\TicketController::class,
+    'UserController'     => \App\Http\Controllers\User\UserController::class,
 ];
 
 foreach ($controllers as $name => $class) {
