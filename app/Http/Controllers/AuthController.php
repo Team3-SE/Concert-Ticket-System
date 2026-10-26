@@ -21,9 +21,11 @@ class AuthController extends Controller
 {
     /**
      * register(request)
-     * ตรวจสอบข้อมูลสมัครสมาชิก สร้างบัญชีผู้ใช้ (role = USER ตรงกับ app_user.role ใน database) แล้วเข้าสู่ระบบให้ทันที
+     * ตรวจสอบข้อมูลสมัครสมาชิก แล้วเก็บข้อมูลชั่วคราวพร้อมส่งลิงก์ยืนยันอีเมล
+     * (ยังไม่สร้างบัญชี บัญชี role = USER จะถูกสร้างและเข้าสู่ระบบเมื่อกดลิงก์ที่ EmailVerificationController::verify)
+     * เก็บค่า redirect (หน้าที่ผู้ใช้อยู่ตอนกดสมัคร) ไปด้วย เพื่อพากลับหลังยืนยันอีเมลสำเร็จ
      * param : request
-     * return : RedirectResponse ไปหน้าที่ส่งมาใน redirect (ไม่มี = หน้าแรก) ถ้าข้อมูลไม่ถูกต้องจะกลับหน้าเดิมพร้อม error
+     * return : RedirectResponse ไปหน้า verification.notice ถ้าข้อมูลไม่ถูกต้องจะกลับหน้าเดิมพร้อม error
      */
     public function register(Request $request)
     {
@@ -74,6 +76,7 @@ class AuthController extends Controller
             'first_name'    => $request->first_name,
             'last_name'     => $request->last_name,
             'phone'         => $request->phone,
+            'redirect'      => $this->redirectTarget($request),
         ];
         $token = PendingRegistration::store($data);
         $request->session()->put('verify_email', $request->email);
@@ -170,7 +173,7 @@ class AuthController extends Controller
 
     /**
      * redirectTarget(request)
-     * หน้าที่จะพาไปหลัง login/สมัครสมาชิกสำเร็จ จากช่อง redirect ในหน้าต่าง (เช่น /booking?concert_id=1)
+     * หน้าที่จะพาไปหลัง login หรือหลังยืนยันอีเมลตอนสมัครสมาชิก จากช่อง redirect ในหน้าต่าง (เช่น /booking?concert_id=1)
      * รับเฉพาะ path ภายในเว็บ (ขึ้นต้นด้วย / ตัวเดียว) กันการพาออกไปเว็บอื่น (open redirect)
      * param : request
      * return : path (string) ถ้าไม่มีหรือไม่ถูกต้อง = '/'

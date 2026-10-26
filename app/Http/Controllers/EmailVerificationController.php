@@ -38,7 +38,7 @@ class EmailVerificationController extends Controller
      * verify(request, token)
      * ตรวจลิงก์ยืนยัน (signed URL) แล้วสร้างบัญชีจากข้อมูลที่เก็บไว้ชั่วคราว และเข้าสู่ระบบให้
      * param : request, token
-     * return : RedirectResponse ไปหน้าแรก
+     * return : RedirectResponse กลับหน้าที่ผู้ใช้อยู่ตอนสมัคร (ไม่มี = หน้าแรกพร้อมหน้าต่างยืนยันสำเร็จ)
      */
     public function verify(Request $request, string $token)
     {
@@ -80,7 +80,18 @@ class EmailVerificationController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect('/')->with('verified', true);
+        // กลับหน้าเดิมที่เก็บไว้ตอนสมัคร (รับเฉพาะ path ภายในเว็บ) ไม่มีหรือเป็นหน้าแรกให้แสดงหน้าต่างยืนยันสำเร็จ
+        $target = $data['redirect'] ?? '/';
+        $isLocalPath = is_string($target)
+            && str_starts_with($target, '/')
+            && !str_starts_with($target, '//')
+            && !str_contains($target, '\\');
+
+        if (!$isLocalPath || $target === '/') {
+            return redirect('/')->with('verified', true);
+        }
+
+        return redirect($target)->with('status', 'ยืนยันอีเมลสำเร็จ ยินดีต้อนรับสู่ TEAM 3 Ticket');
     }
 
     /**
