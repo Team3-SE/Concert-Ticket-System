@@ -91,6 +91,17 @@
     networks:
       - concert_network
 
+# --- Mailpit (รับอีเมลทดสอบ ดูได้ที่ http://localhost:8025) --------------------
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: concert_mailpit
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_WEB_PORT:-8025}:8025"
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+    networks:
+      - concert_network
+
 # --- Named Volumes (persistent storage) ----------------------------------------
 volumes:
   concert_mysql_data7:

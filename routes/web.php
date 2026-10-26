@@ -103,3 +103,12 @@ Route::middleware('auth')->group(function () {
 Route::post('/auth/register', [\App\Http\Controllers\AuthController::class, 'register'])->name('auth.register');
 Route::post('/auth/login',    [\App\Http\Controllers\AuthController::class, 'login'])->name('auth.login');
 Route::post('/auth/logout',   [\App\Http\Controllers\AuthController::class, 'logout'])->name('auth.logout');
+
+// ยืนยันอีเมลหลังสมัครสมาชิก
+Route::get('/email/verify', [\App\Http\Controllers\EmailVerificationController::class, 'notice'])->name('verification.notice');
+Route::get('/email/verify/{token}', [\App\Http\Controllers\EmailVerificationController::class, 'verify'])
+    ->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
+Route::post('/email/resend', [\App\Http\Controllers\EmailVerificationController::class, 'resend'])
+    ->middleware('throttle:3,1')->name('verification.resend');
+
+

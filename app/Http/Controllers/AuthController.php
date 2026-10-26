@@ -11,6 +11,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AppUser;
+use App\Services\PendingRegistration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -55,21 +56,41 @@ class AuthController extends Controller
                 ->with('open_modal', 'register');
         }
 
-        // สร้าง Customer ใน app_user เดียว (single-table design per spec)
-        $user = AppUser::create([
-            'email'          => $request->email,
-            'password_hash'  => Hash::make($request->password),
-            'role'           => AppUser::ROLE_CUSTOMER,
-            'account_status' => AppUser::STATUS_ACTIVE,
-            'first_name'     => $request->first_name,
-            'last_name'      => $request->last_name,
-            'phone'          => $request->phone,
-        ]);
+        // อีเมลนี้มีการสมัครที่รอยืนยันอยู่แล้ว: ไม่ให้สมัครซ้ำจนกว่าลิงก์เดิมจะหมดอายุ
+        if (PendingRegistration::hasEmail($request->email)) {
+            $request->session()->put('verify_email', $request->email);
 
-        Auth::login($user);
-        $request->session()->regenerate();
+            return back()
+                ->withErrors(['email' => 'อีเมลนี้ส่งลิงก์ยืนยันไปแล้ว กรุณาตรวจอีเมลหรือกดส่งลิงก์อีกครั้ง'])
+                ->withInput($request->except('password', 'password_confirmation'))
+                ->with('open_modal', 'register')
+                ->with('pending_verify', true);
+        }
 
-        return redirect($this->redirectTarget($request))->with('status', 'ยินดีต้อนรับ! สมัครสมาชิกสำเร็จแล้ว 🎉');
+        // ยังไม่สร้างบัญชี: เก็บข้อมูลชั่วคราวและส่งลิงก์ยืนยัน บัญชีจะถูกสร้างเมื่อกดลิงก์
+        $data = [
+            'email'         => $request->email,
+            'password_hash' => Hash::make($request->password),
+            'first_name'    => $request->first_name,
+            'last_name'     => $request->last_name,
+            'phone'         => $request->phone,
+        ];
+        $token = PendingRegistration::store($data);
+        $request->session()->put('verify_email', $request->email);
+
+        try {
+            PendingRegistration::send($token, $data);
+        } catch (\Throwable $e) {
+            report($e);
+            PendingRegistration::forget($token, $request->email);
+
+            return back()
+                ->withErrors(['email' => 'ส่งอีเมลยืนยันไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'])
+                ->withInput($request->except('password', 'password_confirmation'))
+                ->with('open_modal', 'register');
+        }
+
+        return redirect()->route('verification.notice');
     }
 
     /**
