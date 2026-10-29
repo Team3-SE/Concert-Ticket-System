@@ -10,6 +10,8 @@
 @extends('layouts.user')
 
 @section('title', 'ยืนยันอีเมล - TEAM 3 Ticket')
+
+
 @section('body_class', 'page-verify min-h-screen flex flex-col bg-[#EBF1F9]')
 
 @section('content')

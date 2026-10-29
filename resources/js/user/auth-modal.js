@@ -6,9 +6,10 @@
  *   (ใส่ค่าใน data-login-required ได้ ถ้าไม่ใช่ลิงก์ เช่น data-login-required="/booking?concert_id=1")
  * - window.openLoginModal(url) ให้ script อื่นเรียกเปิดได้
  * - ช่องเบอร์โทรในฟอร์มสมัครสมาชิก: ใส่ได้เฉพาะตัวเลข สูงสุด 10 ตัว
+ * - ลิงก์ "ลืมรหัสผ่าน?": ส่งอีเมลที่กรอกไว้ในช่องเข้าสู่ระบบไปเติมในหน้าลืมรหัสผ่าน
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 23/10/2569
- * Updated : 24/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 29/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 (() => {
@@ -78,6 +79,16 @@
     btn.addEventListener('click', closeAll);
   });
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeAll(); });
+
+  // ลิงก์ "ลืมรหัสผ่าน?": ถ้ากรอกอีเมลในช่องเข้าสู่ระบบไว้แล้ว ส่งต่อไปเติมในหน้าลืมรหัสผ่าน
+  loginOverlay.querySelector('[data-forgot-password]')?.addEventListener('click', (event) => {
+    const value = loginOverlay.querySelector('input[name="email"]')?.value.trim() || '';
+    if (!value.includes('@')) return;
+    event.preventDefault();
+    const url = new URL(event.currentTarget.href, window.location.origin);
+    url.searchParams.set('email', value);
+    window.location.href = url.toString();
+  });
 
   // ช่องเบอร์โทร: ตัดตัวที่ไม่ใช่ตัวเลขออก (รวมถึงตอนวาง) และไม่ให้เกิน 10 ตัว
   const phoneInput = registerOverlay.querySelector('input[name="phone"]');

@@ -4,7 +4,7 @@
  * ใช้กับ : user/partials/auth-modals.blade.php (layouts/user ใส่ให้ตอนยังไม่ login)
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 23/10/2569
- * Updated : 24/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 29/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 /* ครอบทุก rule ด้วย .auth-overlay กันชนกับ .field / .btn-orange ของหน้าอื่น */
@@ -42,6 +42,11 @@
 .auth-overlay .sub-link:hover{text-decoration:underline;}
 .auth-overlay .modal-error{
   background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;
+  border-radius:8px;padding:9px 13px;font-size:12px;margin-bottom:16px;
+}
+/* ข้อความสำเร็จ (เช่น ตั้งรหัสผ่านใหม่สำเร็จ) */
+.auth-overlay .modal-success{
+  background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;
   border-radius:8px;padding:9px 13px;font-size:12px;margin-bottom:16px;
 }
 

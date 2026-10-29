@@ -6,7 +6,8 @@
  * หลังบ้านแยกไฟล์ (require ท้ายไฟล์นี้): routes/organizer.php, routes/admin.php, routes/staff.php
  * role ของแต่ละ route ตรวจด้วย middleware role (app/Http/Middleware/EnsureRole.php)
  *   - role:GUEST,USER = ลูกค้าและคนที่ยังไม่ login เท่านั้น (Organizer/Admin/Staff ถูกพากลับหน้าแรกของ role ตัวเอง)
- * Updated : 27/10/2569 67160292 ธีรเมธ พลสาย
+ *   - role:GUEST = เฉพาะคนที่ยังไม่ login (หน้าลืมรหัสผ่าน)
+ * Updated : 29/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -124,6 +125,22 @@ Route::middleware(['auth', 'role:USER'])->group(function () {
 // ===== เข้าสู่ระบบ / ออกจากระบบ (ใช้ร่วมทุก role: หน้าต่างเข้าสู่ระบบเดียวกัน แล้วพาไปหน้าแรกของ role) =====
 Route::post('/auth/login',  [\App\Http\Controllers\AuthController::class, 'login'])->name('auth.login');
 Route::post('/auth/logout', [\App\Http\Controllers\AuthController::class, 'logout'])->name('auth.logout');
+
+// ===== ลืมรหัสผ่าน: ส่งรหัส 6 หลักทางอีเมล → ยืนยันรหัส → ตั้งรหัสผ่านใหม่ (เฉพาะคนที่ยังไม่ได้เข้าสู่ระบบ) =====
+// throttle:จำนวนครั้ง,นาที,ชื่อ – ใส่ชื่อแยกแต่ละ route ไม่งั้นทุก route ที่ใช้ throttle จะนับรวมกันต่อ IP
+Route::middleware('role:GUEST')
+    ->prefix('password')
+    ->name('password.')
+    ->controller(\App\Http\Controllers\PasswordResetController::class)
+    ->group(function () {
+        Route::get('/forgot', 'showForgot')->name('forgot');
+        Route::post('/forgot', 'sendCode')->middleware('throttle:5,1,pw-send')->name('send');
+        Route::get('/verify', 'showVerify')->name('verify');
+        Route::post('/verify', 'verifyCode')->middleware('throttle:10,1,pw-check')->name('check');
+        Route::post('/resend', 'resend')->middleware('throttle:3,1,pw-resend')->name('resend');
+        Route::get('/reset', 'showReset')->name('reset');
+        Route::post('/reset', 'reset')->middleware('throttle:5,1,pw-update')->name('update');
+    });
 
 // ===== หลังบ้าน =====
 require __DIR__.'/organizer.php';

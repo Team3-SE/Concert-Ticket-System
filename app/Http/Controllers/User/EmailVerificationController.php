@@ -5,6 +5,7 @@
  * ยืนยันอีเมลก่อนสร้างบัญชี: หน้าแจ้งให้ตรวจอีเมล, ลิงก์ยืนยัน (สร้างบัญชีจริง) และส่งลิงก์ซ้ำ
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 17/10/2569
+ * Updated : 29/10/2569 67160292 ธีรเมธ พลสาย (ย้าย webmailFor ไปที่ Services/WebmailLink)
  */
 
 namespace App\Http\Controllers\User;
@@ -12,6 +13,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\AppUser;
 use App\Services\PendingRegistration;
+use App\Services\WebmailLink;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -42,7 +44,7 @@ class EmailVerificationController extends Controller
             'email'    => $email,
             'cooldown' => $cooldown,
             'ttl'      => PendingRegistration::TTL_MINUTES,
-            'webmail'  => $this->webmailFor($email),
+            'webmail'  => WebmailLink::for($email),
         ]);
     }
 
@@ -145,25 +147,6 @@ class EmailVerificationController extends Controller
 
         return redirect()->route('verification.notice')
             ->with('status', 'ส่งลิงก์ยืนยันอีกครั้งแล้ว กรุณาตรวจอีเมล');
-    }
-
-    /**
-     * webmailFor(email)
-     * ลิงก์เปิดเว็บเมลตามโดเมนของอีเมล (ใช้กับปุ่ม "เปิด Gmail" ในหน้าแจ้งตรวจอีเมล)
-     * param : email
-     * return : array|null – ['label' => ชื่อบริการ, 'url' => ลิงก์] หรือ null ถ้าไม่รู้จักโดเมน (ไม่แสดงปุ่ม)
-     */
-    private function webmailFor(string $email): ?array
-    {
-        $domain = mb_strtolower(substr((string) strrchr($email, '@'), 1));
-
-        return match ($domain) {
-            'gmail.com', 'googlemail.com'                      => ['label' => 'Gmail', 'url' => 'https://mail.google.com'],
-            'outlook.com', 'hotmail.com', 'live.com', 'msn.com' => ['label' => 'Outlook', 'url' => 'https://outlook.live.com/mail'],
-            'yahoo.com', 'yahoo.co.th'                          => ['label' => 'Yahoo Mail', 'url' => 'https://mail.yahoo.com'],
-            'icloud.com', 'me.com'                              => ['label' => 'iCloud Mail', 'url' => 'https://www.icloud.com/mail'],
-            default                                             => null,
-        };
     }
 
     /**

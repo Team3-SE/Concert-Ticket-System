@@ -5,7 +5,7 @@
  * ช่อง redirect = หน้าที่จะพาไปหลัง login/สมัครสมาชิกสำเร็จ (ว่าง = หน้า Home)
  * @Author 67160292 ธีรเมธ พลสาย
  * @Create Date 23/10/2569
- * @Update Date 27/10/2569 67160292 ธีรเมธ พลสาย
+ * @Update Date 29/10/2569 67160292 ธีรเมธ พลสาย
 --}}
 @php($openModal = session('open_modal') ?: (request()->query('login') === '1' ? 'login' : null))
 
@@ -21,6 +21,9 @@
     {{-- แสดง error --}}
     @if(session('open_modal') === 'login' && $errors->any())
       <div class="modal-error">{{ $errors->first() }}</div>
+    @endif
+    @if(session('open_modal') === 'login' && session('login_notice'))
+      <div class="modal-success" role="status">{{ session('login_notice') }}</div>
     @endif
 
     <form id="loginForm" method="POST" action="{{ route('auth.login') }}">
@@ -40,7 +43,7 @@
       </div>
       <div class="options-row">
         <label><input type="checkbox" name="remember"> จำฉันไว้</label>
-        <a href="#">ลืมรหัสผ่าน?</a>
+        <a href="{{ route('password.forgot') }}" data-forgot-password>ลืมรหัสผ่าน?</a>
       </div>
       <button type="submit" class="btn-orange">เข้าสู่ระบบ</button>
     </form>

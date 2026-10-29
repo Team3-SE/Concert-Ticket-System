@@ -5,7 +5,7 @@
  * ใช้กับ : layouts/user.blade.php (@vite)
  * Author : ธีรเมธ พลสาย
  * Created : 09/10/2569
- * Updated : 27/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 29/10/2569 67160292 ธีรเมธ พลสาย
  */
 
 /* shared/          ใช้ร่วมกับหลังบ้าน */
@@ -20,6 +20,7 @@
 
 /* user/auth/       views/user/auth/* */
 @import './user/auth/verify-notice.css';
+@import './user/auth/password-reset.css';
 
 /* user/concerts/   views/user/concerts/* */
 @import './user/concerts/home.css';
