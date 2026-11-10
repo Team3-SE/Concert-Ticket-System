@@ -10,6 +10,7 @@
 
 namespace App\Models;
 
+use App\Services\SeatLockService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Booking extends Model
 {
+    public const SEAT_LOCK_MINUTES = 10;
+
     /* การจองที่มีรายการชำระเงินรอยืนยันอยู่ จะรอเพิ่มอีกกี่นาทีหลังหมดเวลา ก่อนปล่อยที่นั่ง (กันกรณีจ่ายเงินตอนใกล้หมดเวลา) */
     public const PAYMENT_GRACE_MINUTES = 2;
 
@@ -120,6 +123,18 @@ class Booking extends Model
             $this->payments()->where('status', 'PENDING')->update(['status' => 'FAILED']);
             $this->cancelBooking();
         });
+
+        $this->releaseRedisSeatLocks();
+    }
+
+    public function releaseRedisSeatLocks(): void
+    {
+        if (! $this->booking_code) {
+            return;
+        }
+
+        $seatIds = $this->bookingSeats()->pluck('seat_id')->all();
+        app(SeatLockService::class)->releaseSeats($seatIds, $this->booking_code);
     }
 
     /**

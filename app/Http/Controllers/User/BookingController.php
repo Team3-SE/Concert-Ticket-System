@@ -18,16 +18,17 @@ use App\Models\BookingStandingItem;
 use App\Models\Concert;
 use App\Models\Seat;
 use App\Models\SeatLockLog;
-use Illuminate\Http\JsonResponse;
 use App\Models\Zone;
+use App\Services\SeatLockService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Throwable;
 
 class BookingController extends Controller
 {
-    /* เวลาที่ล็อกที่นั่งไว้ให้ชำระเงิน (นาที) */
-    private const SEAT_LOCK_MINUTES = 10;
+    public function __construct(private readonly SeatLockService $seatLockService) {}
 
     /**
      * index(request)
@@ -182,120 +183,141 @@ class BookingController extends Controller
             abort(403, 'บัญชีถูกระงับหรือพฤติกรรมไม่ได้รับอนุญาต');
         }
 
-        return DB::transaction(function () use ($customerId, $concertId, $seatIds, $standingItems) {
-            $concert = Concert::with('zones')->findOrFail($concertId);
-            $totalAmount = 0;
-            $standingData = [];
+        $seatIds = array_values(array_unique(array_map('intval', $seatIds)));
+        if (in_array(0, $seatIds, true)) {
+            abort(422, 'รายการที่นั่งไม่ถูกต้อง');
+        }
 
-            // ── คำนวณยอดรวม SEATED ──
-            $seatsData = [];
-            foreach ($seatIds as $seatId) {
-                // lockForUpdate: กันผู้ใช้ 2 คนจองที่นั่งเดียวกันพร้อมกัน
-                $seat = Seat::with('zone')->lockForUpdate()->findOrFail($seatId);
-                if ($seat->seat_booking_status !== 'AVAILABLE') {
-                    abort(409, "Seat {$seatId} ไม่ว่าง");
-                }
-                $totalAmount += (float) $seat->zone->price;
-                $seatsData[] = [
-                    'seat' => $seat,
-                    'zone' => $seat->zone,
-                    'unit_price' => (float) $seat->zone->price,
-                ];
-            }
+        $bookingCode = 'BKG-'.strtoupper(Str::random(10));
+        if (! $this->seatLockService->acquireSeats($seatIds, $bookingCode)) {
+            abort(409, 'ที่นั่งบางรายการกำลังถูกจองโดยผู้ใช้อื่น');
+        }
 
-            // ── คำนวณยอดรวม STANDING ──
-            $standingQuantities = [];
-            foreach ($standingItems as $item) {
-                if (! is_array($item)) {
-                    abort(422, 'รายการบัตรยืนไม่ถูกต้อง');
-                }
+        try {
+            return DB::transaction(function () use ($customerId, $concertId, $seatIds, $standingItems, $bookingCode) {
+                $concert = Concert::with('zones')->findOrFail($concertId);
+                $totalAmount = 0;
+                $standingData = [];
 
-                $zoneId = (int) ($item['zone_id'] ?? 0);
-                $quantity = (int) ($item['quantity'] ?? 1);
-                if ($zoneId < 1 || $quantity < 1) {
-                    abort(422, 'รายการบัตรยืนไม่ถูกต้อง');
+                // ── คำนวณยอดรวม SEATED ──
+                $seatsData = [];
+                foreach ($seatIds as $seatId) {
+                    // lockForUpdate: กันผู้ใช้ 2 คนจองที่นั่งเดียวกันพร้อมกัน
+                    $seat = Seat::with('zone')->lockForUpdate()->findOrFail($seatId);
+                    if ($seat->seat_booking_status !== 'AVAILABLE') {
+                        abort(409, "Seat {$seatId} ไม่ว่าง");
+                    }
+                    $totalAmount += (float) $seat->zone->price;
+                    $seatsData[] = [
+                        'seat' => $seat,
+                        'zone' => $seat->zone,
+                        'unit_price' => (float) $seat->zone->price,
+                    ];
                 }
 
-                $standingQuantities[$zoneId] = ($standingQuantities[$zoneId] ?? 0) + $quantity;
-            }
-            ksort($standingQuantities);
+                // ── คำนวณยอดรวม STANDING ──
+                $standingQuantities = [];
+                foreach ($standingItems as $item) {
+                    if (! is_array($item)) {
+                        abort(422, 'รายการบัตรยืนไม่ถูกต้อง');
+                    }
 
-            foreach ($standingQuantities as $zoneId => $quantity) {
-                $zone = Zone::query()
-                    ->where('zone_id', $zoneId)
-                    ->where('concert_id', $concertId)
-                    ->lockForUpdate()
-                    ->firstOrFail();
+                    $zoneId = (int) ($item['zone_id'] ?? 0);
+                    $quantity = (int) ($item['quantity'] ?? 1);
+                    if ($zoneId < 1 || $quantity < 1) {
+                        abort(422, 'รายการบัตรยืนไม่ถูกต้อง');
+                    }
 
-                if ($zone->zone_type !== 'STANDING') {
-                    abort(422, 'รายการบัตรยืนไม่ถูกต้อง');
+                    $standingQuantities[$zoneId] = ($standingQuantities[$zoneId] ?? 0) + $quantity;
+                }
+                ksort($standingQuantities);
+
+                foreach ($standingQuantities as $zoneId => $quantity) {
+                    $zone = Zone::query()
+                        ->where('zone_id', $zoneId)
+                        ->where('concert_id', $concertId)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    if ($zone->zone_type !== 'STANDING') {
+                        abort(422, 'รายการบัตรยืนไม่ถูกต้อง');
+                    }
+
+                    $reservedQuantity = BookingStandingItem::query()
+                        ->where('zone_id', $zone->zone_id)
+                        ->whereHas('booking', function ($query) {
+                            $query->where('status', 'PENDING_PAYMENT')
+                                ->where('expiry_time', '>', now());
+                        })
+                        ->sum('quantity');
+                    $soldQuantity = (int) $zone->tickets()->sum('quantity');
+                    $availableCapacity = max(0, (int) $zone->capacity - $soldQuantity - (int) $reservedQuantity);
+
+                    if ($availableCapacity < $quantity) {
+                        abort(409, "Zone {$zone->name} capacity ไม่เพียงพอ");
+                    }
+
+                    $totalAmount += (float) $zone->price * $quantity;
+                    $standingData[] = [
+                        'zone' => $zone,
+                        'quantity' => $quantity,
+                    ];
                 }
 
-                $reservedQuantity = BookingStandingItem::query()
-                    ->where('zone_id', $zone->zone_id)
-                    ->whereHas('booking', function ($query) {
-                        $query->where('status', 'PENDING_PAYMENT')
-                            ->where('expiry_time', '>', now());
-                    })
-                    ->sum('quantity');
-                $soldQuantity = (int) $zone->tickets()->sum('quantity');
-                $availableCapacity = max(0, (int) $zone->capacity - $soldQuantity - (int) $reservedQuantity);
-
-                if ($availableCapacity < $quantity) {
-                    abort(409, "Zone {$zone->name} capacity ไม่เพียงพอ");
-                }
-
-                $totalAmount += (float) $zone->price * $quantity;
-                $standingData[] = [
-                    'zone' => $zone,
-                    'quantity' => $quantity,
-                ];
-            }
-
-            // ── สร้าง Booking ──
-            $booking = Booking::create([
-                'booking_code' => 'BKG-'.strtoupper(Str::random(10)),
-                'user_id' => $customerId,
-                'concert_id' => $concertId,
-                'booking_date' => now(),
-                'total_amount' => $totalAmount,
-                'status' => 'PENDING_PAYMENT',
-                'expiry_time' => now()->addMinutes(self::SEAT_LOCK_MINUTES),
-            ]);
-
-            // ── ล็อก Seat + บันทึก BookingSeat + SeatLockLog ──
-            foreach ($seatsData as $seatData) {
-                $seatData['seat']->lockSeat();
-
-                BookingSeat::create([
-                    'booking_id' => $booking->booking_id,
-                    'seat_id' => $seatData['seat']->seat_id,
-                    'zone_name_snapshot' => $seatData['zone']->name,
-                    'seat_label_snapshot' => $seatData['seat']->row.$seatData['seat']->number,
-                    'unit_price_snapshot' => $seatData['unit_price'],
+                // ── สร้าง Booking ──
+                $expiryTime = now()->addMinutes(Booking::SEAT_LOCK_MINUTES);
+                $booking = Booking::create([
+                    'booking_code' => $bookingCode,
+                    'user_id' => $customerId,
+                    'concert_id' => $concertId,
+                    'booking_date' => now(),
+                    'total_amount' => $totalAmount,
+                    'status' => 'PENDING_PAYMENT',
+                    'expiry_time' => $expiryTime,
                 ]);
 
-                SeatLockLog::create([
-                    'booking_id' => $booking->booking_id,
-                    'seat_id' => $seatData['seat']->seat_id,
-                    'locked_at' => now(),
-                    'expired_at' => now()->addMinutes(self::SEAT_LOCK_MINUTES),
-                    'status' => 'LOCKED',
-                ]);
+                // ── ล็อก Seat + บันทึก BookingSeat + SeatLockLog ──
+                foreach ($seatsData as $seatData) {
+                    $seatData['seat']->lockSeat();
+
+                    BookingSeat::create([
+                        'booking_id' => $booking->booking_id,
+                        'seat_id' => $seatData['seat']->seat_id,
+                        'zone_name_snapshot' => $seatData['zone']->name,
+                        'seat_label_snapshot' => $seatData['seat']->row.$seatData['seat']->number,
+                        'unit_price_snapshot' => $seatData['unit_price'],
+                    ]);
+
+                    SeatLockLog::create([
+                        'booking_id' => $booking->booking_id,
+                        'seat_id' => $seatData['seat']->seat_id,
+                        'locked_at' => now(),
+                        'expired_at' => $expiryTime,
+                        'status' => 'LOCKED',
+                    ]);
+                }
+
+                foreach ($standingData as $standingItem) {
+                    BookingStandingItem::create([
+                        'booking_id' => $booking->booking_id,
+                        'zone_id' => $standingItem['zone']->zone_id,
+                        'quantity' => $standingItem['quantity'],
+                        'zone_name_snapshot' => $standingItem['zone']->name,
+                        'unit_price_snapshot' => $standingItem['zone']->price,
+                    ]);
+                }
+
+                return $booking;
+            });
+        } catch (Throwable $exception) {
+            try {
+                $this->seatLockService->releaseSeats($seatIds, $bookingCode);
+            } catch (Throwable $releaseException) {
+                report($releaseException);
             }
 
-            foreach ($standingData as $standingItem) {
-                BookingStandingItem::create([
-                    'booking_id' => $booking->booking_id,
-                    'zone_id' => $standingItem['zone']->zone_id,
-                    'quantity' => $standingItem['quantity'],
-                    'zone_name_snapshot' => $standingItem['zone']->name,
-                    'unit_price_snapshot' => $standingItem['zone']->price,
-                ]);
-            }
-
-            return $booking;
-        });
+            throw $exception;
+        }
     }
 
     /**

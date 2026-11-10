@@ -297,9 +297,11 @@ class PaymentController extends Controller
      */
     public function completePayment(int $paymentId): \App\Models\CustomerOrder
     {
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($paymentId) {
+        $completedBooking = null;
+        $order = \Illuminate\Support\Facades\DB::transaction(function () use ($paymentId, &$completedBooking) {
             $payment = \App\Models\Payment::with('booking.concert.organization')->findOrFail($paymentId);
             $booking = $payment->booking;
+            $completedBooking = $booking;
 
             // การจองหมดเวลา/ถูกยกเลิกแล้ว (ที่นั่งถูกปล่อยไปแล้ว) ห้ามยืนยันการชำระเงิน
             if ($booking->status !== 'PENDING_PAYMENT') {
@@ -336,6 +338,10 @@ class PaymentController extends Controller
 
             return $order;
         });
+
+        $completedBooking->releaseRedisSeatLocks();
+
+        return $order;
     }
 
     /**
