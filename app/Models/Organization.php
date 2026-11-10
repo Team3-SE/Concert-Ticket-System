@@ -5,6 +5,7 @@
  * องค์กรผู้จัดคอนเสิร์ต (ตาราง organization)
  * Author :
  * Created :
+ * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -15,20 +16,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Organization extends Model
 {
     protected $table = 'organization';
-    protected $primaryKey = 'organization_id';
+    protected $primaryKey = 'org_id';
     public $incrementing = true;
     protected $keyType = 'int';
     public $timestamps = false;
 
+    // schema 3.4.2: ช่องทางติดต่อ (phone, email, facebook, line) ย้ายไปอยู่ที่ตาราง concert
     protected $fillable = [
-        'organization_id',
         'name',
-        'initials',
-        'description',
-        'phone',
-        'email',
-        'facebook',
-        'line',
         'created_at',
         'updated_at',
     ];
@@ -44,13 +39,13 @@ class Organization extends Model
 
     /**
      * getOrganizationInfo()
-     * สรุปข้อมูลองค์กร (ชื่อ ชื่อย่อ รายละเอียด และช่องทางติดต่อ)
+     * สรุปข้อมูลองค์กร (schema 3.4.2 เหลือแค่ชื่อองค์กร)
      * param : -
      * return : string
      */
     public function getOrganizationInfo(): string
     {
-        return trim("{$this->name} ({$this->initials}): {$this->description} | phone: {$this->phone} | email: {$this->email} | facebook: {$this->facebook} | line: {$this->line}");
+        return (string) $this->name;
     }
 
     /**
@@ -76,7 +71,7 @@ class Organization extends Model
      */
     public function organizers(): HasMany
     {
-        return $this->hasMany(AppUser::class, 'organization_id', 'organization_id')
+        return $this->hasMany(AppUser::class, 'u_organization_id', 'org_id')
             ->where('role', AppUser::ROLE_ORGANIZER);
     }
 
@@ -88,7 +83,7 @@ class Organization extends Model
      */
     public function staff(): HasMany
     {
-        return $this->hasMany(AppUser::class, 'organization_id', 'organization_id')
+        return $this->hasMany(AppUser::class, 'u_organization_id', 'org_id')
             ->where('role', AppUser::ROLE_STAFF);
     }
 
@@ -100,6 +95,6 @@ class Organization extends Model
      */
     public function concerts(): HasMany
     {
-        return $this->hasMany(Concert::class, 'organization_id', 'organization_id');
+        return $this->hasMany(Concert::class, 'c_organization_id', 'org_id');
     }
 }

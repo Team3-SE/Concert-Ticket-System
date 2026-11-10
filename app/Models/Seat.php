@@ -5,6 +5,7 @@
  * ที่นั่ง (ตาราง seat)
  * Author :
  * Created :
+ * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -17,18 +18,28 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Seat extends Model
 {
     protected $table = 'seat';
-    protected $primaryKey = 'seat_id';
+    protected $primaryKey = 's_id';
     public $incrementing = true;
     protected $keyType = 'int';
     public $timestamps = false;
 
+    // Booking Status Enumerations (seat.seat_booking_status ตัวพิมพ์เล็กตาม schema 3.4.2)
+    public const STATUS_AVAILABLE = 'available';
+    public const STATUS_LOCKED    = 'locked';
+    public const STATUS_RESERVED  = 'reserved';
+    public const STATUS_SOLD      = 'sold';
+
+    // Seat Status Enumerations (seat.seat_status สถานะตัวที่นั่งเอง ไม่เกี่ยวกับการจอง)
+    public const SEAT_ACTIVE   = 'active';
+    public const SEAT_DISABLED = 'disabled';
+    public const SEAT_BLOCKED  = 'blocked';
+
     protected $fillable = [
-        'zone_id',
+        's_zone_id',
         'row',
         'number',
         'seat_booking_status',
         'seat_status',
-        'zone_seat_pattern_pattern_id',
         'created_at',
         'updated_at',
     ];
@@ -44,36 +55,47 @@ class Seat extends Model
     // ==========================================
 
     /**
+     * label()
+     * ชื่อที่นั่งสำหรับแสดงผล (แถว + เลขที่นั่ง เช่น A1)
+     * param : -
+     * return : string
+     */
+    public function label(): string
+    {
+        return $this->row . $this->number;
+    }
+
+    /**
      * lockSeat()
-     * ล็อกที่นั่งชั่วคราวระหว่างการจอง (LOCKED)
+     * ล็อกที่นั่งชั่วคราวระหว่างการจอง (locked)
      * param : -
      * return : void
      */
     public function lockSeat(): void
     {
-        $this->update(['seat_booking_status' => 'LOCKED']);
+        $this->update(['seat_booking_status' => self::STATUS_LOCKED]);
     }
 
     /**
      * unlockSeat()
-     * ปลดล็อกที่นั่งกลับเป็น AVAILABLE เมื่อยกเลิกหรือหมดเวลา
+     * ปลดล็อกที่นั่งกลับเป็น available เมื่อยกเลิกหรือหมดเวลา
      * param : -
      * return : void
      */
     public function unlockSeat(): void
     {
-        $this->update(['seat_booking_status' => 'AVAILABLE']);
+        $this->update(['seat_booking_status' => self::STATUS_AVAILABLE]);
     }
 
     /**
      * confirmSeat()
-     * ยืนยันที่นั่งหลังชำระเงินสำเร็จ (SOLD)
+     * ยืนยันที่นั่งหลังชำระเงินสำเร็จ (sold)
      * param : -
      * return : void
      */
     public function confirmSeat(): void
     {
-        $this->update(['seat_booking_status' => 'SOLD']);
+        $this->update(['seat_booking_status' => self::STATUS_SOLD]);
     }
 
     // ==========================================
@@ -88,7 +110,7 @@ class Seat extends Model
      */
     public function zone(): BelongsTo
     {
-        return $this->belongsTo(Zone::class, 'zone_id', 'zone_id');
+        return $this->belongsTo(Zone::class, 's_zone_id', 'z_id');
     }
 
     /**
@@ -99,18 +121,29 @@ class Seat extends Model
      */
     public function bookingSeats(): HasMany
     {
-        return $this->hasMany(BookingSeat::class, 'seat_id', 'seat_id');
+        return $this->hasMany(BookingSeat::class, 'bs_seat_id', 's_id');
     }
 
     /**
      * ticket()
-     * ความสัมพันธ์กับบัตรของที่นั่ง
+     * ความสัมพันธ์กับบัตรที่ยังใช้ได้ (status = valid) ของที่นั่ง ที่นั่งหนึ่งมีบัตร valid ได้ใบเดียว
      * param : -
      * return : HasOne Ticket
      */
     public function ticket(): HasOne
     {
-        return $this->hasOne(Ticket::class, 'seat_id', 'seat_id');
+        return $this->hasOne(Ticket::class, 't_seat_id', 's_id')->where('status', Ticket::STATUS_VALID);
+    }
+
+    /**
+     * tickets()
+     * ความสัมพันธ์กับบัตรทั้งหมดของที่นั่ง รวมบัตรที่ถูกยกเลิก/ออกใหม่แทน
+     * param : -
+     * return : HasMany Ticket
+     */
+    public function tickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class, 't_seat_id', 's_id');
     }
 
     /**
@@ -121,17 +154,6 @@ class Seat extends Model
      */
     public function seatLockLogs(): HasMany
     {
-        return $this->hasMany(SeatLockLog::class, 'seat_id', 'seat_id');
-    }
-
-    /**
-     * zoneSeatPattern()
-     * ความสัมพันธ์กับรูปแบบการจัดที่นั่ง
-     * param : -
-     * return : BelongsTo ZoneSeatPattern
-     */
-    public function zoneSeatPattern(): BelongsTo
-    {
-        return $this->belongsTo(ZoneSeatPattern::class, 'zone_seat_pattern_pattern_id', 'pattern_id');
+        return $this->hasMany(SeatLockLog::class, 'sll_seat_id', 's_id');
     }
 }

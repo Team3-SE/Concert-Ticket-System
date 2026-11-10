@@ -5,6 +5,7 @@
  * ผู้จัดคอนเสิร์ต (AppUser ที่ role = ORGANIZER)
  * Author :
  * Created :
+ * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -44,13 +45,13 @@ class Organizer extends AppUser
 
     /**
      * concerts()
-     * ความสัมพันธ์กับคอนเสิร์ตของผู้จัด
+     * ความสัมพันธ์กับคอนเสิร์ตขององค์กรที่ผู้จัดสังกัด (concert.c_organization_id = app_user.u_organization_id)
      * param : -
      * return : HasMany Concert
      */
     public function concerts(): HasMany
     {
-        return $this->hasMany(Concert::class, 'organizer_id', 'user_id');
+        return $this->hasMany(Concert::class, 'c_organization_id', 'u_organization_id');
     }
 
     /**
@@ -61,6 +62,6 @@ class Organizer extends AppUser
      */
     public function staff(): HasMany
     {
-        return $this->hasMany(Staff::class, 'created_by_user_id', 'user_id');
+        return $this->hasMany(Staff::class, 'u_created_by_app_user_id', 'u_id');
     }
 }

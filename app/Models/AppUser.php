@@ -5,6 +5,7 @@
  * บัญชีผู้ใช้ทุกประเภท (CUSTOMER / ORGANIZER / STAFF / ADMIN) ในตาราง app_user
  * Author :
  * Created :
+ * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -22,16 +23,16 @@ class AppUser extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $table = 'app_user';
-    protected $primaryKey = 'user_id';
+    protected $primaryKey = 'u_id';
     public $timestamps = false;
 
-    // Role Enumerations (ค่าต้องตรงกับ app_user.role ในฐานข้อมูล: ลูกค้าทั่วไปคือ 'USER' เหมือน default ของ schema v3.1.0)
+    // Role Enumerations (ค่าต้องตรงกับ app_user.role ในฐานข้อมูล: ลูกค้าทั่วไปคือ 'USER')
     public const ROLE_CUSTOMER  = 'USER';
     public const ROLE_ORGANIZER = 'ORGANIZER';
     public const ROLE_STAFF     = 'STAFF';
     public const ROLE_ADMIN     = 'ADMIN';
 
-    // Account Status Enumerations (schema v3.1.0: app_user.account_status TINYINT, 1 = ACTIVE, 0 = BANNED)
+    // Account Status Enumerations (app_user.account_status TINYINT, 1 = ACTIVE, 0 = BANNED)
     public const STATUS_ACTIVE = 1;
     public const STATUS_BANNED = 0;
 
@@ -44,8 +45,8 @@ class AppUser extends Authenticatable
         'last_name',
         'phone',
         'username',
-        'created_by_user_id',
-        'organization_id',
+        'u_created_by_app_user_id',
+        'u_organization_id',
         'created_at',
         'updated_at',
     ];
@@ -154,7 +155,7 @@ class AppUser extends Authenticatable
      */
     public function organization(): BelongsTo
     {
-        return $this->belongsTo(Organization::class, 'organization_id', 'organization_id');
+        return $this->belongsTo(Organization::class, 'u_organization_id', 'org_id');
     }
 
     /**
@@ -165,7 +166,7 @@ class AppUser extends Authenticatable
      */
     public function createdBy(): BelongsTo
     {
-        return $this->belongsTo(AppUser::class, 'created_by_user_id', 'user_id');
+        return $this->belongsTo(AppUser::class, 'u_created_by_app_user_id', 'u_id');
     }
 
     /**
@@ -176,7 +177,7 @@ class AppUser extends Authenticatable
      */
     public function auditLogs(): HasMany
     {
-        return $this->hasMany(AuditLog::class, 'user_id', 'user_id');
+        return $this->hasMany(AuditLog::class, 'al_user_id', 'u_id');
     }
 
     // ==========================================

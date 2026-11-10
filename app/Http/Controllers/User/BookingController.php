@@ -5,7 +5,7 @@
  * จัดการการจองบัตรของลูกค้า: หน้าเลือกที่นั่ง ตรวจความปลอดภัย สร้างการจอง และประวัติการจอง
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 04/09/2569
- * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -131,8 +131,7 @@ class BookingController extends Controller
         $concert = $concertId
             ? $concertController->getConcertDetail($concertId)
             : Concert::with(['organization', 'zones'])
-                ->where('status', 'ON_SALE')
-                ->where('is_deleted', 0)
+                ->where('status', Concert::STATUS_ON_SALE)
                 ->orderBy('event_datetime', 'asc')
                 ->first();
 
@@ -143,7 +142,7 @@ class BookingController extends Controller
                     'price'    => (int) $zone->price,
                     'color'    => $zone->color,
                     'seats'    => $zone->getAvailableCapacity(),
-                    'capacity' => $zone->zone_type === 'STANDING' ? (int) $zone->capacity : $zone->seats()->count(),
+                    'capacity' => $zone->isStanding() ? (int) $zone->capacity : $zone->seats()->count(),
                 ];
             })
             : collect();

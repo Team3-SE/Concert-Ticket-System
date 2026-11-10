@@ -5,6 +5,7 @@
  * จัดการข้อมูลบัญชีผู้ใช้: ดึงโปรไฟล์ แก้ไขโปรไฟล์ และเปลี่ยนรหัสผ่าน
  * Author :
  * Created :
+ * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -42,7 +43,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'first_name' => ['required', 'regex:/^[\p{Thai}a-zA-Z]{2,30}$/u'],
             'last_name'  => ['required', 'regex:/^[\p{Thai}a-zA-Z]{2,30}$/u'],
-            'phone'      => ['required', 'regex:/^0[0-9]{9}$/', "unique:app_user,phone,{$userId},user_id"],
+            'phone'      => ['required', 'regex:/^0[0-9]{9}$/', "unique:app_user,phone,{$userId},u_id"],
         ], [
             'first_name.required' => 'กรุณากรอกชื่อ',
             'first_name.regex'    => 'ชื่อต้องมี 2–30 ตัวอักษร (ภาษาไทยหรืออังกฤษ)',

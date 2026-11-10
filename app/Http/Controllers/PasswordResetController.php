@@ -8,6 +8,7 @@
  * รหัสเก็บใน Cache ผ่าน Services/PasswordResetOtp
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 29/10/2569
+ * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers;
@@ -147,7 +148,7 @@ class PasswordResetController extends Controller
         }
 
         $request->session()->put(self::SESSION_VERIFIED, [
-            'user_id'    => $user->user_id,
+            'user_id'    => $user->u_id,
             'email'      => $user->email,
             'expires_at' => now()->addMinutes(PasswordResetOtp::RESET_WINDOW_MINUTES)->timestamp,
         ]);

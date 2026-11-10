@@ -5,6 +5,7 @@
  * ประวัติการใช้งานระบบ (ตาราง audit_log)
  * Author :
  * Created :
+ * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -15,14 +16,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class AuditLog extends Model
 {
     protected $table = 'audit_log';
-    protected $primaryKey = 'log_id';
+    protected $primaryKey = 'al_id';
     public $incrementing = true;
     protected $keyType = 'int';
     public $timestamps = false;
 
+    // schema 3.4.2: คอลัมน์ action (int) เปลี่ยนเป็น type (varchar)
     protected $fillable = [
-        'user_id',
-        'action',
+        'al_user_id',
+        'type',
         'created_at',
         'ip_address',
         'metadata_details',
@@ -39,13 +41,13 @@ class AuditLog extends Model
 
     /**
      * getDetails()
-     * สรุปรายละเอียดของ log (action เวลา IP และ metadata)
+     * สรุปรายละเอียดของ log (ประเภท เวลา IP และ metadata)
      * param : -
      * return : string
      */
     public function getDetails(): string
     {
-        return trim("action: {$this->action} | at: {$this->created_at} | ip: {$this->ip_address} | metadata: " . json_encode($this->metadata_details));
+        return trim("type: {$this->type} | at: {$this->created_at} | ip: {$this->ip_address} | metadata: " . json_encode($this->metadata_details));
     }
 
     // ==========================================
@@ -60,6 +62,6 @@ class AuditLog extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(AppUser::class, 'user_id', 'user_id');
+        return $this->belongsTo(AppUser::class, 'al_user_id', 'u_id');
     }
 }

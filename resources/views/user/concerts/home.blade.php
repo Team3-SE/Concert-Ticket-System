@@ -3,7 +3,7 @@
  * หน้า Home: ช่องค้นหา แบนเนอร์ไฮไลต์ และคอนเสิร์ตแนะนำ (หน้าต่างเข้าสู่ระบบ/สมัครสมาชิกย้ายไป user/partials/auth-modals)
  * @Author
  * @Create Date
- * @Update Date 23/10/2569 67160292 ธีรเมธ พลสาย
+ * @Update Date 10/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 @extends('layouts.user')
 
@@ -38,7 +38,7 @@
       <div class="hero-slide {{ $index === 0 ? 'active' : '' }} {{ $bannerUrl ? 'has-banner' : '' }}" data-slide="{{ $index }}">
         @if($bannerUrl)
           {{-- รูปโหลดไม่ได้: ลบรูปแล้วกลับไปแสดงสไลด์แบบข้อความ --}}
-          <a class="hero-banner-link" href="{{ url('/concert-detail?concert_id=' . $highlight->concert_id) }}" aria-label="{{ $highlight->name }}">
+          <a class="hero-banner-link" href="{{ url('/concert-detail?concert_id=' . $highlight->c_id) }}" aria-label="{{ $highlight->name }}">
             <img class="hero-banner-img" src="{{ $bannerUrl }}" alt="{{ $highlight->name }}"
                  onerror="this.closest('.hero-slide').classList.remove('has-banner'); this.closest('a').remove();">
           </a>

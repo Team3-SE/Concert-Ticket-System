@@ -5,6 +5,7 @@
  * ลูกค้า (AppUser ที่ role = USER)
  * Author :
  * Created :
+ * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -57,8 +58,8 @@ class Customer extends AppUser
      */
     public function searchConcert(string $keyword)
     {
+        // Concert ใช้ SoftDeletes: คอนเสิร์ตที่ถูกลบ (deleted_at ไม่ว่าง) จะไม่ถูกดึงมาเอง
         return Concert::query()
-            ->where('is_deleted', 0)
             ->where(function ($q) use ($keyword) {
                 $q->where('name', 'like', "%{$keyword}%")
                   ->orWhere('artist', 'like', "%{$keyword}%")
@@ -100,7 +101,7 @@ class Customer extends AppUser
     {
         return Ticket::query()
             ->whereHas('order.booking', function ($q) {
-                $q->where('user_id', $this->user_id);
+                $q->where('b_user_id', $this->u_id);
             })
             ->get();
     }
@@ -117,6 +118,6 @@ class Customer extends AppUser
      */
     public function bookings(): HasMany
     {
-        return $this->hasMany(Booking::class, 'user_id', 'user_id');
+        return $this->hasMany(Booking::class, 'b_user_id', 'u_id');
     }
 }

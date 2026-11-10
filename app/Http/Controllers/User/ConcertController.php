@@ -5,7 +5,7 @@
  * จัดการข้อมูลคอนเสิร์ตฝั่งลูกค้า: รายการ ค้นหา รายการแนะนำขณะพิมพ์ และรายละเอียดคอนเสิร์ต
  * Author :
  * Created :
- * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -34,21 +34,20 @@ class ConcertController extends Controller
 
     /* ตัวกรองสถานะในหน้าคอนเสิร์ตทั้งหมด */
     private const STATUS_FILTERS = [
-        'ON_SALE'   => 'เปิดขาย',
-        'SCHEDULED' => 'เร็ว ๆ นี้',
-        'SOLD_OUT'  => 'ขายหมด',
+        Concert::STATUS_ON_SALE   => 'เปิดขาย',
+        Concert::STATUS_SCHEDULED => 'เร็ว ๆ นี้',
+        Concert::STATUS_SOLD_OUT  => 'ขายหมด',
     ];
 
     /**
      * getConcertList()
-     * ดึงรายการคอนเสิร์ตที่ยังไม่ถูกลบ เรียงตามวันเปิดขาย
+     * ดึงรายการคอนเสิร์ตที่ยังไม่ถูกลบ เรียงตามวันเปิดขาย (Concert ใช้ SoftDeletes ไม่ดึงคอนเสิร์ตที่ถูกลบมาเอง)
      * param : -
      * return : Collection ของ Concert
      */
     public function getConcertList()
     {
         return Concert::with('organization')
-            ->where('is_deleted', 0)
             ->orderBy('sale_start_datetime', 'asc')
             ->get();
     }
@@ -136,7 +135,7 @@ class ConcertController extends Controller
         return response()->json([
             'query'   => $query,
             'results' => $results->map(fn (Concert $concert) => [
-                'id'           => $concert->concert_id,
+                'id'           => $concert->c_id,
                 'name'         => $concert->name,
                 'artist'       => $concert->artist,
                 'venue'        => $concert->venue,
@@ -146,7 +145,7 @@ class ConcertController extends Controller
                     : null,
                 'status'       => strtoupper((string) $concert->status),
                 'poster'       => $concert->poster_path ? asset('storage/' . $concert->poster_path) : null,
-                'url'          => url('/concert-detail?concert_id=' . $concert->concert_id),
+                'url'          => url('/concert-detail?concert_id=' . $concert->c_id),
             ])->values(),
         ]);
     }
@@ -160,8 +159,7 @@ class ConcertController extends Controller
     public function getConcertDetail(int $concertId)
     {
         return Concert::with(['organization', 'zones'])
-            ->where('concert_id', $concertId)
-            ->where('is_deleted', 0)
+            ->whereKey($concertId)
             ->firstOrFail();
     }
 
@@ -176,8 +174,7 @@ class ConcertController extends Controller
     private function publicConcerts(): Builder
     {
         return Concert::with('organization')
-            ->where('is_deleted', 0)
-            ->where('status', '!=', 'DRAFT');
+            ->where('status', '!=', Concert::STATUS_DRAFT);
     }
 
     /**

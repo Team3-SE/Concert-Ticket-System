@@ -5,7 +5,7 @@
  * detailed = แสดงสถานที่
  * @Author 67160292 ธีรเมธ พลสาย
  * @Create Date 09-10-2569
- * @Update Date 23/10/2569 67160292 ธีรเมธ พลสาย
+ * @Update Date 10/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 @php
   $detailed = $detailed ?? false;
@@ -36,7 +36,7 @@
       @endif
     @endif
     @if($btnClass === 'buy')
-      <a href="{{ url('/concert-detail?concert_id=' . $concert->concert_id) }}" class="card-btn buy">{{ $btnText }}</a>
+      <a href="{{ url('/concert-detail?concert_id=' . $concert->c_id) }}" class="card-btn buy">{{ $btnText }}</a>
     @else
       <span class="card-btn {{ $btnClass }}">{{ $btnText }}</span>
     @endif
