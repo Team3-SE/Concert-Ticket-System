@@ -4,331 +4,330 @@ classDiagram
 
     direction LR
 
-    class AppUser {
+    class appUser {
         <<abstract>>
-        +userID
-        +email
-        +passwordHash
-        +role
-        +accountStatus
-        +firstName
-        +lastName
-        +phone
-        +username
-        +organizationID
-        +createdByUserID
-        +createdAt
-        +updatedAt
+        +Integer user_id
+        +String email
+        +String password_hash
+        +String role
+        +Boolean account_status
+        +String first_name
+        +String last_name
+        +String phone
+        +String username
+        +Integer organization_id
+        +Integer created_by_user_id
+        +DateTime created_at
+        +DateTime updated_at
         +login() Boolean
         +logout() void
     }
 
-    class Customer {
+    class customer {
         +register() void
-        +searchConcert(keyword) List~Concert~
-        +createBooking(concert, seats, standingItems) Booking
-        +viewHistory() List~Booking~
-        +viewTickets() List~Ticket~
+        +searchConcert(String keyword) List~concert~
+        +createBooking(Integer concert_id, Integer seats, Integer standing_items) booking
+        +viewHistory() List~booking~
+        +viewTickets() List~ticket~
     }
 
-    class Organizer {
-        +createConcert(details) Concert
-        +defineSeatMap(concert, mapDetails) void
-        +viewSalesRealTime(concert) Report
+    class organizer {
+        +createConcert(String details) concert
+        +defineSeatMap(Integer concert_id, String map_details) void
+        +viewSalesRealTime(Integer concert_id) String
     }
 
-    class Staff {
-        +scanTicketQR(qrCode) Boolean
+    class staff {
+        +scanTicketQR(String qr_code) Boolean
     }
 
-    class Admin {
-        +manageUser(userID, action) void
-        +viewAnomalies(filters) List~SystemAnomaly~
-        +acknowledgeAnomaly(anomalyID) void
-        +resolveAnomaly(anomalyID, reason, files) void
+    class admin {
+        +manageUser(Integer user_id, String action) void
+        +viewAnomalies(String filters) List~systemAnomaly~
+        +acknowledgeAnomaly(Integer anomaly_id) void
+        +resolveAnomaly(Integer anomaly_id, Text reason, String files) void
     }
 
-    class Organization {
-        +organizationID
-        +name
-        +initials
-        +description
-        +phone
-        +email
-        +facebook
-        +line
-        +createdAt
-        +updatedAt
+    class organization {
+        +Integer organization_id
+        +String name
+        +String initials
+        +Text description
+        +String phone
+        +String email
+        +String facebook
+        +String line
+        +DateTime created_at
+        +DateTime updated_at
         +getOrganizationInfo() String
-        +listEvents() List~Concert~
+        +listEvents() List~concert~
     }
 
-    AppUser <|-- Customer : เป็น role CUSTOMER
-    AppUser <|-- Organizer : เป็น role ORGANIZER
-    AppUser <|-- Staff : เป็น role STAFF
-    AppUser <|-- Admin : เป็น role ADMIN
+    appUser <|-- customer : เป็น role CUSTOMER
+    appUser <|-- organizer : เป็น role ORGANIZER
+    appUser <|-- staff : เป็น role STAFF
+    appUser <|-- admin : เป็น role ADMIN
 
-    Organization "1" --> "1..*" Organizer : มี Organizer สังกัด
-    Organization "1" --> "1..*" Staff : มี Staff สังกัด
-    Organization "1" --> "1..*" Concert : จัด
+    organization "1" --> "1..*" organizer : มี Organizer สังกัด
+    organization "1" --> "1..*" staff : มี Staff สังกัด
+    organization "1" --> "1..*" concert : จัด
 
-    Organizer "1" --> "0..*" Staff : สร้างบัญชี (createdByUserID)
-    Admin "1" --> "0..*" AppUser : สร้างบัญชี (createdByUserID)
+    organizer "1" --> "0..*" staff : สร้างบัญชี (created_by_user_id)
+    admin "1" --> "0..*" appUser : สร้างบัญชี (created_by_user_id)
 
 
-    class NamingTemplate {
-        +templateID
-        +organizerID
-        +templateName
-        +patternType
-        +prefix
-        +customItems
-        +createdAt
+    class namingTemplate {
+        +Integer template_id
+        +Integer organizer_id
+        +String template_name
+        +String pattern_type
+        +String prefix
+        +JSON custom_items
+        +DateTime created_at
     }
 
-    class Concert {
-        +concertID
-        +organizationID
-        +name
-        +artist
-        +venue
-        +address
-        +eventDatetime
-        +description
-        +posterPath
-        +seatMapImagePath
-        +saleStartDatetime
-        +saleEndDatetime
-        +maxTicketPerOrder
-        +status
-        +concertCode
-        +isDeleted
-        +createdAt
-        +updatedAt
-        +getDetails() ConcertInfo
+    class concert {
+        +Integer concert_id
+        +Integer organization_id
+        +String name
+        +String artist
+        +String venue
+        +String address
+        +DateTime event_datetime
+        +Text description
+        +String poster_path
+        +String seat_map_image_path
+        +DateTime sale_start_datetime
+        +DateTime sale_end_datetime
+        +Integer max_ticket_per_order
+        +String status
+        +String concert_code
+        +Boolean is_deleted
+        +DateTime created_at
+        +DateTime updated_at
+        +getDetails() String
     }
 
-    class Zone {
-        +zoneID
-        +concertID
-        +name
-        +zoneType
-        +price
-        +capacity
-        +totalRows
-        +seatsPerRow
-        +seatStartNumber
-        +color
-        +createdAt
-        +updatedAt
-        +getAvailableSeats() List~Seat~
+    class zone {
+        +Integer zone_id
+        +Integer concert_id
+        +String name
+        +String zone_type
+        +Decimal price
+        +Integer capacity
+        +Integer total_rows
+        +Integer seats_per_row
+        +Integer seat_start_number
+        +String color
+        +DateTime created_at
+        +DateTime updated_at
+        +getAvailableSeats() List~seat~
         +getAvailableCapacity() Integer
     }
 
-    class ZoneSeatPattern {
-        +patternID
-        +zoneID
-        +patternType
-        +rowStart
-        +rowEnd
-        +prefix
-        +sourceTemplateID
-        +customItems
-        +generateSeats() List~Seat~
+    class zoneSeatPattern {
+        +Integer pattern_id
+        +Integer zone_id
+        +String pattern_type
+        +Integer row_start
+        +Integer row_end
+        +String prefix
+        +Integer source_template_id
+        +JSON custom_items
+        +generateSeats() List~seat~
     }
 
-    class Seat {
-        +seatID
-        +zoneID
-        +row
-        +number
-        +bookingStatus
-        +seatStatus
-        +zoneSeatPatternID
-        +createdAt
-        +updatedAt
+    class seat {
+        +Integer seat_id
+        +Integer zone_id
+        +String row
+        +Integer number
+        +String seat_booking_status
+        +String seat_status
+        +Integer zone_seat_pattern_id
+        +DateTime created_at
+        +DateTime updated_at
         +lockSeat() void
         +unlockSeat() void
         +confirmSeat() void
     }
 
-    Organizer "1" --> "0..*" NamingTemplate : เป็นเจ้าของ
-    NamingTemplate "1" --> "0..*" ZoneSeatPattern : เป็นต้นแบบให้ (sourceTemplateID)
+    organizer "1" --> "0..*" namingTemplate : เป็นเจ้าของ
+    namingTemplate "1" --> "0..*" zoneSeatPattern : เป็นต้นแบบให้ (source_template_id)
 
-    Concert "1" --> "1..*" Zone : ประกอบด้วย
-    Zone "1" --> "0..*" ZoneSeatPattern : กำหนด pattern ที่นั่ง
-    ZoneSeatPattern "1" --> "0..*" Seat : generate ที่นั่งจาก pattern
-    Zone "1" --> "0..*" Seat : มีที่นั่ง
+    concert "1" --> "1..*" zone : ประกอบด้วย
+    zone "1" --> "0..*" zoneSeatPattern : กำหนด pattern ที่นั่ง
+    zoneSeatPattern "1" --> "0..*" seat : generate ที่นั่งจาก pattern
+    zone "1" --> "0..*" seat : มีที่นั่ง
 
 
-    class StaffConcert {
-        +staffID
-        +concertID
-        +assignedAt
-        +status
-        +revokedAt
+    class staffConcert {
+        +Integer staff_id
+        +Integer concert_id
+        +DateTime assigned_at
+        +Boolean status
+        +DateTime revoked_at
     }
 
-    Staff "0..*" --> "0..*" Concert : ถูกมอบหมายดูแล (ผ่าน StaffConcert)
-    Staff "1" --> "0..*" StaffConcert : ได้รับมอบหมายผ่าน
-    Concert "1" --> "0..*" StaffConcert : ถูกมอบหมายดูแลผ่าน
+    staff "0..*" --> "0..*" concert : ถูกมอบหมายดูแล (ผ่าน staffConcert)
+    staff "1" --> "0..*" staffConcert : ได้รับมอบหมายผ่าน
+    concert "1" --> "0..*" staffConcert : ถูกมอบหมายดูแลผ่าน
 
 
-    class Booking {
-        +bookingID
-        +customerID
-        +concertID
-        +bookingCode
-        +bookingDate
-        +totalAmount
-        +status
-        +expiryTime
-        +updatedAt
-        +calculateTotal() Double
+    class booking {
+        +Integer booking_id
+        +Integer customer_id
+        +Integer concert_id
+        +String booking_code
+        +DateTime booking_date
+        +Decimal total_amount
+        +String status
+        +DateTime expiry_time
+        +DateTime updated_at
+        +calculateTotal() Decimal
         +confirmBooking() void
         +cancelBooking() void
         +checkExpiry() Boolean
     }
 
-    class BookingSeat {
-        +bookingID
-        +seatID
-        +zoneNameSnapshot
-        +seatLabelSnapshot
-        +unitPriceSnapshot
+    class bookingSeat {
+        +Integer booking_id
+        +Integer seat_id
+        +String zone_name_snapshot
+        +String seat_label_snapshot
+        +Decimal unit_price_snapshot
     }
 
-    class SeatLockLog {
-        +lockID
-        +bookingID
-        +seatID
-        +lockedAt
-        +expiredAt
-        +releasedAt
-        +status
+    class seatLockLog {
+        +Integer lock_id
+        +Integer booking_id
+        +Integer seat_id
+        +DateTime locked_at
+        +DateTime expired_at
+        +DateTime released_at
+        +String status
     }
 
-    Customer "1" --> "0..*" Booking : สร้างการจอง
-    Concert "1" --> "0..*" Booking : ถูกจองใน
+    customer "1" --> "0..*" booking : สร้างการจอง
+    concert "1" --> "0..*" booking : ถูกจองใน
 
-    Booking "0..*" --> "0..*" Seat : จอง (ผ่าน BookingSeat)
-    Booking "1" --> "0..*" BookingSeat : บันทึกที่นั่งที่จอง
-    Seat "1" --> "0..*" BookingSeat : ถูกจองอยู่ใน
+    booking "0..*" --> "0..*" seat : จอง (ผ่าน bookingSeat)
+    booking "1" --> "0..*" bookingSeat : บันทึกที่นั่งที่จอง
+    seat "1" --> "0..*" bookingSeat : ถูกจองอยู่ใน
 
-    Booking "1" --> "0..*" SeatLockLog : บันทึกประวัติการล็อก
-    Seat "1" --> "0..*" SeatLockLog : ถูกบันทึกการล็อกใน
+    booking "1" --> "0..*" seatLockLog : บันทึกประวัติการล็อก
+    seat "1" --> "0..*" seatLockLog : ถูกบันทึกการล็อกใน
 
 
-    class Payment {
-        +paymentID
-        +bookingID
-        +amount
-        +method
-        +status
-        +providerTransactionID
-        +paymentMetadata
-        +createdAt
-        +updatedAt
+    class payment {
+        +Integer payment_id
+        +Integer booking_id
+        +Decimal amount
+        +String method
+        +String status
+        +String provider_transaction_id
+        +JSON payment_metadata
+        +DateTime created_at
+        +DateTime updated_at
         +processPayment() Boolean
         +verifyStatus() Boolean
     }
 
-    class CustomerOrder {
-        +orderID
-        +bookingID
-        +paymentID
-        +orderDate
-        +orderCode
-        +concertNameSnapshot
-        +artistSnapshot
-        +venueSnapshot
-        +eventDatetimeSnapshot
-        +organizationNameSnapshot
-        +customerFirstNameSnapshot
-        +customerLastNameSnapshot
-        +customerPhoneSnapshot
+    class customerOrder {
+        +Integer order_id
+        +Integer booking_id
+        +Integer payment_id
+        +DateTime order_date
+        +String order_code
+        +String concert_name_snapshot
+        +String artist_snapshot
+        +String venue_snapshot
+        +DateTime event_datetime_snapshot
+        +String organization_name_snapshot
+        +String customer_firstname_snapshot
+        +String customer_lastname_snapshot
+        +String customer_phone_snapshot
     }
 
-    Booking "1" --> "0..*" Payment : ชำระเงินผ่าน
-    Booking "1" --> "0..1" CustomerOrder : generate order เมื่อชำระสำเร็จ
-    Payment "1" --> "0..1" CustomerOrder : generate order เมื่อสำเร็จ
+    booking "1" --> "0..*" payment : ชำระเงินผ่าน
+    booking "1" --> "0..1" customerOrder : generate order เมื่อชำระสำเร็จ
+    payment "1" --> "0..1" customerOrder : generate order เมื่อสำเร็จ
 
 
-    class Ticket {
-        +ticketID
-        +orderID
-        +zoneID
-        +seatID
-        +quantity
-        +qrCode
-        +isUsed
-        +ticketCode
-        +zoneNameSnapshot
-        +seatLabelSnapshot
-        +unitPriceSnapshot
-        +createdAt
-        +updatedAt
+    class ticket {
+        +Integer ticket_id
+        +Integer order_id
+        +Integer zone_id
+        +Integer seat_id
+        +Integer quantity
+        +String qr_code
+        +Boolean is_used
+        +String ticket_code
+        +String zone_name_snapshot
+        +String seat_label_snapshot
+        +Decimal unit_price_snapshot
+        +DateTime created_at
+        +DateTime updated_at
         +generateQR() String
         +validateTicket() Boolean
         +markAsUsed() void
     }
 
-    class TicketValidationLog {
-        +validationID
-        +ticketID
-        +staffID
-        +validationTime
-        +result
+    class ticketValidationLog {
+        +Integer validation_id
+        +Integer ticket_id
+        +Integer staff_id
+        +DateTime validation_time
+        +Boolean result
     }
 
-    CustomerOrder "1" --> "0..*" Ticket : generate ตั๋ว (SEATED และ STANDING)
-    Zone "1" --> "0..*" Ticket : ออกตั๋วภายใต้
-    Seat "1" --> "0..*" Ticket : ถูกอ้างอิงโดย
+    customerOrder "1" --> "0..*" ticket : generate ตั๋ว (SEATED และ STANDING)
+    zone "1" --> "0..*" ticket : ออกตั๋วภายใต้
+    seat "1" --> "0..*" ticket : ถูกอ้างอิงโดย
 
-    Staff "1" --> "0..*" TicketValidationLog : ตรวจสอบตั๋วและบันทึกผล
-    Ticket "1" --> "0..1" TicketValidationLog : ถูกตรวจสอบและบันทึกผลใน
+    staff "1" --> "0..*" ticketValidationLog : ตรวจสอบตั๋วและบันทึกผล
+    ticket "1" --> "0..1" ticketValidationLog : ถูกตรวจสอบและบันทึกผลใน
 
 
-    class SystemAnomaly {
-        +anomalyID
-        +bookingID
-        +causedByUserID
-        +managedByAdminID
-        +type
-        +message
-        +status
-        +detectedAt
-        +ackedAt
-        +resolvedAt
-        +resolveReason
-        +anomalyCode
-        +updateStatus(newStatus) void
-        +addAttachment(file) void
+    class systemAnomaly {
+        +Integer anomaly_id
+        +Integer booking_id
+        +Integer caused_by_user_id
+        +Integer managed_by_admin_id
+        +String type
+        +Text message
+        +String status
+        +DateTime detected_at
+        +DateTime acked_at
+        +DateTime resolved_at
+        +Text resolve_reason
+        +String anomaly_code
+        +updateStatus(String new_status) void
+        +addAttachment(String file_path) void
     }
 
-    class AnomalyAttachment {
-        +attachmentID
-        +anomalyID
-        +filePath
-        +createdAt
-        +updatedAt
+    class anomalyAttachment {
+        +Integer attachment_id
+        +Integer anomaly_id
+        +String file_path
+        +DateTime created_at
+        +DateTime updated_at
     }
 
-    class AuditLog {
-        +logID
-        +userID
-        +action
-        +createdAt
-        +ipAddress
-        +metadataDetails
+    class auditLog {
+        +Integer log_id
+        +Integer user_id
+        +Integer action
+        +DateTime created_at
+        +String ip_address
+        +JSON metadata_details
         +getDetails() String
     }
 
-    AppUser "1" --> "0..*" SystemAnomaly : เป็นต้นเหตุของ (causedByUserID)
-    Admin "1" --> "0..*" SystemAnomaly : ตรวจสอบ/จัดการ (managedByAdminID)
-    AppUser "1" --> "0..*" AuditLog : สร้าง log การกระทำ
-    Booking "1" --> "0..*" SystemAnomaly : อาจก่อให้เกิดเคสผิดปกติ
-    SystemAnomaly "1" --> "0..*" AnomalyAttachment : แนบไฟล์หลักฐาน
-
+    appUser "1" --> "0..*" systemAnomaly : เป็นต้นเหตุของ (caused_by_user_id)
+    admin "1" --> "0..*" systemAnomaly : ตรวจสอบ/จัดการ (managed_by_admin_id)
+    appUser "1" --> "0..*" auditLog : สร้าง log การกระทำ
+    booking "1" --> "0..*" systemAnomaly : อาจก่อให้เกิดเคสผิดปกติ
+    systemAnomaly "1" --> "0..*" anomalyAttachment : แนบไฟล์หลักฐาน
 
     classDef default fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
