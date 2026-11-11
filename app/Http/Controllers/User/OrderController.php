@@ -5,7 +5,7 @@
  * แสดงประวัติการสั่งซื้อของผู้ใช้ที่เข้าสู่ระบบ
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 16/10/2569
- * Updated : 21/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -34,45 +34,35 @@ class OrderController extends Controller
         $orders = CustomerOrder::with([
             'booking.concert',
             'booking.bookingSeats',
-            'booking.bookingStandingItems',
-            'tickets.zone',
-            'tickets.seat',
+            'validTickets',
             'payment',
         ])
-            ->whereHas('booking', fn ($q) => $q->where('user_id', $userId))
+            ->whereHas('booking', fn ($q) => $q->where('b_user_id', $userId))
             ->orderBy('order_date', 'desc')
             ->paginate(self::ORDERS_PER_PAGE)
             ->through(function (CustomerOrder $order) {
                 $booking = $order->booking;
                 $concert = $booking?->concert;
                 $seats = $booking?->bookingSeats ?? collect();
-                $seatGroups = $seats->groupBy(fn ($seat) => $seat->zone_name_snapshot ?? '–');
-                $zones = $seatGroups->map(function ($zoneSeats, $zoneName) {
-                    $seatLabels = $zoneSeats->pluck('seat_label_snapshot')->filter()->join(', ');
 
-                    return [
-                        'name' => Str::startsWith($zoneName, 'โซน') ? $zoneName : 'โซน '.$zoneName,
-                        'details' => $seatLabels ?: '–',
-                    ];
-                })->values();
-
-                foreach ($booking?->bookingStandingItems ?? collect() as $standingItem) {
-                    $zoneName = $standingItem->zone_name_snapshot ?? '–';
-                    $zones->push([
-                        'name' => Str::startsWith($zoneName, 'โซน') ? $zoneName : 'โซน '.$zoneName,
-                        'details' => 'บัตรยืน x '.$standingItem->quantity,
-                    ]);
-                }
+                // schema 3.4.2: 1 คำสั่งซื้อ = 1 โซน ชื่อโซนเก็บไว้ที่ user_order.zone_name_snapshot
+                $zoneName = (string) ($order->zone_name_snapshot ?: $booking?->zone_name_snapshot ?: '–');
+                $zones = collect([[
+                    'name' => Str::startsWith($zoneName, 'โซน') ? $zoneName : 'โซน '.$zoneName,
+                    'details' => $booking?->isStanding()
+                        ? 'บัตรยืน x '.(int) $booking->standing_quantity
+                        : ($seats->pluck('seat_label_snapshot')->filter()->join(', ') ?: '–'),
+                ]]);
 
                 return [
-                    'order_code' => $order->order_code ?? substr($order->order_id, 0, 8),
+                    'order_code' => $order->order_code ?? (string) $order->uo_id,
                     'concert_name' => $order->concert_name_snapshot ?? $concert?->name ?? '–',
                     'venue' => $order->venue_snapshot ?? $concert?->venue ?? '–',
                     'event_datetime' => $this->formatThaiDateTime(
                         $order->event_datetime_snapshot ?? $concert?->event_datetime
                     ),
                     'zones' => $zones,
-                    'ticket_count' => $order->tickets?->count() ?? $seats->count(),
+                    'ticket_count' => $order->validTickets?->count() ?: (int) $order->quantity,
                     'order_date' => $this->formatThaiDateTime($order->order_date, true),
                     'total_amount' => number_format((float) ($order->payment?->amount ?? $booking?->total_amount ?? 0), 0),
                 ];

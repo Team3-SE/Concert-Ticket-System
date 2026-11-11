@@ -6,6 +6,7 @@
  * และอัปโหลด/ลบรูปภาพรายประเภท (poster, banner, seat_map)
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 04/09/2569
+ * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\Organizer;
@@ -14,8 +15,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Concert;
 use App\Models\Organization;
 use App\Models\Seat;
+use App\Models\Ticket;
 use App\Models\Zone;
-use App\Models\ZoneSeatPattern;
+use App\Models\ZoneInventory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -52,14 +54,14 @@ class ConcertImageController extends Controller
 
     /* สถานะคอนเสิร์ตที่เลือกได้ในหน้าแก้ไข */
     private const STATUS_LABELS = [
-        'DRAFT'     => 'ฉบับร่าง (ไม่แสดงหน้าเว็บ)',
-        'SCHEDULED' => 'เร็ว ๆ นี้ (ยังไม่เปิดขาย)',
-        'ON_SALE'   => 'เปิดขาย',
-        'SOLD_OUT'  => 'ขายหมด',
+        Concert::STATUS_DRAFT     => 'ฉบับร่าง (ไม่แสดงหน้าเว็บ)',
+        Concert::STATUS_SCHEDULED => 'เร็ว ๆ นี้ (ยังไม่เปิดขาย)',
+        Concert::STATUS_ON_SALE   => 'เปิดขาย',
+        Concert::STATUS_SOLD_OUT  => 'ขายหมด',
     ];
 
     /* ประเภทโซน: SEATED = ระบุที่นั่ง, STANDING = โซนยืน */
-    private const ZONE_TYPES = ['SEATED', 'STANDING'];
+    private const ZONE_TYPES = [Zone::TYPE_SEATED, Zone::TYPE_STANDING];
 
     /* สีเริ่มต้นของโซน เมื่อไม่ได้เลือกสี */
     private const DEFAULT_ZONE_COLOR = '#3B82F6';
@@ -82,13 +84,13 @@ class ConcertImageController extends Controller
     public function index(Request $request)
     {
         $concerts = Concert::orderBy('event_datetime', 'desc')->get();
-        $selected = $concerts->firstWhere('concert_id', (int) $request->query('concert')) ?? $concerts->first();
+        $selected = $concerts->firstWhere('c_id', (int) $request->query('concert')) ?? $concerts->first();
 
         return view('organizer.concerts.manage-images', [
             'concerts'      => $concerts,
             'selected'      => $selected,
             'zoneRows'      => $selected ? $this->buildZoneRows($selected, $request->old('zones')) : [],
-            'organizations' => Organization::orderBy('name')->get(['organization_id', 'name']),
+            'organizations' => Organization::orderBy('name')->get(['org_id', 'name']),
             'statusLabels'  => self::STATUS_LABELS,
             'imageSizes'    => self::IMAGE_SIZES,
         ]);
@@ -107,14 +109,18 @@ class ConcertImageController extends Controller
         $statuses = array_unique(array_merge(array_keys(self::STATUS_LABELS), [$concert->status]));
 
         $rules = [
-            'organization_id'      => ['required', 'integer', 'exists:organization,organization_id'],
+            'c_organization_id'    => ['required', 'integer', 'exists:organization,org_id'],
             // Public Code Format Specification V2.0.0: ตัวอักษร 1 ตัว + ตัวเลข (ระบบเติม 0 ให้ครบ 6 หลักตอนออกรหัส)
-            'concert_code'         => ['required', 'string', 'max:100', 'regex:' . Concert::CODE_INPUT_PATTERN, Rule::unique('concert', 'concert_code')->ignore($concert->concert_id, 'concert_id')],
+            'concert_code'         => ['required', 'string', 'max:100', 'regex:' . Concert::CODE_INPUT_PATTERN, Rule::unique('concert', 'concert_code')->ignore($concert->c_id, 'c_id')],
             'name'                 => ['required', 'string', 'max:255'],
-            'artist'               => ['nullable', 'string', 'max:255'],
-            'venue'                => ['nullable', 'string', 'max:255'],
-            'address'              => ['nullable', 'string', 'max:500'],
+            // schema 3.4.2: artist และ venue เป็น NOT NULL, ตัดคอลัมน์ address, ช่องทางติดต่อย้ายมาอยู่ที่ concert
+            'artist'               => ['required', 'string', 'max:255'],
+            'venue'                => ['required', 'string', 'max:500'],
             'description'          => ['nullable', 'string', 'max:5000'],
+            'phone'                => ['nullable', 'string', 'max:50'],
+            'email'                => ['nullable', 'email', 'max:255'],
+            'facebook'             => ['nullable', 'string', 'max:255'],
+            'line'                 => ['nullable', 'string', 'max:255'],
             'event_datetime'       => ['required', 'date'],
             'sale_start_datetime'  => ['nullable', 'date'],
             'sale_end_datetime'    => ['nullable', 'date'],
@@ -128,7 +134,7 @@ class ConcertImageController extends Controller
             'zones.*.capacity'     => ['nullable', 'integer', 'min:1', 'max:100000'],
             'zones.*.total_rows'   => ['nullable', 'integer', 'min:1', 'max:' . self::MAX_ROWS],
             'zones.*.seats_per_row'     => ['nullable', 'integer', 'min:1', 'max:' . self::MAX_SEATS_PER_ROW],
-            'zones.*.seat_start_number' => ['nullable', 'integer', 'min:1', 'max:999'],
+            'zones.*.seat_number_start' => ['nullable', 'integer', 'min:1', 'max:999'],
             'zones.*._delete'      => ['nullable', 'boolean'],
         ];
 
@@ -164,13 +170,14 @@ class ConcertImageController extends Controller
         try {
             DB::transaction(function () use ($request, $concert, $data, $zoneOps, &$newPaths, &$oldToDelete) {
                 $concert->fill(Arr::only($data, [
-                    'organization_id', 'concert_code', 'name', 'artist', 'venue', 'address', 'description',
+                    'c_organization_id', 'concert_code', 'name', 'artist', 'venue', 'description',
+                    'phone', 'email', 'facebook', 'line',
                     'event_datetime', 'sale_start_datetime', 'sale_end_datetime', 'max_ticket_per_order', 'status',
                 ]));
 
                 foreach (self::IMAGE_COLUMNS as $type => $column) {
                     if ($request->hasFile($type)) {
-                        $path = $request->file($type)->store("concerts/{$concert->concert_id}", 'public');
+                        $path = $request->file($type)->store("concerts/{$concert->c_id}", 'public');
                         $newPaths[] = $path;
                         if ($concert->{$column}) {
                             $oldToDelete[] = $concert->{$column};
@@ -199,7 +206,7 @@ class ConcertImageController extends Controller
         }
 
         return redirect()
-            ->route('manage.images', ['concert' => $concert->concert_id])
+            ->route('manage.images', ['concert' => $concert->c_id])
             ->with('success', 'บันทึกข้อมูลคอนเสิร์ตเรียบร้อยแล้ว');
     }
 
@@ -281,8 +288,8 @@ class ConcertImageController extends Controller
     {
         $rows = [];
 
-        foreach ($concert->zones()->orderBy('zone_id')->get() as $zone) {
-            $key   = (string) $zone->zone_id;
+        foreach ($concert->zones()->orderBy('z_id')->get() as $zone) {
+            $key   = (string) $zone->z_id;
             $input = $old[$key] ?? [];
 
             $rows[] = [
@@ -295,9 +302,9 @@ class ConcertImageController extends Controller
                 'capacity'          => $input['capacity']          ?? $zone->capacity,
                 'total_rows'        => $input['total_rows']        ?? $zone->total_rows,
                 'seats_per_row'     => $input['seats_per_row']     ?? $zone->seats_per_row,
-                'seat_start_number' => $input['seat_start_number'] ?? $zone->seat_start_number,
+                'seat_number_start' => $input['seat_number_start'] ?? $zone->seat_number_start,
                 'locked'            => $this->zoneHasActivity($zone),
-                'sold'              => (int) $zone->tickets()->sum('quantity'),
+                'sold'              => $this->soldTickets($zone),
                 'remove'            => !empty($input['_delete']),
             ];
         }
@@ -310,14 +317,14 @@ class ConcertImageController extends Controller
             $rows[] = [
                 'key'               => (string) $key,
                 'is_new'            => true,
-                'zone_type'         => $input['zone_type'] ?? 'SEATED',
+                'zone_type'         => $input['zone_type'] ?? Zone::TYPE_SEATED,
                 'name'              => $input['name'] ?? '',
                 'price'             => $input['price'] ?? '',
                 'color'             => $input['color'] ?? self::DEFAULT_ZONE_COLOR,
                 'capacity'          => $input['capacity'] ?? '',
                 'total_rows'        => $input['total_rows'] ?? '',
                 'seats_per_row'     => $input['seats_per_row'] ?? '',
-                'seat_start_number' => $input['seat_start_number'] ?? 1,
+                'seat_number_start' => $input['seat_number_start'] ?? 1,
                 'locked'            => false,
                 'sold'              => 0,
                 'remove'            => false,
@@ -330,23 +337,31 @@ class ConcertImageController extends Controller
     /**
      * zoneHasActivity(zone)
      * ตรวจว่าโซนมีการจอง/ขายตั๋ว/ล็อกที่นั่งแล้วหรือไม่ (ถ้ามี ห้ามลบโซนและห้ามแก้โครงสร้างที่นั่ง)
+     * schema 3.4.2: booking อ้างถึงโซนโดยตรง (b_zone_id) โซนที่เคยมีการจองจึงลบไม่ได้ ไม่งั้น foreign key จะไม่ยอม
      * param : zone
      * return : bool
      */
     private function zoneHasActivity(Zone $zone): bool
     {
-        if ($zone->tickets()->exists()) {
+        if ($zone->tickets()->exists() || $zone->bookings()->exists()) {
             return true;
         }
-        if ($zone->zone_type === 'STANDING') {
+        if ($zone->isStanding()) {
             return false;
         }
 
-        return $zone->seats()->where('seat_booking_status', '!=', 'AVAILABLE')->exists()
-            || DB::table('booking_seat')->join('seat', 'seat.seat_id', '=', 'booking_seat.seat_id')
-                ->where('seat.zone_id', $zone->zone_id)->exists()
-            || DB::table('seat_lock_log')->join('seat', 'seat.seat_id', '=', 'seat_lock_log.seat_id')
-                ->where('seat.zone_id', $zone->zone_id)->exists();
+        return $zone->seats()->where('seat_booking_status', '!=', Seat::STATUS_AVAILABLE)->exists();
+    }
+
+    /**
+     * soldTickets(zone)
+     * จำนวนตั๋วที่ยังใช้ได้ (status = valid) ของโซน
+     * param : zone
+     * return : int
+     */
+    private function soldTickets(Zone $zone): int
+    {
+        return $zone->tickets()->where('status', Ticket::STATUS_VALID)->count();
     }
 
     /**
@@ -357,7 +372,7 @@ class ConcertImageController extends Controller
      */
     private function planZoneChanges(Concert $concert, array $zonesInput): array
     {
-        $existing = $concert->zones()->get()->keyBy('zone_id');
+        $existing = $concert->zones()->get()->keyBy('z_id');
         $ops      = [];
         $errors   = [];
 
@@ -396,16 +411,18 @@ class ConcertImageController extends Controller
                 continue;
             }
 
-            if ($zone->zone_type === 'STANDING') {
-                $sold = (int) $zone->tickets()->sum('quantity');
+            if ($zone->isStanding()) {
+                // จำนวนที่ใช้ไปแล้ว = ที่จองรอชำระ (held) + ที่ขายแล้ว (sold) ใน zone_inventory
+                $inventory = $zone->inventory;
+                $used = $inventory ? (int) $inventory->held + (int) $inventory->sold : $this->soldTickets($zone);
                 $cap  = (int) ($z['capacity'] ?? 0);
                 if ($cap < 1) {
                     $errors[] = "{$label}: กรุณากรอกจำนวนที่รองรับ";
-                } elseif ($cap < $sold) {
-                    $errors[] = "{$label}: จำนวนที่รองรับต้องไม่น้อยกว่าตั๋วที่ขายแล้ว ({$sold} ใบ)";
+                } elseif ($cap < $used) {
+                    $errors[] = "{$label}: จำนวนที่รองรับต้องไม่น้อยกว่าตั๋วที่ขายและจองไว้แล้ว ({$used} ใบ)";
                 }
             } elseif (!$locked) {
-                $errors = array_merge($errors, $this->checkZoneSize('SEATED', $z, $label));
+                $errors = array_merge($errors, $this->checkZoneSize(Zone::TYPE_SEATED, $z, $label));
             }
 
             $ops[] = ['op' => 'update', 'zone' => $zone, 'data' => $z, 'type' => $zone->zone_type, 'locked' => $locked];
@@ -422,7 +439,7 @@ class ConcertImageController extends Controller
      */
     private function checkZoneSize(string $type, array $z, string $label): array
     {
-        if ($type === 'STANDING') {
+        if ($type === Zone::TYPE_STANDING) {
             return empty($z['capacity']) ? ["{$label}: กรุณากรอกจำนวนที่รองรับ"] : [];
         }
 
@@ -451,8 +468,8 @@ class ConcertImageController extends Controller
             $zone = $op['zone'];
 
             if ($op['op'] === 'delete') {
-                Seat::where('zone_id', $zone->zone_id)->delete();
-                ZoneSeatPattern::where('zone_id', $zone->zone_id)->delete();
+                Seat::where('s_zone_id', $zone->z_id)->delete();
+                ZoneInventory::whereKey($zone->z_id)->delete();
                 $zone->delete();
                 continue;
             }
@@ -463,14 +480,16 @@ class ConcertImageController extends Controller
                 'color' => $z['color'] ?: self::DEFAULT_ZONE_COLOR,
             ];
 
-            if ($op['type'] === 'STANDING') {
+            if ($op['type'] === Zone::TYPE_STANDING) {
                 $attrs['capacity'] = (int) $z['capacity'];
                 if ($op['op'] === 'create') {
-                    Zone::create($attrs + [
-                        'concert_id'        => $concert->concert_id,
-                        'zone_type'         => 'STANDING',
-                        'seat_start_number' => 1,
+                    $zone = Zone::create($attrs + [
+                        'z_concert_id'      => $concert->c_id,
+                        'zone_type'         => Zone::TYPE_STANDING,
+                        'seat_number_start' => 1,
                     ]);
+                    // โซนยืนต้องมีแถวตัวนับใน zone_inventory (held = จองรอชำระ, sold = ขายแล้ว)
+                    ZoneInventory::create(['zi_zone_id' => $zone->z_id, 'held' => 0, 'sold' => 0]);
                 } else {
                     $zone->update($attrs);
                 }
@@ -481,36 +500,36 @@ class ConcertImageController extends Controller
             if ($op['op'] === 'create' || !$op['locked']) {
                 $rows   = (int) $z['total_rows'];
                 $perRow = (int) $z['seats_per_row'];
-                $start  = (int) ($z['seat_start_number'] ?: 1);
+                $start  = (int) (($z['seat_number_start'] ?? null) ?: 1);
 
                 $attrs += [
                     'total_rows'        => $rows,
                     'seats_per_row'     => $perRow,
-                    'seat_start_number' => $start,
+                    'seat_number_start' => $start,
                     'capacity'          => $rows * $perRow,
                 ];
             }
 
             if ($op['op'] === 'create') {
                 $zone = Zone::create($attrs + [
-                    'concert_id' => $concert->concert_id,
-                    'zone_type'  => 'SEATED',
+                    'z_concert_id' => $concert->c_id,
+                    'zone_type'    => Zone::TYPE_SEATED,
                 ]);
-                $this->generateSeats($zone, $attrs['total_rows'], $attrs['seats_per_row'], $attrs['seat_start_number']);
+                $this->generateSeats($zone, $attrs['total_rows'], $attrs['seats_per_row'], $attrs['seat_number_start']);
                 continue;
             }
 
             $layoutChanged = isset($attrs['total_rows']) && (
                 (int) $zone->total_rows           !== $attrs['total_rows']
                 || (int) $zone->seats_per_row     !== $attrs['seats_per_row']
-                || (int) $zone->seat_start_number !== $attrs['seat_start_number']
+                || (int) $zone->seat_number_start !== $attrs['seat_number_start']
             );
 
             $zone->update($attrs);
 
             if ($layoutChanged) {
-                Seat::where('zone_id', $zone->zone_id)->delete();
-                $this->generateSeats($zone, $attrs['total_rows'], $attrs['seats_per_row'], $attrs['seat_start_number']);
+                Seat::where('s_zone_id', $zone->z_id)->delete();
+                $this->generateSeats($zone, $attrs['total_rows'], $attrs['seats_per_row'], $attrs['seat_number_start']);
             }
         }
     }
@@ -528,11 +547,11 @@ class ConcertImageController extends Controller
         for ($r = 1; $r <= $rows; $r++) {
             for ($n = 0; $n < $perRow; $n++) {
                 $batch[] = [
-                    'zone_id'             => $zone->zone_id,
+                    's_zone_id'           => $zone->z_id,
                     'row'                 => chr(64 + $r),
                     'number'              => $start + $n,
-                    'seat_booking_status' => 'AVAILABLE',
-                    'seat_status'         => 'NORMAL',
+                    'seat_booking_status' => Seat::STATUS_AVAILABLE,
+                    'seat_status'         => Seat::SEAT_ACTIVE,
                 ];
             }
         }
@@ -566,6 +585,7 @@ class ConcertImageController extends Controller
             'date'         => ':attribute รูปแบบวันที่ไม่ถูกต้อง',
             'in'           => ':attribute ไม่ถูกต้อง',
             'exists'       => ':attribute ไม่ถูกต้อง',
+            'email'        => ':attribute รูปแบบอีเมลไม่ถูกต้อง',
             'unique'       => ':attribute นี้ถูกใช้แล้ว',
             'regex'        => ':attribute ไม่ถูกต้อง',
             'image'        => ':attribute ต้องเป็นไฟล์รูปภาพ',
@@ -584,13 +604,16 @@ class ConcertImageController extends Controller
     private function validationAttributes(): array
     {
         return [
-            'organization_id'      => 'ผู้จัด',
+            'c_organization_id'    => 'ผู้จัด',
             'concert_code'         => 'รหัสคอนเสิร์ต',
             'name'                 => 'ชื่อคอนเสิร์ต',
             'artist'               => 'ศิลปิน',
             'venue'                => 'สถานที่',
-            'address'              => 'ที่อยู่',
             'description'          => 'รายละเอียด',
+            'phone'                => 'เบอร์โทรติดต่อ',
+            'email'                => 'อีเมลติดต่อ',
+            'facebook'             => 'Facebook',
+            'line'                 => 'LINE',
             'event_datetime'       => 'วัน-เวลาแสดง',
             'sale_start_datetime'  => 'วันเปิดขาย',
             'sale_end_datetime'    => 'วันปิดขาย',
@@ -605,7 +628,7 @@ class ConcertImageController extends Controller
             'zones.*.capacity'     => 'จำนวนที่รองรับ',
             'zones.*.total_rows'   => 'จำนวนแถว',
             'zones.*.seats_per_row'     => 'จำนวนที่นั่งต่อแถว',
-            'zones.*.seat_start_number' => 'เลขที่นั่งเริ่มต้น',
+            'zones.*.seat_number_start' => 'เลขที่นั่งเริ่มต้น',
         ];
     }
 }

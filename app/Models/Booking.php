@@ -7,7 +7,7 @@
  * โซนที่นั่งเก็บที่นั่งใน booking_seat, โซนยืนเก็บจำนวนใน standing_quantity และนับใน zone_inventory
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -86,6 +86,17 @@ class Booking extends Model
     public function ticketQuantity(): int
     {
         return $this->isStanding() ? (int) $this->standing_quantity : $this->bookingSeats()->count();
+    }
+
+    /**
+     * concertId()
+     * รหัสคอนเสิร์ตของการจอง (schema 3.4.2 ไม่มี concert_id ในตาราง booking จึงดูจากโซนที่จอง)
+     * param : -
+     * return : int
+     */
+    public function concertId(): int
+    {
+        return (int) ($this->zone?->z_concert_id ?? 0);
     }
 
     /**

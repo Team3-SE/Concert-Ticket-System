@@ -5,6 +5,7 @@
  * - ขวา: ฟอร์มแก้ไขของคอนเสิร์ตที่เลือก (ส่งไป ConcertImageController@update)
  * @Author
  * @Create Date
+ * @Update Date 11/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 @extends('layouts.user')
 
@@ -89,7 +90,7 @@
     $editorConfig = [
       'dirty'    =>$errors->any(),
       'zones'    =>$zoneRows,
-      'resetUrl' =>route('manage.images', ['concert' =>$selected->concert_id]),
+      'resetUrl' =>route('manage.images', ['concert' =>$selected->c_id]),
       'limits'   =>collect($imageSizes)->map(fn ($s) =>$s['maxKB'])->all(),
       'images'   =>collect($imageTypes)->map(fn ($m) =>[
           'url'     =>$selected->{$m['column']} ? asset('storage/' . $selected->{$m['column']}) : null,
@@ -111,8 +112,8 @@
       </div>
       <div class="max-h-[260px] lg:max-h-[calc(100vh-190px)] overflow-y-auto divide-y divide-gray-50">
         @foreach($concerts as $c)
-          @php $isCurrent = $c->concert_id === $selected->concert_id; @endphp
-          <a href="{{ route('manage.images', ['concert' =>$c->concert_id]) }}"
+          @php $isCurrent = $c->c_id === $selected->c_id; @endphp
+          <a href="{{ route('manage.images', ['concert' =>$c->c_id]) }}"
              data-search="{{ \Illuminate\Support\Str::lower($c->name . ' ' . $c->artist . ' ' . $c->concert_code) }}"
              x-show="!q || $el.dataset.search.includes(q.toLowerCase())"
              class="flex gap-3 p-3 transition {{ $isCurrent ? 'bg-blue-50 border-l-4 border-[#F47B1F]' : 'hover:bg-gray-50 border-l-4 border-transparent' }}">
@@ -135,7 +136,7 @@
     </aside>
 
     {{-- ===== ฟอร์มแก้ไข (ฟอร์มเดียว บันทึกทั้งหมด) ===== --}}
-    <form method="POST" action="{{ route('manage.concerts.update', $selected->concert_id) }}" enctype="multipart/form-data"
+    <form method="POST" action="{{ route('manage.concerts.update', $selected->c_id) }}" enctype="multipart/form-data"
           x-data="concertEditor(@js($editorConfig))"
           @input="dirty = true" @change="dirty = true" @submit="submitting = true"
           class="space-y-6 min-w-0">
@@ -148,7 +149,7 @@
           <h2 class="font-bold text-base truncate">{{ $selected->name }}</h2>
           <p class="text-blue-200 text-xs mt-0.5">รหัส {{ $selected->concert_code }} · แสดง {{ $selected->event_datetime->thDateTime() }}</p>
         </div>
-        <a href="{{ url('/booking?concert_id=' . $selected->concert_id) }}" target="_blank" rel="noopener"
+        <a href="{{ url('/booking?concert_id=' . $selected->c_id) }}" target="_blank" rel="noopener"
            class="text-xs px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 transition font-medium">
           ดูหน้าจอง ↗
         </a>
@@ -167,24 +168,37 @@
             <input id="f-code" type="text" name="concert_code" required maxlength="100" value="{{ old('concert_code', $selected->concert_code) }}" class="{{ $field('concert_code') }}">
           </div>
           <div>
-            <label class="{{ $label }}" for="f-artist">ศิลปิน</label>
-            <input id="f-artist" type="text" name="artist" maxlength="255" value="{{ old('artist', $selected->artist) }}" class="{{ $field('artist') }}">
+            <label class="{{ $label }}" for="f-artist">ศิลปิน <span class="text-red-500">*</span></label>
+            <input id="f-artist" type="text" name="artist" required maxlength="255" value="{{ old('artist', $selected->artist) }}" class="{{ $field('artist') }}">
           </div>
           <div>
             <label class="{{ $label }}" for="f-org">ผู้จัด <span class="text-red-500">*</span></label>
-            <select id="f-org" name="organization_id" required class="{{ $field('organization_id') }}">
+            <select id="f-org" name="c_organization_id" required class="{{ $field('c_organization_id') }}">
               @foreach($organizations as $org)
-                <option value="{{ $org->organization_id }}" @selected((int) old('organization_id', $selected->organization_id) === (int) $org->organization_id)>{{ $org->name }}</option>
+                <option value="{{ $org->org_id }}" @selected((int) old('c_organization_id', $selected->c_organization_id) === (int) $org->org_id)>{{ $org->name }}</option>
               @endforeach
             </select>
           </div>
           <div>
-            <label class="{{ $label }}" for="f-venue">สถานที่</label>
-            <input id="f-venue" type="text" name="venue" maxlength="255" value="{{ old('venue', $selected->venue) }}" class="{{ $field('venue') }}">
+            <label class="{{ $label }}" for="f-venue">สถานที่ <span class="text-red-500">*</span></label>
+            <input id="f-venue" type="text" name="venue" required maxlength="500" value="{{ old('venue', $selected->venue) }}" class="{{ $field('venue') }}">
+          </div>
+          {{-- schema 3.4.2: ช่องทางติดต่อผู้จัดเก็บไว้ที่คอนเสิร์ต (แสดงในหน้ารายละเอียด หน้าจอง และหน้าชำระเงิน) --}}
+          <div>
+            <label class="{{ $label }}" for="f-phone">เบอร์โทรติดต่อ</label>
+            <input id="f-phone" type="text" name="phone" maxlength="50" value="{{ old('phone', $selected->phone) }}" class="{{ $field('phone') }}">
           </div>
           <div>
-            <label class="{{ $label }}" for="f-address">ที่อยู่</label>
-            <input id="f-address" type="text" name="address" maxlength="500" value="{{ old('address', $selected->address) }}" class="{{ $field('address') }}">
+            <label class="{{ $label }}" for="f-email">อีเมลติดต่อ</label>
+            <input id="f-email" type="email" name="email" maxlength="255" value="{{ old('email', $selected->email) }}" class="{{ $field('email') }}">
+          </div>
+          <div>
+            <label class="{{ $label }}" for="f-facebook">Facebook</label>
+            <input id="f-facebook" type="text" name="facebook" maxlength="255" value="{{ old('facebook', $selected->facebook) }}" class="{{ $field('facebook') }}">
+          </div>
+          <div>
+            <label class="{{ $label }}" for="f-line">LINE</label>
+            <input id="f-line" type="text" name="line" maxlength="255" value="{{ old('line', $selected->line) }}" class="{{ $field('line') }}">
           </div>
           <div>
             <label class="{{ $label }}" for="f-event">วัน-เวลาแสดง <span class="text-red-500">*</span></label>
@@ -348,7 +362,7 @@
                     </div>
                     <div class="w-28">
                       <label class="{{ $label }}">เลขเริ่มต้น</label>
-                      <input type="number" required min="1" max="999" :disabled="z.locked" :name="'zones[' + z.key + '][seat_start_number]'" x-model="z.seat_start_number"
+                      <input type="number" required min="1" max="999" :disabled="z.locked" :name="'zones[' + z.key + '][seat_number_start]'" x-model="z.seat_number_start"
                              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100 disabled:text-gray-400">
                     </div>
                     <p class="text-xs text-gray-500 pb-2.5">รวม <strong class="text-gray-700" x-text="seatTotal(z).toLocaleString()"></strong>ที่นั่ง</p>
@@ -496,7 +510,7 @@
           capacity: '',
           total_rows: '',
           seats_per_row: '',
-          seat_start_number: 1,
+          seat_number_start: 1,
           locked: false,
           sold: 0,
           remove: false,

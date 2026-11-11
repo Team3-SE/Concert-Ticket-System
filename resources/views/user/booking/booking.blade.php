@@ -3,7 +3,7 @@
  * หน้าเลือกโซนและที่นั่งของคอนเสิร์ต
  * @Author 67160434 จิตฏิยากร โสภา
  * @Create Date 2026-10-13
- * @Update Date 23/10/2569 67160292 ธีรเมธ พลสาย
+ * @Update Date 11/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 @extends('layouts.user')
 
@@ -55,14 +55,14 @@
             </div>
 
             @if($concert)
-              @php($organization = $concert->organization)
+              {{-- schema 3.4.2: ช่องทางติดต่อผู้จัดเก็บไว้ที่คอนเสิร์ต --}}
               <div class="contact-info">
                 <p>ติดต่อผู้จัดงาน</p>
                 <div class="contact-grid">
-                  <div>โทร: <span>{{ $organization?->phone ?: '-' }}</span></div>
-                  <div>Facebook: <span>{{ $organization?->facebook ?: '-' }}</span></div>
-                  <div>LINE: <span>{{ $organization?->line ?: '-' }}</span></div>
-                  <div>Email: <span>{{ $organization?->email ?: '-' }}</span></div>
+                  <div>โทร: <span>{{ $concert->phone ?: '-' }}</span></div>
+                  <div>Facebook: <span>{{ $concert->facebook ?: '-' }}</span></div>
+                  <div>LINE: <span>{{ $concert->line ?: '-' }}</span></div>
+                  <div>Email: <span>{{ $concert->email ?: '-' }}</span></div>
                 </div>
               </div>
             @endif
@@ -482,7 +482,7 @@
       const dbZones = @json($zones ?? []);
       const dbOccupied = @json($occupiedSeats ?? []);
       const dbPending = @json($pendingSeats ?? []);
-      const concertId = @json($concert ? $concert->concert_id : null);
+      const concertId = @json($concert ? $concert->c_id : null);
       const maxTickets = @json($concert ? $concert->max_ticket_per_order : 4);
 
       const defaultCols = Array.from({ length: 20 }, (_, i) => i + 1);
