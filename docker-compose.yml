@@ -55,6 +55,8 @@
     image: mysql:8.0
     container_name: concert_db
     restart: unless-stopped
+    # ใช้เวลาประเทศไทยเป็นค่าเริ่มต้นของ MySQL (มีผลกับ NOW() ตอน import ไฟล์ mock ผ่าน Workbench ด้วย)
+    command: ["--default-time-zone=+07:00"]
     ports:
       - "${DB_PORT:-3306}:3306"
     environment:

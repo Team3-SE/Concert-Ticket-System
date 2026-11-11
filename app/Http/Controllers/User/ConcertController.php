@@ -5,7 +5,7 @@
  * จัดการข้อมูลคอนเสิร์ตฝั่งลูกค้า: รายการ ค้นหา รายการแนะนำขณะพิมพ์ และรายละเอียดคอนเสิร์ต
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -41,13 +41,13 @@ class ConcertController extends Controller
 
     /**
      * getConcertList()
-     * ดึงรายการคอนเสิร์ตที่ยังไม่ถูกลบ เรียงตามวันเปิดขาย (Concert ใช้ SoftDeletes ไม่ดึงคอนเสิร์ตที่ถูกลบมาเอง)
+     * ดึงรายการคอนเสิร์ตที่ลูกค้าเห็นได้ (ไม่ถูกลบ ไม่ใช่ DRAFT) เรียงตามวันเปิดขาย พร้อมจำนวนบัตรคงเหลือสำหรับป้ายสถานะ
      * param : -
      * return : Collection ของ Concert
      */
     public function getConcertList()
     {
-        return Concert::with('organization')
+        return $this->publicConcerts()
             ->orderBy('sale_start_datetime', 'asc')
             ->get();
     }
@@ -76,7 +76,8 @@ class ConcertController extends Controller
 
         $query = $base->withMin('zones', 'price');   // zones_min_price = ราคาเริ่มต้น
         if ($status !== '') {
-            $query->where('status', $status);
+            // กรองตามสถานะที่แสดงผล (เช่น ขายหมด = ตั้งสถานะ SOLD_OUT หรือที่นั่งถูกจองหมดแล้ว)
+            $query->whereDisplayStatus($status);
         }
 
         // คอนเสิร์ตที่ยังไม่จัดขึ้นก่อน แล้วเรียงตามวันแสดงที่ใกล้ที่สุด
@@ -143,7 +144,7 @@ class ConcertController extends Controller
                 'date'         => $concert->event_datetime
                     ? Carbon::parse($concert->event_datetime)->thDateLong() . ' ' . Carbon::parse($concert->event_datetime)->format('H:i') . ' น.'
                     : null,
-                'status'       => strtoupper((string) $concert->status),
+                'status'       => $concert->displayStatus(),
                 'poster'       => $concert->poster_path ? asset('storage/' . $concert->poster_path) : null,
                 'url'          => url('/concert-detail?concert_id=' . $concert->c_id),
             ])->values(),
@@ -152,7 +153,7 @@ class ConcertController extends Controller
 
     /**
      * getConcertDetail(concertId)
-     * ดึงรายละเอียดคอนเสิร์ต พร้อมผู้จัด (ช่องทางติดต่อ) และโซน
+     * ดึงรายละเอียดคอนเสิร์ต พร้อมผู้จัดและโซน (คอนเสิร์ตฉบับร่าง DRAFT ลูกค้าเปิดไม่ได้ ตอบ 404)
      * param : concertId
      * return : Concert (ถ้าไม่พบจะตอบ 404)
      */
@@ -160,6 +161,7 @@ class ConcertController extends Controller
     {
         return Concert::with(['organization', 'zones'])
             ->whereKey($concertId)
+            ->where('status', '!=', Concert::STATUS_DRAFT)
             ->firstOrFail();
     }
 
@@ -167,14 +169,15 @@ class ConcertController extends Controller
 
     /**
      * publicConcerts()
-     * สร้าง query ของคอนเสิร์ตที่ลูกค้าเห็นได้ (ไม่ถูกลบ และไม่ใช่ DRAFT)
+     * สร้าง query ของคอนเสิร์ตที่ลูกค้าเห็นได้ (ไม่ถูกลบ และไม่ใช่ DRAFT) พร้อมจำนวนบัตรคงเหลือ (available_tickets)
      * param : -
      * return : Builder
      */
     private function publicConcerts(): Builder
     {
         return Concert::with('organization')
-            ->where('status', '!=', Concert::STATUS_DRAFT);
+            ->withAvailability()
+            ->where('concert.status', '!=', Concert::STATUS_DRAFT);
     }
 
     /**

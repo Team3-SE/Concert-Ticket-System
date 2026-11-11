@@ -2,31 +2,18 @@
 
 /**
  * routes/web.php
- * route ฝั่ง User (ลูกค้า + คนที่ยังไม่ login), เข้าสู่ระบบ/ออกจากระบบ และเครื่องมือ dev
+ * route ฝั่ง User (ลูกค้า + คนที่ยังไม่ login) และเข้าสู่ระบบ/ออกจากระบบ
  * หลังบ้านแยกไฟล์ (require ท้ายไฟล์นี้): routes/organizer.php, routes/admin.php, routes/staff.php
  * role ของแต่ละ route ตรวจด้วย middleware role (app/Http/Middleware/EnsureRole.php)
  *   - role:GUEST,USER = ลูกค้าและคนที่ยังไม่ login เท่านั้น (Organizer/Admin/Staff ถูกพากลับหน้าแรกของ role ตัวเอง)
  *   - role:GUEST = เฉพาะคนที่ยังไม่ login (หน้าลืมรหัสผ่าน)
- * Updated : 29/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
  */
 
-use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
-use Illuminate\Cookie\Middleware\EncryptCookies;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
-use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
-use Illuminate\View\Middleware\ShareErrorsFromSession;
 use App\Http\Controllers\User\OrderController;
 use App\Http\Controllers\User\ProfileController;
 use App\Http\Controllers\User\TicketController;
-
-$statelessDevMiddleware = [
-    EncryptCookies::class,
-    AddQueuedCookiesToResponse::class,
-    StartSession::class,
-    ShareErrorsFromSession::class,
-    VerifyCsrfToken::class,
-];
 
 Route::view('/welcome', 'welcome');
 // ===== จัดการรูปภาพคอนเสิร์ต (หน้าเดิม ยังไม่ได้จำกัด role: view อยู่ที่ organizer/concerts/manage-images) =====
@@ -34,14 +21,6 @@ Route::get('/manage-images', [\App\Http\Controllers\Organizer\ConcertImageContro
 Route::put('/manage/concerts/{concertId}', [\App\Http\Controllers\Organizer\ConcertImageController::class, 'update'])->name('manage.concerts.update');
 Route::post('/manage/images/{concertId}/{type}', [\App\Http\Controllers\Organizer\ConcertImageController::class, 'upload']);
 Route::delete('/manage/images/{concertId}/{type}', [\App\Http\Controllers\Organizer\ConcertImageController::class, 'destroy']);
-
-// ===== DEV TOOLS (Model Tester) =====
-Route::get('/dev/models', function () {
-    return view('dev.model-tester');
-})->withoutMiddleware($statelessDevMiddleware);
-
-Route::post('/dev/models/methods', [\App\Http\Controllers\Dev\ModelTesterController::class, 'getMethods'])->withoutMiddleware($statelessDevMiddleware);
-Route::post('/dev/models/execute', [\App\Http\Controllers\Dev\ModelTesterController::class, 'execute'])->withoutMiddleware($statelessDevMiddleware);
 
 // ===== ฝั่ง User: เปิดได้ทั้งลูกค้าและคนที่ยังไม่ login =====
 Route::middleware('role:GUEST,USER')->group(function () {
@@ -69,9 +48,9 @@ Route::middleware('role:GUEST,USER')->group(function () {
 
     Route::get('/email/verify', [\App\Http\Controllers\User\EmailVerificationController::class, 'notice'])->name('verification.notice');
     Route::get('/email/verify/{token}', [\App\Http\Controllers\User\EmailVerificationController::class, 'verify'])
-        ->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
+        ->middleware(['signed', 'throttle:6,1,verify-email'])->name('verification.verify');
     Route::post('/email/resend', [\App\Http\Controllers\User\EmailVerificationController::class, 'resend'])
-        ->middleware('throttle:3,1')->name('verification.resend');
+        ->middleware('throttle:3,1,verify-resend')->name('verification.resend');
 });
 
 // ===== ฝั่ง User ที่ต้อง login ก่อน (เฉพาะลูกค้า) =====

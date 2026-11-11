@@ -58,6 +58,7 @@ class ConcertImageController extends Controller
         Concert::STATUS_SCHEDULED => 'เร็ว ๆ นี้ (ยังไม่เปิดขาย)',
         Concert::STATUS_ON_SALE   => 'เปิดขาย',
         Concert::STATUS_SOLD_OUT  => 'ขายหมด',
+        Concert::STATUS_CANCELLED => 'ยกเลิกการแสดง',
     ];
 
     /* ประเภทโซน: SEATED = ระบุที่นั่ง, STANDING = โซนยืน */

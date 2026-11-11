@@ -5,7 +5,7 @@
  * โซนที่นั่งของคอนเสิร์ต (ตาราง zone)
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -74,13 +74,15 @@ class Zone extends Model
 
     /**
      * getAvailableSeats()
-     * ดึงที่นั่งที่ยังว่างในโซน (สำหรับโซน SEATED)
+     * ดึงที่นั่งที่ยังว่างและเปิดใช้งานอยู่ในโซน (สำหรับโซน SEATED) ที่นั่งที่ปิดใช้งาน (disabled / blocked) ไม่นับ
      * param : -
      * return : HasMany Seat
      */
     public function getAvailableSeats(): HasMany
     {
-        return $this->seats()->where('seat_booking_status', Seat::STATUS_AVAILABLE);
+        return $this->seats()
+            ->where('seat_booking_status', Seat::STATUS_AVAILABLE)
+            ->where('seat_status', Seat::SEAT_ACTIVE);
     }
 
     /**

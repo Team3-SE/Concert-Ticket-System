@@ -5,18 +5,21 @@
  * detailed = แสดงสถานที่
  * @Author 67160292 ธีรเมธ พลสาย
  * @Create Date 09-10-2569
- * @Update Date 10/11/2569 67160292 ธีรเมธ พลสาย
+ * @Update Date 11/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 @php
   $detailed = $detailed ?? false;
   $colorClass = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'][($index ?? 0) % 6];
   $concertDate = $concert->event_datetime ? \Carbon\Carbon::parse($concert->event_datetime) : null;
 
-  // ปุ่มตาม concert.status: ON_SALE = ซื้อได้, SOLD_OUT = ขายหมด, อื่น ๆ = Coming Soon
-  [$btnClass, $btnText] = match (strtolower((string) $concert->status)) {
-      'on_sale'  => ['buy', 'Buy Now'],
-      'sold_out' => ['sold-out', 'Sold out'],
-      default    => ['soon', 'Coming Soon'],
+  // ปุ่มตามสถานะที่ระบบคำนวณ (Concert::displayStatus): ซื้อได้เฉพาะ ON_SALE ที่ยังอยู่ในช่วงขาย ยังไม่ถึงเวลาแสดง และบัตรยังไม่หมด
+  [$btnClass, $btnText] = match ($concert->displayStatus()) {
+      \App\Models\Concert::STATUS_ON_SALE       => ['buy', 'Buy Now'],
+      \App\Models\Concert::STATUS_SOLD_OUT      => ['sold-out', 'Sold out'],
+      \App\Models\Concert::STATUS_CANCELLED     => ['sold-out', 'Cancelled'],
+      \App\Models\Concert::DISPLAY_COMPLETED    => ['sold-out', 'Ended'],
+      \App\Models\Concert::DISPLAY_SALE_CLOSED  => ['sold-out', 'Sales closed'],
+      default                                    => ['soon', 'Coming Soon'],
   };
 @endphp
 <div class="card">

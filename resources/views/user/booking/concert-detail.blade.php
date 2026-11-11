@@ -3,7 +3,7 @@
   * หน้ารายละเอียดคอนเสิร์ตและข้อมูลบัตร
   * @Author 67160279 กนกพล แซ่ตั๊น
   * @Create Date 18-10-2026
-  * @Update Date 10/11/2569 67160292 ธีรเมธ พลสาย
+  * @Update Date 11/11/2569 67160292 ธีรเมธ พลสาย
 *@--}}
 
 @extends('layouts.user')
@@ -109,15 +109,15 @@
               </p>
             </div>
             <div class="mt-2 flex justify-center">
-              @if($concert->status === 'ON_SALE')
+              @if($concert->canBook())
                 {{-- ยังไม่ login: เปิดหน้าต่างเข้าสู่ระบบแทน แล้ว login เสร็จพาไปหน้าจองบัตรต่อ (resources/js/user/auth-modal.js) --}}
                 <a href="{{ url('/booking?concert_id=' . $concert->c_id) }}" @guest data-login-required @endguest class="btn-clean-submit !text-[16px] block w-full max-w-[660px] text-center">
                   ซื้อบัตรการแสดง
                 </a>
               @else
-                {{-- สถานะที่ไม่ใช่ ON_SALE: กดจองไม่ได้ --}}
+                {{-- จองไม่ได้: บอกเหตุผลตามสถานะ (บัตรหมด / ยกเลิก / การแสดงจบแล้ว / ปิดการขาย / ยังไม่เปิดขาย) --}}
                 <button type="button" disabled class="btn-clean-submit !text-[16px] block w-full max-w-[660px] text-center">
-                  {{ $concert->status === 'SOLD_OUT' ? 'บัตรหมดแล้ว' : 'ยังไม่เปิดขายบัตร' }}
+                  {{ $concert->bookingBlockedMessage() }}
                 </button>
               @endif
             </div>

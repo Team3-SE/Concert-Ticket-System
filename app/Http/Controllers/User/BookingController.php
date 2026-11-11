@@ -44,14 +44,9 @@ class BookingController extends Controller
         $concert = $concertId
             ? $concertController->getConcertDetail($concertId)
             : Concert::with(['organization', 'zones'])
-                ->where('status', Concert::STATUS_ON_SALE)
+                ->whereDisplayStatus(Concert::STATUS_ON_SALE)   // คอนเสิร์ตที่จองได้จริงตอนนี้
                 ->orderBy('event_datetime', 'asc')
                 ->first();
-
-        // คอนเสิร์ตที่ไม่ได้เปิดขาย (ยังไม่เปิด/ขายหมด/ยกเลิก) เข้าหน้าจองไม่ได้ → กลับไปหน้ารายละเอียด
-        if ($concert && $concert->status !== Concert::STATUS_ON_SALE) {
-            return redirect('/concert-detail?concert_id=' . $concert->c_id);
-        }
 
         if (! $concert) {
             return view('user.booking.booking', [
@@ -61,8 +56,13 @@ class BookingController extends Controller
             ]);
         }
 
-        // ครบ 10 นาทีแล้วไม่ชำระ: ปล่อยที่นั่งกลับเป็นว่างก่อนแสดงผังที่นั่ง
+        // ครบ 10 นาทีแล้วไม่ชำระ: ปล่อยที่นั่งกลับเป็นว่างก่อน (ก่อนตรวจว่าบัตรหมดหรือยัง และก่อนแสดงผังที่นั่ง)
         Booking::releaseExpired($concert->c_id);
+
+        // จองไม่ได้ (ยังไม่เปิดขาย / เลยวันปิดขาย / การแสดงจบแล้ว / บัตรหมด / ยกเลิก) → กลับไปหน้ารายละเอียด
+        if (! $concert->canBook()) {
+            return redirect('/concert-detail?concert_id=' . $concert->c_id);
+        }
 
         // ที่นั่งที่ผู้ใช้คนนี้ล็อกไว้เองและยังไม่ชำระ: ไม่นับเป็น "คนอื่นกำลังชำระเงิน" (สีส้ม) แต่ยังเลือกซ้ำไม่ได้
         $ownLockedSeatIds = $request->user()
@@ -133,9 +133,14 @@ class BookingController extends Controller
         $concert = $concertId
             ? $concertController->getConcertDetail($concertId)
             : Concert::with(['organization', 'zones'])
-                ->where('status', Concert::STATUS_ON_SALE)
+                ->whereDisplayStatus(Concert::STATUS_ON_SALE)   // คอนเสิร์ตที่จองได้จริงตอนนี้
                 ->orderBy('event_datetime', 'asc')
                 ->first();
+
+        // ปล่อยการจองที่หมดเวลาแล้วก่อนนับบัตรคงเหลือ (ไม่มี scheduler รันอยู่ก็ยังได้ตัวเลขที่ถูก)
+        if ($concert) {
+            Booking::releaseExpired($concert->c_id);
+        }
 
         $zones = $concert
             ? $concert->zones->map(function ($zone) {
@@ -317,9 +322,9 @@ class BookingController extends Controller
         // ปล่อยที่นั่งที่หมดเวลาก่อน เพื่อให้จองที่นั่งเดิมได้ทันทีที่ครบเวลา
         Booking::releaseExpired($concert->c_id);
 
-        // จองได้เฉพาะคอนเสิร์ตที่เปิดขายอยู่
-        if ($concert->status !== Concert::STATUS_ON_SALE) {
-            return response()->json(['message' => 'คอนเสิร์ตนี้ยังไม่เปิดขายบัตร'], 422);
+        // จองได้เฉพาะคอนเสิร์ตที่เปิดขายอยู่ ยังอยู่ในช่วงขายบัตร ยังไม่ถึงเวลาแสดง และบัตรยังไม่หมด
+        if (! $concert->canBook()) {
+            return response()->json(['message' => $concert->bookingBlockedMessage()], 422);
         }
 
         $maxTickets = (int) ($concert->max_ticket_per_order ?: 4);

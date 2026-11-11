@@ -1,5 +1,5 @@
 -- =====================================================================
--- Mock ข้อมูลเดโมครบทุกฟังก์ชัน (16 คอนเสิร์ต, ผู้ใช้ทุกบทบาท, ออเดอร์, ตั๋ว) สำหรับนำเสนอ PO
+-- Mock ข้อมูลเดโมครบทุกฟังก์ชัน (17 คอนเสิร์ต รวมคอนเสิร์ตที่ยกเลิก 1 รายการ, ผู้ใช้ทุกบทบาท, ออเดอร์, ตั๋ว) สำหรับนำเสนอ PO
 -- โครงสร้างฐานข้อมูล v3.4.2 (แปลงจากไฟล์เดิมที่ใช้ schema v3.1.0)
 -- รันใน MySQL Workbench ทั้งไฟล์ (Ctrl+Shift+Enter) ฐานข้อมูล concert_db (ต้อง php artisan migrate ให้เป็น v3.4.2 ก่อน)
 -- คำเตือน: ล้างข้อมูลเดิมในทุกตารางก่อนสร้างใหม่
@@ -73,7 +73,8 @@ INSERT INTO `concert` (`c_id`, `c_organization_id`, `name`, `artist`, `venue`, `
 (13, 2, 'Midnight Soul', 'Velvet Voices', 'Siam Pavalai Royal Grand Theatre', '2026-11-07 20:00:00', 'ค่ำคืนโซลและอาร์แอนด์บี บรรยากาศอบอุ่น ที่นั่งเริ่มเหลือน้อย', '02-612-9999', 'contact@bec-tero.example', 'BEC-Tero Entertainment', '@bectero', NULL, NULL, 'seat-maps/demo-midnight-soul.png', '2026-09-10 10:00:00', '2026-11-06 23:59:59', 4, 'ON_SALE', 'C0013', NULL, NOW()),
 (14, 3, 'Anime Music Festival', 'Various Artists', 'Bitec Hall 99', '2027-01-09 12:00:00', 'เทศกาลดนตรีอนิเมะ รวมศิลปินและคอสเพลย์ เปิดขายเร็ว ๆ นี้', '02-111-2233', 'hello@movelive.example', 'Move Live Thailand', '@movelive', NULL, NULL, 'seat-maps/demo-anime-music-festival.png', '2026-11-20 10:00:00', '2027-01-08 23:59:59', 6, 'SCHEDULED', 'C0014', NULL, NOW()),
 (15, 1, 'Thai Folk Night', 'Sala Kham Trio', 'Chiang Mai Convention Centre', '2026-12-06 19:00:00', 'ค่ำคืนเพลงโฟล์กล้านนา ที่นั่งทั้งหมด เหมาะกับการทดสอบจองหลายที่นั่งติดกัน', '02-669-9000', 'contact@gmm-grammy.example', 'GMM Grammy Official', '@gmmgrammy', NULL, NULL, 'seat-maps/demo-thai-folk-night.png', '2026-10-08 10:00:00', '2026-12-05 23:59:59', 4, 'ON_SALE', 'C0015', NULL, NOW()),
-(16, 1, 'Grand Mega Concert 2027', 'All Star Alliance', 'Rajamangala National Stadium', '2027-02-27 17:00:00', 'มหกรรมคอนเสิร์ตสเกลใหญ่สุด ครบทุกรูปแบบ มีทั้งโซนที่นั่งแถวยาว 16-32 ที่นั่งต่อแถว และโซนยืนหลายราคา', '02-669-9000', 'contact@gmm-grammy.example', 'GMM Grammy Official', '@gmmgrammy', NULL, NULL, 'seat-maps/demo-grand-mega-concert.png', '2026-10-15 10:00:00', '2027-02-26 23:59:59', 4, 'ON_SALE', 'C0016', NULL, NOW());
+(16, 1, 'Grand Mega Concert 2027', 'All Star Alliance', 'Rajamangala National Stadium', '2027-02-27 17:00:00', 'มหกรรมคอนเสิร์ตสเกลใหญ่สุด ครบทุกรูปแบบ มีทั้งโซนที่นั่งแถวยาว 16-32 ที่นั่งต่อแถว และโซนยืนหลายราคา', '02-669-9000', 'contact@gmm-grammy.example', 'GMM Grammy Official', '@gmmgrammy', NULL, NULL, 'seat-maps/demo-grand-mega-concert.png', '2026-10-15 10:00:00', '2027-02-26 23:59:59', 4, 'ON_SALE', 'C0016', NULL, NOW()),
+(17, 2, 'Rainy Season Fest 2026', 'The Monsoon Band', 'Central World Square', '2026-12-20 18:00:00', 'เทศกาลดนตรีกลางแจ้งที่ถูกยกเลิกเนื่องจากสภาพอากาศ ใช้ดูสถานะคอนเสิร์ตที่ยกเลิก', '02-612-9999', 'contact@bec-tero.example', 'BEC-Tero Entertainment', '@bectero', NULL, NULL, NULL, '2026-10-01 10:00:00', '2026-12-19 23:59:59', 4, 'CANCELLED', 'C0017', NULL, NOW());
 
 INSERT INTO `zone` (`z_id`, `z_concert_id`, `name`, `zone_type`, `price`, `capacity`, `total_rows`, `seats_per_row`, `seat_number_start`, `color`, `created_at`) VALUES
 (1, 1, 'VIP', 'SEATED', 4500, 30, 3, 10, 1, '#F59E0B', NOW()),
@@ -128,7 +129,8 @@ INSERT INTO `zone` (`z_id`, `z_concert_id`, `name`, `zone_type`, `price`, `capac
 (50, 16, 'Bronze', 'SEATED', 1800, 384, 12, 32, 1, '#10B981', NOW()),
 (51, 16, 'Standing Pit', 'STANDING', 3500, 1000, NULL, NULL, 1, '#EF4444', NOW()),
 (52, 16, 'Standing A', 'STANDING', 2000, 2500, NULL, NULL, 1, '#EC4899', NOW()),
-(53, 16, 'Standing B', 'STANDING', 1200, 4000, NULL, NULL, 1, '#06B6D4', NOW());
+(53, 16, 'Standing B', 'STANDING', 1200, 4000, NULL, NULL, 1, '#06B6D4', NOW()),
+(54, 17, 'Standing', 'STANDING', 1500, 1000, NULL, NULL, 1, '#10B981', NOW());
 
 INSERT INTO `zone_inventory` (`zi_zone_id`, `held`, `sold`) VALUES
 (4, 0, 150),
@@ -147,7 +149,8 @@ INSERT INTO `zone_inventory` (`zi_zone_id`, `held`, `sold`) VALUES
 (42, 0, 0),
 (51, 0, 300),
 (52, 0, 750),
-(53, 0, 1200);
+(53, 0, 1200),
+(54, 0, 0);
 
 INSERT INTO `seat` (`s_id`, `s_zone_id`, `row`, `number`, `seat_booking_status`, `seat_status`) VALUES
 (1, 1, 'A', 1, 'available', 'active'),

@@ -5,7 +5,7 @@
  * แสดงประวัติการสั่งซื้อของผู้ใช้ที่เข้าสู่ระบบ
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 16/10/2569
- * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย (เวลาเป็นเวลาไทยทั้งระบบแล้ว ไม่ต้องแปลงจาก UTC)
  */
 
 namespace App\Http\Controllers\User;
@@ -63,7 +63,7 @@ class OrderController extends Controller
                     ),
                     'zones' => $zones,
                     'ticket_count' => $order->validTickets?->count() ?: (int) $order->quantity,
-                    'order_date' => $this->formatThaiDateTime($order->order_date, true),
+                    'order_date' => $this->formatThaiDateTime($order->order_date),
                     'total_amount' => number_format((float) ($order->payment?->amount ?? $booking?->total_amount ?? 0), 0),
                 ];
             });
@@ -71,16 +71,19 @@ class OrderController extends Controller
         return view('user.account.order-history', compact('orders'));
     }
 
-    private function formatThaiDateTime(mixed $value, bool $convertFromUtc = false): string
+    /**
+     * formatThaiDateTime(value)
+     * แปลงวันเวลาเป็นรูปแบบไทย เช่น 11 พ.ย. 2569 16:30 (ระบบเก็บเวลาเป็นเวลาไทยอยู่แล้ว)
+     * param : value
+     * return : string
+     */
+    private function formatThaiDateTime(mixed $value): string
     {
         if (! $value) {
             return '–';
         }
 
         $date = Carbon::parse($value);
-        if ($convertFromUtc) {
-            $date->setTimezone('Asia/Bangkok');
-        }
 
         $months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
             'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
