@@ -11,13 +11,8 @@
   @foreach(['กรอกอีเมล', 'ใส่รหัสยืนยัน', 'ตั้งรหัสใหม่'] as $i => $label)
     @php($step = $i + 1)
     <li @class(['is-done' => $step < $current, 'is-current' => $step === $current]) @if($step === $current) aria-current="step" @endif>
-      <b>
-        @if($step < $current)
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-        @else
-          {{ $step }}
-        @endif
-      </b>
+      {{-- ทุกขั้นแสดงเป็นตัวเลข (ตามแบบ Figma) แยกสถานะด้วยสี: ทำแล้ว / กำลังทำ / ยังไม่ถึง --}}
+      <b>{{ $step }}</b>
       <span>{{ $label }}</span>
     </li>
   @endforeach
