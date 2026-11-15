@@ -1,8 +1,8 @@
 {{--
  * app.blade.php
  * โครงหน้าแบบมี sidebar ซ้าย (หน้า account) ต่อยอดจาก layouts/user
- * @Author
- * @Create Date
+ * @Author 67160292 ธีรเมธ พลสาย
+ * @Create Date 24/10/2569
  * @Update Date 24/10/2569 67160292 ธีรเมธ พลสาย
 --}}
 @extends('layouts.user')

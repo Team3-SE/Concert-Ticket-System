@@ -2,7 +2,8 @@
  * sidebar.blade.php
  * เมนูซ้ายของหน้า account (เรียกใช้ด้วย @include('user.partials.sidebar'))
  * @Author 67160292 ธีรเมธ พลสาย
- * @Create Date 08-10-2569
+ * @Create Date 09-10-2569
+ * @Update Date 11/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 <aside class="sidebar">
   {{-- sidebar-logo start --}}

@@ -4,7 +4,7 @@
  * WebmailLink
  * ลิงก์เปิดเว็บเมลตามโดเมนของอีเมล (ปุ่ม "เปิด Gmail" ในหน้ายืนยันอีเมลและหน้ากรอกรหัสลืมรหัสผ่าน)
  * Author : 67160292 ธีรเมธ พลสาย
- * Created : 29/10/2569 (ย้ายมาจาก EmailVerificationController::webmailFor)
+ * Created : 29/10/2569 
  */
 
 namespace App\Services;

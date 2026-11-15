@@ -1,14 +1,5 @@
 <?php
 
-/**
- * add_remember_token_and_banner_path
- * เพิ่มคอลัมน์ที่ schema 3.4.2 ไม่มีแต่ระบบยังใช้อยู่ (ตรงกับโมเดล 3.4.3.mwb)
- * - app_user.remember_token : ให้ช่อง "จำฉันไว้" ตอนเข้าสู่ระบบใช้งานได้
- * - concert.banner_path     : path รูปแบนเนอร์แนวนอนของคอนเสิร์ต
- * Author : 67160292 ธีรเมธ พลสาย
- * Created : 10/11/2569
- */
-
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;

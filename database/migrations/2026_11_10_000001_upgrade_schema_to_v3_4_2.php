@@ -1,12 +1,6 @@
 <?php
 
-/**
- * upgrade_schema_to_v3_4_2
- * เปลี่ยนโครงสร้างฐานข้อมูลจากเวอร์ชัน 3.1.0 เป็น 3.4.2
- * ลบตารางของ 3.1.0 ทั้งหมด (ข้อมูลเดิมหาย) แล้วสร้างตารางใหม่จากไฟล์ concert_ticketing_schema_v3.4.2.sql
- * Author : 67160292 ธีรเมธ พลสาย
- * Created : 10/11/2569
- */
+
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;

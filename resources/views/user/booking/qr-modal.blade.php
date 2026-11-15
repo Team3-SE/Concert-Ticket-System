@@ -1,8 +1,8 @@
 {{--
  * qr-modal.blade.php
- * popup ชำระเงินด้วย Thai QR (ใช้ในหน้า payment)
- * @Author
- * @Create Date
+ * หน้าเลือกโซนและที่นั่งของคอนเสิร์ต
+ * @Author 67160434 จิตฏิยากร โสภา
+ * @Create Date 2026-10-13
  * @Update Date 11/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 {{-- THAI QR PAYMENT MODAL COMPONENT --}}
