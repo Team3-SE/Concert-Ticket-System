@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\View\Composers\AuthModalComposer;
 use Carbon\Carbon as BaseCarbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -22,6 +24,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ข้อมูลหน้าต่างเข้าสู่ระบบ/สมัครสมาชิก/ลืมรหัสผ่าน/ตรวจอีเมล (user/partials/auth-modals)
+        View::composer('user.partials.auth-modals', AuthModalComposer::class);
+
         // รูปแบบวันเวลามาตรฐานของระบบ: ว/ด/ป(พ.ศ.) และเวลา 24 ชม.
         //   $dt->thDate()     -> 16/10/2569
         //   $dt->thDateLong() -> 16 ตุลาคม 2569

@@ -6,71 +6,77 @@
  * ใช้ได้ทุกบัญชีที่มีอีเมล (User / Organizer / Admin) ยกเว้น Staff ซึ่งให้ Organizer รีเซ็ตรหัสผ่านให้
  * เปิดได้เฉพาะคนที่ยังไม่ได้เข้าสู่ระบบ (routes/web.php กลุ่ม role:GUEST)
  * รหัสเก็บใน Cache ผ่าน Services/PasswordResetOtp
+ * ทุกขั้นเป็นหน้าต่าง (user/auth/partials/forgot-modal ใน user/partials/auth-modals): ส่งฟอร์มแล้วกลับหน้าเดิม
+ * พร้อมเปิดหน้าต่างที่ขั้นถัดไปผ่าน session open_modal (forgot / forgot-code / forgot-reset)
+ * ข้อมูลที่แสดงในหน้าต่างมาจาก View/Composers/AuthModalComposer
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 29/10/2569
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 15/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers;
 
 use App\Models\AppUser;
 use App\Services\PasswordResetOtp;
-use App\Services\WebmailLink;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class PasswordResetController extends Controller
 {
-    /* session: อีเมลที่กำลังขอรีเซ็ต (ใช้ในขั้นกรอกรหัส) */
-    private const SESSION_EMAIL = 'password_reset_email';
+    /* session: อีเมลที่กำลังขอรีเซ็ต (ใช้ในขั้นกรอกรหัส, AuthModalComposer อ่านไปแสดงในหน้าต่าง) */
+    public const SESSION_EMAIL = 'password_reset_email';
 
     /* session: สิทธิ์ตั้งรหัสผ่านใหม่หลังยืนยันรหัสแล้ว ['user_id', 'email', 'expires_at'] */
-    private const SESSION_VERIFIED = 'password_reset_verified';
+    public const SESSION_VERIFIED = 'password_reset_verified';
 
     /* กฎรหัสผ่านเดียวกับตอนสมัครสมาชิก (AuthController::register) */
     private const PASSWORD_REGEX = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)\S{8,32}$/';
 
     /**
      * showForgot(request)
-     * ขั้นที่ 1: หน้ากรอกอีเมลเพื่อขอรหัส (เติมอีเมลให้ถ้ามาจากหน้าต่างเข้าสู่ระบบ ?email=)
+     * ลิงก์เดิมของหน้าลืมรหัสผ่าน: พาไปหน้าแรกแล้วเปิดหน้าต่างลืมรหัสผ่านขั้นที่ 1 (เติมอีเมลให้ถ้ามี ?email=)
      * param : request
-     * return : View user.auth.forgot-password (email)
+     * return : RedirectResponse
      */
     public function showForgot(Request $request)
     {
-        $email = (string) ($request->query('email') ?: $request->session()->get(self::SESSION_EMAIL, ''));
+        $email = trim((string) $request->query('email', ''));
 
-        return view('user.auth.forgot-password', ['email' => old('email', $email)]);
+        return $this->openOnHome($request, 'forgot', $email !== '' ? ['email' => $email] : []);
     }
 
     /**
      * sendCode(request)
-     * ตรวจอีเมลแล้วส่งรหัส 6 หลัก (ถ้าเพิ่งส่งไปไม่ถึง 60 วินาที จะไม่ส่งซ้ำ พาไปหน้ากรอกรหัสเลย)
+     * ตรวจอีเมลแล้วส่งรหัส 6 หลัก (ถ้าเพิ่งส่งไปไม่ถึง 60 วินาที จะไม่ส่งซ้ำ พาไปขั้นกรอกรหัสเลย)
      * param : request – email
-     * return : RedirectResponse ไปหน้ากรอกรหัส หรือกลับหน้าเดิมพร้อม error
+     * return : RedirectResponse กลับหน้าเดิมพร้อมเปิดขั้นกรอกรหัส หรือขั้นที่ 1 พร้อม error
      */
     public function sendCode(Request $request)
     {
         $request->merge(['email' => trim((string) $request->input('email'))]);
-        $request->validate([
+        $validator = Validator::make($request->only('email'), [
             'email' => ['required', 'email', 'max:255'],
         ], [
             'email.required' => 'กรุณากรอกอีเมล',
             'email.email'    => 'รูปแบบอีเมลไม่ถูกต้อง',
             'email.max'      => 'อีเมลยาวเกินไป',
         ]);
+        if ($validator->fails()) {
+            return $this->toStep('forgot')->withErrors($validator)->withInput($request->only('email'));
+        }
 
         $user = AppUser::where('email', $request->email)->first();
         if ($error = $this->cannotReset($user)) {
-            return back()->withErrors(['email' => $error])->withInput();
+            return $this->toStep('forgot')->withErrors(['email' => $error])->withInput($request->only('email'));
         }
 
         $request->session()->forget(self::SESSION_VERIFIED);
         $request->session()->put(self::SESSION_EMAIL, $user->email);
 
         if (PasswordResetOtp::cooldownLeft($user->email) > 0) {
-            return redirect()->route('password.verify')
+            return $this->toStep('forgot-code')
                 ->with('status', 'เราเพิ่งส่งรหัสไปที่อีเมลนี้ กรุณาตรวจอีเมล');
         }
 
@@ -80,46 +86,36 @@ class PasswordResetController extends Controller
             report($e);
             $request->session()->forget(self::SESSION_EMAIL);
 
-            return back()->withErrors(['email' => 'ส่งอีเมลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'])->withInput();
+            return $this->toStep('forgot')
+                ->withErrors(['email' => 'ส่งอีเมลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'])
+                ->withInput($request->only('email'));
         }
 
-        return redirect()->route('password.verify');
+        return $this->toStep('forgot-code');
     }
 
     /**
      * showVerify(request)
-     * ขั้นที่ 2: หน้ากรอกรหัส 6 หลัก พร้อมเวลาที่รหัสยังใช้ได้ และปุ่มส่งรหัสอีกครั้ง (นับถอยหลัง)
+     * ลิงก์เดิมของหน้ากรอกรหัส: พาไปหน้าแรกแล้วเปิดหน้าต่างลืมรหัสผ่านขั้นที่ 2 (ยังไม่ได้ขอรหัส = ขั้นที่ 1)
      * param : request
-     * return : View user.auth.verify-code หรือกลับขั้นที่ 1 ถ้ายังไม่ได้ขอรหัส
+     * return : RedirectResponse
      */
     public function showVerify(Request $request)
     {
-        $email = $request->session()->get(self::SESSION_EMAIL);
-        if (!$email) {
-            return redirect()->route('password.forgot');
-        }
-
-        return view('user.auth.verify-code', [
-            'email'       => $email,
-            'secondsLeft' => PasswordResetOtp::secondsLeft($email),
-            'cooldown'    => PasswordResetOtp::cooldownLeft($email),
-            'ttl'         => PasswordResetOtp::TTL_MINUTES,
-            'maxAttempts' => PasswordResetOtp::MAX_ATTEMPTS,
-            'webmail'     => WebmailLink::for($email),
-        ]);
+        return $this->openOnHome($request, 'forgot-code');
     }
 
     /**
      * verifyCode(request)
      * ตรวจรหัสที่กรอก (ช่อง digits[] 6 ช่อง หรือ code) ถูกแล้วให้สิทธิ์ตั้งรหัสผ่านใหม่ภายใน RESET_WINDOW_MINUTES นาที
      * param : request
-     * return : RedirectResponse ไปขั้นที่ 3 หรือกลับหน้ากรอกรหัสพร้อม error
+     * return : RedirectResponse กลับหน้าเดิมพร้อมเปิดขั้นที่ 3 หรือขั้นกรอกรหัสพร้อม error
      */
     public function verifyCode(Request $request)
     {
         $email = $request->session()->get(self::SESSION_EMAIL);
         if (!$email) {
-            return redirect()->route('password.forgot');
+            return $this->toStep('forgot');
         }
 
         $digits = $request->input('digits');
@@ -127,19 +123,19 @@ class PasswordResetController extends Controller
         $code = preg_replace('/\s+/', '', $code);
 
         if (!preg_match('/^\d{6}$/', $code)) {
-            return back()->withErrors(['code' => 'กรุณากรอกรหัสตัวเลขให้ครบ 6 หลัก']);
+            return $this->toStep('forgot-code')->withErrors(['code' => 'กรุณากรอกรหัสตัวเลขให้ครบ 6 หลัก']);
         }
 
         $result = PasswordResetOtp::check($email, $code);
 
         if ($result['status'] === PasswordResetOtp::INVALID) {
-            return back()->withErrors(['code' => "รหัสไม่ถูกต้อง กรอกได้อีก {$result['left']} ครั้ง"]);
+            return $this->toStep('forgot-code')->withErrors(['code' => "รหัสไม่ถูกต้อง กรอกได้อีก {$result['left']} ครั้ง"]);
         }
         if ($result['status'] === PasswordResetOtp::LOCKED) {
-            return back()->withErrors(['code' => 'กรอกรหัสผิดครบ ' . PasswordResetOtp::MAX_ATTEMPTS . ' ครั้ง รหัสนี้ใช้ไม่ได้แล้ว กรุณากดส่งรหัสอีกครั้ง']);
+            return $this->toStep('forgot-code')->withErrors(['code' => 'กรอกรหัสผิดครบ ' . PasswordResetOtp::MAX_ATTEMPTS . ' ครั้ง รหัสนี้ใช้ไม่ได้แล้ว กรุณากดส่งรหัสอีกครั้ง']);
         }
         if ($result['status'] === PasswordResetOtp::EXPIRED) {
-            return back()->withErrors(['code' => 'รหัสหมดอายุหรือถูกยกเลิกแล้ว กรุณากดส่งรหัสอีกครั้ง']);
+            return $this->toStep('forgot-code')->withErrors(['code' => 'รหัสหมดอายุหรือถูกยกเลิกแล้ว กรุณากดส่งรหัสอีกครั้ง']);
         }
 
         $user = AppUser::find($result['user_id']);
@@ -154,25 +150,25 @@ class PasswordResetController extends Controller
         ]);
         $request->session()->regenerate();
 
-        return redirect()->route('password.reset');
+        return $this->toStep('forgot-reset');
     }
 
     /**
      * resend(request)
      * ส่งรหัสใหม่ไปที่อีเมลเดิม (รหัสเดิมใช้ไม่ได้ทันที) จำกัดให้ห่างกันอย่างน้อย 60 วินาที
      * param : request
-     * return : RedirectResponse กลับหน้ากรอกรหัส
+     * return : RedirectResponse กลับหน้าเดิมพร้อมเปิดขั้นกรอกรหัส
      */
     public function resend(Request $request)
     {
         $email = $request->session()->get(self::SESSION_EMAIL);
         if (!$email) {
-            return redirect()->route('password.forgot');
+            return $this->toStep('forgot');
         }
 
         // หน้าเว็บนับถอยหลังให้แล้ว อันนี้กันกรณีส่งฟอร์มเอง
         if (PasswordResetOtp::cooldownLeft($email) > 0) {
-            return redirect()->route('password.verify')
+            return $this->toStep('forgot-code')
                 ->withErrors(['code' => 'กรุณารอสักครู่ก่อนขอรหัสใหม่']);
         }
 
@@ -185,38 +181,30 @@ class PasswordResetController extends Controller
             PasswordResetOtp::send($user);
         } catch (\Throwable $e) {
             report($e);
-            return redirect()->route('password.verify')
+            return $this->toStep('forgot-code')
                 ->withErrors(['code' => 'ส่งอีเมลไม่สำเร็จ กรุณาลองใหม่อีกครั้งภายหลัง']);
         }
 
-        return redirect()->route('password.verify')
+        return $this->toStep('forgot-code')
             ->with('status', 'ส่งรหัสใหม่แล้ว รหัสเดิมใช้ไม่ได้แล้ว กรุณาตรวจอีเมล');
     }
 
     /**
      * showReset(request)
-     * ขั้นที่ 3: หน้าตั้งรหัสผ่านใหม่ (ต้องยืนยันรหัสในขั้นที่ 2 ก่อน และยังไม่หมดเวลา)
+     * ลิงก์เดิมของหน้าตั้งรหัสผ่านใหม่: พาไปหน้าแรกแล้วเปิดหน้าต่างลืมรหัสผ่านขั้นที่ 3 (ยังไม่ได้ยืนยันรหัสหรือหมดเวลา = ขั้นที่ 1)
      * param : request
-     * return : View user.auth.reset-password (email, minutesLeft) หรือกลับขั้นที่ 1
+     * return : RedirectResponse
      */
     public function showReset(Request $request)
     {
-        $state = $this->verifiedState($request);
-        if (!is_array($state)) {
-            return $state;
-        }
-
-        return view('user.auth.reset-password', [
-            'email'       => $state['email'],
-            'minutesLeft' => (int) ceil(($state['expires_at'] - now()->timestamp) / 60),
-        ]);
+        return $this->openOnHome($request, 'forgot-reset');
     }
 
     /**
      * reset(request)
      * บันทึกรหัสผ่านใหม่ (hash) และสุ่ม remember_token ใหม่ ให้เครื่องอื่นที่เลือก "จำฉันไว้" ต้องเข้าสู่ระบบใหม่
      * param : request – password, password_confirmation
-     * return : RedirectResponse หน้าแรกพร้อมหน้าต่างเข้าสู่ระบบ (เติมอีเมลให้)
+     * return : RedirectResponse กลับหน้าเดิมพร้อมหน้าต่างเข้าสู่ระบบ (เติมอีเมลให้) หรือขั้นตั้งรหัสใหม่พร้อม error
      */
     public function reset(Request $request)
     {
@@ -225,13 +213,16 @@ class PasswordResetController extends Controller
             return $state;
         }
 
-        $request->validate([
+        $validator = Validator::make($request->only('password', 'password_confirmation'), [
             'password' => ['required', 'confirmed', 'regex:' . self::PASSWORD_REGEX],
         ], [
             'password.required'  => 'กรุณากรอกรหัสผ่านใหม่',
             'password.regex'     => 'รหัสผ่านต้องมี 8–32 ตัวอักษร และมีตัวอักษรอังกฤษพิมพ์เล็ก พิมพ์ใหญ่ และตัวเลข',
             'password.confirmed' => 'รหัสผ่านยืนยันไม่ตรงกัน',
         ]);
+        if ($validator->fails()) {
+            return $this->toStep('forgot-reset')->withErrors($validator);
+        }
 
         $user = AppUser::find($state['user_id']);
         if ($error = $this->cannotReset($user)) {
@@ -245,10 +236,11 @@ class PasswordResetController extends Controller
         PasswordResetOtp::forget($user->email);
         $request->session()->forget([self::SESSION_EMAIL, self::SESSION_VERIFIED]);
 
-        return redirect('/')
+        // เปิดหน้าต่างเข้าสู่ระบบในหน้าเดิม เข้าสู่ระบบแล้วอยู่หน้าเดิมต่อ (ช่อง redirect)
+        return back()
             ->with('open_modal', 'login')
             ->with('login_notice', 'ตั้งรหัสผ่านใหม่สำเร็จ กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่')
-            ->withInput(['email' => $user->email]);
+            ->withInput(['email' => $user->email, 'redirect' => $this->previousPath()]);
     }
 
     /**
@@ -262,7 +254,7 @@ class PasswordResetController extends Controller
         $state = $request->session()->get(self::SESSION_VERIFIED);
 
         if (!is_array($state)) {
-            return redirect()->route('password.forgot')
+            return $this->toStep('forgot')
                 ->withErrors(['email' => 'กรุณายืนยันรหัสจากอีเมลก่อนตั้งรหัสผ่านใหม่']);
         }
         if ($state['expires_at'] <= now()->timestamp) {
@@ -304,8 +296,47 @@ class PasswordResetController extends Controller
         $email ??= $request->session()->get(self::SESSION_EMAIL);
         $request->session()->forget([self::SESSION_EMAIL, self::SESSION_VERIFIED]);
 
-        return redirect()->route('password.forgot')
+        return $this->toStep('forgot')
             ->withErrors(['email' => $message])
             ->withInput(['email' => (string) $email]);
+    }
+
+    /**
+     * toStep(modal)
+     * กลับหน้าที่ผู้ใช้อยู่ แล้วเปิดหน้าต่างลืมรหัสผ่านที่ขั้นนั้น
+     * param : modal – forgot (ขั้นที่ 1 กรอกอีเมล), forgot-code (ขั้นที่ 2 กรอกรหัส), forgot-reset (ขั้นที่ 3 ตั้งรหัสใหม่)
+     * return : RedirectResponse
+     */
+    private function toStep(string $modal)
+    {
+        return back()->with('open_modal', $modal);
+    }
+
+    /**
+     * openOnHome(request, modal, input)
+     * ลิงก์เดิมของหน้าแยก (ตอนนี้เป็นหน้าต่างแล้ว): พาไปหน้าแรกพร้อมเปิดหน้าต่างลืมรหัสผ่าน
+     * เก็บข้อความ/error ที่ส่งมากับ redirect ก่อนหน้าไว้ด้วย (reflash) เผื่อมาจากหน้าเก่าที่เปิดค้างไว้
+     * param : request, modal (ใช้เมื่อไม่มี open_modal ส่งมาก่อน), input (ค่าเริ่มต้นในช่องกรอก)
+     * return : RedirectResponse
+     */
+    private function openOnHome(Request $request, string $modal, array $input = [])
+    {
+        $request->session()->reflash();
+        $response = redirect('/')->with('open_modal', $request->session()->get('open_modal') ?: $modal);
+
+        return $input ? $response->withInput($input) : $response;
+    }
+
+    /**
+     * previousPath()
+     * path ของหน้าที่ผู้ใช้อยู่ (เช่น /concert-detail?concert_id=1) ใช้เป็นช่อง redirect ของหน้าต่างเข้าสู่ระบบ
+     * param : -
+     * return : string
+     */
+    private function previousPath(): string
+    {
+        $url = parse_url(url()->previous());
+
+        return ($url['path'] ?? '/') . (isset($url['query']) ? '?' . $url['query'] : '');
     }
 }

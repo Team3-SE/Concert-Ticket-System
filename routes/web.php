@@ -6,8 +6,8 @@
  * หลังบ้านแยกไฟล์ (require ท้ายไฟล์นี้): routes/organizer.php, routes/admin.php, routes/staff.php
  * role ของแต่ละ route ตรวจด้วย middleware role (app/Http/Middleware/EnsureRole.php)
  *   - role:GUEST,USER = ลูกค้าและคนที่ยังไม่ login เท่านั้น (Organizer/Admin/Staff ถูกพากลับหน้าแรกของ role ตัวเอง)
- *   - role:GUEST = เฉพาะคนที่ยังไม่ login (หน้าลืมรหัสผ่าน)
- * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
+ *   - role:GUEST = เฉพาะคนที่ยังไม่ login (หน้าต่างลืมรหัสผ่าน)
+ * Updated : 15/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 use Illuminate\Support\Facades\Route;
@@ -44,6 +44,7 @@ Route::middleware('role:GUEST,USER')->group(function () {
     Route::get('/payment', [\App\Http\Controllers\User\PaymentController::class, 'index']);
 
     // ===== สมัครสมาชิก + ยืนยันอีเมล =====
+    // หน้าแจ้งตรวจอีเมลเป็นหน้าต่างใน user/partials/auth-modals แล้ว: GET /email/verify (ลิงก์เดิม) พาไปหน้าแรกพร้อมเปิดหน้าต่าง
     Route::post('/auth/register', [\App\Http\Controllers\AuthController::class, 'register'])->name('auth.register');
 
     Route::get('/email/verify', [\App\Http\Controllers\User\EmailVerificationController::class, 'notice'])->name('verification.notice');
@@ -106,6 +107,7 @@ Route::post('/auth/login',  [\App\Http\Controllers\AuthController::class, 'login
 Route::post('/auth/logout', [\App\Http\Controllers\AuthController::class, 'logout'])->name('auth.logout');
 
 // ===== ลืมรหัสผ่าน: ส่งรหัส 6 หลักทางอีเมล → ยืนยันรหัส → ตั้งรหัสผ่านใหม่ (เฉพาะคนที่ยังไม่ได้เข้าสู่ระบบ) =====
+// ทุกขั้นเป็นหน้าต่างใน user/partials/auth-modals: GET /forgot, /verify, /reset (ลิงก์เดิม) พาไปหน้าแรกพร้อมเปิดหน้าต่างขั้นนั้น
 // throttle:จำนวนครั้ง,นาที,ชื่อ – ใส่ชื่อแยกแต่ละ route ไม่งั้นทุก route ที่ใช้ throttle จะนับรวมกันต่อ IP
 Route::middleware('role:GUEST')
     ->prefix('password')

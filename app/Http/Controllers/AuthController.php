@@ -5,7 +5,7 @@
  * จัดการการสมัครสมาชิก เข้าสู่ระบบ และออกจากระบบของผู้ใช้
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 04/09/2569
- * Updated : 27/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 15/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers;
@@ -25,7 +25,7 @@ class AuthController extends Controller
      * (ยังไม่สร้างบัญชี บัญชี role = USER จะถูกสร้างและเข้าสู่ระบบเมื่อกดลิงก์ที่ EmailVerificationController::verify)
      * เก็บค่า redirect (หน้าที่ผู้ใช้อยู่ตอนกดสมัคร) ไปด้วย เพื่อพากลับหลังยืนยันอีเมลสำเร็จ
      * param : request
-     * return : RedirectResponse ไปหน้า verification.notice ถ้าข้อมูลไม่ถูกต้องจะกลับหน้าเดิมพร้อม error
+     * return : RedirectResponse กลับหน้าเดิมพร้อมเปิดหน้าต่างตรวจอีเมล ถ้าข้อมูลไม่ถูกต้องจะเปิดหน้าต่างสมัครสมาชิกพร้อม error
      */
     public function register(Request $request)
     {
@@ -95,7 +95,8 @@ class AuthController extends Controller
 
         $request->session()->put('verify_sent_at', now()->timestamp);
 
-        return redirect()->route('verification.notice');
+        // กลับหน้าเดิมแล้วเปิดหน้าต่างตรวจอีเมล (user/auth/partials/verify-email-modal)
+        return back()->with('open_modal', 'verify-email');
     }
 
     /**

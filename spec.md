@@ -1,4 +1,4 @@
-# Concert Ticketing System — Project Specification
+# Concert Ticket System — Project Specification
 
 > รวม **Technology Stack Specification (v1.0.1)** และ **Coding Standard (v1.0.1)**
 > ของโปรเจกต์ระบบจองตั๋วคอนเสิร์ต (Team 3, Software Engineering, Burapha University)
@@ -29,7 +29,7 @@
 
 ## 1. Objective
 
-พัฒนา **Concert Ticketing System** ตาม business requirement ที่กำหนด โดย **ต้องใช้ tech stack ตามที่ระบุไว้เท่านั้น** ห้ามเปลี่ยนเทคโนโลยีใด ๆ เว้นแต่จะได้รับคำสั่งชัดเจน
+พัฒนา **Concert Ticket System** ตาม business requirement ที่กำหนด โดย **ต้องใช้ tech stack ตามที่ระบุไว้เท่านั้น** ห้ามเปลี่ยนเทคโนโลยีใด ๆ เว้นแต่จะได้รับคำสั่งชัดเจน
 
 ต้องให้ความสำคัญกับ:
 

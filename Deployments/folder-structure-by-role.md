@@ -1,5 +1,5 @@
 # โครงสร้างไฟล์ตาม Role (User / Organizer / Admin / Staff)
-### Concert Ticketing System — TEAM 3 Ticket
+### Concert Ticket System — TEAM 3 Ticket
 
 > จัดทำโดย 67160292 ธีรเมธ พลสาย · 27/10/2569
 > โครงสร้างนี้คือของจริงในโค้ดตอนนี้ (สาขา `refactor/views`) — ไฟล์แผนเดิม `folder-structure-team-assignment.md` ใช้ชื่อโฟลเดอร์ `customer/` แต่ของจริงใช้ `user/`
@@ -46,7 +46,7 @@ views/
 │   ├── concerts/    home · index
 │   ├── booking/     concert-detail · booking · payment · payment-popups · qr-modal
 │   ├── account/     edit-profile · my-ticket · order-history
-│   ├── auth/        verify-notice
+│   ├── auth/        partials/ (forgot-modal · verify-email-modal · reset-steps — หน้าต่างใน auth-modals)
 │   └── partials/    navbar · footer · sidebar · auth-modals · concert-card · zone-overview
 │
 ├── organizer/                       ── Organizer ──

@@ -1,10 +1,11 @@
 {{--
  * reset-steps.blade.php
- * แถบ 3 ขั้นตอนของหน้าลืมรหัสผ่าน (กรอกอีเมล → ใส่รหัสยืนยัน → ตั้งรหัสใหม่)
- * ใช้กับ : user/auth/forgot-password, verify-code, reset-password  สไตล์ : resources/css/user/auth/password-reset.css
+ * แถบ 3 ขั้นตอนของหน้าต่างลืมรหัสผ่าน (กรอกอีเมล → ใส่รหัสยืนยัน → ตั้งรหัสใหม่)
+ * ใช้กับ : user/auth/partials/forgot-modal (ทั้ง 3 ขั้น)  สไตล์ : resources/css/user/auth/password-reset.css
  * ข้อมูล : $current (ขั้นที่กำลังทำ 1–3)
  * @Author 67160292 ธีรเมธ พลสาย
  * @Create Date 29/10/2569
+ * @Update Date 15/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 <ol class="pr-steps" aria-label="ขั้นตอนการตั้งรหัสผ่านใหม่">
   @foreach(['กรอกอีเมล', 'ใส่รหัสยืนยัน', 'ตั้งรหัสใหม่'] as $i => $label)

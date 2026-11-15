@@ -5,8 +5,6 @@
 --   seat_lock_log.active_seat_id : sll_released_at, sll_sold_at -> released_at, sold_at
 --   ticket.active_seat_id        : t_status -> status
 --   ticket.active_slot           : t_status, t_slot_no -> status, slot_no
--- Author : 67160292 ธีรเมธ พลสาย
--- Created : 10/11/2569
 -- -----------------------------------------------------
 
 -- MySQL Script generated from MySQL Workbench model 3.4.2.mwb

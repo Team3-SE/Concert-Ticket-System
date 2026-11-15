@@ -1,7 +1,7 @@
 ﻿@echo off
 chcp 65001 >nul
 echo ===================================================
-echo   Concert Ticketing System - Local Setup Script
+echo   Concert Ticket System - Local Setup Script
 echo ===================================================
 
 if not exist .env (
