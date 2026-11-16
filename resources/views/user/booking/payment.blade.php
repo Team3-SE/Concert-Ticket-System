@@ -3,7 +3,7 @@
  * หน้าชำระเงิน
  * @Author 67160434 จิตฏิยากร โสภา
  * @Create Date 2026-10-13
- * @Update Date 24/10/2569 67160292 ธีรเมธ พลสาย
+ * @Update Date 11/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 @extends('layouts.user')
 
@@ -203,11 +203,11 @@
         {{-- Organizer Support Contact --}}
         <div class="contact-box">
           <span class="contact-title">มีปัญหา ต้องการติดต่อผู้จัดงาน</span>
-          {{-- schema v3.1.0: ช่องทางติดต่ออยู่ในตาราง organization --}}
-          <span class="contact-item">โทร : {{ $organization?->phone ?: '-' }}</span>
-          <span class="contact-item">LINE : {{ $organization?->line ?: '-' }}</span>
-          <span class="contact-item">Facebook : {{ $organization?->facebook ?: '-' }}</span>
-          <span class="contact-item">Email : {{ $organization?->email ?: '-' }}</span>
+          {{-- schema 3.4.2: ช่องทางติดต่อผู้จัดเก็บไว้ที่คอนเสิร์ต --}}
+          <span class="contact-item">โทร : {{ $concert?->phone ?: '-' }}</span>
+          <span class="contact-item">LINE : {{ $concert?->line ?: '-' }}</span>
+          <span class="contact-item">Facebook : {{ $concert?->facebook ?: '-' }}</span>
+          <span class="contact-item">Email : {{ $concert?->email ?: '-' }}</span>
         </div>
 
         {{-- Back & Payment Action Buttons --}}
@@ -242,7 +242,7 @@
      */
     function paymentApp() {
       const checkout = @json($checkout ?? null);
-      const concertId = @json($concert?->concert_id);
+      const concertId = @json($concert?->c_id);
       const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 
       return {

@@ -5,6 +5,7 @@
  * การชำระเงิน (ตาราง payment)
  * Author :
  * Created :
+ * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -16,13 +17,18 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Payment extends Model
 {
     protected $table = 'payment';
-    protected $primaryKey = 'payment_id';
+    protected $primaryKey = 'p_id';
     public $incrementing = true;
     protected $keyType = 'int';
     public $timestamps = false;
 
+    // Status Enumerations (payment.status)
+    public const STATUS_PENDING   = 'PENDING';
+    public const STATUS_COMPLETED = 'COMPLETED';
+    public const STATUS_FAILED    = 'FAILED';
+
     protected $fillable = [
-        'booking_id',
+        'p_booking_id',
         'amount',
         'method',
         'status',
@@ -53,7 +59,7 @@ class Payment extends Model
     {
         // ส่งข้อมูลไปยัง Payment Provider (stub)
         // TODO: เรียก Provider API จริง
-        return $this->status === 'PENDING';
+        return $this->status === self::STATUS_PENDING;
     }
 
     /**
@@ -65,7 +71,7 @@ class Payment extends Model
     public function verifyStatus(): bool
     {
         // TODO: เรียก Provider API จริงเพื่อตรวจสอบสถานะ
-        return $this->status === 'COMPLETED';
+        return $this->status === self::STATUS_COMPLETED;
     }
 
     // ==========================================
@@ -80,7 +86,7 @@ class Payment extends Model
      */
     public function booking(): BelongsTo
     {
-        return $this->belongsTo(Booking::class, 'booking_id', 'booking_id');
+        return $this->belongsTo(Booking::class, 'p_booking_id', 'b_id');
     }
 
     /**
@@ -91,6 +97,6 @@ class Payment extends Model
      */
     public function customerOrder(): HasOne
     {
-        return $this->hasOne(CustomerOrder::class, 'payment_id', 'payment_id');
+        return $this->hasOne(CustomerOrder::class, 'uo_payment_id', 'p_id');
     }
 }

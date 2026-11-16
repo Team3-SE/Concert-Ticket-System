@@ -3,7 +3,7 @@
  * หน้าเลือกโซนและที่นั่งของคอนเสิร์ต
  * @Author 67160434 จิตฏิยากร โสภา
  * @Create Date 2026-10-13
- * @Update Date 23/10/2569 67160292 ธีรเมธ พลสาย
+ * @Update Date 15/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 @extends('layouts.user')
 
@@ -55,14 +55,14 @@
             </div>
 
             @if($concert)
-              @php($organization = $concert->organization)
+              {{-- schema 3.4.2: ช่องทางติดต่อผู้จัดเก็บไว้ที่คอนเสิร์ต --}}
               <div class="contact-info">
                 <p>ติดต่อผู้จัดงาน</p>
                 <div class="contact-grid">
-                  <div>โทร: <span>{{ $organization?->phone ?: '-' }}</span></div>
-                  <div>Facebook: <span>{{ $organization?->facebook ?: '-' }}</span></div>
-                  <div>LINE: <span>{{ $organization?->line ?: '-' }}</span></div>
-                  <div>Email: <span>{{ $organization?->email ?: '-' }}</span></div>
+                  <div>โทร: <span>{{ $concert->phone ?: '-' }}</span></div>
+                  <div>Facebook: <span>{{ $concert->facebook ?: '-' }}</span></div>
+                  <div>LINE: <span>{{ $concert->line ?: '-' }}</span></div>
+                  <div>Email: <span>{{ $concert->email ?: '-' }}</span></div>
                 </div>
               </div>
             @endif
@@ -257,14 +257,28 @@
             {{-- ฝั่งซ้าย: เลือกจำนวนบัตร (แบบการ์ดตั๋ว: ข้อมูลโซน | รอยปรุ | จำนวนบัตร) --}}
             <div class="md:col-span-7 h-full flex flex-col md:flex-row bg-white rounded-2xl border border-[#DFE6F2] shadow-[0_4px_10px_rgba(11,27,61,0.05)]">
 
-              {{-- ส่วนซ้ายของตั๋ว: ข้อมูลโซนและราคา --}}
-              <div class="flex-[3_1_0%] flex flex-col gap-2.5 p-8">
-                <div class="flex items-center gap-2">
+              {{-- ส่วนซ้ายของตั๋ว: ชื่อโซน, STANDING, บัตรคงเหลือในโซน และราคา --}}
+              <div class="flex-[3_1_0%] min-w-0 flex flex-col gap-2.5 p-8">
+                <div class="flex items-center gap-2 min-w-0">
                   <span class="w-2.5 h-2.5 rounded-[3px] flex-shrink-0" :style="{ backgroundColor: selectedZone.color || '#4D7EE0' }"></span>
-                  <span class="text-[12px] font-semibold tracking-[2px] text-[#5B6580]">STANDING ZONE</span>
+                  <span class="text-[13px] font-semibold tracking-[2px] text-[#5B6580] truncate" x-text="selectedZone.name"></span>
                 </div>
-                <span class="text-[32px] font-bold leading-tight text-[#0A1F45] break-words" x-text="selectedZone.name"></span>
+                <span class="text-[34px] font-bold leading-tight tracking-[1px] text-[#0A1F45]">STANDING</span>
                 <span class="text-[14px] text-[#5B6580]">ไม่ระบุที่นั่ง · บัตร 1 ใบเข้างานได้ 1 คน</span>
+
+                {{-- บัตรคงเหลือในโซน: ที่เหลือ / ความจุ + แถบสัดส่วนที่เหลือ (ไล่สีน้ำเงิน → ส้ม) --}}
+                <div class="mt-3 px-4 py-3.5 rounded-xl bg-[#F4F7FC] border border-[#DFE6F2]">
+                  <div class="flex items-center justify-between gap-3 text-[13px] font-semibold text-[#0A1F45]">
+                    <span>บัตรคงเหลือในโซน</span>
+                    <span class="whitespace-nowrap">
+                      เหลือ <span class="text-[15px] text-[#F47B1F]" x-text="Number(selectedZone.seats).toLocaleString()"></span><span x-show="selectedZone.capacity > 0"> / <span x-text="Number(selectedZone.capacity).toLocaleString()"></span></span> ใบ
+                    </span>
+                  </div>
+                  <div class="mt-2.5 h-1.5 rounded-full bg-[#DFE6F2] overflow-hidden">
+                    <div class="h-full rounded-full transition-[width] duration-300"
+                         :style="{ width: remainingPercent() + '%', background: 'linear-gradient(90deg, #4D7EE0, #F47B1F)' }"></div>
+                  </div>
+                </div>
                 <div class="mt-auto pt-4 flex items-baseline gap-1.5">
                   <span class="text-[28px] font-bold text-[#0A1F45]" x-text="Number(selectedZone.price).toLocaleString() + ' บาท'"></span>
                   <span class="text-[14px] text-[#5B6580]">/ ใบ</span>
@@ -482,7 +496,7 @@
       const dbZones = @json($zones ?? []);
       const dbOccupied = @json($occupiedSeats ?? []);
       const dbPending = @json($pendingSeats ?? []);
-      const concertId = @json($concert ? $concert->concert_id : null);
+      const concertId = @json($concert ? $concert->c_id : null);
       const maxTickets = @json($concert ? $concert->max_ticket_per_order : 4);
 
       const defaultCols = Array.from({ length: 20 }, (_, i) => i + 1);
@@ -550,6 +564,18 @@
         standingMax() {
           if (!this.selectedZone) return 0;
           return Math.max(0, Math.min(maxTickets, parseInt(this.selectedZone.seats) || 0));
+        },
+
+        /**
+         * remainingPercent()
+         * สัดส่วนบัตรที่เหลือของโซนยืน เทียบกับความจุของโซน (0–100) ใช้กับแถบบัตรคงเหลือในโซน
+         * @return {number}
+         */
+        remainingPercent() {
+          const capacity = parseInt(this.selectedZone?.capacity) || 0;
+          if (capacity <= 0) return 0;
+          const left = parseInt(this.selectedZone.seats) || 0;
+          return Math.min(100, Math.max(0, (left / capacity) * 100));
         },
 
         /**

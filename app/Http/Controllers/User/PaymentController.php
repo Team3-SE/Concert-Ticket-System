@@ -5,12 +5,13 @@
  * จัดการการชำระเงิน: หน้าชำระเงิน ตรวจ rate limit สร้าง/ยืนยันการชำระเงิน และสร้างคำสั่งซื้อ
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 04/09/2569
- * Updated : 24/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppUser;
 use App\Models\Booking;
 use App\Models\Concert;
 use App\Models\CustomerOrder;
@@ -61,38 +62,36 @@ class PaymentController extends Controller
             }
 
             $booking = $this->findOwnBooking($request, $bookingId);
-            $booking->loadMissing(['bookingSeats', 'bookingStandingItems', 'concert.organization']);
+            $booking->loadMissing(['bookingSeats', 'zone', 'concert.organization']);
 
-            if ($booking->status !== 'PENDING_PAYMENT') {
+            if ($booking->status !== Booking::STATUS_PENDING_PAYMENT) {
                 return redirect()->route('orders.history');
             }
             if ($booking->checkExpiry()) {
                 $this->expireBooking($booking);
-                return redirect('/booking?concert_id=' . $booking->concert_id)
+                return redirect('/booking?concert_id=' . $booking->concertId())
                     ->with('error', 'หมดเวลาชำระเงิน กรุณาเลือกที่นั่งใหม่');
             }
 
             $concert = $booking->concert;
             $user = $request->user();
             $seats = $booking->bookingSeats;
-            $standing = $booking->bookingStandingItems;
-            $pendingPayment = $booking->payments()->where('status', 'PENDING')->latest('payment_id')->first();
+            $pendingPayment = $booking->payments()->where('status', Payment::STATUS_PENDING)->latest('p_id')->first();
 
+            // schema 3.4.2: 1 การจอง = 1 โซน ชื่อโซนและราคาต่อใบเก็บไว้ที่ booking
             $checkout = [
-                'bookingId'     => $booking->booking_id,
-                'zoneName'      => $seats->pluck('zone_name_snapshot')
-                    ->merge($standing->pluck('zone_name_snapshot'))
-                    ->filter()->unique()->join(', '),
+                'bookingId'     => $booking->b_id,
+                'zoneName'      => (string) $booking->zone_name_snapshot,
                 // โซนยืนไม่มีเลขที่นั่ง แสดงเป็น "บัตรยืน"
                 'seatNo'        => $seats->isNotEmpty() ? $seats->pluck('seat_label_snapshot')->filter()->join(', ') : 'บัตรยืน',
-                'quantity'      => $seats->count() + (int) $standing->sum('quantity'),
-                'ticketPrice'   => (float) ($seats->first()?->unit_price_snapshot ?? $standing->first()?->unit_price_snapshot ?? 0),
+                'quantity'      => $booking->isStanding() ? (int) $booking->standing_quantity : $seats->count(),
+                'ticketPrice'   => (float) $booking->zone_price_snapshot,
                 'subtotal'      => (float) $booking->total_amount,
                 'serviceFee'    => self::SERVICE_FEE,
                 'protectionRate' => self::PROTECTION_RATE,
                 'secondsLeft'   => max(0, (int) now()->diffInSeconds($booking->expiry_time, false)),
                 'orderCode'     => $pendingPayment?->payment_metadata['orderCode'] ?? null,
-                'paymentId'     => $pendingPayment?->payment_id,
+                'paymentId'     => $pendingPayment?->p_id,
                 'buyer'         => [
                     'name'  => trim($user->first_name . ' ' . $user->last_name),
                     'email' => $user->email,
@@ -111,8 +110,8 @@ class PaymentController extends Controller
         $concertId = (int) $request->query('concert_id');
 
         $concert = $concertId
-            ? Concert::with('organization')->where('concert_id', $concertId)->where('is_deleted', 0)->firstOrFail()
-            : Concert::with('organization')->where('status', 'ON_SALE')->where('is_deleted', 0)->orderBy('event_datetime')->first();
+            ? Concert::with('organization')->whereKey($concertId)->firstOrFail()
+            : Concert::with('organization')->where('status', Concert::STATUS_ON_SALE)->orderBy('event_datetime')->first();
 
         return view('user.booking.payment', [
             'concert'      => $concert,
@@ -140,7 +139,7 @@ class PaymentController extends Controller
 
         $booking = $this->findOwnBooking($request, (int) $data['booking_id']);
 
-        if ($booking->status !== 'PENDING_PAYMENT') {
+        if ($booking->status !== Booking::STATUS_PENDING_PAYMENT) {
             return response()->json(['message' => 'การจองนี้ชำระเงินแล้วหรือถูกยกเลิก'], 409);
         }
         if ($booking->checkExpiry()) {
@@ -148,7 +147,7 @@ class PaymentController extends Controller
             return response()->json(['message' => 'หมดเวลาชำระเงิน กรุณาเลือกที่นั่งใหม่'], 410);
         }
 
-        $payment = $booking->payments()->where('status', 'PENDING')->latest('payment_id')->first();
+        $payment = $booking->payments()->where('status', Payment::STATUS_PENDING)->latest('p_id')->first();
         $method = self::METHOD_MAP[$data['method']];
         $amount = $this->calculateAmount($booking, $protection);
 
@@ -163,7 +162,7 @@ class PaymentController extends Controller
             // รายการที่ออกเลขไว้ก่อนเปลี่ยนรูปแบบ (เช่น ORD-ZISQRXU9, ORD-C0024-261021-00001) ให้ออกเลขใหม่เป็น ORD-C000024-000001
             if (!preg_match(self::ORDER_CODE_PATTERN, (string) ($metadata['orderCode'] ?? ''))) {
                 $metadata['orderCode'] = \Illuminate\Support\Facades\DB::transaction(function () use ($booking) {
-                    $concert = Concert::whereKey($booking->concert_id)->lockForUpdate()->firstOrFail();
+                    $concert = Concert::whereKey($booking->concertId())->lockForUpdate()->firstOrFail();
                     return $this->generateOrderCode($concert);
                 });
             }
@@ -175,11 +174,11 @@ class PaymentController extends Controller
             ]);
         } else {
             $request->merge(['method' => $method]);
-            $payment = $this->processPayment($request, $booking->booking_id, $protection);
+            $payment = $this->processPayment($request, $booking->b_id, $protection);
         }
 
         return response()->json([
-            'payment_id' => $payment->payment_id,
+            'payment_id' => $payment->p_id,   // ชื่อ key เดิมที่ JS หน้า payment ใช้
             'order_code' => $payment->payment_metadata['orderCode'] ?? null,
             'amount'     => (float) $payment->amount,
         ]);
@@ -196,9 +195,9 @@ class PaymentController extends Controller
         abort_unless(app()->environment('local'), 404);
 
         $payment = Payment::with('booking')->findOrFail($paymentId);
-        abort_unless((int) $payment->booking?->user_id === (int) $request->user()->user_id, 403);
+        abort_unless((int) $payment->booking?->b_user_id === (int) $request->user()->u_id, 403);
 
-        if ($payment->status !== 'PENDING') {
+        if ($payment->status !== Payment::STATUS_PENDING) {
             return response()->json(['message' => 'รายการนี้ไม่ได้อยู่ในสถานะรอชำระ'], 409);
         }
 
@@ -218,8 +217,8 @@ class PaymentController extends Controller
      */
     public function checkRateLimit(int $customerId, string $ipAddress, ?string $deviceFingerprint): bool
     {
-        $failCount = \App\Models\Payment::whereHas('booking', fn($q) => $q->where('user_id', $customerId))
-            ->where('status', 'FAILED')
+        $failCount = Payment::whereHas('booking', fn ($q) => $q->where('b_user_id', $customerId))
+            ->where('status', Payment::STATUS_FAILED)
             ->where('created_at', '>=', now()->subMinutes(self::RATE_LIMIT_WINDOW_MINUTES))
             ->where(function ($q) use ($ipAddress, $deviceFingerprint) {
                 $q->whereJsonContains('payment_metadata->ipAddress', $ipAddress);
@@ -248,19 +247,19 @@ class PaymentController extends Controller
         $ipAddress = $request->ip();
         $deviceFingerprint = $request->header('X-Device-Fingerprint');
 
-        if (!$this->checkRateLimit($booking->user_id, $ipAddress, $deviceFingerprint)) {
+        if (!$this->checkRateLimit((int) $booking->b_user_id, $ipAddress, $deviceFingerprint)) {
             abort(429, 'คำขอชำระเงินเกินจำนวนที่กำหนด กรุณารอสักครู่');
         }
 
         return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $booking, $bookingId, $protection, $ipAddress, $deviceFingerprint) {
             // ล็อกแถวคอนเสิร์ต กันสองรายการได้เลขลำดับคำสั่งซื้อซ้ำกัน
-            $concert = Concert::whereKey($booking->concert_id)->lockForUpdate()->firstOrFail();
+            $concert = Concert::whereKey($booking->concertId())->lockForUpdate()->firstOrFail();
 
-            return \App\Models\Payment::create([
-                'booking_id'       => $bookingId,
+            return Payment::create([
+                'p_booking_id'     => $bookingId,
                 'amount'           => $this->calculateAmount($booking, $protection),
                 'method'           => $request->input('method'),
-                'status'           => 'PENDING',
+                'status'           => Payment::STATUS_PENDING,
                 'payment_metadata' => [
                     'ipAddress'         => $ipAddress,
                     'deviceFingerprint' => $deviceFingerprint,
@@ -286,7 +285,7 @@ class PaymentController extends Controller
         $payment = \App\Models\Payment::findOrFail($paymentId);
         // TODO: เรียก Payment Provider API จริง
         // ตัวอย่าง: ส่งคืน true ถ้า COMPLETED
-        return $payment->status === 'COMPLETED';
+        return $payment->status === Payment::STATUS_COMPLETED;
     }
 
     /**
@@ -297,44 +296,48 @@ class PaymentController extends Controller
      */
     public function completePayment(int $paymentId): \App\Models\CustomerOrder
     {
-        $completedBooking = null;
-        $order = \Illuminate\Support\Facades\DB::transaction(function () use ($paymentId, &$completedBooking) {
-            $payment = \App\Models\Payment::with('booking.concert.organization')->findOrFail($paymentId);
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($paymentId) {
+            $payment = Payment::with(['booking.zone', 'booking.concert.organization'])->findOrFail($paymentId);
             $booking = $payment->booking;
             $completedBooking = $booking;
 
             // การจองหมดเวลา/ถูกยกเลิกแล้ว (ที่นั่งถูกปล่อยไปแล้ว) ห้ามยืนยันการชำระเงิน
-            if ($booking->status !== 'PENDING_PAYMENT') {
+            if ($booking->status !== Booking::STATUS_PENDING_PAYMENT) {
                 abort(409, 'การจองนี้หมดเวลาหรือถูกยกเลิกแล้ว');
             }
 
             $concert = $booking->concert;
-            $customer = \App\Models\AppUser::find($booking->user_id);
+            $customer = AppUser::find($booking->b_user_id);
 
             // อัปเดต Payment → COMPLETED
-            $payment->update(['status' => 'COMPLETED']);
+            $payment->update(['status' => Payment::STATUS_COMPLETED]);
 
-            // ยืนยัน Booking
+            // ยืนยัน Booking (ที่นั่งเป็น sold, ปิดล็อกที่นั่ง, โซนยืนย้ายจาก held ไป sold)
             $booking->confirmBooking();
 
-            // สร้าง CustomerOrder พร้อม Snapshot
-            $order = \App\Models\CustomerOrder::create([
-                'booking_id'                   => $booking->booking_id,
-                'payment_id'                   => $paymentId,
-                'order_code'                   => $payment->payment_metadata['orderCode'] ?? $this->generateOrderCode($concert),
-                'concert_name_snapshot'        => $concert->name,
-                'artist_snapshot'              => $concert->artist,
-                'venue_snapshot'               => $concert->venue,
-                'event_datetime_snapshot'      => $concert->event_datetime,
-                'organization_name_snapshot'   => $concert->organization?->name ?? '',
-                'user_fiestname_snapshot'      => $customer?->first_name ?? '',
-                'user_lastname_snapshot'       => $customer?->last_name ?? '',
-                'user_phone_snapshot'          => $customer?->phone ?? '',
-                'order_date'                   => now(),
+            // สร้าง CustomerOrder พร้อม Snapshot (schema 3.4.2 เก็บโซน ราคา ยอดรวม จำนวน และอีเมลผู้ซื้อด้วย)
+            $order = CustomerOrder::create([
+                'uo_booking_id'              => $booking->b_id,
+                'uo_payment_id'              => $payment->p_id,
+                'order_code'                 => $payment->payment_metadata['orderCode'] ?? $this->generateOrderCode($concert),
+                'concert_name_snapshot'      => $concert->name,
+                'artist_snapshot'            => $concert->artist,
+                'venue_snapshot'             => $concert->venue,
+                'event_datetime_snapshot'    => $concert->event_datetime,
+                'organization_name_snapshot' => $concert->organization?->name ?? '',
+                'user_firstname_snapshot'    => $customer?->first_name ?? '',
+                'user_lastname_snapshot'     => $customer?->last_name ?? '',
+                'user_phone_snapshot'        => $customer?->phone,
+                'user_email_snapshot'        => $customer?->email,
+                'zone_name_snapshot'         => $booking->zone_name_snapshot,
+                'unit_price_snapshot'        => $booking->zone_price_snapshot,
+                'total_amount_snapshot'      => $booking->total_amount,
+                'quantity'                   => $booking->ticketQuantity(),
+                'order_date'                 => now(),
             ]);
 
-            // สร้าง Ticket ผ่าน TicketController
-            (new TicketController())->generateTickets($order->order_id);
+            // สร้าง Ticket ผ่าน TicketController (1 ใบต่อ 1 ที่นั่ง/บัตรยืน)
+            (new TicketController())->generateTickets($order->uo_id);
 
             return $order;
         });
@@ -371,11 +374,11 @@ class PaymentController extends Controller
     {
         $booking = $this->findOwnBooking($request, $bookingId);
 
-        if ($booking->status !== 'PENDING_PAYMENT') {
+        if ($booking->status !== Booking::STATUS_PENDING_PAYMENT) {
             return response()->json(['cancelled' => false, 'message' => 'การจองนี้ไม่ได้อยู่ในสถานะรอชำระเงิน'], 409);
         }
 
-        if ($booking->payments()->where('status', 'PENDING')->exists()) {
+        if ($booking->payments()->where('status', Payment::STATUS_PENDING)->exists()) {
             return response()->json(['cancelled' => false, 'message' => 'มีรายการชำระเงินที่รอยืนยันอยู่'], 409);
         }
 
@@ -451,8 +454,8 @@ class PaymentController extends Controller
      */
     private function findOwnBooking(Request $request, int $bookingId): Booking
     {
-        return Booking::where('booking_id', $bookingId)
-            ->where('user_id', $request->user()->user_id)
+        return Booking::whereKey($bookingId)
+            ->where('b_user_id', $request->user()->u_id)
             ->firstOrFail();
     }
 

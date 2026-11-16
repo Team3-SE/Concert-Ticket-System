@@ -1,4 +1,4 @@
-# Concert Ticketing System
+# Concert Ticket System
 
 ระบบจองตั๋วคอนเสิร์ต — Team 3, Software Engineering, Burapha University
 
@@ -153,7 +153,7 @@ docker exec concert_app php artisan view:clear
 **Q: ถ้าเขียนฟังก์ชันใหม่เพิ่ม หรือแก้ไฟล์ PHP ต้องรัน `docker-compose build` ใหม่ไหม?**
 > **ตอบ: ไม่ต้องครับ!** 🎉
 > 
-> โฟลเดอร์โปรเจกต์ของคุณ (`concert-ticketing-system`) ถูก Map (Volume) เข้าไปใน Docker Container โดยตรง 
+> โฟลเดอร์โปรเจกต์ของคุณ (`concert-ticket-system`) ถูก Map (Volume) เข้าไปใน Docker Container โดยตรง 
 > ดังนั้น **"เมื่อคุณ Save ไฟล์ใน VS Code โค้ดใน Docker จะอัปเดตตามทันที"** คุณสามารถสลับไปกด Refresh หน้าเว็บเพื่อดูผลลัพธ์ หรือรันเทสต์ผ่าน Model Tester ได้เลย
 >
 > **กรณีเดียวที่ต้องสั่ง Rebuild (`docker-compose build`) คือ:**

@@ -5,7 +5,6 @@ namespace Database\Factories;
 use App\Models\AppUser;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 /**
  * @extends Factory<AppUser>
@@ -26,11 +25,14 @@ class AppUserFactory extends Factory
      */
     public function definition(): array
     {
+        // schema 3.4.2: u_id เป็น AUTO_INCREMENT ไม่ต้องกำหนดเอง, ลูกค้าทั่วไปใช้ role 'USER'
         return [
-            'user_id' => (string) Str::ulid(),
+            'email' => fake()->unique()->safeEmail(),
             'password_hash' => static::$password ??= Hash::make('password'),
-            'role' => 'customer',
-            'account_status' => 1,
+            'role' => AppUser::ROLE_CUSTOMER,
+            'account_status' => AppUser::STATUS_ACTIVE,
+            'first_name' => fake()->firstName(),
+            'last_name' => fake()->lastName(),
             'created_at' => now(),
         ];
     }

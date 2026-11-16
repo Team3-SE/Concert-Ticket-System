@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * DatabaseSeeder
+ * ข้อมูลตัวอย่างสำหรับ schema 3.4.2 (องค์กร ผู้ใช้ทุกบทบาท คอนเสิร์ต โซน ที่นั่ง และการจองที่ชำระเงินแล้ว 1 รายการ)
+ * ทุกบัญชีใช้รหัสผ่าน Password123!
+ * Author :
+ * Created :
+ * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
@@ -12,32 +21,26 @@ class DatabaseSeeder extends Seeder
 {
     private array $codeSequences = [];
 
+    /**
+     * run()
+     * ล้างข้อมูลเดิมแล้วสร้างข้อมูลตัวอย่างใหม่ทั้งหมด
+     * param : -
+     * return : void
+     */
     public function run(): void
     {
-        $this->truncateNewSchema();
+        $this->truncateSchema();
 
         $now = now();
 
-        // Organizations (formerly company)
+        // Organizations (schema 3.4.2 เหลือแค่ชื่อ ช่องทางติดต่อย้ายไปอยู่ที่คอนเสิร์ต)
         $orgGmmId = DB::table('organization')->insertGetId([
             'name' => 'GMM Grammy',
-            'initials' => 'GMM',
-            'description' => 'Thai entertainment company and concert promoter.',
-            'phone' => '02-669-9000',
-            'email' => 'contact@gmm-grammy.example',
-            'facebook' => 'GMM Grammy Official',
-            'line' => '@gmmgrammy',
             'created_at' => $now,
         ]);
 
         $orgBecId = DB::table('organization')->insertGetId([
             'name' => 'BEC-Tero Entertainment',
-            'initials' => 'BEC',
-            'description' => 'Live event and concert promoter.',
-            'phone' => '02-612-9999',
-            'email' => 'contact@bec-tero.example',
-            'facebook' => 'BEC-Tero Entertainment',
-            'line' => '@bectero',
             'created_at' => $now,
         ]);
 
@@ -57,7 +60,7 @@ class DatabaseSeeder extends Seeder
             'role' => 'ORGANIZER',
             'account_status' => 1,
             'username' => 'gmm-organizer',
-            'organization_id' => $orgGmmId,
+            'u_organization_id' => $orgGmmId,
             'created_at' => $now,
         ]);
 
@@ -67,7 +70,7 @@ class DatabaseSeeder extends Seeder
             'role' => 'ORGANIZER',
             'account_status' => 1,
             'username' => 'bec-organizer',
-            'organization_id' => $orgBecId,
+            'u_organization_id' => $orgBecId,
             'created_at' => $now,
         ]);
 
@@ -76,8 +79,8 @@ class DatabaseSeeder extends Seeder
             'role' => 'STAFF',
             'account_status' => 1,
             'username' => 'gmm-gate-1',
-            'organization_id' => $orgGmmId,
-            'created_by_user_id' => $orgGmmUserId,
+            'u_organization_id' => $orgGmmId,
+            'u_created_by_app_user_id' => $orgGmmUserId,
             'created_at' => $now,
         ]);
 
@@ -86,8 +89,8 @@ class DatabaseSeeder extends Seeder
             'role' => 'STAFF',
             'account_status' => 1,
             'username' => 'gmm-gate-2',
-            'organization_id' => $orgGmmId,
-            'created_by_user_id' => $orgGmmUserId,
+            'u_organization_id' => $orgGmmId,
+            'u_created_by_app_user_id' => $orgGmmUserId,
             'created_at' => $now,
         ]);
 
@@ -96,8 +99,8 @@ class DatabaseSeeder extends Seeder
             'role' => 'STAFF',
             'account_status' => 1,
             'username' => 'bec-gate-1',
-            'organization_id' => $orgBecId,
-            'created_by_user_id' => $orgBecUserId,
+            'u_organization_id' => $orgBecId,
+            'u_created_by_app_user_id' => $orgBecUserId,
             'created_at' => $now,
         ]);
 
@@ -112,7 +115,7 @@ class DatabaseSeeder extends Seeder
             'created_at' => $now,
         ]);
 
-        $user2Id = DB::table('app_user')->insertGetId([
+        DB::table('app_user')->insert([
             'email' => 'user2@example.com',
             'password_hash' => Hash::make('Password123!'),
             'role' => 'USER',
@@ -123,14 +126,18 @@ class DatabaseSeeder extends Seeder
             'created_at' => $now,
         ]);
 
-        // Concerts
+        // Concerts (ช่องทางติดต่อของผู้จัดเก็บที่คอนเสิร์ต)
         $concertRockId = DB::table('concert')->insertGetId([
-            'organization_id' => $orgGmmId,
+            'c_organization_id' => $orgGmmId,
             'name' => 'Rock Night 2026',
             'artist' => 'Bodyslam',
             'venue' => 'BCC Hall, Bangkok',
             'event_datetime' => '2026-11-01 18:00:00',
             'description' => 'A high-energy rock concert in Bangkok.',
+            'phone' => '02-669-9000',
+            'email' => 'contact@gmm-grammy.example',
+            'facebook' => 'GMM Grammy Official',
+            'line' => '@gmmgrammy',
             'poster_path' => 'posters/rock-night-2026.jpg',
             'seat_map_image_path' => 'seat-maps/rock-night-2026.png',
             'sale_start_datetime' => '2026-09-15 10:00:00',
@@ -142,12 +149,16 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $concertPopId = DB::table('concert')->insertGetId([
-            'organization_id' => $orgBecId,
+            'c_organization_id' => $orgBecId,
             'name' => 'Pop Star Live 2026',
             'artist' => 'Bird Thongchai',
             'venue' => 'Impact Arena, Muang Thong Thani',
             'event_datetime' => '2026-12-15 19:00:00',
             'description' => 'A pop concert with reserved and standing zones.',
+            'phone' => '02-612-9999',
+            'email' => 'contact@bec-tero.example',
+            'facebook' => 'BEC-Tero Entertainment',
+            'line' => '@bectero',
             'poster_path' => 'posters/pop-star-live-2026.jpg',
             'seat_map_image_path' => 'seat-maps/pop-star-live-2026.png',
             'sale_start_datetime' => '2026-10-01 10:00:00',
@@ -158,52 +169,53 @@ class DatabaseSeeder extends Seeder
             'created_at' => $now,
         ]);
 
-        $rockVipZoneId = $this->seedZoneWithSeats($concertRockId, 'VIP', 'SEATED', 3000, 15, '#F59E0B', 'A', 1, 3, 5);
-        $rockZoneAId = $this->seedZoneWithSeats($concertRockId, 'Zone A', 'SEATED', 1500, 24, '#3B82F6', 'D', 1, 4, 6);
-        $popStandingZoneId = $this->seedStandingZone($concertPopId, 'Standing', 1200, 500, '#10B981');
+        $rockVipZoneId = $this->seedZoneWithSeats($concertRockId, 'VIP', 3000, 15, '#F59E0B', 'A', 1, 3, 5);
+        $this->seedZoneWithSeats($concertRockId, 'Zone A', 1500, 24, '#3B82F6', 'D', 1, 4, 6);
+        $this->seedStandingZone($concertPopId, 'Standing', 1200, 500, '#10B981');
 
+        // staff_concert.status: 1 = ยังได้รับมอบหมายอยู่
         DB::table('staff_concert')->insert([
-            ['staff_id' => $staffGmm1Id, 'concert_id' => $concertRockId],
-            ['staff_id' => $staffGmm2Id, 'concert_id' => $concertRockId],
-            ['staff_id' => $staffBec1Id, 'concert_id' => $concertPopId],
+            ['sc_staff_id' => $staffGmm1Id, 'sc_concert_id' => $concertRockId, 'status' => 1],
+            ['sc_staff_id' => $staffGmm2Id, 'sc_concert_id' => $concertRockId, 'status' => 1],
+            ['sc_staff_id' => $staffBec1Id, 'sc_concert_id' => $concertPopId, 'status' => 1],
         ]);
 
-        $vipSeats = DB::table('seat')->where('zone_id', $rockVipZoneId)->orderBy('row')->orderBy('number')->take(2)->get();
-        
+        // การจองที่ชำระเงินแล้ว: user1 จองที่นั่ง VIP 2 ที่
+        $vipSeats = DB::table('seat')->where('s_zone_id', $rockVipZoneId)->orderBy('row')->orderBy('number')->take(2)->get();
+
         $seatBookingId = DB::table('booking')->insertGetId([
             'booking_code' => $this->makeCode('BKG'),   // booking_code เป็นรหัสภายใน (ไม่ใช่ Public Code)
-            'user_id' => $user1Id,
-            'concert_id' => $concertRockId,
+            'b_user_id' => $user1Id,
+            'b_zone_id' => $rockVipZoneId,
             'booking_date' => $now->copy()->subMinutes(30),
             'total_amount' => 6000,
             'status' => 'CONFIRMED',
             'expiry_time' => $now->copy()->subMinutes(20),
+            'zone_price_snapshot' => 3000,
+            'zone_name_snapshot' => 'VIP',
         ]);
 
         foreach ($vipSeats as $seat) {
             DB::table('booking_seat')->insert([
-                'booking_id' => $seatBookingId,
-                'seat_id' => $seat->seat_id,
-                'zone_name_snapshot' => 'VIP',
+                'bs_booking_id' => $seatBookingId,
+                'bs_seat_id' => $seat->s_id,
                 'seat_label_snapshot' => $seat->row . $seat->number,
-                'unit_price_snapshot' => 3000,
             ]);
-            DB::table('seat')->where('seat_id', $seat->seat_id)->update(['seat_booking_status' => 'SOLD']);
+            DB::table('seat')->where('s_id', $seat->s_id)->update(['seat_booking_status' => 'sold']);
         }
 
-        $this->seedPaymentOrderAndTickets(
-            $seatBookingId,
-            $concertRockId,
-            $rockVipZoneId,
-            $vipSeats->pluck('seat_id')->all(),
-            6000,
-            'C024'
-        );
+        $this->seedPaymentOrderAndTickets($seatBookingId, $vipSeats->pluck('s_id')->all(), 6000, 'C024');
 
-        $this->command->info('Seeded the v3.1.0 SQL schema successfully.');
+        $this->command->info('Seeded the v3.4.2 schema successfully.');
     }
 
-    private function truncateNewSchema(): void
+    /**
+     * truncateSchema()
+     * ล้างข้อมูลทุกตารางของ schema 3.4.2 (ปิดการตรวจ foreign key ระหว่างล้าง)
+     * param : -
+     * return : void
+     */
+    private function truncateSchema(): void
     {
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         $tables = [
@@ -215,8 +227,7 @@ class DatabaseSeeder extends Seeder
             'payment',
             'booking_seat',
             'seat',
-            'zone_seat_pattern',
-            'naming_template',
+            'zone_inventory',
             'zone',
             'audit_log',
             'anomaly_attachment',
@@ -235,14 +246,24 @@ class DatabaseSeeder extends Seeder
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
 
-    private function seedZoneWithSeats(int $concertId, string $name, string $zoneType, float $price, int $capacity, string $color, string $startRow, int $startSeatNumber, int $rowCount, int $seatsPerRow): int
+    /**
+     * seedZoneWithSeats(concertId, name, price, capacity, color, startRow, startSeatNumber, rowCount, seatsPerRow)
+     * สร้างโซนที่นั่ง (SEATED) พร้อมที่นั่งทุกที่ (แถวเริ่มจาก startRow เลขที่นั่งเริ่มจาก startSeatNumber)
+     * param : concertId, name, price, capacity, color, startRow, startSeatNumber, rowCount, seatsPerRow
+     * return : int รหัสโซน
+     */
+    private function seedZoneWithSeats(int $concertId, string $name, float $price, int $capacity, string $color, string $startRow, int $startSeatNumber, int $rowCount, int $seatsPerRow): int
     {
         $zoneId = DB::table('zone')->insertGetId([
-            'concert_id' => $concertId,
+            'z_concert_id' => $concertId,
             'name' => $name,
-            'zone_type' => $zoneType,
+            'zone_type' => 'SEATED',
             'price' => $price,
             'capacity' => $capacity,
+            'total_rows' => $rowCount,
+            'seats_per_row' => $seatsPerRow,
+            'seat_number_start' => $startSeatNumber,
+            'row_alphabet_start' => $startRow,
             'color' => $color,
             'created_at' => now(),
         ]);
@@ -252,11 +273,11 @@ class DatabaseSeeder extends Seeder
             $row = chr(ord($startRow) + $rowOffset);
             for ($seatNumber = $startSeatNumber; $seatNumber < $startSeatNumber + $seatsPerRow; $seatNumber++) {
                 $seats[] = [
-                    'zone_id' => $zoneId,
+                    's_zone_id' => $zoneId,
                     'row' => $row,
                     'number' => $seatNumber,
-                    'seat_booking_status' => 'AVAILABLE',
-                    'seat_status' => 'NORMAL',
+                    'seat_booking_status' => 'available',
+                    'seat_status' => 'active',
                 ];
             }
         }
@@ -266,10 +287,16 @@ class DatabaseSeeder extends Seeder
         return $zoneId;
     }
 
+    /**
+     * seedStandingZone(concertId, name, price, capacity, color)
+     * สร้างโซนยืน (STANDING) พร้อมแถวตัวนับใน zone_inventory (held = 0, sold = 0)
+     * param : concertId, name, price, capacity, color
+     * return : int รหัสโซน
+     */
     private function seedStandingZone(int $concertId, string $name, float $price, int $capacity, string $color): int
     {
-        return DB::table('zone')->insertGetId([
-            'concert_id' => $concertId,
+        $zoneId = DB::table('zone')->insertGetId([
+            'z_concert_id' => $concertId,
             'name' => $name,
             'zone_type' => 'STANDING',
             'price' => $price,
@@ -277,19 +304,28 @@ class DatabaseSeeder extends Seeder
             'color' => $color,
             'created_at' => now(),
         ]);
+
+        DB::table('zone_inventory')->insert(['zi_zone_id' => $zoneId, 'held' => 0, 'sold' => 0]);
+
+        return $zoneId;
     }
 
-    private function seedPaymentOrderAndTickets(int $bookingId, int $concertId, int $zoneId, array $seatIds, float $amount, string $concertCode): void
+    /**
+     * seedPaymentOrderAndTickets(bookingId, seatIds, amount, concertCode)
+     * สร้างการชำระเงินที่สำเร็จ คำสั่งซื้อ (พร้อม snapshot) และบัตร 1 ใบต่อที่นั่ง ของการจองที่กำหนด
+     * param : bookingId, seatIds, amount, concertCode
+     * return : void
+     */
+    private function seedPaymentOrderAndTickets(int $bookingId, array $seatIds, float $amount, string $concertCode): void
     {
-        $concert = DB::table('concert')->where('concert_id', $concertId)->first();
-        $org = DB::table('organization')->where('organization_id', $concert->organization_id)->first();
-        $zone = DB::table('zone')->where('zone_id', $zoneId)->first();
-        $booking = DB::table('booking')->where('booking_id', $bookingId)->first();
-        $user = DB::table('app_user')->where('user_id', $booking->user_id)->first();
-        $unitPrice = $zone ? (float) $zone->price : 0;
+        $booking = DB::table('booking')->where('b_id', $bookingId)->first();
+        $zone = DB::table('zone')->where('z_id', $booking->b_zone_id)->first();
+        $concert = DB::table('concert')->where('c_id', $zone->z_concert_id)->first();
+        $org = DB::table('organization')->where('org_id', $concert->c_organization_id)->first();
+        $user = DB::table('app_user')->where('u_id', $booking->b_user_id)->first();
 
         $paymentId = DB::table('payment')->insertGetId([
-            'booking_id' => $bookingId,
+            'p_booking_id' => $bookingId,
             'amount' => $amount,
             'method' => 'CREDIT_CARD',
             'status' => 'COMPLETED',
@@ -298,40 +334,52 @@ class DatabaseSeeder extends Seeder
 
         $orderId = DB::table('user_order')->insertGetId([
             'order_code' => $this->makeCode('ORD', $concertCode),
-            'booking_id' => $bookingId,
-            'payment_id' => $paymentId,
+            'uo_booking_id' => $bookingId,
+            'uo_payment_id' => $paymentId,
             'concert_name_snapshot' => $concert->name,
             'artist_snapshot' => $concert->artist,
             'venue_snapshot' => $concert->venue,
             'event_datetime_snapshot' => $concert->event_datetime,
             'organization_name_snapshot' => $org->name,
-            'user_fiestname_snapshot' => $user->first_name,
+            'user_firstname_snapshot' => $user->first_name,
             'user_lastname_snapshot' => $user->last_name,
             'user_phone_snapshot' => $user->phone,
+            'user_email_snapshot' => $user->email,
+            'zone_name_snapshot' => $booking->zone_name_snapshot,
+            'unit_price_snapshot' => $booking->zone_price_snapshot,
+            'total_amount_snapshot' => $booking->total_amount,
+            'quantity' => count($seatIds),
         ]);
 
-        foreach ($seatIds as $seatId) {
-            $seat = $seatId ? DB::table('seat')->where('seat_id', $seatId)->first() : null;
+        foreach (array_values($seatIds) as $index => $seatId) {
+            $seat = DB::table('seat')->where('s_id', $seatId)->first();
 
             DB::table('ticket')->insert([
                 'ticket_code' => $this->makeCode('TKT', $concertCode),
-                'order_id' => $orderId,
-                'zone_id' => $zoneId,
-                'seat_id' => $seatId,
+                't_order_id' => $orderId,
+                't_zone_id' => $booking->b_zone_id,
+                't_seat_id' => $seatId,
                 'qr_code' => hash('sha256', uniqid() . $orderId . config('app.key', 'dev-key')),
                 'is_used' => 0,
-                'zone_name_snapshot' => $zone->name,
                 'seat_label_snapshot' => $seat ? $seat->row . $seat->number : null,
-                'unit_price_snapshot' => $unitPrice,
+                'status' => 'valid',
+                'slot_no' => $index + 1,
             ]);
         }
     }
 
+    /**
+     * makeCode(prefix, concertCode)
+     * สร้างรหัสตาม Public Code Format Specification V2.0.0: {TYPE}-{CONCERT 7 ตัว}-{ลำดับ 6 หลัก}
+     * ถ้าไม่ระบุ concertCode จะได้รหัสสุ่ม {TYPE}-{10 ตัว}
+     * param : prefix, concertCode
+     * return : string
+     */
     private function makeCode(string $prefix, ?string $concertCode = null): string
     {
         $parts = [$prefix];
 
-        // Public Code Format Specification V2.0.0: {TYPE}-{CONCERT 7 ตัว}-{ลำดับ 6 หลัก} นับแยกตาม TYPE + คอนเสิร์ต ไม่มีวันที่
+        // นับลำดับแยกตาม TYPE + คอนเสิร์ต ไม่มีวันที่
         if ($concertCode) {
             $parts[] = \App\Models\Concert::normalizePublicCode($concertCode);
             $sequenceKey = implode('-', $parts);
@@ -344,4 +392,3 @@ class DatabaseSeeder extends Seeder
         return $prefix . '-' . strtoupper(Str::random(10));
     }
 }
-

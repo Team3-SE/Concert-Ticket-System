@@ -1,5 +1,5 @@
 Class Design Specification
-Concert Ticketing System
+Concert Ticket System
 Interface - Controller - Entity Specification
 ฉบับ v3.1.0
 1. Interface / Boundary - Methods

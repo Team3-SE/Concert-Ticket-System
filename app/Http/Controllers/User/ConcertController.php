@@ -2,10 +2,10 @@
 
 /**
  * ConcertController
- * จัดการข้อมูลคอนเสิร์ตฝั่งลูกค้า: รายการ ค้นหา รายการแนะนำขณะพิมพ์ และรายละเอียดคอนเสิร์ต
- * Author :
- * Created :
- * Updated : 23/10/2569 67160292 ธีรเมธ พลสาย
+ * จัดการข้อมูลคอนเสิร์ตฝั่งลูกค้า: รายการ ค้นหา (ชื่อ ศิลปิน สถานที่ ผู้จัด วันที่) รายการแนะนำขณะพิมพ์ และรายละเอียดคอนเสิร์ต
+ * Author : 67160292 ธีรเมธ พลสาย
+ * Created : 16/10/2569
+ * Updated : 16/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -32,23 +32,36 @@ class ConcertController extends Controller
     /* จำนวนคำค้นสูงสุดที่นำไปค้นหา */
     private const MAX_SEARCH_TERMS = 5;
 
+    /* ชื่อเดือนที่ใช้ค้นหาด้วยวันที่ (ไทยเต็ม/ย่อ และอังกฤษ) => เลขเดือน */
+    private const MONTH_NAMES = [
+        'มกราคม' => 1, 'กุมภาพันธ์' => 2, 'มีนาคม' => 3, 'เมษายน' => 4, 'พฤษภาคม' => 5, 'มิถุนายน' => 6,
+        'กรกฎาคม' => 7, 'สิงหาคม' => 8, 'กันยายน' => 9, 'ตุลาคม' => 10, 'พฤศจิกายน' => 11, 'ธันวาคม' => 12,
+        'ม.ค.' => 1, 'ก.พ.' => 2, 'มี.ค.' => 3, 'เม.ย.' => 4, 'พ.ค.' => 5, 'มิ.ย.' => 6,
+        'ก.ค.' => 7, 'ส.ค.' => 8, 'ก.ย.' => 9, 'ต.ค.' => 10, 'พ.ย.' => 11, 'ธ.ค.' => 12,
+        'ม.ค' => 1, 'ก.พ' => 2, 'มี.ค' => 3, 'เม.ย' => 4, 'พ.ค' => 5, 'มิ.ย' => 6,
+        'ก.ค' => 7, 'ส.ค' => 8, 'ก.ย' => 9, 'ต.ค' => 10, 'พ.ย' => 11, 'ธ.ค' => 12,
+        'january' => 1, 'february' => 2, 'march' => 3, 'april' => 4, 'may' => 5, 'june' => 6,
+        'july' => 7, 'august' => 8, 'september' => 9, 'october' => 10, 'november' => 11, 'december' => 12,
+        'jan' => 1, 'feb' => 2, 'mar' => 3, 'apr' => 4, 'jun' => 6, 'jul' => 7,
+        'aug' => 8, 'sep' => 9, 'oct' => 10, 'nov' => 11, 'dec' => 12,
+    ];
+
     /* ตัวกรองสถานะในหน้าคอนเสิร์ตทั้งหมด */
     private const STATUS_FILTERS = [
-        'ON_SALE'   => 'เปิดขาย',
-        'SCHEDULED' => 'เร็ว ๆ นี้',
-        'SOLD_OUT'  => 'ขายหมด',
+        Concert::STATUS_ON_SALE   => 'เปิดขาย',
+        Concert::STATUS_SCHEDULED => 'เร็ว ๆ นี้',
+        Concert::STATUS_SOLD_OUT  => 'ขายหมด',
     ];
 
     /**
      * getConcertList()
-     * ดึงรายการคอนเสิร์ตที่ยังไม่ถูกลบ เรียงตามวันเปิดขาย
+     * ดึงรายการคอนเสิร์ตที่ลูกค้าเห็นได้ (ไม่ถูกลบ ไม่ใช่ DRAFT) เรียงตามวันเปิดขาย พร้อมจำนวนบัตรคงเหลือสำหรับป้ายสถานะ
      * param : -
      * return : Collection ของ Concert
      */
     public function getConcertList()
     {
-        return Concert::with('organization')
-            ->where('is_deleted', 0)
+        return $this->publicConcerts()
             ->orderBy('sale_start_datetime', 'asc')
             ->get();
     }
@@ -77,7 +90,8 @@ class ConcertController extends Controller
 
         $query = $base->withMin('zones', 'price');   // zones_min_price = ราคาเริ่มต้น
         if ($status !== '') {
-            $query->where('status', $status);
+            // กรองตามสถานะที่แสดงผล (เช่น ขายหมด = ตั้งสถานะ SOLD_OUT หรือที่นั่งถูกจองหมดแล้ว)
+            $query->whereDisplayStatus($status);
         }
 
         // คอนเสิร์ตที่ยังไม่จัดขึ้นก่อน แล้วเรียงตามวันแสดงที่ใกล้ที่สุด
@@ -136,7 +150,7 @@ class ConcertController extends Controller
         return response()->json([
             'query'   => $query,
             'results' => $results->map(fn (Concert $concert) => [
-                'id'           => $concert->concert_id,
+                'id'           => $concert->c_id,
                 'name'         => $concert->name,
                 'artist'       => $concert->artist,
                 'venue'        => $concert->venue,
@@ -144,24 +158,24 @@ class ConcertController extends Controller
                 'date'         => $concert->event_datetime
                     ? Carbon::parse($concert->event_datetime)->thDateLong() . ' ' . Carbon::parse($concert->event_datetime)->format('H:i') . ' น.'
                     : null,
-                'status'       => strtoupper((string) $concert->status),
+                'status'       => $concert->displayStatus(),
                 'poster'       => $concert->poster_path ? asset('storage/' . $concert->poster_path) : null,
-                'url'          => url('/concert-detail?concert_id=' . $concert->concert_id),
+                'url'          => url('/concert-detail?concert_id=' . $concert->c_id),
             ])->values(),
         ]);
     }
 
     /**
      * getConcertDetail(concertId)
-     * ดึงรายละเอียดคอนเสิร์ต พร้อมผู้จัด (ช่องทางติดต่อ) และโซน
+     * ดึงรายละเอียดคอนเสิร์ต พร้อมผู้จัดและโซน (คอนเสิร์ตฉบับร่าง DRAFT ลูกค้าเปิดไม่ได้ ตอบ 404)
      * param : concertId
      * return : Concert (ถ้าไม่พบจะตอบ 404)
      */
     public function getConcertDetail(int $concertId)
     {
         return Concert::with(['organization', 'zones'])
-            ->where('concert_id', $concertId)
-            ->where('is_deleted', 0)
+            ->whereKey($concertId)
+            ->where('status', '!=', Concert::STATUS_DRAFT)
             ->firstOrFail();
     }
 
@@ -169,15 +183,15 @@ class ConcertController extends Controller
 
     /**
      * publicConcerts()
-     * สร้าง query ของคอนเสิร์ตที่ลูกค้าเห็นได้ (ไม่ถูกลบ และไม่ใช่ DRAFT)
+     * สร้าง query ของคอนเสิร์ตที่ลูกค้าเห็นได้ (ไม่ถูกลบ และไม่ใช่ DRAFT) พร้อมจำนวนบัตรคงเหลือ (available_tickets)
      * param : -
      * return : Builder
      */
     private function publicConcerts(): Builder
     {
         return Concert::with('organization')
-            ->where('is_deleted', 0)
-            ->where('status', '!=', 'DRAFT');
+            ->withAvailability()
+            ->where('concert.status', '!=', Concert::STATUS_DRAFT);
     }
 
     /**
@@ -221,18 +235,84 @@ class ConcertController extends Controller
      */
     private function applyKeyword(Builder $query, array $terms, bool $matchAll): Builder
     {
-        return $query->where(function (Builder $outer) use ($terms, $matchAll) {
-            foreach ($terms as $term) {
-                $like = $this->likeValue($term);
-                $matchTerm = function (Builder $q) use ($like) {
-                    $q->where('name', 'like', $like)
-                      ->orWhere('artist', 'like', $like)
-                      ->orWhere('venue', 'like', $like)
-                      ->orWhereHas('organization', fn (Builder $org) => $org->where('name', 'like', $like));
-                };
-                $matchAll ? $outer->where($matchTerm) : $outer->orWhere($matchTerm);
+        // ถ้าคำค้นเป็นวันที่ (เช่น 16/11/2569, 16 พ.ย. 2569, พฤศจิกายน) ให้ค้นจากวันแสดง (event_datetime) ด้วย
+        $date = $this->parseDateKeyword(implode(' ', $terms));
+
+        return $query->where(function (Builder $outer) use ($terms, $matchAll, $date) {
+            $outer->where(function (Builder $textMatch) use ($terms, $matchAll) {
+                foreach ($terms as $term) {
+                    $like = $this->likeValue($term);
+                    $matchTerm = function (Builder $q) use ($like) {
+                        $q->where('name', 'like', $like)
+                          ->orWhere('artist', 'like', $like)
+                          ->orWhere('venue', 'like', $like)
+                          ->orWhereHas('organization', fn (Builder $org) => $org->where('name', 'like', $like));
+                    };
+                    $matchAll ? $textMatch->where($matchTerm) : $textMatch->orWhere($matchTerm);
+                }
+            });
+
+            if ($date !== null) {
+                $outer->orWhere(function (Builder $q) use ($date) {
+                    $q->whereNotNull('event_datetime');
+                    if ($date['year'] !== null)  { $q->whereYear('event_datetime', $date['year']); }
+                    if ($date['month'] !== null) { $q->whereMonth('event_datetime', $date['month']); }
+                    if ($date['day'] !== null)   { $q->whereDay('event_datetime', $date['day']); }
+                });
             }
         });
+    }
+
+    /**
+     * parseDateKeyword(keyword)
+     * แปลงคำค้นที่เป็นวันที่ให้เป็นส่วนของวันที่ (รองรับปี พ.ศ./ค.ศ.)
+     * รูปแบบ: 16/11/2569, 16-11-2025, 2025-11-16, 11/2569, 16/11, 16 พฤศจิกายน 2569, 16 พ.ย., พฤศจิกายน 2569, พฤศจิกายน
+     * param : keyword
+     * return : array ['day' => ?int, 'month' => ?int, 'year' => ?int] หรือ null ถ้าไม่ใช่วันที่
+     */
+    private function parseDateKeyword(string $keyword): ?array
+    {
+        $text = mb_strtolower(trim($keyword));
+        $day = $month = $year = null;
+
+        if (preg_match('/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/', $text, $m)) {
+            [$day, $month, $year] = [(int) $m[1], (int) $m[2], (int) $m[3]];
+        } elseif (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $text, $m)) {
+            [$year, $month, $day] = [(int) $m[1], (int) $m[2], (int) $m[3]];
+        } elseif (preg_match('/^(\d{1,2})[\/\-.](\d{4})$/', $text, $m)) {
+            [$month, $year] = [(int) $m[1], (int) $m[2]];
+        } elseif (preg_match('/^(\d{1,2})[\/\-.](\d{1,2})$/', $text, $m)) {
+            [$day, $month] = [(int) $m[1], (int) $m[2]];
+        } else {
+            $names = array_keys(self::MONTH_NAMES);
+            usort($names, fn ($a, $b) => mb_strlen($b) <=> mb_strlen($a));
+            $pattern = implode('|', array_map(fn ($n) => preg_quote($n, '/'), $names));
+
+            if (!preg_match('/^(?:(\d{1,2})\s*)?(' . $pattern . ')(?:\s*(\d{4}))?$/u', $text, $m)) {
+                return null;
+            }
+            $day   = $m[1] !== '' ? (int) $m[1] : null;
+            $month = self::MONTH_NAMES[$m[2]];
+            $year  = isset($m[3]) && $m[3] !== '' ? (int) $m[3] : null;
+        }
+
+        if ($year !== null && $year > 2400) {
+            $year -= 543;   // พ.ศ. → ค.ศ.
+        }
+        if ($month !== null && ($month < 1 || $month > 12)) {
+            return null;
+        }
+        if ($day !== null && ($day < 1 || $day > 31)) {
+            return null;
+        }
+        if ($day !== null && $month !== null && $year !== null && !checkdate($month, $day, $year)) {
+            return null;
+        }
+        if ($year !== null && ($year < 1900 || $year > 2200)) {
+            return null;
+        }
+
+        return ['day' => $day, 'month' => $month, 'year' => $year];
     }
 
     /**

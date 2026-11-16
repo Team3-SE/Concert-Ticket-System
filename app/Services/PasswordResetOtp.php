@@ -7,6 +7,7 @@
  * - กรอกผิดครบ MAX_ATTEMPTS ครั้ง รหัสนั้นถูกลบ ต้องขอรหัสใหม่
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 29/10/2569
+ * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Services;
@@ -61,7 +62,7 @@ class PasswordResetOtp
         $expiresAt = now()->addMinutes(self::TTL_MINUTES);
 
         Cache::put(self::key($user->email), [
-            'user_id'    => $user->user_id,
+            'user_id'    => $user->u_id,
             'hash'       => Hash::make($code),
             'attempts'   => 0,
             'sent_at'    => now()->timestamp,

@@ -40,7 +40,7 @@
             data-concert-search data-suggest-url="{{ route('concerts.suggest') }}">
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input type="search" name="search" value="{{ $search }}"
-               placeholder="ค้นหาชื่อคอนเสิร์ต ศิลปิน สถานที่ หรือผู้จัด"
+               placeholder="ค้นหาชื่อคอนเสิร์ต ศิลปิน สถานที่ ผู้จัด หรือวันที่่จัดงาน"
                aria-label="ค้นหาคอนเสิร์ต" autocomplete="off" spellcheck="false"
                role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="searchSuggest">
         @if($status !== '')

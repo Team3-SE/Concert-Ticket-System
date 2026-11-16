@@ -5,6 +5,7 @@
  * แสดงหน้า Home: คอนเสิร์ตแนะนำ ผลการค้นหา และคอนเสิร์ตไฮไลต์
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 16/10/2569
+ * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -50,8 +51,11 @@ class HomeController extends Controller
             $concerts = $this->concertController->getConcertList()->take(self::CONCERT_LIMIT);
         }
 
+        // ไฮไลต์: เฉพาะคอนเสิร์ตที่ยังไม่จัดขึ้น ไม่ใช่ฉบับร่างหรือยกเลิก (คอนเสิร์ตที่ถูกลบ SoftDeletes ไม่ดึงมาเอง)
         // เลือกคอนเสิร์ตที่มีแบนเนอร์ก่อน แล้วเรียงตามวันแสดง
-        $highlights = Concert::where('is_deleted', 0)
+        $highlights = Concert::query()
+            ->whereNotIn('status', [Concert::STATUS_DRAFT, Concert::STATUS_CANCELLED])
+            ->where(fn ($q) => $q->whereNull('event_datetime')->orWhere('event_datetime', '>', now()))
             ->orderByRaw('banner_path IS NULL')
             ->orderBy('event_datetime', 'asc')
             ->limit(self::HIGHLIGHT_LIMIT)

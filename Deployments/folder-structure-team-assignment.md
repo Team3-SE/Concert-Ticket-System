@@ -1,12 +1,12 @@
 # Folder Structure & Team Assignment (12 คน)
-### Concert Ticketing System — Laravel Modular Architecture
+### Concert Ticket System — Laravel Modular Architecture
 
 ---
 
 ## 1. โครงสร้าง Folder (Laravel Modular)
 
 ```
-concert-ticketing-system/
+concert-ticket-system/
 │
 ├── app/    
 │   ├── Console/                     # Artisan commands (เช่น cleanup expired lock/booking)

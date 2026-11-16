@@ -1,8 +1,9 @@
 {{--
  * navbar.blade.php
  * แถบด้านบน: โลโก้ ชื่อและรูปโปรไฟล์ของผู้ใช้ เมนูโปรไฟล์ หรือปุ่มเข้าสู่ระบบ
- * @Author
- * @Create Date
+ * @Author 67160292 ธีรเมธ พลสาย
+ * @Create Date 09-10-2569
+ * @Update Date 11/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 @php
   $showLogo = $showLogo ?? true;
@@ -10,7 +11,7 @@
   $profileName = $profileUser
       ? (trim(($profileUser->first_name ?? '') . ' ' . ($profileUser->last_name ?? '')) ?: $profileUser->email)
       : null;
-  // อักษรตัวแรกของชื่อ + สีพื้นหลังที่คงที่ต่อผู้ใช้ (คำนวณจาก user_id จึงได้สีเดิมทุกครั้งที่กลับเข้ามา)
+  // อักษรตัวแรกของชื่อ + สีพื้นหลังที่คงที่ต่อผู้ใช้ (คำนวณจากรหัสผู้ใช้ u_id จึงได้สีเดิมทุกครั้งที่กลับเข้ามา)
   $profileInitial = $profileUser
       ? mb_strtoupper(mb_substr($profileUser->first_name ?: ($profileUser->email ?? '?'), 0, 1))
       : '';

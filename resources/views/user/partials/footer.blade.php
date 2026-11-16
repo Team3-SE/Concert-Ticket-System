@@ -1,8 +1,9 @@
 {{--
  * footer.blade.php
  * ส่วนท้ายของเว็บ: ข้อมูลติดต่อและลิงก์นโยบาย
- * @Author
- * @Create Date
+ * @Author 67160292 ธีรเมธ พลสาย
+ * @Create Date 09-10-2569
+ * @Update Date 11/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 <footer class="bg-[#0B2F61] text-white border-t-2 border-[#F47B1F] mt-12 w-full">
   <div class="max-w-6xl mx-auto px-6 md:px-8 pt-8 pb-6">

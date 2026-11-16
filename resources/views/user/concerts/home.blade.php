@@ -1,9 +1,9 @@
 {{--
  * home.blade.php
  * หน้า Home: ช่องค้นหา แบนเนอร์ไฮไลต์ และคอนเสิร์ตแนะนำ (หน้าต่างเข้าสู่ระบบ/สมัครสมาชิกย้ายไป user/partials/auth-modals)
- * @Author
+ * @Author ธีรเมธ พลสาย
  * @Create Date
- * @Update Date 23/10/2569 67160292 ธีรเมธ พลสาย
+ * @Update Date 10/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 @extends('layouts.user')
 
@@ -18,7 +18,7 @@
           data-concert-search data-suggest-url="{{ route('concerts.suggest') }}">
       <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input type="search" name="search" value="{{ $search ?? request('search') }}"
-             placeholder="ค้นหาชื่อคอนเสิร์ต ศิลปิน สถานที่ หรือผู้จัด"
+             placeholder="ค้นหาชื่อคอนเสิร์ต ศิลปิน สถานที่ ผู้จัด หรือวันที่จัดงาน"
              aria-label="ค้นหาคอนเสิร์ต" autocomplete="off" spellcheck="false"
              role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="searchSuggest">
     </form>
@@ -38,7 +38,7 @@
       <div class="hero-slide {{ $index === 0 ? 'active' : '' }} {{ $bannerUrl ? 'has-banner' : '' }}" data-slide="{{ $index }}">
         @if($bannerUrl)
           {{-- รูปโหลดไม่ได้: ลบรูปแล้วกลับไปแสดงสไลด์แบบข้อความ --}}
-          <a class="hero-banner-link" href="{{ url('/concert-detail?concert_id=' . $highlight->concert_id) }}" aria-label="{{ $highlight->name }}">
+          <a class="hero-banner-link" href="{{ url('/concert-detail?concert_id=' . $highlight->c_id) }}" aria-label="{{ $highlight->name }}">
             <img class="hero-banner-img" src="{{ $bannerUrl }}" alt="{{ $highlight->name }}"
                  onerror="this.closest('.hero-slide').classList.remove('has-banner'); this.closest('a').remove();">
           </a>

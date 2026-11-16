@@ -2,10 +2,10 @@
 
 /**
  * EmailVerificationController
- * ยืนยันอีเมลก่อนสร้างบัญชี: หน้าแจ้งให้ตรวจอีเมล, ลิงก์ยืนยัน (สร้างบัญชีจริง) และส่งลิงก์ซ้ำ
+ * ยืนยันอีเมลก่อนสร้างบัญชี: หน้าต่างแจ้งให้ตรวจอีเมล (user/auth/partials/verify-email-modal), หน้ากดปุ่มยืนยันจากลิงก์ในอีเมล, สร้างบัญชีจริง และส่งลิงก์ซ้ำ
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 17/10/2569
- * Updated : 29/10/2569 67160292 ธีรเมธ พลสาย (ย้าย webmailFor ไปที่ Services/WebmailLink)
+ * Updated : 16/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -13,10 +13,10 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\AppUser;
 use App\Services\PendingRegistration;
-use App\Services\WebmailLink;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class EmailVerificationController extends Controller
 {
@@ -25,32 +25,43 @@ class EmailVerificationController extends Controller
 
     /**
      * notice(request)
-     * แสดงหน้า "กรุณาตรวจอีเมลเพื่อยืนยัน" พร้อมปุ่มเปิดเว็บเมลและปุ่มส่งลิงก์ซ้ำ (นับถอยหลัง)
+     * ลิงก์เดิมของหน้า "กรุณาตรวจอีเมล": พาไปหน้าแรกแล้วเปิดหน้าต่างตรวจอีเมล (ข้อมูลในหน้าต่างมาจาก AuthModalComposer)
+     * ไม่มีอีเมลรอยืนยันใน session = เปิดหน้าต่างสมัครสมาชิกแทน
      * param : request
-     * return : View auth.verify-notice (email, cooldown, ttl, webmail) หรือ redirect หน้าแรกถ้าไม่มีอีเมลรอยืนยัน
+     * return : RedirectResponse
      */
     public function notice(Request $request)
     {
-        $email = $request->session()->get('verify_email');
+        $request->session()->reflash();
 
-        if (!$email) {
-            return redirect('/')->with('open_modal', 'register');
+        return redirect('/')->with('open_modal', $request->session()->get('verify_email') ? 'verify-email' : 'register');
+    }
+
+    /**
+     * confirm(request, token)
+     * หน้าที่เปิดจากลิงก์ในอีเมล: แสดงปุ่มให้กดยืนยัน (ยังไม่สร้างบัญชี)
+     * เพื่อไม่ให้โปรแกรมสแกนลิงก์ของอีเมลที่เปิดลิงก์ล่วงหน้า (GET) ใช้ลิงก์ไปก่อนผู้ใช้
+     * param : request, token
+     * return : View user.auth.verify-confirm หรือ RedirectResponse ถ้าข้อมูลสมัครหมดอายุ
+     */
+    public function confirm(Request $request, string $token)
+    {
+        $data = PendingRegistration::find($token);
+
+        if (!$data) {
+            return $this->backToRegister('ลิงก์ยืนยันหมดอายุหรือไม่ถูกต้อง กรุณาสมัครสมาชิกใหม่');
         }
 
-        $sentAt   = (int) $request->session()->get('verify_sent_at', 0);
-        $cooldown = max(0, self::RESEND_COOLDOWN_SECONDS - (now()->timestamp - $sentAt));
-
-        return view('user.auth.verify-notice', [
-            'email'    => $email,
-            'cooldown' => $cooldown,
-            'ttl'      => PendingRegistration::TTL_MINUTES,
-            'webmail'  => WebmailLink::for($email),
+        return view('user.auth.verify-confirm', [
+            'email'     => $data['email'],
+            'firstName' => $data['first_name'] ?? '',
+            'action'    => $request->fullUrl(),   // signed URL เดิม ส่งกลับไปที่ POST
         ]);
     }
 
     /**
      * verify(request, token)
-     * ตรวจลิงก์ยืนยัน (signed URL) แล้วสร้างบัญชีจากข้อมูลที่เก็บไว้ชั่วคราว และเข้าสู่ระบบให้
+     * (POST จากปุ่มในหน้า confirm) ตรวจลิงก์ยืนยัน (signed URL) แล้วสร้างบัญชีจากข้อมูลที่เก็บไว้ชั่วคราว และเข้าสู่ระบบให้
      * param : request, token
      * return : RedirectResponse กลับหน้าที่ผู้ใช้อยู่ตอนสมัคร (ไม่มี = หน้าแรกพร้อมหน้าต่างยืนยันสำเร็จ)
      */
@@ -112,40 +123,45 @@ class EmailVerificationController extends Controller
      * resend(request)
      * ส่งลิงก์ยืนยันอีกครั้งจากข้อมูลสมัครที่ยังรอยืนยัน (จำกัดความถี่ที่ route)
      * param : request
-     * return : RedirectResponse กลับหน้าแจ้งตรวจอีเมล
+     * return : RedirectResponse กลับหน้าเดิมพร้อมเปิดหน้าต่างตรวจอีเมล
      */
     public function resend(Request $request)
     {
-        $request->validate(['email' => ['required', 'email']], [
+        $validator = Validator::make($request->only('email'), ['email' => ['required', 'email']], [
             'email.required' => 'กรุณากรอกอีเมล',
             'email.email'    => 'รูปแบบอีเมลไม่ถูกต้อง',
         ]);
+        if ($validator->fails()) {
+            return back()->with('open_modal', 'verify-email')->withErrors($validator);
+        }
 
         // กันกดส่งซ้ำถี่เกินไป (หน้าเว็บนับถอยหลังให้แล้ว อันนี้กันกรณีส่งฟอร์มเอง)
         $sentAt = (int) $request->session()->get('verify_sent_at', 0);
         if (now()->timestamp - $sentAt < self::RESEND_COOLDOWN_SECONDS) {
-            return redirect()->route('verification.notice')
-                ->with('error', 'กรุณารอสักครู่ก่อนส่งลิงก์อีกครั้ง');
+            return back()->with('open_modal', 'verify-email')
+                ->withErrors(['email' => 'กรุณารอสักครู่ก่อนส่งลิงก์อีกครั้ง']);
         }
 
         $token = PendingRegistration::tokenForEmail($request->email);
         $data  = $token ? PendingRegistration::find($token) : null;
 
         if (!$data) {
-            return $this->backToRegister('ไม่พบข้อมูลที่รอยืนยันหรือหมดอายุแล้ว กรุณาสมัครสมาชิกใหม่');
+            return back()->with('open_modal', 'register')
+                ->withErrors(['email' => 'ไม่พบข้อมูลที่รอยืนยันหรือหมดอายุแล้ว กรุณาสมัครสมาชิกใหม่']);
         }
 
         try {
             PendingRegistration::send($token, $data);
         } catch (\Throwable $e) {
             report($e);
-            return back()->with('error', 'ส่งอีเมลไม่สำเร็จ กรุณาลองใหม่อีกครั้งภายหลัง');
+            return back()->with('open_modal', 'verify-email')
+                ->withErrors(['email' => 'ส่งอีเมลไม่สำเร็จ กรุณาลองใหม่อีกครั้งภายหลัง']);
         }
 
         $request->session()->put('verify_email', $request->email);
         $request->session()->put('verify_sent_at', now()->timestamp);
 
-        return redirect()->route('verification.notice')
+        return back()->with('open_modal', 'verify-email')
             ->with('status', 'ส่งลิงก์ยืนยันอีกครั้งแล้ว กรุณาตรวจอีเมล');
     }
 

@@ -1,9 +1,9 @@
 {{--
  * qr-modal.blade.php
- * popup ชำระเงินด้วย Thai QR (ใช้ในหน้า payment)
- * @Author
- * @Create Date
- * @Update Date 21/10/2569
+ * หน้าเลือกโซนและที่นั่งของคอนเสิร์ต
+ * @Author 67160434 จิตฏิยากร โสภา
+ * @Create Date 2026-10-13
+ * @Update Date 11/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 {{-- THAI QR PAYMENT MODAL COMPONENT --}}
 <div x-show="showQrModal"
@@ -88,11 +88,11 @@
     {{-- Modal Footer --}}
     <div class="qr-modal-footer">
       <span class="qr-contact-title">มีปัญหา ต้องการติดต่อผู้จัดงาน</span>
-      {{-- schema v3.1.0: ช่องทางติดต่ออยู่ในตาราง organization --}}
-      <span class="qr-contact-item">โทร : {{ $organization?->phone ?: '-' }}</span>
-      <span class="qr-contact-item">LINE : {{ $organization?->line ?: '-' }}</span>
-      <span class="qr-contact-item">Facebook : {{ $organization?->facebook ?: '-' }}</span>
-      <span class="qr-contact-item">Email : {{ $organization?->email ?: '-' }}</span>
+      {{-- schema 3.4.2: ช่องทางติดต่อผู้จัดเก็บไว้ที่คอนเสิร์ต --}}
+      <span class="qr-contact-item">โทร : {{ $concert?->phone ?: '-' }}</span>
+      <span class="qr-contact-item">LINE : {{ $concert?->line ?: '-' }}</span>
+      <span class="qr-contact-item">Facebook : {{ $concert?->facebook ?: '-' }}</span>
+      <span class="qr-contact-item">Email : {{ $concert?->email ?: '-' }}</span>
     </div>
 
   </div>

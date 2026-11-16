@@ -5,21 +5,21 @@
  * ประวัติการตรวจบัตร (ตาราง ticket_validation_log)
  * Author :
  * Created :
+ * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TicketValidationLog extends Model
 {
     protected $table = 'ticket_validation_log';
-    protected $primaryKey = 'validation_id';
+    protected $primaryKey = 'tvl_id';
     public $timestamps = false;
 
-    protected $fillable = ['validation_id', 'ticket_id', 'staff_id', 'validation_time', 'result'];
+    protected $fillable = ['tvl_ticket_id', 'tvl_staff_id', 'validation_time', 'result'];
 
     protected $casts = ['validation_time' => 'datetime', 'result' => 'boolean'];
 
@@ -31,7 +31,7 @@ class TicketValidationLog extends Model
      */
     public function ticket(): BelongsTo
     {
-        return $this->belongsTo(Ticket::class, 'ticket_id', 'ticket_id');
+        return $this->belongsTo(Ticket::class, 'tvl_ticket_id', 't_id');
     }
 
     /**
@@ -42,7 +42,6 @@ class TicketValidationLog extends Model
      */
     public function staff(): BelongsTo
     {
-        return $this->belongsTo(Staff::class, 'staff_id', 'staff_id');
+        return $this->belongsTo(Staff::class, 'tvl_staff_id', 'u_id');
     }
-
 }

@@ -1,12 +1,6 @@
 <?php
 
-/**
- * create_booking_standing_item_table
- * สร้างตาราง booking_standing_item เก็บจำนวนบัตรโซนยืนของแต่ละการจอง (โซนยืนไม่มีที่นั่งให้เก็บใน booking_seat)
- * Author : 67160292 ธีรเมธ พลสาย
- * Created : 21/10/2569
- * Updated : 21/10/2569 67160292 ธีรเมธ พลสาย
- */
+
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;

@@ -37,7 +37,8 @@
 | `user/partials/navbar.css` | `user/partials/navbar` | แถบด้านบน ชื่อ/รูปโปรไฟล์ |
 | `user/partials/sidebar.css` | `user/partials/sidebar` | เมนูซ้าย (หน้า account) |
 | `user/partials/auth-modal.css` | `user/partials/auth-modals` | หน้าต่างเข้าสู่ระบบ/สมัครสมาชิก (ทุกหน้า ตอนยังไม่ login) |
-| `user/auth/verify-notice.css` | `user/auth/verify-notice` | หน้าแจ้งให้ตรวจอีเมลหลังสมัครสมาชิก |
+| `user/auth/verify-notice.css` | `user/auth/partials/verify-email-modal`, `forgot-modal` | หน้าต่างแจ้งให้ตรวจอีเมลหลังสมัครสมาชิก + กล่อง/ปุ่มที่หน้าต่างลืมรหัสผ่านใช้ร่วม (ครอบด้วย `.auth-flow`) |
+| `user/auth/password-reset.css` | `user/auth/partials/forgot-modal`, `reset-steps` | หน้าต่างลืมรหัสผ่าน 3 ขั้น (ครอบด้วย `.auth-flow`) |
 | `user/concerts/home.css` | `user/concerts/home`, `user/partials/concert-card` | หน้า Home + การ์ดคอนเสิร์ต |
 | `user/concerts/index.css` | `user/concerts/index` | หน้าคอนเสิร์ตทั้งหมด (Show All) |
 | `user/concerts/search.css` | `user/concerts/home`, `user/concerts/index` | ช่องค้นหา + รายการแนะนำ |
@@ -63,7 +64,6 @@
 | body class | ไฟล์ |
 |---|---|
 | `page-home` | `user/concerts/home.css` |
-| `page-verify` | `user/auth/verify-notice.css` |
 | `page-concerts` | `user/concerts/index.css` |
 | `page-payment` | `user/booking/payment.css` |
 | `page-account` | `user/account/account.css` |

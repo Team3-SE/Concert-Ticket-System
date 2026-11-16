@@ -1,16 +1,17 @@
 {{--
  * auth-modals.blade.php
  * หน้าต่างเข้าสู่ระบบ / สมัครสมาชิก ใช้ได้ทุกหน้า (layouts/user ใส่ให้เฉพาะตอนยังไม่ login) ตามแบบ Figma
+ * รวมหน้าต่างลืมรหัสผ่าน (user/auth/partials/forgot-modal) และหน้าต่างตรวจอีเมลหลังสมัครสมาชิก (user/auth/partials/verify-email-modal)
+ * ข้อมูลจาก View/Composers/AuthModalComposer : $authOpen (หน้าต่างที่ต้องเปิดตอนโหลดหน้า), $forgot, $verify
  * เปิด/ปิดด้วย resources/js/user/auth-modal.js, สไตล์อยู่ที่ resources/css/user/partials/auth-modal.css
  * ช่อง redirect = หน้าที่จะพาไปหลัง login/สมัครสมาชิกสำเร็จ (ว่าง = หน้า Home)
  * @Author 67160292 ธีรเมธ พลสาย
  * @Create Date 23/10/2569
- * @Update Date 29/10/2569 67160292 ธีรเมธ พลสาย
+ * @Update Date 15/11/2569 67160292 ธีรเมธ พลสาย
 --}}
-@php($openModal = session('open_modal') ?: (request()->query('login') === '1' ? 'login' : null))
 
 {{-- Login Modal --}}
-<div @class(['overlay', 'auth-overlay', 'open' => $openModal === 'login']) id="loginOverlay">
+<div @class(['overlay', 'auth-overlay', 'open' => $authOpen === 'login']) id="loginOverlay">
   <div class="modal modal-login" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
     <button type="button" class="modal-close" data-close aria-label="ปิด">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -52,7 +53,7 @@
 </div>
 
 {{-- Register Modal --}}
-<div @class(['overlay', 'auth-overlay', 'open' => $openModal === 'register']) id="registerOverlay">
+<div @class(['overlay', 'auth-overlay', 'open' => $authOpen === 'register']) id="registerOverlay">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="registerTitle">
     <button type="button" class="modal-close" data-close aria-label="ปิด">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -117,3 +118,9 @@
     </form>
   </div>
 </div>
+
+{{-- Forgot Password Modal (3 ขั้น) --}}
+@include('user.auth.partials.forgot-modal')
+
+{{-- Verify Email Modal (หลังสมัครสมาชิก) --}}
+@include('user.auth.partials.verify-email-modal')
