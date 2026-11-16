@@ -1,0 +1,51 @@
+﻿
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    $OutputEncoding = [System.Text.Encoding]::UTF8
+    $word = New-Object -ComObject Word.Application
+    $word.Visible = $false
+    $word.DisplayAlerts = 0
+    try {
+        $doc = $word.Documents.Open("C:\Github\Concert-P-Tum\งานอื่นๆ\datadic\2569-11-16_DD_V2.3.0.docx", $false, $true)
+        $doc.Repaginate()
+        $results = @()
+        for ($t = 1; $t -le $doc.Tables.Count; $t++) {
+            $tbl = $doc.Tables.Item($t)
+            $capPara = $doc.Range($tbl.Range.Start - 1, $tbl.Range.Start - 1).Paragraphs.Item(1)
+            $capText = $capPara.Range.Text.Trim()
+            $capPage = $capPara.Range.Information(3)
+            $capY = [Math]::Round($capPara.Range.Information(6), 1)
+            $r1 = $tbl.Rows.Item(1)
+            $r6 = $tbl.Rows.Item(6)
+            $rng1 = $r1.Range.Duplicate; $rng1.Collapse(1)
+            $rng6 = $r6.Range.Duplicate; $rng6.Collapse(1)
+            $hStartPage = $rng1.Information(3)
+            $hEndPage = $rng6.Information(3)
+            $hStartY = [Math]::Round($rng1.Information(6), 1)
+            $rowPages = @()
+            $rowYs = @()
+            for ($r = 7; $r -le $tbl.Rows.Count; $r++) {
+                $row = $tbl.Rows.Item($r)
+                $rng = $row.Range.Duplicate; $rng.Collapse(1)
+                $rowPages += $rng.Information(3)
+                $rowYs += [Math]::Round($rng.Information(6), 1)
+            }
+            $results += [PSCustomObject]@{
+                TableIndex = $t
+                Caption = $capText
+                CapPage = $capPage
+                CapY = $capY
+                HeaderStartPage = $hStartPage
+                HeaderEndPage = $hEndPage
+                HeaderStartY = $hStartY
+                DataRowCount = $rowPages.Count
+                RowPages = $rowPages
+                RowYs = $rowYs
+            }
+        }
+        $results | ConvertTo-Json -Depth 5 -Compress
+    } finally {
+        if ($doc) { $doc.Close(0) }
+        $word.Quit()
+        [void][System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($word)
+    }
+    
