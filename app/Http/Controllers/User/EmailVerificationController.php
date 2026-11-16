@@ -2,10 +2,10 @@
 
 /**
  * EmailVerificationController
- * ยืนยันอีเมลก่อนสร้างบัญชี: หน้าต่างแจ้งให้ตรวจอีเมล (user/auth/partials/verify-email-modal), ลิงก์ยืนยัน (สร้างบัญชีจริง) และส่งลิงก์ซ้ำ
+ * ยืนยันอีเมลก่อนสร้างบัญชี: หน้าต่างแจ้งให้ตรวจอีเมล (user/auth/partials/verify-email-modal), หน้ากดปุ่มยืนยันจากลิงก์ในอีเมล, สร้างบัญชีจริง และส่งลิงก์ซ้ำ
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 17/10/2569
- * Updated : 15/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 16/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -38,8 +38,30 @@ class EmailVerificationController extends Controller
     }
 
     /**
+     * confirm(request, token)
+     * หน้าที่เปิดจากลิงก์ในอีเมล: แสดงปุ่มให้กดยืนยัน (ยังไม่สร้างบัญชี)
+     * เพื่อไม่ให้โปรแกรมสแกนลิงก์ของอีเมลที่เปิดลิงก์ล่วงหน้า (GET) ใช้ลิงก์ไปก่อนผู้ใช้
+     * param : request, token
+     * return : View user.auth.verify-confirm หรือ RedirectResponse ถ้าข้อมูลสมัครหมดอายุ
+     */
+    public function confirm(Request $request, string $token)
+    {
+        $data = PendingRegistration::find($token);
+
+        if (!$data) {
+            return $this->backToRegister('ลิงก์ยืนยันหมดอายุหรือไม่ถูกต้อง กรุณาสมัครสมาชิกใหม่');
+        }
+
+        return view('user.auth.verify-confirm', [
+            'email'     => $data['email'],
+            'firstName' => $data['first_name'] ?? '',
+            'action'    => $request->fullUrl(),   // signed URL เดิม ส่งกลับไปที่ POST
+        ]);
+    }
+
+    /**
      * verify(request, token)
-     * ตรวจลิงก์ยืนยัน (signed URL) แล้วสร้างบัญชีจากข้อมูลที่เก็บไว้ชั่วคราว และเข้าสู่ระบบให้
+     * (POST จากปุ่มในหน้า confirm) ตรวจลิงก์ยืนยัน (signed URL) แล้วสร้างบัญชีจากข้อมูลที่เก็บไว้ชั่วคราว และเข้าสู่ระบบให้
      * param : request, token
      * return : RedirectResponse กลับหน้าที่ผู้ใช้อยู่ตอนสมัคร (ไม่มี = หน้าแรกพร้อมหน้าต่างยืนยันสำเร็จ)
      */

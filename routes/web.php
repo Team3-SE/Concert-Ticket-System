@@ -45,11 +45,15 @@ Route::middleware('role:GUEST,USER')->group(function () {
 
     // ===== สมัครสมาชิก + ยืนยันอีเมล =====
     // หน้าแจ้งตรวจอีเมลเป็นหน้าต่างใน user/partials/auth-modals แล้ว: GET /email/verify (ลิงก์เดิม) พาไปหน้าแรกพร้อมเปิดหน้าต่าง
-    Route::post('/auth/register', [\App\Http\Controllers\AuthController::class, 'register'])->name('auth.register');
+    Route::post('/auth/register', [\App\Http\Controllers\AuthController::class, 'register'])
+        ->middleware('throttle:5,1,register')->name('auth.register');
 
     Route::get('/email/verify', [\App\Http\Controllers\User\EmailVerificationController::class, 'notice'])->name('verification.notice');
-    Route::get('/email/verify/{token}', [\App\Http\Controllers\User\EmailVerificationController::class, 'verify'])
+    // GET = หน้าให้กดปุ่มยืนยัน (ไม่สร้างบัญชี กันโปรแกรมสแกนลิงก์ของอีเมลเปิดลิงก์แทนผู้ใช้), POST = สร้างบัญชีจริง
+    Route::get('/email/verify/{token}', [\App\Http\Controllers\User\EmailVerificationController::class, 'confirm'])
         ->middleware(['signed', 'throttle:6,1,verify-email'])->name('verification.verify');
+    Route::post('/email/verify/{token}', [\App\Http\Controllers\User\EmailVerificationController::class, 'verify'])
+        ->middleware(['signed', 'throttle:6,1,verify-email-confirm'])->name('verification.confirm');
     Route::post('/email/resend', [\App\Http\Controllers\User\EmailVerificationController::class, 'resend'])
         ->middleware('throttle:3,1,verify-resend')->name('verification.resend');
 });
@@ -103,7 +107,8 @@ Route::middleware(['auth', 'role:USER'])->group(function () {
 });
 
 // ===== เข้าสู่ระบบ / ออกจากระบบ (ใช้ร่วมทุก role: หน้าต่างเข้าสู่ระบบเดียวกัน แล้วพาไปหน้าแรกของ role) =====
-Route::post('/auth/login',  [\App\Http\Controllers\AuthController::class, 'login'])->name('auth.login');
+Route::post('/auth/login',  [\App\Http\Controllers\AuthController::class, 'login'])
+    ->middleware('throttle:10,1,login')->name('auth.login');
 Route::post('/auth/logout', [\App\Http\Controllers\AuthController::class, 'logout'])->name('auth.logout');
 
 // ===== ลืมรหัสผ่าน: ส่งรหัส 6 หลักทางอีเมล → ยืนยันรหัส → ตั้งรหัสผ่านใหม่ (เฉพาะคนที่ยังไม่ได้เข้าสู่ระบบ) =====

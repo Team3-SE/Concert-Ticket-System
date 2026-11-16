@@ -5,6 +5,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
+use Illuminate\Routing\Exceptions\InvalidSignatureException;
 use Illuminate\Http\Request;
 use Illuminate\Session\TokenMismatchException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -36,6 +37,8 @@ return Application::configure(basePath: dirname(__DIR__))
             $request->routeIs('password.check', 'password.resend') => 'forgot-code',
             $request->routeIs('password.update')                   => 'forgot-reset',
             $request->routeIs('verification.resend')               => 'verify-email',
+            $request->routeIs('auth.register')                     => 'register',
+            $request->routeIs('auth.login')                        => 'login',
             default                                                => null,
         };
 
@@ -49,6 +52,18 @@ return Application::configure(basePath: dirname(__DIR__))
                     ->withInput($request->isMethod('get') ? ['redirect' => $request->getRequestUri()] : [])
                     ->withErrors(['auth' => 'กรุณาเข้าสู่ระบบก่อนเข้าใช้งาน']);
             }
+        });
+
+        // ลิงก์ยืนยันอีเมลหมดอายุหรือถูกแก้ไข (signed URL ไม่ผ่าน) เดิมจะขึ้นหน้า 403 ดิบ
+        // → พากลับหน้า Home พร้อมเปิดหน้าต่างสมัครสมาชิกและข้อความให้สมัครใหม่
+        $exceptions->render(function (InvalidSignatureException $e, Request $request) {
+            if ($request->expectsJson() || ! $request->routeIs('verification.verify', 'verification.confirm')) {
+                return null;
+            }
+
+            return redirect('/')
+                ->with('open_modal', 'register')
+                ->withErrors(['email' => 'ลิงก์ยืนยันหมดอายุหรือไม่ถูกต้อง กรุณาสมัครสมาชิกใหม่']);
         });
 
         // ฟอร์มที่เปิดค้างไว้นานจน session หมดอายุ (CSRF token ไม่ตรง) เดิมจะขึ้นหน้า 419 PAGE EXPIRED
