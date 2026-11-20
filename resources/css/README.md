@@ -54,7 +54,6 @@
 | `backoffice/layout.css` | `layouts/backoffice`, `partials/backoffice/*` | โครงหลังบ้าน Organizer + Admin: sidebar, แถบด้านบน, `.bo-title`, `.bo-card`, `.bo-empty` |
 | `staff/layout.css` | `layouts/staff` | โครงหน้า Staff (โทนมืด มือถือก่อน) |
 | `staff/check-in.css` | `staff/check-in` | หน้าตรวจสอบสิทธิ์เข้างานของ Staff |
-| `app.css` | `welcome` | หน้า welcome ของ Laravel (Tailwind) — ไม่เกี่ยวกับหน้าอื่น |
 
 ## class บน `<body>` (กันสไตล์ชนกันระหว่างหน้า)
 

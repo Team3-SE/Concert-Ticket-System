@@ -15,7 +15,6 @@ use App\Http\Controllers\User\OrderController;
 use App\Http\Controllers\User\ProfileController;
 use App\Http\Controllers\User\TicketController;
 
-Route::view('/welcome', 'welcome');
 // ===== จัดการรูปภาพคอนเสิร์ต (หน้าเดิม ยังไม่ได้จำกัด role: view อยู่ที่ organizer/concerts/manage-images) =====
 Route::get('/manage-images', [\App\Http\Controllers\Organizer\ConcertImageController::class, 'index'])->name('manage.images');
 Route::put('/manage/concerts/{concertId}', [\App\Http\Controllers\Organizer\ConcertImageController::class, 'update'])->name('manage.concerts.update');

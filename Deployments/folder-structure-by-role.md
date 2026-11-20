@@ -66,7 +66,6 @@ views/
 │   ├── registration-verification.blade.php
 │   └── registration-verification-text.blade.php
 │
-└── welcome.blade.php
 ```
 
 ---
