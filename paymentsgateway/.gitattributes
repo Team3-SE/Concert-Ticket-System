@@ -1,0 +1,3 @@
+# บังคับ LF ให้ไฟล์ที่ต้องรันใน container Linux (กัน Git บน Windows แปลงเป็น CRLF จน entrypoint ทำงานไม่ได้)
+*.sh text eol=lf
+docker/* text eol=lf

@@ -105,6 +105,10 @@ Route::middleware(['auth', 'role:USER'])->group(function () {
 
 });
 
+// ===== Webhook จาก PayMock (ไม่ต้อง login/CSRF ตรวจด้วยลายเซ็น HMAC ใน X-Signature) =====
+Route::post('/webhooks/paymock', [\App\Http\Controllers\PaymockWebhookController::class, 'handle'])
+    ->middleware('throttle:120,1,paymock-webhook')->name('webhooks.paymock');
+
 // ===== เข้าสู่ระบบ / ออกจากระบบ (ใช้ร่วมทุก role: หน้าต่างเข้าสู่ระบบเดียวกัน แล้วพาไปหน้าแรกของ role) =====
 Route::post('/auth/login',  [\App\Http\Controllers\AuthController::class, 'login'])
     ->middleware('throttle:10,1,login')->name('auth.login');

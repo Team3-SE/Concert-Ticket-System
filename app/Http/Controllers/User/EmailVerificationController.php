@@ -39,7 +39,7 @@ class EmailVerificationController extends Controller
 
     /**
      * confirm(request, token)
-     * หน้าที่เปิดจากลิงก์ในอีเมล: แสดงปุ่มให้กดยืนยัน (ยังไม่สร้างบัญชี)
+     * หน้าที่เปิดจากลิงก์ในอีเมล: หน้าว่างที่ส่งฟอร์มยืนยันเอง (ยังไม่สร้างบัญชีตอน GET)
      * เพื่อไม่ให้โปรแกรมสแกนลิงก์ของอีเมลที่เปิดลิงก์ล่วงหน้า (GET) ใช้ลิงก์ไปก่อนผู้ใช้
      * param : request, token
      * return : View user.auth.verify-confirm หรือ RedirectResponse ถ้าข้อมูลสมัครหมดอายุ

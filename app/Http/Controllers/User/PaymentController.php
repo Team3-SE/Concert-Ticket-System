@@ -16,6 +16,7 @@ use App\Models\Booking;
 use App\Models\Concert;
 use App\Models\CustomerOrder;
 use App\Models\Payment;
+use App\Services\PaymockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -65,7 +66,7 @@ class PaymentController extends Controller
             $booking->loadMissing(['bookingSeats', 'zone', 'concert.organization']);
 
             if ($booking->status !== Booking::STATUS_PENDING_PAYMENT) {
-                return redirect()->route('orders.history');
+                return redirect()->route('tickets.index');
             }
             if ($booking->checkExpiry()) {
                 $this->expireBooking($booking);
@@ -92,6 +93,7 @@ class PaymentController extends Controller
                 'secondsLeft'   => max(0, (int) now()->diffInSeconds($booking->expiry_time, false)),
                 'orderCode'     => $pendingPayment?->payment_metadata['orderCode'] ?? null,
                 'paymentId'     => $pendingPayment?->p_id,
+                'gatewayEnabled' => app(PaymockService::class)->enabled(),   // true = ชำระผ่าน PayMock (รองรับบัตรเครดิต)
                 'buyer'         => [
                     'name'  => trim($user->first_name . ' ' . $user->last_name),
                     'email' => $user->email,
@@ -177,11 +179,65 @@ class PaymentController extends Controller
             $payment = $this->processPayment($request, $booking->b_id, $protection);
         }
 
+        // เชื่อม PayMock: สร้างรายการที่ gateway (ได้ QR / ลิงก์กรอกบัตร) ถ้าไม่ได้ตั้งค่า PAYMOCK_URL จะใช้การจำลองแบบเดิม
+        $gateway = null;
+        $paymock = app(PaymockService::class);
+        if ($paymock->enabled()) {
+            try {
+                $gateway = $this->ensureGatewayPayment($paymock, $payment, $booking);
+            } catch (\Throwable $e) {
+                report($e);
+                return response()->json(['message' => 'ระบบชำระเงินไม่พร้อมใช้งานชั่วคราว กรุณาลองใหม่อีกครั้ง'], 502);
+            }
+        }
+
         return response()->json([
             'payment_id' => $payment->p_id,   // ชื่อ key เดิมที่ JS หน้า payment ใช้
             'order_code' => $payment->payment_metadata['orderCode'] ?? null,
             'amount'     => (float) $payment->amount,
+            'gateway'    => $gateway,         // null = ไม่ใช้ gateway | { method, qrcode_url, checkout_url }
         ]);
+    }
+
+    /**
+     * ensureGatewayPayment(paymock, payment, booking)
+     * ให้ payment มีรายการที่ PayMock ตรงกับช่องทางและยอดปัจจุบัน (ใช้รายการเดิมถ้ายังตรง ไม่ตรงก็ยกเลิกแล้วสร้างใหม่)
+     * param : paymock, payment (PENDING), booking
+     * return : array { method, qr_image, qrcode_url, checkout_url, bank_simulator_url }
+     */
+    private function ensureGatewayPayment(PaymockService $paymock, Payment $payment, Booking $booking): array
+    {
+        $payment->refresh();
+        $meta = $payment->payment_metadata ?? [];
+        $gateway = $meta['gateway'] ?? null;
+
+        $reusable = $payment->provider_transaction_id
+            && $gateway
+            && ($gateway['method'] ?? null) === $payment->method
+            && abs((float) ($gateway['amount'] ?? 0) - (float) $payment->amount) < 0.01;
+
+        if (!$reusable) {
+            if ($payment->provider_transaction_id) {
+                $paymock->cancelPayment($payment->provider_transaction_id);
+            }
+
+            $created = $paymock->createPayment($payment, $booking, ((int) ($gateway['attempt'] ?? 0)) + 1);
+            $gateway = $created + ['method' => $payment->method, 'amount' => (float) $payment->amount];
+
+            $payment->update([
+                'provider_transaction_id' => $created['id'],
+                'payment_metadata'        => array_merge($meta, ['gateway' => $gateway]),
+            ]);
+        }
+
+        return [
+            'method'       => $payment->method,
+            'qr_image'     => $payment->method === 'PROMPTPAY' ? $paymock->fetchQrImage($payment->provider_transaction_id) : null,   // ภาพ QR จาก PayMock (data URI)
+            'qrcode_url'   => $paymock->publicUrl($gateway['qrcode_url'] ?? null),   // สำรอง: ให้เบราว์เซอร์โหลดจาก PayMock ตรง
+            'checkout_url' => $paymock->publicUrl($gateway['checkout_url'] ?? null),
+            // ลิงก์จำลองหน้าแอปธนาคาร (เฉพาะเครื่อง dev ใช้แทนการสแกน QR จริง)
+            'bank_simulator_url' => app()->environment('local') ? $paymock->publicUrl($gateway['bank_simulator_url'] ?? null) : null,
+        ];
     }
 
     /**
@@ -205,7 +261,7 @@ class PaymentController extends Controller
 
         return response()->json([
             'order_code' => $order->order_code,
-            'redirect'   => route('orders.history'),
+            'redirect'   => route('tickets.index'),
         ]);
     }
 
@@ -296,10 +352,9 @@ class PaymentController extends Controller
      */
     public function completePayment(int $paymentId): \App\Models\CustomerOrder
     {
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($paymentId) {
+        $order = \Illuminate\Support\Facades\DB::transaction(function () use ($paymentId) {
             $payment = Payment::with(['booking.zone', 'booking.concert.organization'])->findOrFail($paymentId);
             $booking = $payment->booking;
-            $completedBooking = $booking;
 
             // การจองหมดเวลา/ถูกยกเลิกแล้ว (ที่นั่งถูกปล่อยไปแล้ว) ห้ามยืนยันการชำระเงิน
             if ($booking->status !== Booking::STATUS_PENDING_PAYMENT) {
@@ -342,7 +397,8 @@ class PaymentController extends Controller
             return $order;
         });
 
-        $completedBooking->releaseRedisSeatLocks();
+        // ปล่อยล็อกที่นั่งใน Redis หลังบันทึกฐานข้อมูลสำเร็จ (ที่นั่งขายแล้ว ไม่ต้องล็อกต่อ)
+        Booking::find($order->uo_booking_id)?->releaseRedisSeatLocks();
 
         return $order;
     }
@@ -356,10 +412,20 @@ class PaymentController extends Controller
     public function status(Request $request, int $bookingId): JsonResponse
     {
         $booking = $this->findOwnBooking($request, $bookingId);
+        $payment = $booking->payments()->latest('p_id')->first();
+
+        // webhook ยังไม่มา/หาย: ถาม PayMock ตรง ๆ แล้วปรับสถานะ (หน้าชำระเงินเรียกทุกไม่กี่วินาทีขณะเปิด QR)
+        if ($payment && $booking->status === Booking::STATUS_PENDING_PAYMENT
+            && $payment->status === Payment::STATUS_PENDING && $payment->provider_transaction_id) {
+            app(PaymockService::class)->syncPayment($payment, 'poll');
+            $booking->refresh();
+            $payment->refresh();
+        }
 
         return response()->json([
-            'status'       => $booking->status,
-            'seconds_left' => $booking->expiry_time ? max(0, (int) now()->diffInSeconds($booking->expiry_time, false)) : 0,
+            'status'         => $booking->status,
+            'payment_status' => $payment?->status,   // PENDING | COMPLETED | FAILED (FAILED = ชำระไม่สำเร็จ ลองใหม่ได้ถ้ายังไม่หมดเวลา)
+            'seconds_left'   => $booking->expiry_time ? max(0, (int) now()->diffInSeconds($booking->expiry_time, false)) : 0,
         ]);
     }
 

@@ -30,16 +30,20 @@
         {{-- APP_ENV=local: กดที่ QR เพื่อจำลองว่าชำระเงินสำเร็จ (ยังไม่มี payment provider จริง) --}}
         <div class="qr-placeholder-box"
              @env('local')
-               :class="{ 'is-mock-pay': paymentId }"
-               :title="paymentId ? 'ทดสอบ: กดเพื่อจำลองว่าชำระเงินสำเร็จ' : ''"
+               :class="{ 'is-mock-pay': paymentId && !gateway }"
+               :title="paymentId && !gateway ? 'ทดสอบ: กดเพื่อจำลองว่าชำระเงินสำเร็จ' : ''"
                @click="confirmModalPayment()"
              @endenv
         >
-          <svg class="w-16 h-16 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {{-- QR จริงจาก PayMock --}}
+          <img x-show="gateway && (gateway.qr_image || gateway.qrcode_url)" :src="gateway ? (gateway.qr_image || gateway.qrcode_url) : ''" alt="QR พร้อมเพย์" width="240" height="240">
+          {{-- ลิงก์จำลองหน้าแอปธนาคารสำหรับทดสอบ (มีเฉพาะ APP_ENV=local) --}}
+          <a x-show="gateway && gateway.bank_simulator_url" :href="gateway ? gateway.bank_simulator_url : '#'" target="_blank" rel="noopener" class="text-xs text-blue-600 underline mt-2" @click.stop>เปิดหน้าจำลองแอปธนาคาร (ทดสอบ)</a>
+          <svg x-show="!gateway" class="w-16 h-16 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-4v-3m-4 3h-2m-2 0H4m0 0v-4m0 4h2m6-11V4m0 0h2m-2 0H8m4 0v3m-4-3H4m0 0v4m0-4h2m0 4v3m0-3h2m4 0h2m-2 0v3m0-3V9m-4 3h2m-2 0H8m4 0v3" />
           </svg>
-          <span class="text-xs font-semibold text-gray-500">QR CODE PLACEHOLDER</span>
-          <span class="text-[10px] text-gray-400 mt-1">(รอเชื่อมต่อระบบชำระเงิน)</span>
+          <span x-show="!gateway" class="text-xs font-semibold text-gray-500">QR CODE PLACEHOLDER</span>
+          <span x-show="!gateway" class="text-[10px] text-gray-400 mt-1">(รอเชื่อมต่อระบบชำระเงิน)</span>
         </div>
 
         {{-- Countdown Timer Box --}}

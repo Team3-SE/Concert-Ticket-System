@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    // PayMock (mock payment gateway ใน paymentsgateway/) — ว่าง PAYMOCK_URL = ไม่ใช้ gateway (ใช้ปุ่มจำลองเดิม)
+    'paymock' => [
+        'url'            => env('PAYMOCK_URL'),
+        'api_key'        => env('PAYMOCK_API_KEY'),
+        'webhook_secret' => env('PAYMOCK_WEBHOOK_SECRET'),
+        'callback_url'   => env('PAYMOCK_CALLBACK_URL'),
+        'public_url'     => env('PAYMOCK_PUBLIC_URL', 'http://localhost:8081'),   // ที่อยู่ที่เบราว์เซอร์ของผู้ใช้เข้าถึง PayMock (QR, หน้ากรอกบัตร)
+        'tolerance'      => (int) env('PAYMOCK_WEBHOOK_TOLERANCE', 300),
+    ],
+
 ];

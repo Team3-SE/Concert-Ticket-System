@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
             '/dev/*',
+            '/webhooks/paymock',   // webhook จาก PayMock (ตรวจลายเซ็น HMAC แทน CSRF)
         ]);
 
         // ไม่มี route ชื่อ login (ฟอร์มเข้าสู่ระบบเป็น modal ในหน้า Home) → ระบุปลายทางเองเพื่อไม่ให้ middleware auth หา route('login') แล้ว error

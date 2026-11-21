@@ -202,7 +202,7 @@ class Booking extends Model
             return;
         }
 
-        $seatIds = $this->bookingSeats()->pluck('seat_id')->all();
+        $seatIds = $this->bookingSeats()->pluck('bs_seat_id')->all();
         app(SeatLockService::class)->releaseSeats($seatIds, $this->booking_code);
     }
 

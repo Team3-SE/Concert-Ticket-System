@@ -110,7 +110,13 @@
     </div>
 
     {{-- DYNAMIC SECTION: CREDIT CARD DETAILS FORM --}}
-    <div x-show="paymentMethod === 'credit'"
+    {{-- เชื่อม PayMock: กรอกบัตรที่หน้า checkout ของ gateway (ระบบเราไม่รับข้อมูลบัตร) --}}
+    <div x-show="paymentMethod === 'credit' && gatewayEnabled" x-cloak class="info-card !pb-8">
+      <h3 class="detail-heading">บัตรเครดิต / เดบิต</h3>
+      <p class="text-sm text-gray-600">เมื่อกดชำระเงิน ระบบจะพาไปหน้ากรอกข้อมูลบัตรของผู้ให้บริการชำระเงินอย่างปลอดภัย</p>
+    </div>
+
+    <div x-show="paymentMethod === 'credit' && !gatewayEnabled"
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 transform -translate-y-2"
          x-transition:enter-end="opacity-100 transform translate-y-0"
@@ -269,12 +275,15 @@
         failMessage: '',
         expiresAt: 0,              // เวลาหมดอายุจริง (ms) ใช้คำนวณเวลาที่เหลือ ไม่ลบทีละวินาที กันตัวนับเพี้ยนตอนแท็บอยู่เบื้องหลัง
         paidTotal: '',             // ยอดที่ชำระแล้ว (แสดงใน popup สำเร็จ)
-        redirectUrl: '/orders/history',
+        redirectUrl: '/tickets',
         isSubmitting: false,
         countdownTimer: null,
         timeLeft: checkout?.secondsLeft ?? 597,
         orderCode: checkout?.orderCode ?? null,
         paymentId: checkout?.paymentId ?? null,
+        gatewayEnabled: checkout?.gatewayEnabled ?? false,   // เชื่อม PayMock อยู่หรือไม่
+        gateway: null,             // ข้อมูลจาก gateway หลังสร้างรายการ { qrcode_url, checkout_url, bank_simulator_url }
+        pollTimer: null,
         currentDate: '',
 
         init() {
@@ -423,6 +432,45 @@
 
         closeModal() {
           this.showQrModal = false;
+          this.stopPolling();
+        },
+
+        /**
+         * startPolling()
+         * ระหว่างเปิด QR ถามสถานะการจองกับ server ทุก 3 วินาที (server ถาม PayMock ให้ถ้า webhook ยังไม่มา)
+         * CONFIRMED = ชำระสำเร็จ, payment_status FAILED = ชำระไม่สำเร็จ
+         */
+        startPolling() {
+          this.stopPolling();
+          if (!this.bookingId || !this.gateway) return;
+
+          this.pollTimer = setInterval(async () => {
+            try {
+              const res = await fetch(`/bookings/${this.bookingId}/status`, { headers: { 'Accept': 'application/json' } });
+              const data = await res.json().catch(() => ({}));
+
+              if (data.status === 'CONFIRMED') {
+                this.stopPolling();
+                clearInterval(this.countdownTimer);
+                this.paidTotal = this.calculateTotal();
+                this.showQrModal = false;
+                this.showSuccessModal = true;
+              } else if (data.payment_status === 'FAILED') {
+                this.stopPolling();
+                this.showFail('error', 'การชำระเงินไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+              } else if (data.status && data.status !== 'PENDING_PAYMENT') {
+                this.stopPolling();
+                this.showFail('timeout');
+              }
+            } catch (e) {
+              // ติดต่อ server ไม่ได้ชั่วคราว ลองรอบถัดไป
+            }
+          }, 3000);
+        },
+
+        stopPolling() {
+          clearInterval(this.pollTimer);
+          this.pollTimer = null;
         },
 
         /**
@@ -430,7 +478,7 @@
          * กดปุ่มชำระเงิน: เปิด popup ให้ยืนยันก่อน (ยังไม่สร้างรายการชำระเงิน)
          */
         requestPayment() {
-          if (this.paymentMethod !== 'promptpay') {
+          if (this.paymentMethod !== 'promptpay' && !this.gatewayEnabled) {
             alert('ระบบชำระด้วยบัตรเครดิตยังไม่เชื่อมต่อ กรุณาเลือกพร้อมเพย์');
             return;
           }
@@ -448,7 +496,7 @@
 
         /**
          * finishPayment()
-         * กดตกลงใน popup ชำระเงินสำเร็จ: ไปหน้าประวัติคำสั่งซื้อ
+         * กดตกลงใน popup ชำระเงินสำเร็จ: ไปหน้าตั๋วของฉัน
          */
         finishPayment() {
           window.location.href = this.redirectUrl;
@@ -483,7 +531,17 @@
 
             this.paymentId = data.payment_id;
             this.orderCode = data.order_code;
+            this.gateway = data.gateway ?? null;
+
+            // บัตรเครดิต: ไปหน้ากรอกบัตรของ gateway (กรอกเสร็จ gateway พากลับหน้าตั๋วของฉัน)
+            if (this.gateway?.checkout_url) {
+              clearInterval(this.countdownTimer);
+              window.location.href = this.gateway.checkout_url;
+              return;
+            }
+
             this.showQrModal = true;
+            this.startPolling();
           } catch (e) {
             this.showFail('error', 'เชื่อมต่อระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
           } finally {
@@ -493,10 +551,10 @@
 
         /**
          * confirmModalPayment()
-         * จำลองการชำระเงินสำเร็จ (ปุ่มนี้แสดงเฉพาะ APP_ENV=local) แล้วไปหน้าประวัติคำสั่งซื้อ
+         * จำลองการชำระเงินสำเร็จ (ปุ่มนี้แสดงเฉพาะ APP_ENV=local) แล้วไปหน้าตั๋วของฉัน
          */
         async confirmModalPayment() {
-          if (!this.paymentId) return;
+          if (!this.paymentId || this.gateway) return;   // ใช้ gateway อยู่: รอผลจริง ไม่ใช้ปุ่มจำลอง
 
           const res = await fetch(`/payments/${this.paymentId}/mock-complete`, {
             method: 'POST',
@@ -509,10 +567,11 @@
             this.showFail(res.status === 409 ? 'timeout' : 'error', res.status === 409 ? '' : (data.message || ''));
             return;
           }
-          // ชำระเงินสำเร็จ: ปิดหน้าต่าง QR แล้วแจ้งผลด้วย popup (กดตกลงแล้วไปหน้าประวัติคำสั่งซื้อ)
+          // ชำระเงินสำเร็จ: ปิดหน้าต่าง QR แล้วแจ้งผลด้วย popup (กดตกลงแล้วไปหน้าตั๋วของฉัน)
           this.redirectUrl = data.redirect || this.redirectUrl;
           this.paidTotal = this.calculateTotal();
           clearInterval(this.countdownTimer);
+          this.stopPolling();
           this.showQrModal = false;
           this.showSuccessModal = true;
         }

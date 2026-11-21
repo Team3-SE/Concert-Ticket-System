@@ -19,6 +19,7 @@ use App\Models\Seat;
 use App\Models\SeatLockLog;
 use App\Models\Zone;
 use App\Models\ZoneInventory;
+use App\Services\SeatLockService;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -257,7 +258,7 @@ class BookingController extends Controller
                     'booking_date'        => now(),
                     'total_amount'        => $unitPrice * $quantity,
                     'status'              => Booking::STATUS_PENDING_PAYMENT,
-                    'expiry_time'         => now()->addMinutes(self::SEAT_LOCK_MINUTES),
+                    'expiry_time'         => now()->addMinutes(Booking::SEAT_LOCK_MINUTES),
                     'zone_price_snapshot' => $unitPrice,
                     'zone_name_snapshot'  => $zone->name,
                     'standing_quantity'   => $standingQuantity,
@@ -277,7 +278,7 @@ class BookingController extends Controller
                         'sll_booking_id' => $booking->b_id,
                         'sll_seat_id'    => $seat->s_id,
                         'locked_at'      => now(),
-                        'expires_at'     => now()->addMinutes(self::SEAT_LOCK_MINUTES),
+                        'expires_at'     => now()->addMinutes(Booking::SEAT_LOCK_MINUTES),
                     ]);
                 }
 

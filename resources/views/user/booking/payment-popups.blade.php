@@ -21,7 +21,7 @@
   </div>
 </div>
 
-{{-- PAYMENT SUCCESS POPUP: ชำระเงินสำเร็จแล้วแจ้งผล กดตกลงไปหน้าประวัติคำสั่งซื้อ --}}
+{{-- PAYMENT SUCCESS POPUP: ชำระเงินสำเร็จแล้วแจ้งผล กดตกลงไปหน้าตั๋วของฉัน --}}
 <div x-show="showSuccessModal" x-transition.opacity x-cloak class="pay-popup-overlay">
   <div class="pay-popup-card" role="dialog" aria-modal="true" aria-labelledby="successPayTitle">
     <div class="pay-popup-icon is-success" aria-hidden="true">
