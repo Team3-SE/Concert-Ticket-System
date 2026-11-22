@@ -1,0 +1,43 @@
+# Example GitHub Actions Workflow for PHP / Laravel Repositories
+# Filename: .github/workflows/security.yml
+name: "Security Pipeline (Laravel)"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, development]
+  push:
+    branches: [main, development]
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security:
+    name: "Security Pipeline"
+    # When using within the same repo:
+    # uses: ./.github/workflows/reusable-security-pipeline.yml
+    # When calling from another repo across the organization:
+    uses: Team3-SE/Concert-Ticket-System/.github/workflows/reusable-security-pipeline.yml@main
+    with:
+      app_port: 8000
+      app_start_command: "php artisan serve --host=127.0.0.1 --port=8000"
+      zap_target: "http://127.0.0.1:8000"
+      sonar_project_key: "your-org_laravel-service"
+      sonar_organization: "your-org"
+      runtime: "php"
+      runtime_version: "8.3"
+      working_directory: "."
+      install_command: "composer install --prefer-dist --no-interaction --no-progress"
+      pre_start_command: "cp -n .env.example .env || true; php artisan key:generate --force; touch database/database.sqlite; php artisan migrate --force"
+      test_command: "php artisan test"
+      lint_command: "vendor/bin/pint --test"
+      health_check_url: "http://127.0.0.1:8000/up"
+      startup_timeout: 60
+      fail_on_severity: "high"
+      sonar_wait_quality_gate: true
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      APP_ENV_FILE: ${{ secrets.APP_ENV_FILE }}

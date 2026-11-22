@@ -1,0 +1,42 @@
+# Example GitHub Actions Workflow for Node.js / Express / NestJS / Next.js Repositories
+# Filename: .github/workflows/security.yml
+name: "Security Pipeline (Node.js)"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, development]
+  push:
+    branches: [main, development]
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security:
+    name: "Security Pipeline"
+    # When calling from another repo across the organization:
+    uses: Team3-SE/Concert-Ticket-System/.github/workflows/reusable-security-pipeline.yml@main
+    with:
+      app_port: 3000
+      app_start_command: "npm start"
+      zap_target: "http://127.0.0.1:3000"
+      sonar_project_key: "your-org_nodejs-service"
+      sonar_organization: "your-org"
+      runtime: "node"
+      runtime_version: "20"
+      working_directory: "."
+      install_command: "npm ci"
+      build_command: "npm run build --if-present"
+      test_command: "npm test --if-present"
+      lint_command: "npm run lint --if-present"
+      pre_start_command: "cp -n .env.example .env || true"
+      health_check_url: "http://127.0.0.1:3000/health"
+      startup_timeout: 45
+      fail_on_severity: "high"
+      sonar_wait_quality_gate: true
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      APP_ENV_FILE: ${{ secrets.APP_ENV_FILE }}
