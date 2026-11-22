@@ -1,0 +1,11 @@
+/*
+ * resources/css/admin/users.css
+ * หน้าที่ : จัดการผู้ใช้ของ Admin: ตาราง ค้นหา กรองบทบาท ป้ายบทบาท/สถานะ และ modal เพิ่ม/ระงับบัญชี
+ * ใช้กับ : admin/users/index.blade.php (<body class="bo page-admin-users">)
+ * Author : 67160292 ธีรเมธ พลสาย
+ * Created : 27/10/2569
+ */
+
+/* Scoped to <body class="page-admin-users"> — เขียน rule ของหน้านี้โดยขึ้นต้นด้วย .page-admin-users */
+
+.page-admin-users{}

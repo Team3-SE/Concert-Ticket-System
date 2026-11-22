@@ -1,0 +1,1368 @@
+{
+  "info": {
+    "name": "PayMock Gateway API Collection",
+    "description": "Merchant API ของ PayMock + Concert Backend\n\nConcert สร้าง booking code (booking_ref) ตอนสร้าง booking ก่อนเริ่มชำระเงิน; code คงเดิมเมื่อสร้าง payment attempt ใหม่ใน booking เดิม. payment_id ใช้อ้างอิง payment attempt และ Idempotency-Key ใช้คง identity ในการ retry attempt เดิม.\nResponse: id = provider transaction ID สำหรับ GET / cancel / QR / reconcile; payment_id = merchant payment ID; booking_ref = booking code ที่ใช้แสดงให้ผู้ใช้และเป็นส่วนของ return URL เช่น /booking/TK-260101-ABCDE.\nหลังชำระบัตร PayMock กลับไป return_url ตรง ๆ โดยไม่เติม payment ID ลงใน URL.\n\nChaos / Webhook ผิดปกติตั้งที่ PayMock Admin (ชั้น 1 chaos_mode, ชั้น 2 webhook_mode)\n\nเวลา: created_at = สร้างรายการ | paid_at = จ่ายสำเร็จ (เฉพาะ COMPLETED) | ไม่มี completed_at",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "pm_test_key_concert_system_2024",
+      "type": "string"
+    },
+    {
+      "key": "bookingCode",
+      "value": "TK-260101-ABCDE",
+      "type": "string"
+    },
+    {
+      "key": "bookingId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "paymentId",
+      "value": "txn_test",
+      "type": "string"
+    },
+    {
+      "key": "promptPayId",
+      "value": "txn_test",
+      "type": "string"
+    },
+    {
+      "key": "concertUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "csrfToken",
+      "value": "",
+      "type": "string",
+      "description": "CSRF token extracted from the hosted checkout page before submitting the card form."
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{apiKey}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Every direct gateway request uses one stable key for that payment.",
+          "if (pm.request.method === 'POST' && /\\/v1\\/payments$/.test(pm.request.url.toString()) && pm.request.body && pm.request.body.raw) {",
+          "  var body = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+          "  if (body.payment_id) pm.request.headers.upsert({ key: 'Idempotency-Key', value: String(body.payment_id) });",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function saveGatewayIds(jsonData) {",
+          "  if (!jsonData || !jsonData.id) return;",
+          "  pm.collectionVariables.set('paymentId', jsonData.id);",
+          "}",
+          "function assertMerchantPaymentId(jsonData) {",
+          "  if (!jsonData || jsonData.error) return;",
+          "  if (jsonData.payment_id === undefined) return;",
+          "  pm.test('payment_id is not null', function () {",
+          "    pm.expect(jsonData.payment_id).to.not.equal(null);",
+          "    pm.expect(String(jsonData.payment_id).length).to.be.above(0);",
+          "  });",
+          "  if (jsonData.booking_ref !== undefined) {",
+          "    pm.test('booking_ref contains the merchant booking code', function () {",
+          "      pm.expect(jsonData.booking_ref).to.be.a('string').and.not.empty;",
+          "    });",
+          "  }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "0. System Health",
+      "item": [
+        {
+          "name": "Health Check (Docker /up)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/up",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "up"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Standard Payment Flow",
+      "item": [
+        {
+          "name": "Create Card Payment (Hosted Checkout)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) { pm.collectionVariables.set('paymentId', jsonData.id); }",
+                  "pm.test('status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('payment_id is merchant id, not null', function () {",
+                  "  pm.expect(jsonData.payment_id).to.eql('12');",
+                  "  pm.expect(jsonData.payment_id).to.not.equal(null);",
+                  "});",
+                  "pm.test('booking code is returned for display and clean return URL', function () {",
+                  "  pm.expect(jsonData.booking_ref).to.eql('TK-260101-ABCDE');",
+                  "  pm.expect(jsonData.return_url).to.include('/booking/' + jsonData.booking_ref);",
+                  "  pm.expect(jsonData.return_url).to.not.include('payment_id=');",
+                  "});",
+                  "pm.test('id is gateway txn', function () {",
+                  "  pm.expect(jsonData.id).to.be.a('string').and.match(/^txn_/);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "12"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"expires_in\": 600\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create PromptPay Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "  pm.collectionVariables.set('promptPayId', jsonData.id);",
+                  "  pm.collectionVariables.set('paymentId', jsonData.id);",
+                  "}",
+                  "pm.test('status 201 PENDING', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(jsonData.status).to.eql('PENDING');",
+                  "});",
+                  "pm.test('payment_id is not null', function () {",
+                  "  pm.expect(jsonData.payment_id).to.not.equal(null);",
+                  "  pm.expect(jsonData.payment_id).to.eql('202');",
+                  "});",
+                  "pm.test('booking_ref is returned', function () {",
+                  "  pm.expect(jsonData.booking_ref).to.eql('TK-POSTMAN-PP-MAIN');",
+                  "});",
+                  "pm.test('PromptPay URLs present', function () {",
+                  "  pm.expect(jsonData.qrcode_url).to.be.a('string').and.include('/qr.svg');",
+                  "  pm.expect(jsonData.bank_simulator_url).to.be.a('string');",
+                  "});",
+                  "pm.test('booking_ref echoed from request', function () {",
+                  "  pm.expect(pm.response.json().booking_ref).to.eql('TK-POSTMAN-PP-MAIN');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "PP-{{$timestamp}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"202\",\n  \"booking_ref\": \"TK-POSTMAN-PP-MAIN\",\n  \"amount\": 2200,\n  \"currency\": \"THB\",\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            },
+            "description": "Request body sends booking_ref; response.booking_ref should match it."
+          }
+        },
+        {
+          "name": "Idempotency Test (Send duplicate Idempotency-Key)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.test('same gateway id as first create', function () {",
+                  "  pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('paymentId'));",
+                  "});",
+                  "pm.test('payment_id still present', function () {",
+                  "  pm.expect(jsonData.payment_id).to.not.equal(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{bookingCode}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Payment Status (Polling / Reconcile)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.test('payment_id is not null', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(jsonData.payment_id).to.not.equal(null);",
+                  "  pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('paymentId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments/{{paymentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments",
+                "{{paymentId}}"
+              ]
+            },
+            "description": "path ใช้ response.id (txn_…) ไม่ใช่ payment_id ของร้านค้า"
+          }
+        },
+        {
+          "name": "Cancel Payment (Before Paid)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments/{{paymentId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments",
+                "{{paymentId}}",
+                "cancel"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Hosted Card Checkout Redirect",
+      "description": "สร้าง Card payment ให้เป็น PENDING ก่อนด้วย POST /v1/payments แล้วเปิด checkout_url ในเบราว์เซอร์ ผู้ใช้กรอกบัตรบน Hosted Checkout และ form จะ POST /payments/{publicId} เพื่อชำระ payment เดิม ก่อน redirect กลับไปยัง return_url โดยไม่มี payment ID ใน URL",
+      "item": [
+        {
+          "name": "Step 1 – Create Card Payment (PENDING + checkout_url)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) { pm.collectionVariables.set('hostedCardId', jsonData.id); }",
+                  "pm.test('PENDING and hosted checkout URL returned', function () {",
+                  "  pm.expect(jsonData.status).to.eql('PENDING');",
+                  "  pm.expect(jsonData.payment_id).to.not.equal(null);",
+                  "  pm.expect(jsonData.checkout_url).to.include('/checkout/');",
+                  "  pm.expect(jsonData.booking_ref).to.eql('TK-260101-ABCDE');",
+                  "  pm.expect(jsonData.return_url).to.include('/booking/' + jsonData.booking_ref);",
+                  "  pm.expect(jsonData.return_url).to.not.include('payment_id=');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "CARD_PENDING_{{$timestamp}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"HOSTED_CARD_{{$timestamp}}\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500.00,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"expires_in\": 600\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            },
+            "description": "คัดลอก checkout_url ไปเปิดใน browser หรือรัน request ถัดไปเพื่อจำลองการ submit form จาก hosted checkout"
+          }
+        },
+        {
+          "name": "Step 1.5 ? GET checkout page and extract CSRF token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var html = pm.response.text();",
+                  "var csrfToken = null;",
+                  "var inputs = html.match(/<input\\b[^>]*>/gi) || [];",
+                  "inputs.some(function (input) {",
+                  "  var nameMatch = input.match(/\\bname=['\"]_token['\"]/i);",
+                  "  var valueMatch = input.match(/\\bvalue=['\"]([^'\"]+)['\"]/i);",
+                  "  if (nameMatch && valueMatch) { csrfToken = valueMatch[1]; return true; }",
+                  "  return false;",
+                  "});",
+                  "pm.test('Checkout page returns successfully', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('CSRF token found in checkout form', function () {",
+                  "  pm.expect(csrfToken, 'checkout form _token').to.be.a('string').and.not.empty;",
+                  "});",
+                  "if (csrfToken) pm.collectionVariables.set('csrfToken', csrfToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/checkout/{{hostedCardId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "checkout",
+                "{{hostedCardId}}"
+              ]
+            },
+            "description": "Run after Step 1 and before Step 2. GET the checkout HTML to establish the session cookie and save the hidden _token field as {{csrfToken}}."
+          }
+        },
+        {
+          "name": "Step 2 – Submit card to POST /payments/{publicId}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Redirects to the merchant return URL', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([302, 303]);",
+                  "  pm.expect(pm.response.headers.get('Location')).to.include('/booking/TK-260101-ABCDE');",
+                  "  pm.expect(pm.response.headers.get('Location')).to.not.include('payment_id=');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "_token",
+                  "value": "{{csrfToken}}"
+                },
+                {
+                  "key": "card_number",
+                  "value": "4242 4242 4242 4242"
+                },
+                {
+                  "key": "expiry",
+                  "value": "12/28"
+                },
+                {
+                  "key": "cvc",
+                  "value": "123"
+                },
+                {
+                  "key": "cardholder",
+                  "value": "SUCCESS USER"
+                },
+                {
+                  "key": "redirect_to_return",
+                  "value": "1"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/{{hostedCardId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "{{hostedCardId}}"
+              ]
+            },
+            "description": "route ของ Hosted Checkout ที่ใช้ settle payment เดิม; ส่ง form fields จากหน้า checkout เท่านั้น ไม่ส่ง API key"
+          },
+          "description": "Submit the checkout form using the session cookie from Step 1.5 and the extracted CSRF token."
+        },
+        {
+          "name": "Deprecated native-card case — use Hosted Card Flow above",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Card creation is PENDING until Hosted Checkout', function () {",
+                  "  pm.expect(jsonData.status).to.eql('PENDING');",
+                  "  pm.expect(jsonData.payment_id).to.not.equal(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "CARD_DECLINE_{{$timestamp}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500,\n  \"method\": \"card\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Card: create PENDING for Hosted Checkout (funds case)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.test('payment_id is not null', function () { pm.expect(jsonData.payment_id).to.not.equal(null); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "CARD_NSF_{{$timestamp}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500,\n  \"method\": \"card\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Card: create PENDING for Hosted Checkout (expiry case)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "CARD_EXP_{{$timestamp}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500,\n  \"method\": \"card\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Card: create PENDING for Hosted Checkout (CVC case)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "CARD_CVC_{{$timestamp}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500,\n  \"method\": \"card\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Card: create PENDING for Hosted Checkout (processing case)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "CARD_PROC_{{$timestamp}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500,\n  \"method\": \"card\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Card: create PENDING for Hosted Checkout (fraud case)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "CARD_FRAUD_{{$timestamp}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500,\n  \"method\": \"card\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Card: create PENDING for Hosted Checkout (delayed webhook case)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "CARD_DELAYWH_{{$timestamp}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-260101-ABCDE\",\n  \"amount\": 1500,\n  \"method\": \"card\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            },
+            "description": "จ่ายสำเร็จทันที; ความผิดปกติของ webhook ตั้งจาก PayMock Admin Webhook Mode เท่านั้น"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. PromptPay – All Cases",
+      "description": "สร้างด้วย POST /v1/payments (method=promptpay, body.payment_id) → ได้ PENDING + payment_id แล้วจบด้วย simulate, bank-simulate หรือ cancel โดยใช้ response.id",
+      "item": [
+        {
+          "name": "PromptPay: Create (PENDING + QR URLs)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "  pm.collectionVariables.set('promptPayId', jsonData.id);",
+                  "  pm.collectionVariables.set('paymentId', jsonData.id);",
+                  "}",
+                  "pm.test('PENDING PromptPay has payment_id', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(jsonData.status).to.eql('PENDING');",
+                  "  pm.expect(jsonData.payment_id).to.not.equal(null);",
+                  "  pm.expect(jsonData.paid_at).to.equal(null);",
+                  "  pm.expect(jsonData.qrcode_url).to.include('/qr.svg');",
+                  "});",
+                  "pm.test('booking_ref echoed from request', function () {",
+                  "  pm.expect(pm.response.json().booking_ref).to.eql('TK-POSTMAN-PP-MAIN');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "PP_CREATE_{{$timestamp}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-POSTMAN-PP-MAIN\",\n  \"amount\": 2200,\n  \"currency\": \"THB\",\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            },
+            "description": "คาดหวัง: status=PENDING, payment_id ไม่เป็น null, paid_at=null, qrcode_url, bank_simulator_url Request body sends booking_ref; response.booking_ref should match it."
+          }
+        },
+        {
+          "name": "PromptPay: GET QR SVG (no auth)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments/{{promptPayId}}/qr.svg",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments",
+                "{{promptPayId}}",
+                "qr.svg"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PromptPay: Simulate COMPLETED (POST /checkout/.../simulate)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"COMPLETED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/checkout/{{promptPayId}}/simulate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "checkout",
+                "{{promptPayId}}",
+                "simulate"
+              ]
+            },
+            "description": "รันหลัง Create — ใช้ {{promptPayId}} = response.id | ตั้ง paid_at=now(), ยิง webhook payment.completed"
+          }
+        },
+        {
+          "name": "PromptPay: Create then Simulate FAILED (payment_declined)",
+          "item": [
+            {
+              "name": "Step 1 – Create PENDING",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var j = pm.response.json();",
+                      "if (j.id) pm.collectionVariables.set('promptPayFailId', j.id);",
+                      "pm.test('payment_id is not null', function () {",
+                      "  pm.expect(j.payment_id).to.not.equal(null);",
+                      "  pm.expect(j.status).to.eql('PENDING');",
+                      "});",
+                      "pm.test('booking_ref is returned', function () {",
+                      "  pm.expect(j.booking_ref).to.eql('TK-POSTMAN-PP-FAIL');",
+                      "});",
+                      "pm.test('booking_ref echoed from request', function () {",
+                      "  pm.expect(pm.response.json().booking_ref).to.eql('TK-POSTMAN-PP-FAIL');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "PP_FAIL_{{$timestamp}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-POSTMAN-PP-FAIL\",\n  \"amount\": 900,\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/payments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "payments"
+                  ]
+                },
+                "description": "Request body sends booking_ref; response.booking_ref should match it."
+              }
+            },
+            {
+              "name": "Step 2 – Simulate FAILED",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"FAILED\",\n  \"failure_code\": \"payment_declined\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/checkout/{{promptPayFailId}}/simulate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "checkout",
+                    "{{promptPayFailId}}",
+                    "simulate"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "PromptPay: Bank App Confirm (POST /bank-simulate/.../pay)",
+          "item": [
+            {
+              "name": "Step 1 – Create PENDING",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var j = pm.response.json();",
+                      "if (j.id) pm.collectionVariables.set('promptPayBankId', j.id);",
+                      "pm.test('payment_id is not null', function () {",
+                      "  pm.expect(j.payment_id).to.not.equal(null);",
+                      "  pm.expect(j.status).to.eql('PENDING');",
+                      "});",
+                      "pm.test('booking_ref is returned', function () {",
+                      "  pm.expect(j.booking_ref).to.eql('TK-POSTMAN-PP-BANK');",
+                      "});",
+                      "pm.test('booking_ref echoed from request', function () {",
+                      "  pm.expect(pm.response.json().booking_ref).to.eql('TK-POSTMAN-PP-BANK');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "PP_BANK_{{$timestamp}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-POSTMAN-PP-BANK\",\n  \"amount\": 1800,\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/payments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "payments"
+                  ]
+                },
+                "description": "Request body sends booking_ref; response.booking_ref should match it."
+              }
+            },
+            {
+              "name": "Step 2 – Bank simulate pay (redirect 302)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/bank-simulate/{{promptPayBankId}}/pay",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "bank-simulate",
+                    "{{promptPayBankId}}",
+                    "pay"
+                  ]
+                },
+                "description": "เทียบเท่ากดยืนยันในแอปธนาคาร → COMPLETED + paid_at"
+              }
+            },
+            {
+              "name": "Step 3 – GET status (polling)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "pm.test('payment_id still present after pay', function () {",
+                      "  pm.expect(jsonData.payment_id).to.not.equal(null);",
+                      "  pm.expect(jsonData.status).to.eql('COMPLETED');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/payments/{{promptPayBankId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "payments",
+                    "{{promptPayBankId}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "PromptPay: Cancel while PENDING",
+          "item": [
+            {
+              "name": "Step 1 – Create PENDING",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var j = pm.response.json();",
+                      "if (j.id) pm.collectionVariables.set('promptPayCancelId', j.id);",
+                      "pm.test('payment_id is not null', function () {",
+                      "  pm.expect(j.payment_id).to.not.equal(null);",
+                      "});",
+                      "pm.test('booking_ref is returned', function () {",
+                      "  pm.expect(j.booking_ref).to.eql('TK-POSTMAN-PP-CANCEL');",
+                      "});",
+                      "pm.test('booking_ref echoed from request', function () {",
+                      "  pm.expect(pm.response.json().booking_ref).to.eql('TK-POSTMAN-PP-CANCEL');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "PP_CANCEL_{{$timestamp}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"payment_id\": \"12\",\n  \"booking_ref\": \"TK-POSTMAN-PP-CANCEL\",\n  \"amount\": 500,\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/payments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "payments"
+                  ]
+                },
+                "description": "Request body sends booking_ref; response.booking_ref should match it."
+              }
+            },
+            {
+              "name": "Step 2 – POST /v1/payments/{id}/cancel",
+              "request": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/payments/{{promptPayCancelId}}/cancel",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "payments",
+                    "{{promptPayCancelId}}",
+                    "cancel"
+                  ]
+                },
+                "description": "path ใช้ response.id | คาดหวัง: ok=true, status=FAILED, failure_code=cancelled"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PromptPay: GET status after pay (ใช้ {{promptPayId}})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.test('payment_id is not null', function () {",
+                  "  pm.expect(jsonData.payment_id).to.not.equal(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments/{{promptPayId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments",
+                "{{promptPayId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. GET service status (chaos_mode + webhook_mode จาก Admin)",
+      "item": [
+        {
+          "name": "GET /v1/payments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.test('recent items have payment_id', function () {",
+                  "  pm.expect(jsonData.recent).to.be.an('array');",
+                  "  jsonData.recent.forEach(function (p) {",
+                  "    pm.expect(p.payment_id, p.id + ' payment_id').to.not.equal(null);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            },
+            "description": "ดูว่า Admin ตั้ง chaos_mode / webhook_mode อะไรอยู่ — recent[].payment_id ต้องไม่เป็น null"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Concert Backend — Hosted Card Redirect + PromptPay",
+      "description": "create-booking สร้าง booking code (booking_ref) และ Concert payment แรก. booking_ref เกิดเมื่อสร้าง booking ก่อนเรียก PayMock และใช้แสดงแก่ผู้ใช้/ทำ return path; payment_id ใช้ภายในเพื่อ polling, reconcile และ cancel. เมื่อ method=card ระบบคืน checkout_url; หลังจ่าย Gateway กลับ /booking/{booking_ref} โดยไม่แนบ ID. หาก FAILED/EXPIRED ให้สร้าง payment attempt ใหม่ใน booking เดิมด้วย POST /api/bookings/{bookingId}/payments และ booking_ref เดิม.",
+      "item": [
+        {
+          "name": "POST create-booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json();",
+                  "pm.test('booking and payment created', function () { pm.expect(j.ok).to.eql(true); pm.expect(j.booking_id).to.be.a('number'); pm.expect(j.booking_ref).to.be.a('string').and.not.empty; pm.expect(j.return_path).to.eql('/booking/' + encodeURIComponent(j.booking_ref)); });",
+                  "if (j.ok) { pm.collectionVariables.set('bookingId', String(j.booking_id)); pm.collectionVariables.set('bookingCode', j.booking_ref); pm.collectionVariables.set('paymentId', j.payment_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seat\": \"VIP-A1\",\n  \"amount\": 3500.00,\n  \"method\": \"card\"\n}"
+            },
+            "url": {
+              "raw": "{{concertUrl}}/api/create-booking",
+              "host": [
+                "{{concertUrl}}"
+              ],
+              "path": [
+                "api",
+                "create-booking"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/bookings/{bookingId}/payments — Payment ใหม่ใน Booking เดิม",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json();",
+                  "pm.test('same booking code, new Concert payment attempt', function () { pm.expect(j.ok).to.eql(true); pm.expect(String(j.booking_id)).to.eql(pm.collectionVariables.get('bookingId')); pm.expect(j.booking_ref).to.eql(pm.collectionVariables.get('bookingCode')); pm.expect(j.concert_payment_id).to.be.a('number'); });",
+                  "if (j.ok) pm.collectionVariables.set('paymentId', j.payment_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"card\"\n}"
+            },
+            "url": {
+              "raw": "{{concertUrl}}/api/bookings/{{bookingId}}/payments",
+              "host": [
+                "{{concertUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "{{bookingId}}",
+                "payments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET booking-status ?payment_id=",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{concertUrl}}/api/booking-status?payment_id={{paymentId}}",
+              "host": [
+                "{{concertUrl}}"
+              ],
+              "path": [
+                "api",
+                "booking-status"
+              ],
+              "query": [
+                {
+                  "key": "payment_id",
+                  "value": "{{paymentId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST reconcile-booking { payment_id }",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"{{paymentId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{concertUrl}}/api/reconcile-booking",
+              "host": [
+                "{{concertUrl}}"
+              ],
+              "path": [
+                "api",
+                "reconcile-booking"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST cancel-booking { payment_id }",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"{{paymentId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{concertUrl}}/api/cancel-booking",
+              "host": [
+                "{{concertUrl}}"
+              ],
+              "path": [
+                "api",
+                "cancel-booking"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
