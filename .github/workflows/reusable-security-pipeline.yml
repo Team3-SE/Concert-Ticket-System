@@ -134,6 +134,12 @@ jobs:
         with:
           python-version: ${{ inputs.runtime_version }}
 
+      - name: Prepare Laravel Cache & Storage Directories
+        if: ${{ inputs.runtime == 'php' }}
+        run: |
+          mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs database
+          chmod -R 775 bootstrap/cache storage database 2>/dev/null || true
+
       - name: Install Dependencies
         if: ${{ inputs.install_command != '' }}
         run: ${{ inputs.install_command }}
@@ -149,6 +155,14 @@ jobs:
       - name: Run Build
         if: ${{ inputs.build_command != '' }}
         run: ${{ inputs.build_command }}
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ${{ inputs.working_directory }}/test-report.xml
+          if-no-files-found: ignore
 
   # =========================================================================
   # Job 2: SonarQube Cloud Static Application Security Testing (SAST)
@@ -214,6 +228,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.runtime_version }}
+
+      - name: Prepare Laravel Cache & Storage Directories
+        if: ${{ inputs.runtime == 'php' }}
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs database
+          chmod -R 775 bootstrap/cache storage database 2>/dev/null || true
 
       - name: Install Application Dependencies
         if: ${{ inputs.install_command != '' }}
@@ -393,7 +414,7 @@ jobs:
           fi
 
   # =========================================================================
-  # Job 4: Security Gate / Overall PR Status Check
+  # Job 4: Security Gate / Overall PR Status Check & AI Report Generation
   # =========================================================================
   security_gate:
     name: "4. Security Gate / Overall Status"
@@ -401,6 +422,58 @@ jobs:
     needs: [validate, sonar_sast, dast_zap]
     if: always()
     steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Download DAST Reports
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: owasp-zap-dast-reports
+          path: owasp-zap-dast-reports
+
+      - name: Download Test Results
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: test-results
+          path: test-results
+
+      - name: Generate AI-Ready Failure & Security Report
+        if: always()
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          ZAP_REPORT="owasp-zap-dast-reports/report_json.json"
+          TEST_REPORT="test-results/test-report.xml"
+
+          python3 scripts/generate_pipeline_report.py \
+            --repo "${{ github.repository }}" \
+            --workflow-name "${{ github.workflow }}" \
+            --run-id "${{ github.run_id }}" \
+            --commit-sha "${{ github.sha }}" \
+            --branch "${{ github.head_ref || github.ref_name }}" \
+            --pr "${{ github.event.pull_request.number }}" \
+            --sonar-project-key "${{ inputs.sonar_project_key }}" \
+            --sonar-org "${{ inputs.sonar_organization }}" \
+            --sonar-token "$SONAR_TOKEN" \
+            --zap-report "$ZAP_REPORT" \
+            --test-report "$TEST_REPORT" \
+            --validate-status "${{ needs.validate.result }}" \
+            --sonar-status "${{ needs.sonar_sast.result }}" \
+            --dast-status "${{ needs.dast_zap.result }}" \
+            --output-dir "pipeline-reports"
+
+      - name: Upload AI-Ready Failure & Security Report Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-failure-report-pr-${{ github.event.pull_request.number || 'push' }}-run-${{ github.run_id }}
+          path: |
+            pipeline-reports/pipeline-report.html
+            pipeline-reports/pipeline-report.json
+          retention-days: 30
+
       - name: Consolidate Security Check Results
         env:
           VALIDATE_RESULT: ${{ needs.validate.result }}
@@ -448,6 +521,10 @@ jobs:
           else:
               md.append("> ### ⛔ Overall Status: BLOCKED FROM MERGING\n")
               md.append("> One or more required security checks failed. Review the failed jobs above and fix reported issues before requesting approval.\n")
+
+          md.append("\n### 📥 AI-Ready Failure & Security Reports\n")
+          md.append("- **Interactive Developer Dashboard (HTML)**: Download the `ci-failure-report-*` artifact above to view searchable findings, code snippets, and remediation details offline.\n")
+          md.append("- **Machine-Readable Report (JSON)**: Use `pipeline-report.json` inside the artifact for automated AI root-cause analysis and automated fixing.\n")
 
           report_text = "".join(md)
           print(report_text)

@@ -29,8 +29,7 @@ cd /var/www/html && php artisan route:clear
 
 # Set permissions
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
-chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
-chmod -R 777 /var/www/html/database
-chmod 666 /var/www/html/database/paymock.sqlite
+chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
+chmod 664 /var/www/html/database/paymock.sqlite
 
 exec "$@"
