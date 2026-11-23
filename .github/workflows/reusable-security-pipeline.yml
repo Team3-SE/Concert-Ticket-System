@@ -364,7 +364,7 @@ jobs:
           FAIL_SEVERITY: ${{ inputs.fail_on_severity }}
           TARGET_URL: ${{ inputs.zap_target }}
         run: |
-          python3 -c '
+          python3 - <<'PYEOF'
           import json, sys, os
 
           report_file = "report_json.json"
@@ -405,15 +405,21 @@ jobs:
               except Exception as e:
                   print(f"Warning parsing report: {e}")
 
+          c_crit = counts["critical"]
+          c_high = counts["high"]
+          c_med = counts["medium"]
+          c_low = counts["low"]
+          c_info = counts["informational"]
+
           summary_md = []
           summary_md.append("### 🛡️ OWASP ZAP DAST Scan Findings\n\n")
           summary_md.append(f"- **Target**: `{target_url}`\n")
           summary_md.append(f"- **Enforced Failure Policy**: Fail on `{fail_severity}` or higher\n\n")
           summary_md.append("| Severity | Total Findings |\n|---|---|\n")
-          summary_md.append(f"| 🔴 Critical / High | {counts[\"high\"]} |\n")
-          summary_md.append(f"| 🟠 Medium | {counts[\"medium\"]} |\n")
-          summary_md.append(f"| 🟡 Low | {counts[\"low\"]} |\n")
-          summary_md.append(f"| ⚪ Informational | {counts[\"informational\"]} |\n\n")
+          summary_md.append(f"| 🔴 Critical / High | {c_high} |\n")
+          summary_md.append(f"| 🟠 Medium | {c_med} |\n")
+          summary_md.append(f"| 🟡 Low | {c_low} |\n")
+          summary_md.append(f"| ⚪ Informational | {c_info} |\n\n")
 
           if alerts_list:
               summary_md.append("#### Alert Details\n\n")
@@ -432,15 +438,15 @@ jobs:
 
           failed = False
           reason = ""
-          if fail_severity == "critical" and counts["critical"] > 0:
+          if fail_severity == "critical" and c_crit > 0:
               failed = True
-              reason = f"Identified {counts[\"critical\"]} Critical severity alert(s)."
-          elif fail_severity == "high" and counts["high"] > 0:
+              reason = f"Identified {c_crit} Critical severity alert(s)."
+          elif fail_severity == "high" and c_high > 0:
               failed = True
-              reason = f"Identified {counts[\"high\"]} High severity alert(s)."
-          elif fail_severity == "medium" and (counts["high"] + counts["medium"]) > 0:
+              reason = f"Identified {c_high} High severity alert(s)."
+          elif fail_severity == "medium" and (c_high + c_med) > 0:
               failed = True
-              reason = f"Identified {counts[\"high\"]} High and {counts[\"medium\"]} Medium severity alert(s)."
+              reason = f"Identified {c_high} High and {c_med} Medium severity alert(s)."
 
           if failed:
               error_msg = f"❌ DAST Policy Violation: {reason}"
@@ -451,7 +457,7 @@ jobs:
               sys.exit(1)
           else:
               print(f"✅ DAST Security Check passed under policy threshold: {fail_severity}.")
-          '
+          PYEOF
 
       - name: Upload Step 2 — OWASP ZAP DAST Security Reports
         if: always()
@@ -536,7 +542,7 @@ jobs:
           echo "2. OWASP ZAP DAST:      $DAST_RESULT"
           echo "=============================================="
 
-          python3 -c '
+          python3 - <<'PYEOF'
           import os, sys
 
           sonar = os.environ.get("SONAR_RESULT", "failure")
@@ -585,4 +591,4 @@ jobs:
 
           if not all_passed:
               sys.exit(1)
-          '
+          PYEOF
