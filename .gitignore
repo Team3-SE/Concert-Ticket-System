@@ -101,4 +101,5 @@ Thumbs.db
 /paymock/storage/logs
 /paymock/database/*.sqlite
 /paymock/database/*.sqlite-journal
+*.zip
 __pycache__/
