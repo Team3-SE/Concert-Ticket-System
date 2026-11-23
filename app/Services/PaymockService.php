@@ -2,7 +2,7 @@
 
 /**
  * PaymockService
- * ติดต่อ PayMock (mock payment gateway ในโฟลเดอร์ paymentsgateway) สร้างรายการชำระเงิน ตรวจลายเซ็น webhook
+ * ติดต่อ PayMock (mock payment gateway ในโฟลเดอร์ paymock) สร้างรายการชำระเงิน ตรวจลายเซ็น webhook
  * และนำผลการชำระเงินมาปรับสถานะ payment/booking (ใช้ร่วมกันทั้ง webhook, scheduler และการ poll จากหน้าชำระเงิน)
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 20/11/2569

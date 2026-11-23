@@ -35,7 +35,7 @@ return [
         ],
     ],
 
-    // PayMock (mock payment gateway ใน paymentsgateway/) — ว่าง PAYMOCK_URL = ไม่ใช้ gateway (ใช้ปุ่มจำลองเดิม)
+    // PayMock (mock payment gateway ใน paymock/) — ว่าง PAYMOCK_URL = ไม่ใช้ gateway (ใช้ปุ่มจำลองเดิม)
     'paymock' => [
         'url'            => env('PAYMOCK_URL'),
         'api_key'        => env('PAYMOCK_API_KEY'),

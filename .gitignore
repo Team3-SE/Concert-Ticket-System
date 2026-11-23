@@ -96,10 +96,9 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 
-# PayMock (paymentsgateway/)
-/paymentsgateway/vendor
-/paymentsgateway/composer.lock
-/paymentsgateway/storage/logs
-/paymentsgateway/database/*.sqlite
-/paymentsgateway/database/*.sqlite-journal
+# PayMock (paymock/)
+/paymock/vendor
+/paymock/storage/logs
+/paymock/database/*.sqlite
+/paymock/database/*.sqlite-journal
 __pycache__/
