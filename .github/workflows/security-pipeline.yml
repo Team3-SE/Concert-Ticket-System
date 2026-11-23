@@ -17,6 +17,9 @@ concurrency:
   group: security-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   call_security_pipeline:
     name: "Security Pipeline"
