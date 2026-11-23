@@ -46,8 +46,8 @@
                     <span class="font-bold text-gray-800">1 ใบ (Seat #A-42)</span>
                 </div>
                 <div class="flex justify-between items-center py-2 border-b border-gray-100 text-sm">
-                    <span class="text-gray-500">ช่องทางชำระเงินที่ต้องการ:</span>
-                    <select x-model="method" class="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white font-medium">
+                    <label for="demo-payment-method" class="text-gray-500">ช่องทางชำระเงินที่ต้องการ:</label>
+                    <select id="demo-payment-method" x-model="method" class="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white font-medium">
                         <option value="promptpay">PromptPay QR</option>
                         <option value="card">บัตรเครดิต / เดบิต</option>
                     </select>

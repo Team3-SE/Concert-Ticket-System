@@ -138,19 +138,20 @@
             
             <form action="{{ route('admin.chaos') }}" method="POST" class="space-y-3">
                 @csrf
-                <select name="chaos_mode"
+                <label for="chaos_mode_select" class="block text-xs text-gray-600 mb-1">เลือกโหมด Chaos</label>
+                <select id="chaos_mode_select" name="chaos_mode"
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
                     <option value="normal" {{ $chaosMode === 'normal' ? 'selected' : '' }}>✅ Normal (ทำงานปกติ)</option>
                     <option value="down" {{ $chaosMode === 'down' ? 'selected' : '' }}>🔴 Gateway มีปัญหา (503)</option>
                     <option value="slow" {{ str_starts_with($chaosMode, 'slow:') ? 'selected' : '' }}>🐢 Slow (หน่วงก่อนประมวลผล)</option>
                     <option value="rate_limit" {{ $chaosMode === 'rate_limit' ? 'selected' : '' }}>🚦 Rate Limit (429 Too Many Requests)</option>
                 </select>
-                <label class="block text-xs text-gray-600">
+                <label for="delay_seconds_input" class="block text-xs text-gray-600">
                     เวลา delay (วินาที, ใช้กับ Slow; 0-3600)
-                    <input type="number" name="delay_seconds" min="0" max="3600"
-                           value="{{ (int) (explode(':', $chaosMode, 2)[1] ?? 5) }}"
-                           class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
                 </label>
+                <input id="delay_seconds_input" type="number" name="delay_seconds" min="0" max="3600"
+                       value="{{ (int) (explode(':', $chaosMode, 2)[1] ?? 5) }}"
+                       class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
                 <button type="submit"
                         class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg text-sm transition shadow">
                     Apply Chaos Mode
@@ -170,7 +171,8 @@
 
             <form action="{{ route('admin.webhook.mode') }}" method="POST" class="space-y-3">
                 @csrf
-                <select name="webhook_mode"
+                <label for="webhook_mode_select" class="block text-xs text-gray-600 mb-1">เลือกโหมด Webhook</label>
+                <select id="webhook_mode_select" name="webhook_mode"
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
                     <option value="normal" {{ $webhookMode === 'normal' ? 'selected' : '' }}>✅ Normal (ส่ง webhook ตามจริง)</option>
                     <option value="webhook_lost" {{ $webhookMode === 'webhook_lost' ? 'selected' : '' }}>🟡 Lost (ไม่ส่งเลย — ทดสอบ reconcile)</option>
@@ -519,21 +521,21 @@
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div class="md:col-span-2">
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Target Webhook URL</label>
-                <input type="url" x-model="whUrl" placeholder="http://concert_backend:5000/api/webhook"
+                <label for="admin_wh_url" class="block text-xs font-semibold text-gray-600 mb-1">Target Webhook URL</label>
+                <input id="admin_wh_url" type="url" x-model="whUrl" placeholder="http://concert_backend:5000/api/webhook"
                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono">
             </div>
             <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Event Type</label>
-                <select x-model="whEvent" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <label for="admin_wh_event" class="block text-xs font-semibold text-gray-600 mb-1">Event Type</label>
+                <select id="admin_wh_event" x-model="whEvent" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                     <option value="payment.completed">payment.completed</option>
                     <option value="payment.failed">payment.failed</option>
                     <option value="payment.expired">payment.expired</option>
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Signature Scenario</label>
-                <select x-model="whScenario" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-xs">
+                <label for="admin_wh_scenario" class="block text-xs font-semibold text-gray-600 mb-1">Signature Scenario</label>
+                <select id="admin_wh_scenario" x-model="whScenario" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-xs">
                     <option value="normal">normal (ลายเซ็นถูกต้อง)</option>
                     <option value="webhook_bad_sig">webhook_bad_sig (ลายเซ็นปลอม)</option>
                 </select>

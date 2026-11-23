@@ -97,8 +97,9 @@
                 @csrf
                 <input type="hidden" name="redirect_to_return" value="1">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
-                    <input type="text"
+                    <label for="checkout_card_number" class="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
+                    <input id="checkout_card_number"
+                           type="text"
                            name="card_number"
                            x-model="cardNumber"
                            placeholder="4242 4242 4242 4242"
@@ -112,8 +113,9 @@
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Expiry (MM/YY)</label>
-                        <input type="text"
+                        <label for="checkout_card_expiry" class="block text-sm font-medium text-gray-700 mb-1">Expiry (MM/YY)</label>
+                        <input id="checkout_card_expiry"
+                               type="text"
                                name="expiry"
                                x-model="cardExpiry"
                                placeholder="12/28"
@@ -122,8 +124,9 @@
                                required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">CVC</label>
-                        <input type="text"
+                        <label for="checkout_card_cvc" class="block text-sm font-medium text-gray-700 mb-1">CVC</label>
+                        <input id="checkout_card_cvc"
+                               type="text"
                                name="cvc"
                                x-model="cardCvc"
                                placeholder="123"
@@ -133,8 +136,9 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Cardholder Name</label>
-                    <input type="text"
+                    <label for="checkout_cardholder" class="block text-sm font-medium text-gray-700 mb-1">Cardholder Name</label>
+                    <input id="checkout_cardholder"
+                           type="text"
                            name="cardholder"
                            x-model="cardHolder"
                            placeholder="JOHN DOE"

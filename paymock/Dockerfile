@@ -19,16 +19,20 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# Copy composer files first for layer caching
-COPY composer.json composer.lock* ./
-RUN if [ -f composer.lock ]; then \
-        composer install --no-dev --no-scripts --no-autoloader --prefer-dist; \
-    else \
-        composer update --no-dev --no-scripts --no-autoloader --prefer-dist; \
-    fi
+# Copy composer dependency specifications
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 
-# Copy app files
-COPY . .
+# Copy application files
+COPY app/ ./app/
+COPY bootstrap/ ./bootstrap/
+COPY config/ ./config/
+COPY database/ ./database/
+COPY public/ ./public/
+COPY resources/ ./resources/
+COPY routes/ ./routes/
+COPY artisan ./
+COPY .env.example ./
 
 # Create required directories and set permissions before autoloader
 RUN mkdir -p /var/www/html/bootstrap/cache \

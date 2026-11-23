@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Payment;
 use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class PaymentApiTest extends TestCase
@@ -17,6 +18,7 @@ class PaymentApiTest extends TestCase
     {
         parent::setUp();
         $this->apiKey = config('paymock.api_key');
+        Http::fake(['*' => Http::response(['ok' => true], 200)]);
     }
 
     /** Test: สร้าง card payment สำเร็จ คืน checkout_url */
