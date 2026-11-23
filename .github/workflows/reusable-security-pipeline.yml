@@ -156,11 +156,11 @@ jobs:
         if: ${{ inputs.build_command != '' }}
         run: ${{ inputs.build_command }}
 
-      - name: Upload Test Results
+      - name: Upload Step 1 — Test Results Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: step1-validate-test-results-run-${{ github.run_id }}
           path: ${{ inputs.working_directory }}/test-report.xml
           if-no-files-found: ignore
 
@@ -204,7 +204,10 @@ jobs:
   dast_zap:
     name: "3. OWASP ZAP DAST Analysis"
     runs-on: ubuntu-latest
+    # Run ZAP independently of validate result so we always get DAST data
+    # even when tests or linter fail (needs validate only for install caching)
     needs: [validate]
+    if: always()
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -394,11 +397,11 @@ jobs:
               print(f"✅ DAST Security Check passed under policy threshold: {fail_severity}.")
           '
 
-      - name: Upload ZAP Security Reports
+      - name: Upload Step 3 — OWASP ZAP DAST Security Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: owasp-zap-dast-reports
+          name: step3-owasp-zap-dast-reports-run-${{ github.run_id }}
           path: |
             report_html.html
             report_json.json
@@ -429,14 +432,14 @@ jobs:
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          name: owasp-zap-dast-reports
+          name: step3-owasp-zap-dast-reports-run-${{ github.run_id }}
           path: owasp-zap-dast-reports
 
       - name: Download Test Results
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          name: test-results
+          name: step1-validate-test-results-run-${{ github.run_id }}
           path: test-results
 
       - name: Generate AI-Ready Failure & Security Report
@@ -464,11 +467,11 @@ jobs:
             --dast-status "${{ needs.dast_zap.result }}" \
             --output-dir "pipeline-reports"
 
-      - name: Upload AI-Ready Failure & Security Report Artifact
+      - name: Upload Step 4 — AI-Ready Full Pipeline Failure Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ci-failure-report-pr-${{ github.event.pull_request.number || 'push' }}-run-${{ github.run_id }}
+          name: step4-ai-full-report-pr-${{ github.event.pull_request.number || 'push' }}-run-${{ github.run_id }}
           path: |
             pipeline-reports/pipeline-report.html
             pipeline-reports/pipeline-report.json
@@ -523,8 +526,12 @@ jobs:
               md.append("> One or more required security checks failed. Review the failed jobs above and fix reported issues before requesting approval.\n")
 
           md.append("\n### 📥 AI-Ready Failure & Security Reports\n")
-          md.append("- **Interactive Developer Dashboard (HTML)**: Download the `ci-failure-report-*` artifact above to view searchable findings, code snippets, and remediation details offline.\n")
-          md.append("- **Machine-Readable Report (JSON)**: Use `pipeline-report.json` inside the artifact for automated AI root-cause analysis and automated fixing.\n")
+          md.append("**Artifacts generated per step (ชื่อไฟล์บ่งบอกขั้นตอน):**\n\n")
+          md.append("| Artifact | ประกอบด้วย | ใช้สำหรับ |\n|---|---|---|\n")
+          md.append("| `step1-validate-test-results-*` | `test-report.xml` | ดู test failures รายละเอียด |\n")
+          md.append("| `step3-owasp-zap-dast-reports-*` | `report_json.json`, `report_html.html` | DAST raw scan results |\n")
+          md.append("| `step4-ai-full-report-*` | `pipeline-report.html`, `pipeline-report.json` | Full report รวมทุก step สำหรับ AI |\n\n")
+          md.append("> **AI Code Fix**: ดาวน์โหลด `step4-ai-full-report-*` → ใช้ `pipeline-report.json` ส่งให้ AI แก้โค้ดได้ทันที\n")
 
           report_text = "".join(md)
           print(report_text)
