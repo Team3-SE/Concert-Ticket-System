@@ -198,6 +198,16 @@ jobs:
         with:
           scanMetadataReportFile: ${{ inputs.working_directory }}/.scannerwork/report-task.txt
 
+      - name: Upload Step 2 — SonarQube SAST Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: step2-sonarqube-sast-report-run-${{ github.run_id }}
+          path: |
+            ${{ inputs.working_directory }}/.scannerwork/report-task.txt
+          if-no-files-found: ignore
+          retention-days: 14
+
   # =========================================================================
   # Job 3: Dynamic Application Security Testing (DAST) with OWASP ZAP
   # =========================================================================
@@ -299,7 +309,9 @@ jobs:
           rules_file_name: ${{ inputs.zap_rules_file }}
           allow_issue_writing: false
           fail_action: false
-          artifact_name: 'owasp-zap-dast-report'
+          # artifact_name left empty so zaproxy does NOT auto-upload its own artifact
+          # We upload manually below as step3-owasp-zap-dast-reports-* for clarity
+          artifact_name: ''
           cmd_options: '-a'
 
       - name: Evaluate DAST Findings & Enforce Policy
