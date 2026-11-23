@@ -198,12 +198,125 @@ jobs:
         with:
           scanMetadataReportFile: ${{ inputs.working_directory }}/.scannerwork/report-task.txt
 
+      - name: Fetch SonarCloud Issues & Quality Gate Details
+        if: always()
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          REPORT_FILE="${{ inputs.working_directory }}/.scannerwork/report-task.txt"
+          SONAR_PROJECT="${{ inputs.sonar_project_key }}"
+          SONAR_ORG="${{ inputs.sonar_organization }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          BRANCH="${{ github.head_ref || github.ref_name }}"
+          OUT_DIR="sonarqube-sast-data"
+          mkdir -p "$OUT_DIR"
+
+          # Copy report-task.txt if present
+          if [ -f "$REPORT_FILE" ]; then
+            cp "$REPORT_FILE" "$OUT_DIR/report-task.txt"
+          fi
+
+          # Fetch Quality Gate status
+          python3 - <<'PYEOF'
+          import os, json, urllib.request, urllib.parse
+
+          token = os.environ.get("SONAR_TOKEN", "")
+          project = os.environ.get("SONAR_PROJECT", "")
+          org = os.environ.get("SONAR_ORG", "")
+          pr_number = os.environ.get("PR_NUMBER", "")
+          branch = os.environ.get("BRANCH", "")
+          out_dir = os.environ.get("OUT_DIR", "sonarqube-sast-data")
+          base_url = "https://sonarcloud.io"
+
+          def sonar_get(path, params=None):
+              url = f"{base_url}{path}"
+              if params:
+                  url = f"{url}?{urllib.parse.urlencode(params)}"
+              req = urllib.request.Request(url)
+              if token:
+                  import base64
+                  creds = base64.b64encode(f"{token}:".encode()).decode()
+                  req.add_header("Authorization", f"Basic {creds}")
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as resp:
+                      return json.loads(resp.read().decode())
+              except Exception as e:
+                  print(f"  Warning: {path} failed: {e}")
+                  return None
+
+          def save(filename, data):
+              with open(os.path.join(out_dir, filename), "w", encoding="utf-8") as f:
+                  json.dump(data, f, indent=2, ensure_ascii=False)
+              print(f"  Saved {filename}")
+
+          print("Fetching SonarCloud Quality Gate status...")
+          qg_params = {"projectKey": project}
+          if pr_number:
+              qg_params["pullRequest"] = pr_number
+          elif branch:
+              qg_params["branch"] = branch
+          if org:
+              qg_params["organization"] = org
+          qg = sonar_get("/api/qualitygates/project_status", qg_params)
+          if qg:
+              save("quality-gate-status.json", qg)
+              status = qg.get("projectStatus", {}).get("status", "UNKNOWN")
+              print(f"  Quality Gate: {status}")
+
+          print("Fetching SonarCloud Issues (bugs, vulnerabilities, code smells)...")
+          issues_params = {
+              "componentKeys": project,
+              "types": "BUG,VULNERABILITY,CODE_SMELL",
+              "ps": 500,
+              "additionalFields": "rules,comments",
+          }
+          if pr_number:
+              issues_params["pullRequest"] = pr_number
+          elif branch:
+              issues_params["branch"] = branch
+          issues = sonar_get("/api/issues/search", issues_params)
+          if issues:
+              save("issues.json", issues)
+              print(f"  Issues fetched: {issues.get('total', 0)}")
+
+          print("Fetching SonarCloud Security Hotspots...")
+          hs_params = {"projectKey": project, "ps": 500}
+          if pr_number:
+              hs_params["pullRequest"] = pr_number
+          elif branch:
+              hs_params["branch"] = branch
+          hotspots = sonar_get("/api/hotspots/search", hs_params)
+          if hotspots:
+              save("hotspots.json", hotspots)
+              print(f"  Hotspots fetched: {len(hotspots.get('hotspots', []))}")
+
+          # Create summary JSON
+          summary = {
+              "project_key": project,
+              "organization": org,
+              "pr_number": pr_number,
+              "branch": branch,
+              "quality_gate": qg.get("projectStatus") if qg else None,
+              "total_issues": issues.get("total", 0) if issues else 0,
+              "total_hotspots": len(hotspots.get("hotspots", [])) if hotspots else 0,
+          }
+          save("sonarqube-summary.json", summary)
+          print("Done fetching SonarCloud data.")
+          PYEOF
+        env:
+          SONAR_PROJECT: ${{ inputs.sonar_project_key }}
+          SONAR_ORG: ${{ inputs.sonar_organization }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          OUT_DIR: sonarqube-sast-data
+
       - name: Upload Step 2 — SonarQube SAST Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: step2-sonarqube-sast-report-run-${{ github.run_id }}
           path: |
+            sonarqube-sast-data/
             ${{ inputs.working_directory }}/.scannerwork/report-task.txt
           if-no-files-found: ignore
           retention-days: 14
