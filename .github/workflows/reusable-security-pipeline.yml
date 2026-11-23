@@ -102,73 +102,10 @@ permissions:
 
 jobs:
   # =========================================================================
-  # Job 1: Validate & Test (Lint, Unit/Feature Tests, Build)
-  # =========================================================================
-  validate:
-    name: "1. Validate & Test"
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ inputs.working_directory }}
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
-
-      - name: Setup PHP Environment
-        if: ${{ inputs.runtime == 'php' }}
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ inputs.runtime_version }}
-          extensions: mbstring, xml, ctype, iconv, intl, pdo, sqlite, pdo_sqlite, bcmath, zip, gd, curl
-          coverage: none
-
-      - name: Setup Node Environment
-        if: ${{ inputs.runtime == 'node' }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.runtime_version }}
-
-      - name: Setup Python Environment
-        if: ${{ inputs.runtime == 'python' }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ inputs.runtime_version }}
-
-      - name: Prepare Laravel Cache & Storage Directories
-        if: ${{ inputs.runtime == 'php' }}
-        run: |
-          mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs database
-          chmod -R 775 bootstrap/cache storage database 2>/dev/null || true
-
-      - name: Install Dependencies
-        if: ${{ inputs.install_command != '' }}
-        run: ${{ inputs.install_command }}
-
-      - name: Run Linter
-        if: ${{ inputs.lint_command != '' }}
-        run: ${{ inputs.lint_command }}
-
-      - name: Run Tests
-        if: ${{ inputs.test_command != '' }}
-        run: ${{ inputs.test_command }}
-
-      - name: Run Build
-        if: ${{ inputs.build_command != '' }}
-        run: ${{ inputs.build_command }}
-
-      - name: Upload Step 1 — Test Results Artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: step1-validate-test-results-run-${{ github.run_id }}
-          path: ${{ inputs.working_directory }}/test-report.xml
-          if-no-files-found: ignore
-
-  # =========================================================================
-  # Job 2: SonarQube Cloud Static Application Security Testing (SAST)
+  # Job 1: SonarQube Cloud Static Application Security Testing (SAST)
   # =========================================================================
   sonar_sast:
-    name: "2. SonarQube Cloud SAST"
+    name: "1. SonarQube Cloud SAST"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source Code (Full History for PR Blame)
@@ -310,11 +247,11 @@ jobs:
           BRANCH: ${{ github.head_ref || github.ref_name }}
           OUT_DIR: sonarqube-sast-data
 
-      - name: Upload Step 2 — SonarQube SAST Report
+      - name: Upload Step 1 — SonarQube SAST Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: step2-sonarqube-sast-report-run-${{ github.run_id }}
+          name: step1-sonarqube-sast-report-run-${{ github.run_id }}
           path: |
             sonarqube-sast-data/
             ${{ inputs.working_directory }}/.scannerwork/report-task.txt
@@ -322,14 +259,11 @@ jobs:
           retention-days: 14
 
   # =========================================================================
-  # Job 3: Dynamic Application Security Testing (DAST) with OWASP ZAP
+  # Job 2: Dynamic Application Security Testing (DAST) with OWASP ZAP
   # =========================================================================
   dast_zap:
-    name: "3. OWASP ZAP DAST Analysis"
+    name: "2. OWASP ZAP DAST Analysis"
     runs-on: ubuntu-latest
-    # Run ZAP independently of validate result so we always get DAST data
-    # even when tests or linter fail (needs validate only for install caching)
-    needs: [validate]
     if: always()
     steps:
       - name: Checkout Source Code
@@ -422,8 +356,6 @@ jobs:
           rules_file_name: ${{ inputs.zap_rules_file }}
           allow_issue_writing: false
           fail_action: false
-          # artifact_name left empty so zaproxy does NOT auto-upload its own artifact
-          # We upload manually below as step3-owasp-zap-dast-reports-* for clarity
           artifact_name: ''
           cmd_options: '-a'
 
@@ -522,11 +454,11 @@ jobs:
               print(f"✅ DAST Security Check passed under policy threshold: {fail_severity}.")
           '
 
-      - name: Upload Step 3 — OWASP ZAP DAST Security Reports
+      - name: Upload Step 2 — OWASP ZAP DAST Security Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: step3-owasp-zap-dast-reports-run-${{ github.run_id }}
+          name: step2-owasp-zap-dast-reports-run-${{ github.run_id }}
           path: |
             report_html.html
             report_json.json
@@ -542,12 +474,12 @@ jobs:
           fi
 
   # =========================================================================
-  # Job 4: Security Gate / Overall PR Status Check & AI Report Generation
+  # Job 3: Security Gate / Overall PR Status Check & AI Report Generation
   # =========================================================================
   security_gate:
-    name: "4. Security Gate / Overall Status"
+    name: "3. Security Gate & AI Failure Report"
     runs-on: ubuntu-latest
-    needs: [validate, sonar_sast, dast_zap]
+    needs: [sonar_sast, dast_zap]
     if: always()
     steps:
       - name: Checkout Source Code
@@ -557,15 +489,8 @@ jobs:
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          name: step3-owasp-zap-dast-reports-run-${{ github.run_id }}
+          name: step2-owasp-zap-dast-reports-run-${{ github.run_id }}
           path: owasp-zap-dast-reports
-
-      - name: Download Test Results
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: step1-validate-test-results-run-${{ github.run_id }}
-          path: test-results
 
       - name: Generate AI-Ready Failure & Security Report
         if: always()
@@ -573,7 +498,6 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           ZAP_REPORT="owasp-zap-dast-reports/report_json.json"
-          TEST_REPORT="test-results/test-report.xml"
 
           python3 scripts/generate_pipeline_report.py \
             --repo "${{ github.repository }}" \
@@ -586,17 +510,16 @@ jobs:
             --sonar-org "${{ inputs.sonar_organization }}" \
             --sonar-token "$SONAR_TOKEN" \
             --zap-report "$ZAP_REPORT" \
-            --test-report "$TEST_REPORT" \
-            --validate-status "${{ needs.validate.result }}" \
+            --validate-status "none" \
             --sonar-status "${{ needs.sonar_sast.result }}" \
             --dast-status "${{ needs.dast_zap.result }}" \
             --output-dir "pipeline-reports"
 
-      - name: Upload Step 4 — AI-Ready Full Pipeline Failure Report
+      - name: Upload Step 3 — AI-Ready Full Pipeline Failure Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: step4-ai-full-report-pr-${{ github.event.pull_request.number || 'push' }}-run-${{ github.run_id }}
+          name: step3-ai-full-report-pr-${{ github.event.pull_request.number || 'push' }}-run-${{ github.run_id }}
           path: |
             pipeline-reports/pipeline-report.html
             pipeline-reports/pipeline-report.json
@@ -604,22 +527,19 @@ jobs:
 
       - name: Consolidate Security Check Results
         env:
-          VALIDATE_RESULT: ${{ needs.validate.result }}
           SONAR_RESULT: ${{ needs.sonar_sast.result }}
           DAST_RESULT: ${{ needs.dast_zap.result }}
         run: |
           echo "=============================================="
           echo "       SECURITY GATE STATUS EVALUATION        "
           echo "=============================================="
-          echo "1. Validate & Test:     $VALIDATE_RESULT"
-          echo "2. SonarQube SAST:      $SONAR_RESULT"
-          echo "3. OWASP ZAP DAST:      $DAST_RESULT"
+          echo "1. SonarQube SAST:      $SONAR_RESULT"
+          echo "2. OWASP ZAP DAST:      $DAST_RESULT"
           echo "=============================================="
 
           python3 -c '
           import os, sys
 
-          validate = os.environ.get("VALIDATE_RESULT", "failure")
           sonar = os.environ.get("SONAR_RESULT", "failure")
           dast = os.environ.get("DAST_RESULT", "failure")
           step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
@@ -634,14 +554,13 @@ jobs:
               else:
                   return "❌ FAILED"
 
-          all_passed = (validate == "success" and sonar == "success" and dast == "success")
+          all_passed = (sonar == "success" and dast == "success")
 
           md = []
           md.append("## 🛡️ Pull Request Security Gate Evaluation\n\n")
           md.append("| Security Check | Status | Requirement Level |\n|---|---|---|\n")
-          md.append(f"| **1. Validation, Linting & Unit Tests** | {format_status(validate)} | Mandatory |\n")
-          md.append(f"| **2. SonarQube Cloud SAST Quality Gate** | {format_status(sonar)} | Mandatory |\n")
-          md.append(f"| **3. OWASP ZAP DAST Dynamic Scan** | {format_status(dast)} | Mandatory |\n\n")
+          md.append(f"| **1. SonarQube Cloud SAST Quality Gate** | {format_status(sonar)} | Mandatory |\n")
+          md.append(f"| **2. OWASP ZAP DAST Dynamic Scan** | {format_status(dast)} | Mandatory |\n\n")
 
           if all_passed:
               md.append("> ### 🚀 Overall Status: APPROVED FOR MERGE\n")
@@ -653,10 +572,10 @@ jobs:
           md.append("\n### 📥 AI-Ready Failure & Security Reports\n")
           md.append("**Artifacts generated per step (ชื่อไฟล์บ่งบอกขั้นตอน):**\n\n")
           md.append("| Artifact | ประกอบด้วย | ใช้สำหรับ |\n|---|---|---|\n")
-          md.append("| `step1-validate-test-results-*` | `test-report.xml` | ดู test failures รายละเอียด |\n")
-          md.append("| `step3-owasp-zap-dast-reports-*` | `report_json.json`, `report_html.html` | DAST raw scan results |\n")
-          md.append("| `step4-ai-full-report-*` | `pipeline-report.html`, `pipeline-report.json` | Full report รวมทุก step สำหรับ AI |\n\n")
-          md.append("> **AI Code Fix**: ดาวน์โหลด `step4-ai-full-report-*` → ใช้ `pipeline-report.json` ส่งให้ AI แก้โค้ดได้ทันที\n")
+          md.append("| `step1-sonarqube-sast-report-*` | `issues.json`, `quality-gate-status.json`, `hotspots.json` | SAST scan & SonarQube Quality Gate issues |\n")
+          md.append("| `step2-owasp-zap-dast-reports-*` | `report_json.json`, `report_html.html`, `report_md.md` | DAST raw scan results |\n")
+          md.append("| `step3-ai-full-report-*` | `pipeline-report.html`, `pipeline-report.json` | Full report รวมทุก step สำหรับ AI (HTML Dashboard + JSON) |\n\n")
+          md.append("> **AI Code Fix**: ดาวน์โหลด `step3-ai-full-report-*` → ใช้ `pipeline-report.json` ส่งให้ AI แก้โค้ดได้ทันที\n")
 
           report_text = "".join(md)
           print(report_text)

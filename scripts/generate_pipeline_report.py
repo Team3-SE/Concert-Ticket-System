@@ -1285,27 +1285,27 @@ def generate_report(
 
     # 2. Build Failed Jobs Metadata
     jobs_data = []
-    if validate_status and validate_status != "success":
+    if validate_status in ("failure", "cancelled"):
         jobs_data.append({
-            "name": "1. Validate & Test",
+            "name": "Validation / Tests",
             "status": validate_status,
             "conclusion": validate_status,
             "failed_step": "Dependencies / Tests / Linter",
             "exit_code": 1,
             "error_message": "Automated tests or code linter checks failed."
         })
-    if sonar_status and sonar_status != "success":
+    if sonar_status in ("failure", "cancelled"):
         jobs_data.append({
-            "name": "2. SonarQube Cloud SAST",
+            "name": "1. SonarQube Cloud SAST",
             "status": sonar_status,
             "conclusion": sonar_status,
             "failed_step": "SonarQube Quality Gate Check",
             "exit_code": 1,
             "error_message": "SonarQube Cloud Quality Gate conditions were not satisfied."
         })
-    if dast_status and dast_status != "success":
+    if dast_status in ("failure", "cancelled"):
         jobs_data.append({
-            "name": "3. OWASP ZAP DAST Analysis",
+            "name": "2. OWASP ZAP DAST Analysis",
             "status": dast_status,
             "conclusion": dast_status,
             "failed_step": "OWASP ZAP Scan / Policy Check",

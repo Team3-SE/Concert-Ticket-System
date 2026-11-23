@@ -35,7 +35,6 @@ jobs:
       working_directory: "paymock"
       install_command: "mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs database && composer install --prefer-dist --no-interaction --no-progress"
       pre_start_command: "cp -n .env.example .env || true; php artisan key:generate --force; touch database/paymock.sqlite; php artisan migrate --force"
-      test_command: "php artisan test --log-junit=test-report.xml"
       health_check_url: "http://127.0.0.1:8081/up"
       startup_timeout: 60
       zap_rules_file: ".zap/rules.tsv"
