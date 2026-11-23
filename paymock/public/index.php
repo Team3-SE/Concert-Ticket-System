@@ -1,5 +1,8 @@
 <?php
 
+header_remove('X-Powered-By');
+@ini_set('expose_php', 'off');
+
 use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));

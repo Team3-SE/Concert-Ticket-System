@@ -355,7 +355,7 @@ jobs:
           rules_file_name: ${{ inputs.zap_rules_file }}
           allow_issue_writing: false
           fail_action: false
-          artifact_name: ''
+          artifact_name: step2-owasp-zap-dast-reports-run-${{ github.run_id }}
           cmd_options: '-a'
 
       - name: Evaluate DAST Findings & Enforce Policy
@@ -363,6 +363,7 @@ jobs:
         env:
           FAIL_SEVERITY: ${{ inputs.fail_on_severity }}
           TARGET_URL: ${{ inputs.zap_target }}
+          RULES_FILE: ${{ inputs.zap_rules_file }}
         run: |
           python3 - <<'PYEOF'
           import json, sys, os
@@ -370,7 +371,22 @@ jobs:
           report_file = "report_json.json"
           fail_severity = os.environ.get("FAIL_SEVERITY", "high").strip().lower()
           target_url = os.environ.get("TARGET_URL", "")
+          rules_file = os.environ.get("RULES_FILE", "")
           step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+
+          ignored_rules = set()
+          if rules_file and os.path.exists(rules_file):
+              try:
+                  with open(rules_file, "r", encoding="utf-8") as rf:
+                      for line in rf:
+                          line = line.strip()
+                          if not line or line.startswith("#"):
+                              continue
+                          parts = line.split("\t")
+                          if len(parts) >= 2 and parts[1].strip().upper() == "IGNORE":
+                              ignored_rules.add(parts[0].strip())
+              except Exception as e:
+                  print(f"Warning parsing rules file: {e}")
 
           counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "informational": 0}
           alerts_list = []
@@ -384,6 +400,10 @@ jobs:
                           sites = [sites]
                       for site in sites:
                           for alert in site.get("alerts", []):
+                              plugin_id = str(alert.get("pluginid", "")).strip()
+                              if plugin_id in ignored_rules:
+                                  continue
+
                               risk_code = str(alert.get("riskcode", "0"))
                               name = alert.get("alert", "Unknown Alert")
                               count = int(alert.get("count", 1))
@@ -459,17 +479,6 @@ jobs:
               print(f"✅ DAST Security Check passed under policy threshold: {fail_severity}.")
           PYEOF
 
-      - name: Upload Step 2 — OWASP ZAP DAST Security Reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: step2-owasp-zap-dast-reports-run-${{ github.run_id }}
-          path: |
-            report_html.html
-            report_json.json
-            report_md.md
-          retention-days: 14
-
       - name: Shutdown Local Application Process
         if: always()
         run: |
@@ -515,6 +524,7 @@ jobs:
             --sonar-org "${{ inputs.sonar_organization }}" \
             --sonar-token "$SONAR_TOKEN" \
             --zap-report "$ZAP_REPORT" \
+            --zap-rules "${{ inputs.zap_rules_file }}" \
             --validate-status "none" \
             --sonar-status "${{ needs.sonar_sast.result }}" \
             --dast-status "${{ needs.dast_zap.result }}" \

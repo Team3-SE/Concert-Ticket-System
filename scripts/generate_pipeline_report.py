@@ -216,8 +216,9 @@ class SonarCollector:
 class ZapCollector:
     """Parses OWASP ZAP Baseline JSON reports."""
 
-    def __init__(self, report_path: str):
+    def __init__(self, report_path: str, rules_path: str = ""):
         self.report_path = report_path
+        self.rules_path = rules_path
 
     def collect(self) -> Dict[str, Any]:
         result = {
@@ -239,6 +240,23 @@ class ZapCollector:
             return result
 
         result["status"] = "OK"
+
+        # Load ignored rules from ZAP rules file if available
+        ignored_rules = set()
+        rules_file = self.rules_path or ".zap/rules.tsv"
+        if rules_file and os.path.exists(rules_file):
+            try:
+                with open(rules_file, "r", encoding="utf-8") as rf:
+                    for line in rf:
+                        line = line.strip()
+                        if not line or line.startswith("#"):
+                            continue
+                        parts = line.split("\t")
+                        if len(parts) >= 2 and parts[1].strip().upper() == "IGNORE":
+                            ignored_rules.add(parts[0].strip())
+            except Exception as e:
+                print(f"Warning reading ZAP rules file: {e}")
+
         sites = data.get("site", [])
         if isinstance(sites, dict):
             sites = [sites]
@@ -262,6 +280,10 @@ class ZapCollector:
                 result["target"] = site_name
 
             for alert in site.get("alerts", []):
+                plugin_id = str(alert.get("pluginid", "")).strip()
+                if plugin_id in ignored_rules:
+                    continue
+
                 risk_code = str(alert.get("riskcode", "0"))
                 severity_key, severity_label = risk_map.get(risk_code, ("informational", "Informational"))
                 confidence_code = str(alert.get("confidence", "2"))
@@ -1261,7 +1283,8 @@ def generate_report(
     validate_status: str,
     sonar_status: str,
     dast_status: str,
-    output_dir: str
+    output_dir: str,
+    zap_rules_path: str = ""
 ) -> Tuple[str, str]:
     """Generates normalized pipeline-report.json and pipeline-report.html."""
     os.makedirs(output_dir, exist_ok=True)
@@ -1277,7 +1300,7 @@ def generate_report(
     )
     sonar_data = sonar_collector.collect()
 
-    zap_collector = ZapCollector(zap_report_path)
+    zap_collector = ZapCollector(zap_report_path, rules_path=zap_rules_path)
     zap_data = zap_collector.collect()
 
     test_collector = TestCollector(test_report_path)
@@ -1468,6 +1491,7 @@ def main():
     parser.add_argument("--validate-status", default="success")
     parser.add_argument("--sonar-status", default="success")
     parser.add_argument("--dast-status", default="success")
+    parser.add_argument("--zap-rules", default=".zap/rules.tsv")
     parser.add_argument("--output-dir", default="pipeline-reports")
 
     args = parser.parse_args()
@@ -1512,7 +1536,8 @@ def main():
         validate_status=args.validate_status,
         sonar_status=args.sonar_status,
         dast_status=args.dast_status,
-        output_dir=args.output_dir
+        output_dir=args.output_dir,
+        zap_rules_path=args.zap_rules
     )
 
     print(f"✅ Generated JSON Report: {json_path}")
