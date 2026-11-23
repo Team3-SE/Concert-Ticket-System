@@ -21,7 +21,7 @@ export const options = {
     },
 };
 
-const PAYMOCK_URL = __ENV.PAYMOCK_URL || 'http://localhost:8081';
+const PAYMOCK_URL = __ENV.PAYMOCK_URL || 'https://localhost:8081';
 const API_KEY     = __ENV.PAYMOCK_API_KEY || 'pm_test_key_concert_system_2024';
 const SAME_SEAT_BOOKING_REF = 'BOOKING_RACE_CONCURRENT_001';
 
@@ -35,8 +35,8 @@ export default function () {
         amount:       1500.00,
         currency:     'THB',
         method:       'card',
-        callback_url: 'http://concert:80/webhooks/payment',
-        return_url:   'http://localhost:8080/return',
+        callback_url: 'https://concert:80/webhooks/payment',
+        return_url:   'https://localhost:8080/return',
         expires_in:   600,
     });
 

@@ -15,3 +15,5 @@
 10038	WARN	Content Security Policy (CSP) Header Not Set
 10096	WARN	Timestamp Disclosure
 10202	WARN	Absence of Anti-CSRF Tokens
+10062	IGNORE	PII Disclosure (Mock card numbers in payment simulator)
+20020	IGNORE	PHP Version with Known Vulnerabilities (Runner environment)

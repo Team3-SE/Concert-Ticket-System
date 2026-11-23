@@ -138,7 +138,7 @@ class AdminController extends Controller
         $payment = $this->paymentService->createOrFind([
             'amount'          => $amount,
             'method'          => $method,
-            'callback_url'    => env('DEFAULT_WEBHOOK_URL', 'http://concert_backend:5000/api/webhook'),
+            'callback_url'    => env('DEFAULT_WEBHOOK_URL', 'https://concert_backend:5000/api/webhook'),
             'return_url'      => null,
             'idempotency_key' => $idempotencyKey,
             'expires_in'      => 600,

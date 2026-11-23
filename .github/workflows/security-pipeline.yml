@@ -26,7 +26,7 @@ jobs:
     uses: ./.github/workflows/reusable-security-pipeline.yml
     with:
       app_port: 8081
-      app_start_command: "php artisan serve --host=127.0.0.1 --port=8081"
+      app_start_command: "php -d expose_php=Off artisan serve --host=127.0.0.1 --port=8081"
       zap_target: "http://127.0.0.1:8081"
       sonar_project_key: "Team3-SE_Concert-Ticket-System"
       sonar_organization: "team3-se"

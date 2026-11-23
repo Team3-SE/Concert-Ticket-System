@@ -18,8 +18,8 @@ class MagicCardTest extends TestCase
             'amount'          => 1200,
             'method'          => 'card',
             'status'          => 'PENDING',
-            'callback_url'    => 'http://concert/webhooks/payment',
-            'return_url'      => 'http://concert.local/booking/return',
+            'callback_url'    => 'https://concert/webhooks/payment',
+            'return_url'      => 'https://concert.local/booking/return',
             'idempotency_key' => 'IDEMP_' . uniqid(),
         ]);
     }
@@ -38,7 +38,7 @@ class MagicCardTest extends TestCase
             'redirect_to_return' => '1',
         ]);
 
-        $response->assertRedirect('http://concert.local/booking/return');
+        $response->assertRedirect('https://concert.local/booking/return');
 
         $this->assertEquals('COMPLETED', $payment->fresh()->status);
         $this->assertNotNull($payment->fresh()->paid_at);
