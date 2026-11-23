@@ -139,6 +139,11 @@ jobs:
         if: always()
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT: ${{ inputs.sonar_project_key }}
+          SONAR_ORG: ${{ inputs.sonar_organization }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          OUT_DIR: sonarqube-sast-data
         run: |
           REPORT_FILE="${{ inputs.working_directory }}/.scannerwork/report-task.txt"
           SONAR_PROJECT="${{ inputs.sonar_project_key }}"
@@ -240,12 +245,6 @@ jobs:
           save("sonarqube-summary.json", summary)
           print("Done fetching SonarCloud data.")
           PYEOF
-        env:
-          SONAR_PROJECT: ${{ inputs.sonar_project_key }}
-          SONAR_ORG: ${{ inputs.sonar_organization }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          BRANCH: ${{ github.head_ref || github.ref_name }}
-          OUT_DIR: sonarqube-sast-data
 
       - name: Upload Step 1 — SonarQube SAST Report
         if: always()
