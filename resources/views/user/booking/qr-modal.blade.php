@@ -36,9 +36,14 @@
              @endenv
         >
           {{-- QR จริงจาก PayMock --}}
-          <img x-show="gateway && (gateway.qr_image || gateway.qrcode_url)" :src="gateway ? (gateway.qr_image || gateway.qrcode_url) : ''" alt="QR พร้อมเพย์" width="240" height="240">
-          {{-- ลิงก์จำลองหน้าแอปธนาคารสำหรับทดสอบ (มีเฉพาะ APP_ENV=local) --}}
-          <a x-show="gateway && gateway.bank_simulator_url" :href="gateway ? gateway.bank_simulator_url : '#'" target="_blank" rel="noopener" class="text-xs text-blue-600 underline mt-2" @click.stop>เปิดหน้าจำลองแอปธนาคาร (ทดสอบ)</a>
+          {{-- กดที่ QR เพื่อเปิดหน้าจำลองแอปธนาคาร (มี bank_simulator_url เฉพาะ APP_ENV=local) --}}
+          <a x-show="gateway && (gateway.qr_image || gateway.qrcode_url)"
+             :href="gateway && gateway.bank_simulator_url ? gateway.bank_simulator_url : null"
+             :title="gateway && gateway.bank_simulator_url ? 'ทดสอบ: กดที่ QR เพื่อเปิดหน้าจำลองแอปธนาคาร' : ''"
+             :style="gateway && gateway.bank_simulator_url ? 'cursor:pointer' : 'cursor:default'"
+             target="_blank" rel="noopener" @click.stop>
+            <img :src="gateway ? (gateway.qr_image || gateway.qrcode_url) : ''" alt="QR พร้อมเพย์" width="240" height="240">
+          </a>
           <svg x-show="!gateway" class="w-16 h-16 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-4v-3m-4 3h-2m-2 0H4m0 0v-4m0 4h2m6-11V4m0 0h2m-2 0H8m4 0v3m-4-3H4m0 0v4m0-4h2m0 4v3m0-3h2m4 0h2m-2 0v3m0-3V9m-4 3h2m-2 0H8m4 0v3" />
           </svg>
