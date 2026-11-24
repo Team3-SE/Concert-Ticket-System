@@ -4,15 +4,10 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
-      - main
-      - development
-      - 'feature/**'
-      - test-workflow
+      - development-security
   push:
     branches:
-      - main
-      - development
-      - test-workflow
+      - test-workflow 
   workflow_dispatch:
 
 concurrency:
