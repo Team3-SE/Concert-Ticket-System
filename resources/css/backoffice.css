@@ -1,0 +1,27 @@
+/*
+ * resources/css/backoffice.css
+ * หน้าที่ : ไฟล์รวม CSS ของหลังบ้าน (Organizer / Admin / Staff) Vite รวมทุกไฟล์ที่ @import ด้านล่างเป็นไฟล์เดียว
+ *          (เพิ่มไฟล์ใหม่ต้องเพิ่ม @import ที่นี่, ฝั่ง User ใช้ user.css)
+ * ใช้กับ : layouts/backoffice.blade.php, layouts/staff.blade.php (@vite)
+ * Author : 67160292 ธีรเมธ พลสาย
+ * Created : 27/10/2569
+ */
+
+/* shared/      ใช้ร่วมกับฝั่ง User */
+@import './shared/base.css';
+@import './shared/pagination.css';
+@import './shared/password-toggle.css';
+
+/* backoffice/  layouts/backoffice + partials/backoffice/* (Organizer + Admin) */
+@import './backoffice/layout.css';
+
+/* organizer/   views/organizer/*   (เพิ่ม @import ของหน้า Organizer ตรงนี้) */
+@import './organizer/dashboard.css';
+@import './organizer/check-in.css';
+
+/* admin/       views/admin/*       (เพิ่ม @import ของหน้า Admin ตรงนี้) */
+@import './admin/users.css';
+
+/* staff/       layouts/staff + views/staff/* */
+@import './staff/layout.css';
+@import './staff/check-in.css';

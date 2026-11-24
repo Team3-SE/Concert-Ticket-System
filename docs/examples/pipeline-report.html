@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CI/CD Failure & Security Report - Team3-SE/Concert-Ticket-System</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --crit: #ef4444;
+      --crit-bg: rgba(239, 68, 68, 0.15);
+      --high: #f97316;
+      --high-bg: rgba(249, 115, 22, 0.15);
+      --med: #eab308;
+      --med-bg: rgba(234, 179, 8, 0.15);
+      --low: #38bdf8;
+      --low-bg: rgba(56, 189, 248, 0.15);
+      --info: #94a3b8;
+      --info-bg: rgba(148, 163, 184, 0.15);
+      --success: #10b981;
+      --success-bg: rgba(16, 185, 129, 0.15);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 1.5rem;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+
+    /* Header */
+    .header {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.5rem 2rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    .header-title h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: #fef2f2;
+      color: #ef4444;
+      border: 1px solid #fecaca;
+    }
+    .header-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+    .header-meta a {
+      color: var(--low);
+      text-decoration: none;
+    }
+    .header-meta a:hover { text-decoration: underline; }
+
+    /* KPI Summary Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      text-align: center;
+      transition: transform 0.15s ease;
+    }
+    .kpi-card:hover { transform: translateY(-2px); }
+    .kpi-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    .kpi-val {
+      font-size: 1.75rem;
+      font-weight: 800;
+    }
+    .val-crit { color: var(--crit); }
+    .val-high { color: var(--high); }
+    .val-med { color: var(--med); }
+    .val-low { color: var(--low); }
+    .val-succ { color: var(--success); }
+
+    /* Tabs */
+    .tabs-nav {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--card-border);
+      margin-bottom: 1.5rem;
+      overflow-x: auto;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.75rem 1.25rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* Tables & Cards */
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .section-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .table-responsive { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    th {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--card-border);
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      vertical-align: top;
+    }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+    /* Pill Badges */
+    .pill {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .pill-crit { background: var(--crit-bg); color: var(--crit); }
+    .pill-high { background: var(--high-bg); color: var(--high); }
+    .pill-med { background: var(--med-bg); color: var(--med); }
+    .pill-low { background: var(--low-bg); color: var(--low); }
+    .pill-info { background: var(--info-bg); color: var(--info); }
+    .pill-ok { background: var(--success-bg); color: var(--success); }
+
+    /* Filter Controls */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      align-items: center;
+    }
+    .search-input, .filter-select {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+    }
+    .search-input { flex-grow: 1; min-width: 200px; }
+
+    /* Code Blocks */
+    pre, code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85rem;
+    }
+    pre {
+      background: #090d16;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 0.75rem;
+      overflow-x: auto;
+      color: #cbd5e1;
+      margin-top: 0.5rem;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: var(--accent-hover); }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: rgba(255, 255, 255, 0.2); }
+
+    details summary {
+      cursor: pointer;
+      color: var(--low);
+      font-weight: 500;
+    }
+    details summary:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-title">
+        <div>
+          <h1>
+            <span>🛡️ Pipeline Security & Failure Report</span>
+            <span class="status-badge">FAILED</span>
+          </h1>
+          <div class="header-meta">
+            <span><strong>Repo:</strong> Team3-SE/Concert-Ticket-System</span>
+            <span><strong>Branch:</strong> <code>feature/payments-gateway-system</code></span>
+            <span><strong>PR:</strong> #3</span>
+            <span><strong>Commit:</strong> <code>c62023c</code></span>
+            <span><strong>Generated:</strong> 2026-11-23T01:35:09.165952+00:00</span>
+            <span><a href="https://github.com/Team3-SE/Concert-Ticket-System/actions/runs/195829140" target="_blank">🔗 View GitHub Actions Run</a></span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <button class="btn btn-secondary" onclick="downloadJSON()">💾 Export JSON</button>
+      </div>
+    </header>
+
+    <!-- KPI Summary Grid -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Findings</div>
+        <div class="kpi-val">36</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Critical / High</div>
+        <div class="kpi-val val-crit">29</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Medium</div>
+        <div class="kpi-val val-med">1</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Low / Info</div>
+        <div class="kpi-val val-low">6</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Failed Tests</div>
+        <div class="kpi-val val-crit">1</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Failed Jobs</div>
+        <div class="kpi-val val-crit">3</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Quality Gate</div>
+        <div class="kpi-val val-crit">ERROR</div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs-nav">
+      <button class="tab-btn active" onclick="switchTab('overview')">📊 Overview & Quality Gate</button>
+      <button class="tab-btn" onclick="switchTab('findings')">🔍 All Security & Code Findings (36)</button>
+      <button class="tab-btn" onclick="switchTab('tests')">🧪 Failed Tests (1)</button>
+      <button class="tab-btn" onclick="switchTab('jobs')">⚙️ Failed Jobs (3)</button>
+      <button class="tab-btn" onclick="switchTab('ai')">🤖 AI Remediation Preparation</button>
+    </nav>
+
+    <!-- Tab 1: Overview & Quality Gate -->
+    <div id="tab-overview" class="tab-pane active">
+      <div class="section-card">
+        <h2 class="section-title">SonarQube Cloud Quality Gate Status</h2>
+        <p style="margin-bottom: 1rem; color: var(--text-muted);">
+          Project Key: <code>Team3-SE_Concert-Ticket-System</code> | Status:
+          <span class="pill pill-crit">ERROR</span>
+        </p>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Condition Metric</th>
+                <th>Status</th>
+                <th>Threshold</th>
+                <th>Actual Value</th>
+                <th>Explanation & Root Cause</th>
+              </tr>
+            </thead>
+            <tbody>
+
+              <tr>
+                <td><strong>new_reliability_rating</strong></td>
+                <td><span class="pill pill-crit">ERROR</span></td>
+                <td>1</td>
+                <td><strong>3</strong></td>
+                <td>Reliability Rating is C (required: grade A). Major bugs detected.</td>
+              </tr>
+
+              <tr>
+                <td><strong>new_security_rating</strong></td>
+                <td><span class="pill pill-crit">ERROR</span></td>
+                <td>1</td>
+                <td><strong>4</strong></td>
+                <td>Security Rating is D (required: grade A). Critical or high vulnerabilities detected.</td>
+              </tr>
+
+              <tr>
+                <td><strong>new_maintainability_rating</strong></td>
+                <td><span class="pill pill-ok">OK</span></td>
+                <td>1</td>
+                <td><strong>1</strong></td>
+                <td>Metric new_maintainability_rating value is 1 (threshold: GT 1).</td>
+              </tr>
+
+              <tr>
+                <td><strong>new_duplicated_lines_density</strong></td>
+                <td><span class="pill pill-ok">OK</span></td>
+                <td>3</td>
+                <td><strong>0.0</strong></td>
+                <td>Duplicated lines density is 0.0% (required: less than 3%).</td>
+              </tr>
+
+              <tr>
+                <td><strong>new_security_hotspots_reviewed</strong></td>
+                <td><span class="pill pill-ok">OK</span></td>
+                <td>100</td>
+                <td><strong>100.0</strong></td>
+                <td>Security hotspots reviewed: 100.0% (required: 100%).</td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Findings (Filterable Table) -->
+    <div id="tab-findings" class="tab-pane">
+      <div class="section-card">
+        <h2 class="section-title">Unified Findings & Vulnerabilities</h2>
+        <div class="filter-bar">
+          <input type="text" id="findingSearch" class="search-input" placeholder="Search by file, rule, message, or CVE..." oninput="filterFindings()">
+          <select id="severityFilter" class="filter-select" onchange="filterFindings()">
+            <option value="ALL">All Severities</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+            <option value="INFORMATIONAL">Informational</option>
+          </select>
+          <select id="sourceFilter" class="filter-select" onchange="filterFindings()">
+            <option value="ALL">All Sources</option>
+            <option value="sonarqube">SonarQube Cloud (SAST)</option>
+            <option value="owasp_zap">OWASP ZAP (DAST)</option>
+            <option value="unit_test">Unit Tests</option>
+            <option value="github_actions">GitHub Actions</option>
+          </select>
+        </div>
+
+        <div class="table-responsive">
+          <table id="findingsTable">
+            <thead>
+              <tr>
+                <th>Severity</th>
+                <th>Source</th>
+                <th>Rule / Alert ID</th>
+                <th>Location / Target</th>
+                <th>Message & Remediation Details</th>
+              </tr>
+            </thead>
+            <tbody>
+
+              <tr class="finding-row" data-severity="LOW" data-source="sonarqube">
+                <td><span class="pill pill-low">LOW</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>php:S5332</strong></td>
+                <td><code>tests/Feature/MagicCardTest.php:22</code></td>
+                <td>
+                  <div><strong>Using HTTP protocol is insecure. Use HTTPS instead.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube vulnerability: Using HTTP protocol is insecure. Use HTTPS instead.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule php:S5332 and resolve the vulnerability in tests/Feature/MagicCardTest.php line 22.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="LOW" data-source="sonarqube">
+                <td><span class="pill pill-low">LOW</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>php:S5332</strong></td>
+                <td><code>tests/Feature/MagicCardTest.php:41</code></td>
+                <td>
+                  <div><strong>Using HTTP protocol is insecure. Use HTTPS instead.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube vulnerability: Using HTTP protocol is insecure. Use HTTPS instead.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule php:S5332 and resolve the vulnerability in tests/Feature/MagicCardTest.php line 41.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:InputWithoutLabelCheck</strong></td>
+                <td><code>resources/views/admin/dashboard.blade.php:173</code></td>
+                <td>
+                  <div><strong>Add an &quot;id&quot; attribute to this input field and associate it with a label.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube bug: Add an &quot;id&quot; attribute to this input field and associate it with a label.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:InputWithoutLabelCheck and resolve the bug in resources/views/admin/dashboard.blade.php line 173.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:S6853</strong></td>
+                <td><code>resources/views/admin/dashboard.blade.php:535</code></td>
+                <td>
+                  <div><strong>A form label must be associated with a control and have accessible text.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube code smell: A form label must be associated with a control and have accessible text.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:S6853 and resolve the code smell in resources/views/admin/dashboard.blade.php line 535.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:InputWithoutLabelCheck</strong></td>
+                <td><code>resources/views/admin/dashboard.blade.php:536</code></td>
+                <td>
+                  <div><strong>Add an &quot;id&quot; attribute to this input field and associate it with a label.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube bug: Add an &quot;id&quot; attribute to this input field and associate it with a label.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:InputWithoutLabelCheck and resolve the bug in resources/views/admin/dashboard.blade.php line 536.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="LOW" data-source="sonarqube">
+                <td><span class="pill pill-low">LOW</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>php:S5332</strong></td>
+                <td><code>app/Http/Controllers/Admin/AdminController.php:141</code></td>
+                <td>
+                  <div><strong>Using HTTP protocol is insecure. Use HTTPS instead.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube vulnerability: Using HTTP protocol is insecure. Use HTTPS instead.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule php:S5332 and resolve the vulnerability in app/Http/Controllers/Admin/AdminController.php line 141.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:InputWithoutLabelCheck</strong></td>
+                <td><code>resources/views/admin/dashboard.blade.php:523</code></td>
+                <td>
+                  <div><strong>Add an &quot;id&quot; attribute to this input field and associate it with a label.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube bug: Add an &quot;id&quot; attribute to this input field and associate it with a label.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:InputWithoutLabelCheck and resolve the bug in resources/views/admin/dashboard.blade.php line 523.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:InputWithoutLabelCheck</strong></td>
+                <td><code>resources/views/demo/modal.blade.php:50</code></td>
+                <td>
+                  <div><strong>Add an &quot;id&quot; attribute to this input field and associate it with a label.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube bug: Add an &quot;id&quot; attribute to this input field and associate it with a label.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:InputWithoutLabelCheck and resolve the bug in resources/views/demo/modal.blade.php line 50.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="LOW" data-source="sonarqube">
+                <td><span class="pill pill-low">LOW</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>docker:S6471</strong></td>
+                <td><code>Dockerfile:1</code></td>
+                <td>
+                  <div><strong>The &quot;php&quot; image runs with &quot;root&quot; as the default user. Make sure it is safe here.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube vulnerability: The &quot;php&quot; image runs with &quot;root&quot; as the default user. Make sure it is safe here.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule docker:S6471 and resolve the vulnerability in Dockerfile line 1.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="CRITICAL" data-source="sonarqube">
+                <td><span class="pill pill-crit">CRITICAL</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>docker:S6470</strong></td>
+                <td><code>Dockerfile:23</code></td>
+                <td>
+                  <div><strong>Copying using a glob pattern might inadvertently add sensitive data to the container. Make sure it is safe here.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube vulnerability: Copying using a glob pattern might inadvertently add sensitive data to the container. Make sure it is safe here.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule docker:S6470 and resolve the vulnerability in Dockerfile line 23.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>docker:S8546</strong></td>
+                <td><code>Dockerfile:27</code></td>
+                <td>
+                  <div><strong>Dependency versions are not predictable. Use a lock-file enforcing command instead.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube vulnerability: Dependency versions are not predictable. Use a lock-file enforcing command instead.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule docker:S8546 and resolve the vulnerability in Dockerfile line 27.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="CRITICAL" data-source="sonarqube">
+                <td><span class="pill pill-crit">CRITICAL</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>docker:S6470</strong></td>
+                <td><code>Dockerfile:31</code></td>
+                <td>
+                  <div><strong>Copying recursively might inadvertently add sensitive data to the container. Make sure it is safe here.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube vulnerability: Copying recursively might inadvertently add sensitive data to the container. Make sure it is safe here.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule docker:S6470 and resolve the vulnerability in Dockerfile line 31.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>shell:S2612</strong></td>
+                <td><code>docker/entrypoint.sh:33</code></td>
+                <td>
+                  <div><strong>Make sure granting write access to others is safe here.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube vulnerability: Make sure granting write access to others is safe here.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule shell:S2612 and resolve the vulnerability in docker/entrypoint.sh line 33.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>shell:S2612</strong></td>
+                <td><code>docker/entrypoint.sh:34</code></td>
+                <td>
+                  <div><strong>Make sure granting write access to others is safe here.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube vulnerability: Make sure granting write access to others is safe here.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule shell:S2612 and resolve the vulnerability in docker/entrypoint.sh line 34.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:InputWithoutLabelCheck</strong></td>
+                <td><code>resources/views/admin/dashboard.blade.php:141</code></td>
+                <td>
+                  <div><strong>Add an &quot;id&quot; attribute to this input field and associate it with a label.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube bug: Add an &quot;id&quot; attribute to this input field and associate it with a label.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:InputWithoutLabelCheck and resolve the bug in resources/views/admin/dashboard.blade.php line 141.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:S6853</strong></td>
+                <td><code>resources/views/admin/dashboard.blade.php:522</code></td>
+                <td>
+                  <div><strong>A form label must be associated with a control and have accessible text.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube code smell: A form label must be associated with a control and have accessible text.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:S6853 and resolve the code smell in resources/views/admin/dashboard.blade.php line 522.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:S6853</strong></td>
+                <td><code>resources/views/admin/dashboard.blade.php:527</code></td>
+                <td>
+                  <div><strong>A form label must be associated with a control and have accessible text.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube code smell: A form label must be associated with a control and have accessible text.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:S6853 and resolve the code smell in resources/views/admin/dashboard.blade.php line 527.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:InputWithoutLabelCheck</strong></td>
+                <td><code>resources/views/admin/dashboard.blade.php:528</code></td>
+                <td>
+                  <div><strong>Add an &quot;id&quot; attribute to this input field and associate it with a label.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube bug: Add an &quot;id&quot; attribute to this input field and associate it with a label.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:InputWithoutLabelCheck and resolve the bug in resources/views/admin/dashboard.blade.php line 528.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:S6853</strong></td>
+                <td><code>resources/views/admin/login.blade.php:20</code></td>
+                <td>
+                  <div><strong>A form label must be associated with a control and have accessible text.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube code smell: A form label must be associated with a control and have accessible text.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:S6853 and resolve the code smell in resources/views/admin/login.blade.php line 20.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:S9379</strong></td>
+                <td><code>resources/views/admin/login.blade.php:21</code></td>
+                <td>
+                  <div><strong>Remove this &quot;autofocus&quot; attribute, as it can reduce usability and accessibility for users.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube code smell: Remove this &quot;autofocus&quot; attribute, as it can reduce usability and accessibility for users.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:S9379 and resolve the code smell in resources/views/admin/login.blade.php line 21.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:InputWithoutLabelCheck</strong></td>
+                <td><code>resources/views/admin/login.blade.php:21</code></td>
+                <td>
+                  <div><strong>Add an &quot;id&quot; attribute to this input field and associate it with a label.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube bug: Add an &quot;id&quot; attribute to this input field and associate it with a label.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:InputWithoutLabelCheck and resolve the bug in resources/views/admin/login.blade.php line 21.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:S6853</strong></td>
+                <td><code>resources/views/checkout/show.blade.php:100</code></td>
+                <td>
+                  <div><strong>A form label must be associated with a control and have accessible text.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube code smell: A form label must be associated with a control and have accessible text.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:S6853 and resolve the code smell in resources/views/checkout/show.blade.php line 100.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:InputWithoutLabelCheck</strong></td>
+                <td><code>resources/views/checkout/show.blade.php:101</code></td>
+                <td>
+                  <div><strong>Add an &quot;id&quot; attribute to this input field and associate it with a label.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube bug: Add an &quot;id&quot; attribute to this input field and associate it with a label.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:InputWithoutLabelCheck and resolve the bug in resources/views/checkout/show.blade.php line 101.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:S6853</strong></td>
+                <td><code>resources/views/checkout/show.blade.php:115</code></td>
+                <td>
+                  <div><strong>A form label must be associated with a control and have accessible text.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube code smell: A form label must be associated with a control and have accessible text.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:S6853 and resolve the code smell in resources/views/checkout/show.blade.php line 115.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:InputWithoutLabelCheck</strong></td>
+                <td><code>resources/views/checkout/show.blade.php:116</code></td>
+                <td>
+                  <div><strong>Add an &quot;id&quot; attribute to this input field and associate it with a label.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube bug: Add an &quot;id&quot; attribute to this input field and associate it with a label.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:InputWithoutLabelCheck and resolve the bug in resources/views/checkout/show.blade.php line 116.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:S6853</strong></td>
+                <td><code>resources/views/checkout/show.blade.php:125</code></td>
+                <td>
+                  <div><strong>A form label must be associated with a control and have accessible text.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube code smell: A form label must be associated with a control and have accessible text.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:S6853 and resolve the code smell in resources/views/checkout/show.blade.php line 125.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:InputWithoutLabelCheck</strong></td>
+                <td><code>resources/views/checkout/show.blade.php:126</code></td>
+                <td>
+                  <div><strong>Add an &quot;id&quot; attribute to this input field and associate it with a label.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube bug: Add an &quot;id&quot; attribute to this input field and associate it with a label.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:InputWithoutLabelCheck and resolve the bug in resources/views/checkout/show.blade.php line 126.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:S6853</strong></td>
+                <td><code>resources/views/checkout/show.blade.php:136</code></td>
+                <td>
+                  <div><strong>A form label must be associated with a control and have accessible text.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube code smell: A form label must be associated with a control and have accessible text.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:S6853 and resolve the code smell in resources/views/checkout/show.blade.php line 136.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="sonarqube">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>Web:InputWithoutLabelCheck</strong></td>
+                <td><code>resources/views/checkout/show.blade.php:137</code></td>
+                <td>
+                  <div><strong>Add an &quot;id&quot; attribute to this input field and associate it with a label.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube bug: Add an &quot;id&quot; attribute to this input field and associate it with a label.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule Web:InputWithoutLabelCheck and resolve the bug in resources/views/checkout/show.blade.php line 137.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="LOW" data-source="sonarqube">
+                <td><span class="pill pill-low">LOW</span></td>
+                <td><code>sonarqube</code></td>
+                <td><strong>javascript:S5332</strong></td>
+                <td><code>tests-k6/seat-race-condition.js:38</code></td>
+                <td>
+                  <div><strong>Using http protocol is insecure. Use https instead.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube vulnerability: Using http protocol is insecure. Use https instead.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Inspect rule javascript:S5332 and resolve the vulnerability in tests-k6/seat-race-condition.js line 38.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="MEDIUM" data-source="owasp_zap">
+                <td><span class="pill pill-med">MEDIUM</span></td>
+                <td><code>owasp_zap</code></td>
+                <td><strong>ZAP-10038</strong></td>
+                <td><code>CI Environment</code></td>
+                <td>
+                  <div><strong>Content Security Policy (CSP) Header Not Set</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">Content Security Policy (CSP) is an added layer of security that helps to detect and mitigate certain types of attacks, including Cross Site Scripting (XSS) and data injection attacks.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Ensure that your web server, application server, load balancer, etc. is configured to set the Content-Security-Policy header.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="LOW" data-source="owasp_zap">
+                <td><span class="pill pill-low">LOW</span></td>
+                <td><code>owasp_zap</code></td>
+                <td><strong>ZAP-10021</strong></td>
+                <td><code>CI Environment</code></td>
+                <td>
+                  <div><strong>X-Content-Type-Options Header Missing</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">The Anti-MIME-Sniffing header X-Content-Type-Options was not set to nosniff.</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Ensure that the application/web-server sets the Content-Type header properly, and that the X-Content-Type-Options: nosniff header is set.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="unit_test">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>unit_test</code></td>
+                <td><strong>test:assertion_failure</strong></td>
+                <td><code>paymock/tests/Feature/PaymentApiTest.php:112</code></td>
+                <td>
+                  <div><strong>Failed asserting that status code 200 matches expected 201.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">Stack trace:
+#0 /var/www/html/tests/Feature/PaymentApiTest.php(115): Illuminate\Testing\TestResponse-&gt;assertStatus(201)
+#1 /var/www/html/vendor/phpunit/phpunit/src/Framework/TestCase.php(1150): Tests\Feature\PaymentApiTest-&gt;test_payment_webhook_signature_verification()</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Verify test logic and application behavior in paymock/tests/Feature/PaymentApiTest.php.</p></details>
+                  <details style="margin-top:0.3rem;"><summary>🔎 Evidence / Context</summary><pre>Stack trace:
+#0 /var/www/html/tests/Feature/PaymentApiTest.php(115): Illuminate\Testing\TestResponse-&gt;assertStatus(201)
+#1 /var/www/html/vendor/phpunit/phpunit/src/Framework/TestCase.php(1150): Tests\Feature\PaymentApiTest-&gt;test_payment_webhook_signature_verification()</pre></details>
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="github_actions">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>github_actions</code></td>
+                <td><strong>ci:job_failure</strong></td>
+                <td><code>.github/workflows/reusable-security-pipeline.yml</code></td>
+                <td>
+                  <div><strong>Automated tests or code linter checks failed.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">Dependencies / Tests / Linter</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Review job step logs in GitHub Actions.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="github_actions">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>github_actions</code></td>
+                <td><strong>ci:job_failure</strong></td>
+                <td><code>.github/workflows/reusable-security-pipeline.yml</code></td>
+                <td>
+                  <div><strong>SonarQube Cloud Quality Gate conditions were not satisfied.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">SonarQube Quality Gate Check</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Review job step logs in GitHub Actions.</p></details>
+                  
+                </td>
+              </tr>
+
+              <tr class="finding-row" data-severity="HIGH" data-source="github_actions">
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><code>github_actions</code></td>
+                <td><strong>ci:job_failure</strong></td>
+                <td><code>.github/workflows/reusable-security-pipeline.yml</code></td>
+                <td>
+                  <div><strong>Dynamic security scan detected vulnerabilities breaching severity thresholds.</strong></div>
+                  <div style="margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">OWASP ZAP Scan / Policy Check</div>
+                  <details style="margin-top:0.5rem;"><summary>💡 Suggested Remediation</summary><p style="margin-top:0.3rem; font-size:0.85rem; color:#a7f3d0;">Review job step logs in GitHub Actions.</p></details>
+                  
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Failed Tests -->
+    <div id="tab-tests" class="tab-pane">
+      <div class="section-card">
+        <h2 class="section-title">Failed Unit & Feature Tests</h2>
+
+        <div style="background: rgba(239,68,68,0.06); border: 1px solid var(--card-border); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <div>
+              <span class="pill pill-crit">FAIL</span>
+              <strong style="margin-left: 0.5rem;">Tests\\Feature\\PaymentApiTest::test_payment_webhook_signature_verification</strong>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">
+              File: paymock/tests/Feature/PaymentApiTest.php:112 (0.09s)
+            </div>
+          </div>
+          <div style="color: #fca5a5; font-size: 0.9rem; margin-bottom: 0.5rem;">
+            <strong>Error:</strong> Failed asserting that status code 200 matches expected 201.
+          </div>
+          <details><summary>View Stack Trace</summary><pre>Stack trace:
+#0 /var/www/html/tests/Feature/PaymentApiTest.php(115): Illuminate\Testing\TestResponse-&gt;assertStatus(201)
+#1 /var/www/html/vendor/phpunit/phpunit/src/Framework/TestCase.php(1150): Tests\Feature\PaymentApiTest-&gt;test_payment_webhook_signature_verification()</pre></details>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Tab 4: Failed Jobs -->
+    <div id="tab-jobs" class="tab-pane">
+      <div class="section-card">
+        <h2 class="section-title">GitHub Actions Job & Step Failures</h2>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Job Name</th>
+                <th>Status</th>
+                <th>Failed Step</th>
+                <th>Exit Code</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+
+              <tr>
+                <td><strong>1. Validate &amp; Test</strong></td>
+                <td><span class="pill pill-crit">failure</span></td>
+                <td>Dependencies / Tests / Linter</td>
+                <td><code>1</code></td>
+                <td>Automated tests or code linter checks failed.</td>
+              </tr>
+
+              <tr>
+                <td><strong>2. SonarQube Cloud SAST</strong></td>
+                <td><span class="pill pill-crit">failure</span></td>
+                <td>SonarQube Quality Gate Check</td>
+                <td><code>1</code></td>
+                <td>SonarQube Cloud Quality Gate conditions were not satisfied.</td>
+              </tr>
+
+              <tr>
+                <td><strong>3. OWASP ZAP DAST Analysis</strong></td>
+                <td><span class="pill pill-crit">failure</span></td>
+                <td>OWASP ZAP Scan / Policy Check</td>
+                <td><code>1</code></td>
+                <td>Dynamic security scan detected vulnerabilities breaching severity thresholds.</td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Tab 5: AI Remediation Preparation -->
+    <div id="tab-ai" class="tab-pane">
+      <div class="section-card">
+        <h2 class="section-title">🤖 AI Agent Code-Fix Preparation</h2>
+        <p style="margin-bottom: 1rem; color: var(--text-muted);">
+          This normalized report is prepared for consumption by automated AI agents. Below is the actionable summary and recommended prompt starter.
+        </p>
+
+        <h3 style="font-size: 1rem; margin-bottom: 0.75rem;">🎯 High-Priority Files Needing Remediation:</h3>
+        <div class="table-responsive" style="margin-bottom: 1.5rem;">
+          <table>
+            <thead>
+              <tr>
+                <th>Target File</th>
+                <th>Highest Severity</th>
+                <th>Total Issues</th>
+                <th>Action Description</th>
+              </tr>
+            </thead>
+            <tbody>
+
+              <tr>
+                <td><code>Dockerfile</code></td>
+                <td><span class="pill pill-crit">CRITICAL</span></td>
+                <td><strong>4</strong></td>
+                <td>Resolve 4 issues (docker:S6471, docker:S8546, docker:S6470)</td>
+              </tr>
+
+              <tr>
+                <td><code>resources/views/admin/dashboard.blade.php</code></td>
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><strong>8</strong></td>
+                <td>Resolve 8 issues (Web:S6853, Web:InputWithoutLabelCheck)</td>
+              </tr>
+
+              <tr>
+                <td><code>resources/views/checkout/show.blade.php</code></td>
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><strong>8</strong></td>
+                <td>Resolve 8 issues (Web:S6853, Web:InputWithoutLabelCheck)</td>
+              </tr>
+
+              <tr>
+                <td><code>resources/views/admin/login.blade.php</code></td>
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><strong>3</strong></td>
+                <td>Resolve 3 issues (Web:S9379, Web:S6853, Web:InputWithoutLabelCheck)</td>
+              </tr>
+
+              <tr>
+                <td><code>.github/workflows/reusable-security-pipeline.yml</code></td>
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><strong>3</strong></td>
+                <td>Resolve 3 issues (ci:job_failure)</td>
+              </tr>
+
+              <tr>
+                <td><code>tests/Feature/MagicCardTest.php</code></td>
+                <td><span class="pill pill-med">LOW</span></td>
+                <td><strong>2</strong></td>
+                <td>Resolve 2 issues (php:S5332)</td>
+              </tr>
+
+              <tr>
+                <td><code>docker/entrypoint.sh</code></td>
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><strong>2</strong></td>
+                <td>Resolve 2 issues (shell:S2612)</td>
+              </tr>
+
+              <tr>
+                <td><code>app/Http/Controllers/Admin/AdminController.php</code></td>
+                <td><span class="pill pill-med">LOW</span></td>
+                <td><strong>1</strong></td>
+                <td>Resolve 1 issues (php:S5332)</td>
+              </tr>
+
+              <tr>
+                <td><code>resources/views/demo/modal.blade.php</code></td>
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><strong>1</strong></td>
+                <td>Resolve 1 issues (Web:InputWithoutLabelCheck)</td>
+              </tr>
+
+              <tr>
+                <td><code>tests-k6/seat-race-condition.js</code></td>
+                <td><span class="pill pill-med">LOW</span></td>
+                <td><strong>1</strong></td>
+                <td>Resolve 1 issues (javascript:S5332)</td>
+              </tr>
+
+              <tr>
+                <td><code>paymock/tests/Feature/PaymentApiTest.php</code></td>
+                <td><span class="pill pill-high">HIGH</span></td>
+                <td><strong>1</strong></td>
+                <td>Resolve 1 issues (test:assertion_failure)</td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">📋 AI Prompt Starter (Copy & Paste to your AI assistant):</h3>
+        <pre id="aiPromptText">You are an expert software engineer and security auditor tasked with fixing CI/CD pipeline failures for repository &#x27;Team3-SE/Concert-Ticket-System&#x27;.
+Current status: FAILED on branch &#x27;feature/payments-gateway-system&#x27; (PR #3).
+Findings Summary: 2 Critical, 27 High, 1 Medium, 1 failed tests.
+
+Please inspect and remediate the following files in priority order:
+- `Dockerfile`: CRITICAL priority (Resolve 4 issues (docker:S6471, docker:S8546, docker:S6470))
+- `resources/views/admin/dashboard.blade.php`: HIGH priority (Resolve 8 issues (Web:S6853, Web:InputWithoutLabelCheck))
+- `resources/views/checkout/show.blade.php`: HIGH priority (Resolve 8 issues (Web:S6853, Web:InputWithoutLabelCheck))
+- `resources/views/admin/login.blade.php`: HIGH priority (Resolve 3 issues (Web:S9379, Web:S6853, Web:InputWithoutLabelCheck))
+- `.github/workflows/reusable-security-pipeline.yml`: HIGH priority (Resolve 3 issues (ci:job_failure))
+
+Failed Tests:
+- `Tests\\Feature\\PaymentApiTest::test_payment_webhook_signature_verification`: Failed asserting that status code 200 matches expected 201.</pre>
+        <div style="margin-top: 0.75rem;">
+          <button class="btn btn-secondary" onclick="copyPrompt()">📋 Copy Prompt to Clipboard</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Embedded Report Data for Client Interaction -->
+  <script>
+    const reportData = JSON.parse(decodeURIComponent('%7B%22%24schema%22%3A%20%22https%3A//json-schema.org/draft/2020-12/schema%22%2C%20%22report_version%22%3A%20%221.0.0%22%2C%20%22generated_at%22%3A%20%222026-11-23T01%3A35%3A09.165952%2B00%3A00%22%2C%20%22generator%22%3A%20%7B%22name%22%3A%20%22CI/CD%20Pipeline%20Failure%20%26%20Security%20Report%20Generator%22%2C%20%22version%22%3A%20%221.0.0%22%7D%2C%20%22repository%22%3A%20%7B%22name%22%3A%20%22Team3-SE/Concert-Ticket-System%22%2C%20%22url%22%3A%20%22https%3A//github.com/Team3-SE/Concert-Ticket-System%22%7D%2C%20%22workflow%22%3A%20%7B%22name%22%3A%20%22Security%20CI%20Pipeline%22%2C%20%22run_id%22%3A%20%22195829140%22%2C%20%22run_url%22%3A%20%22https%3A//github.com/Team3-SE/Concert-Ticket-System/actions/runs/195829140%22%2C%20%22status%22%3A%20%22failure%22%2C%20%22conclusion%22%3A%20%22failure%22%7D%2C%20%22pull_request%22%3A%20%7B%22number%22%3A%203%2C%20%22head_branch%22%3A%20%22feature/payments-gateway-system%22%2C%20%22base_branch%22%3A%20%22main%22%2C%20%22url%22%3A%20%22https%3A//github/Team3-SE/Concert-Ticket-System/pull/3%22%7D%2C%20%22commit%22%3A%20%7B%22sha%22%3A%20%22c62023cef1e0b388e5403aa7d71f6b9d8f555bd4%22%2C%20%22short_sha%22%3A%20%22c62023c%22%7D%2C%20%22summary%22%3A%20%7B%22overall_status%22%3A%20%22FAILED%22%2C%20%22total_findings%22%3A%2036%2C%20%22critical%22%3A%202%2C%20%22high%22%3A%2027%2C%20%22medium%22%3A%201%2C%20%22low%22%3A%206%2C%20%22informational%22%3A%200%2C%20%22failed_tests%22%3A%201%2C%20%22failed_jobs%22%3A%203%2C%20%22quality_gate_status%22%3A%20%22ERROR%22%7D%2C%20%22quality_gate%22%3A%20%7B%22status%22%3A%20%22ERROR%22%2C%20%22project_key%22%3A%20%22Team3-SE_Concert-Ticket-System%22%2C%20%22organization%22%3A%20%22team3-se%22%2C%20%22conditions%22%3A%20%5B%7B%22metric_key%22%3A%20%22new_reliability_rating%22%2C%20%22status%22%3A%20%22ERROR%22%2C%20%22comparator%22%3A%20%22GT%22%2C%20%22threshold%22%3A%20%221%22%2C%20%22actual_value%22%3A%20%223%22%2C%20%22explanation%22%3A%20%22Reliability%20Rating%20is%20C%20%28required%3A%20grade%20A%29.%20Major%20bugs%20detected.%22%7D%2C%20%7B%22metric_key%22%3A%20%22new_security_rating%22%2C%20%22status%22%3A%20%22ERROR%22%2C%20%22comparator%22%3A%20%22GT%22%2C%20%22threshold%22%3A%20%221%22%2C%20%22actual_value%22%3A%20%224%22%2C%20%22explanation%22%3A%20%22Security%20Rating%20is%20D%20%28required%3A%20grade%20A%29.%20Critical%20or%20high%20vulnerabilities%20detected.%22%7D%2C%20%7B%22metric_key%22%3A%20%22new_maintainability_rating%22%2C%20%22status%22%3A%20%22OK%22%2C%20%22comparator%22%3A%20%22GT%22%2C%20%22threshold%22%3A%20%221%22%2C%20%22actual_value%22%3A%20%221%22%2C%20%22explanation%22%3A%20%22Metric%20new_maintainability_rating%20value%20is%201%20%28threshold%3A%20GT%201%29.%22%7D%2C%20%7B%22metric_key%22%3A%20%22new_duplicated_lines_density%22%2C%20%22status%22%3A%20%22OK%22%2C%20%22comparator%22%3A%20%22GT%22%2C%20%22threshold%22%3A%20%223%22%2C%20%22actual_value%22%3A%20%220.0%22%2C%20%22explanation%22%3A%20%22Duplicated%20lines%20density%20is%200.0%25%20%28required%3A%20less%20than%203%25%29.%22%7D%2C%20%7B%22metric_key%22%3A%20%22new_security_hotspots_reviewed%22%2C%20%22status%22%3A%20%22OK%22%2C%20%22comparator%22%3A%20%22LT%22%2C%20%22threshold%22%3A%20%22100%22%2C%20%22actual_value%22%3A%20%22100.0%22%2C%20%22explanation%22%3A%20%22Security%20hotspots%20reviewed%3A%20100.0%25%20%28required%3A%20100%25%29.%22%7D%5D%7D%2C%20%22failed_jobs%22%3A%20%5B%7B%22name%22%3A%20%221.%20Validate%20%26%20Test%22%2C%20%22status%22%3A%20%22failure%22%2C%20%22conclusion%22%3A%20%22failure%22%2C%20%22failed_step%22%3A%20%22Dependencies%20/%20Tests%20/%20Linter%22%2C%20%22exit_code%22%3A%201%2C%20%22error_message%22%3A%20%22Automated%20tests%20or%20code%20linter%20checks%20failed.%22%7D%2C%20%7B%22name%22%3A%20%222.%20SonarQube%20Cloud%20SAST%22%2C%20%22status%22%3A%20%22failure%22%2C%20%22conclusion%22%3A%20%22failure%22%2C%20%22failed_step%22%3A%20%22SonarQube%20Quality%20Gate%20Check%22%2C%20%22exit_code%22%3A%201%2C%20%22error_message%22%3A%20%22SonarQube%20Cloud%20Quality%20Gate%20conditions%20were%20not%20satisfied.%22%7D%2C%20%7B%22name%22%3A%20%223.%20OWASP%20ZAP%20DAST%20Analysis%22%2C%20%22status%22%3A%20%22failure%22%2C%20%22conclusion%22%3A%20%22failure%22%2C%20%22failed_step%22%3A%20%22OWASP%20ZAP%20Scan%20/%20Policy%20Check%22%2C%20%22exit_code%22%3A%201%2C%20%22error_message%22%3A%20%22Dynamic%20security%20scan%20detected%20vulnerabilities%20breaching%20severity%20thresholds.%22%7D%5D%2C%20%22failed_tests%22%3A%20%5B%7B%22suite%22%3A%20%22Tests%5C%5C%5C%5CFeature%5C%5C%5C%5CPaymentApiTest%22%2C%20%22name%22%3A%20%22test_payment_webhook_signature_verification%22%2C%20%22file%22%3A%20%22paymock/tests/Feature/PaymentApiTest.php%22%2C%20%22line%22%3A%20112%2C%20%22message%22%3A%20%22Failed%20asserting%20that%20status%20code%20200%20matches%20expected%20201.%22%2C%20%22stack_trace%22%3A%20%22Stack%20trace%3A%5Cn%230%20/var/www/html/tests/Feature/PaymentApiTest.php%28115%29%3A%20Illuminate%5C%5CTesting%5C%5CTestResponse-%3EassertStatus%28201%29%5Cn%231%20/var/www/html/vendor/phpunit/phpunit/src/Framework/TestCase.php%281150%29%3A%20Tests%5C%5CFeature%5C%5CPaymentApiTest-%3Etest_payment_webhook_signature_verification%28%29%22%2C%20%22duration%22%3A%200.09%2C%20%22type%22%3A%20%22failure%22%7D%5D%2C%20%22security_scan%22%3A%20%7B%22scanner%22%3A%20%22OWASP%20ZAP%20Baseline%22%2C%20%22target%22%3A%20%22http%3A//127.0.0.1%3A8081%22%2C%20%22status%22%3A%20%22OK%22%2C%20%22alert_counts%22%3A%20%7B%22critical%22%3A%200%2C%20%22high%22%3A%200%2C%20%22medium%22%3A%203%2C%20%22low%22%3A%202%2C%20%22informational%22%3A%200%7D%7D%2C%20%22findings%22%3A%20%5B%7B%22id%22%3A%20%22sonar-AaIF7TCDSZVHGneKAKbB%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22vulnerability%22%2C%20%22severity%22%3A%20%22LOW%22%2C%20%22rule_id%22%3A%20%22php%3AS5332%22%2C%20%22title%22%3A%20%22%5BLOW%5D%20php%3AS5332%3A%20Using%20HTTP%20protocol%20is%20insecure.%20Use%20HTTPS%20instead.%22%2C%20%22message%22%3A%20%22Using%20HTTP%20protocol%20is%20insecure.%20Use%20HTTPS%20instead.%22%2C%20%22description%22%3A%20%22SonarQube%20vulnerability%3A%20Using%20HTTP%20protocol%20is%20insecure.%20Use%20HTTPS%20instead.%22%2C%20%22file%22%3A%20%22tests/Feature/MagicCardTest.php%22%2C%20%22line%22%3A%2022%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20php%3AS5332%20and%20resolve%20the%20vulnerability%20in%20tests/Feature/MagicCardTest.php%20line%2022.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/php%3AS5332%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P2%22%2C%20%22suggested_file%22%3A%20%22tests/Feature/MagicCardTest.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TCDSZVHGneKAKbC%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22vulnerability%22%2C%20%22severity%22%3A%20%22LOW%22%2C%20%22rule_id%22%3A%20%22php%3AS5332%22%2C%20%22title%22%3A%20%22%5BLOW%5D%20php%3AS5332%3A%20Using%20HTTP%20protocol%20is%20insecure.%20Use%20HTTPS%20instead.%22%2C%20%22message%22%3A%20%22Using%20HTTP%20protocol%20is%20insecure.%20Use%20HTTPS%20instead.%22%2C%20%22description%22%3A%20%22SonarQube%20vulnerability%3A%20Using%20HTTP%20protocol%20is%20insecure.%20Use%20HTTPS%20instead.%22%2C%20%22file%22%3A%20%22tests/Feature/MagicCardTest.php%22%2C%20%22line%22%3A%2041%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20php%3AS5332%20and%20resolve%20the%20vulnerability%20in%20tests/Feature/MagicCardTest.php%20line%2041.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/php%3AS5332%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P2%22%2C%20%22suggested_file%22%3A%20%22tests/Feature/MagicCardTest.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB7SZVHGneKAKax%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22bug%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AInputWithoutLabelCheck%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AInputWithoutLabelCheck%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22message%22%3A%20%22Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22description%22%3A%20%22SonarQube%20bug%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22line%22%3A%20173%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AInputWithoutLabelCheck%20and%20resolve%20the%20bug%20in%20resources/views/admin/dashboard.blade.php%20line%20173.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AInputWithoutLabelCheck%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB7SZVHGneKAKa2%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22code_smell%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AS6853%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AS6853%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22message%22%3A%20%22A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22description%22%3A%20%22SonarQube%20code%20smell%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22line%22%3A%20535%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AS6853%20and%20resolve%20the%20code%20smell%20in%20resources/views/admin/dashboard.blade.php%20line%20535.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AS6853%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB7SZVHGneKAKa3%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22bug%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AInputWithoutLabelCheck%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AInputWithoutLabelCheck%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22message%22%3A%20%22Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22description%22%3A%20%22SonarQube%20bug%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22line%22%3A%20536%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AInputWithoutLabelCheck%20and%20resolve%20the%20bug%20in%20resources/views/admin/dashboard.blade.php%20line%20536.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AInputWithoutLabelCheck%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TAUSZVHGneKAKas%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22vulnerability%22%2C%20%22severity%22%3A%20%22LOW%22%2C%20%22rule_id%22%3A%20%22php%3AS5332%22%2C%20%22title%22%3A%20%22%5BLOW%5D%20php%3AS5332%3A%20Using%20HTTP%20protocol%20is%20insecure.%20Use%20HTTPS%20instead.%22%2C%20%22message%22%3A%20%22Using%20HTTP%20protocol%20is%20insecure.%20Use%20HTTPS%20instead.%22%2C%20%22description%22%3A%20%22SonarQube%20vulnerability%3A%20Using%20HTTP%20protocol%20is%20insecure.%20Use%20HTTPS%20instead.%22%2C%20%22file%22%3A%20%22app/Http/Controllers/Admin/AdminController.php%22%2C%20%22line%22%3A%20141%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20php%3AS5332%20and%20resolve%20the%20vulnerability%20in%20app/Http/Controllers/Admin/AdminController.php%20line%20141.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/php%3AS5332%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P2%22%2C%20%22suggested_file%22%3A%20%22app/Http/Controllers/Admin/AdminController.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB7SZVHGneKAKaz%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22bug%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AInputWithoutLabelCheck%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AInputWithoutLabelCheck%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22message%22%3A%20%22Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22description%22%3A%20%22SonarQube%20bug%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22line%22%3A%20523%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AInputWithoutLabelCheck%20and%20resolve%20the%20bug%20in%20resources/views/admin/dashboard.blade.php%20line%20523.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AInputWithoutLabelCheck%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TCBSZVHGneKAKbA%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22bug%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AInputWithoutLabelCheck%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AInputWithoutLabelCheck%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22message%22%3A%20%22Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22description%22%3A%20%22SonarQube%20bug%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22file%22%3A%20%22resources/views/demo/modal.blade.php%22%2C%20%22line%22%3A%2050%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AInputWithoutLabelCheck%20and%20resolve%20the%20bug%20in%20resources/views/demo/modal.blade.php%20line%2050.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AInputWithoutLabelCheck%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/demo/modal.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TCNSZVHGneKAKbI%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22vulnerability%22%2C%20%22severity%22%3A%20%22LOW%22%2C%20%22rule_id%22%3A%20%22docker%3AS6471%22%2C%20%22title%22%3A%20%22%5BLOW%5D%20docker%3AS6471%3A%20The%20%5C%22php%5C%22%20image%20runs%20with%20%5C%22root%5C%22%20as%20the%20default%20user.%20Make%20sure%20it%20is%20safe%20here.%22%2C%20%22message%22%3A%20%22The%20%5C%22php%5C%22%20image%20runs%20with%20%5C%22root%5C%22%20as%20the%20default%20user.%20Make%20sure%20it%20is%20safe%20here.%22%2C%20%22description%22%3A%20%22SonarQube%20vulnerability%3A%20The%20%5C%22php%5C%22%20image%20runs%20with%20%5C%22root%5C%22%20as%20the%20default%20user.%20Make%20sure%20it%20is%20safe%20here.%22%2C%20%22file%22%3A%20%22Dockerfile%22%2C%20%22line%22%3A%201%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20docker%3AS6471%20and%20resolve%20the%20vulnerability%20in%20Dockerfile%20line%201.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/docker%3AS6471%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P2%22%2C%20%22suggested_file%22%3A%20%22Dockerfile%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TCNSZVHGneKAKbG%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22vulnerability%22%2C%20%22severity%22%3A%20%22CRITICAL%22%2C%20%22rule_id%22%3A%20%22docker%3AS6470%22%2C%20%22title%22%3A%20%22%5BCRITICAL%5D%20docker%3AS6470%3A%20Copying%20using%20a%20glob%20pattern%20might%20inadvertently%20add%20sensitive%20data%20to%20the%20conta%22%2C%20%22message%22%3A%20%22Copying%20using%20a%20glob%20pattern%20might%20inadvertently%20add%20sensitive%20data%20to%20the%20container.%20Make%20sure%20it%20is%20safe%20here.%22%2C%20%22description%22%3A%20%22SonarQube%20vulnerability%3A%20Copying%20using%20a%20glob%20pattern%20might%20inadvertently%20add%20sensitive%20data%20to%20the%20container.%20Make%20sure%20it%20is%20safe%20here.%22%2C%20%22file%22%3A%20%22Dockerfile%22%2C%20%22line%22%3A%2023%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20docker%3AS6470%20and%20resolve%20the%20vulnerability%20in%20Dockerfile%20line%2023.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/docker%3AS6470%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P0%22%2C%20%22suggested_file%22%3A%20%22Dockerfile%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TCNSZVHGneKAKbJ%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22vulnerability%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22docker%3AS8546%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20docker%3AS8546%3A%20Dependency%20versions%20are%20not%20predictable.%20Use%20a%20lock-file%20enforcing%20command%20inste%22%2C%20%22message%22%3A%20%22Dependency%20versions%20are%20not%20predictable.%20Use%20a%20lock-file%20enforcing%20command%20instead.%22%2C%20%22description%22%3A%20%22SonarQube%20vulnerability%3A%20Dependency%20versions%20are%20not%20predictable.%20Use%20a%20lock-file%20enforcing%20command%20instead.%22%2C%20%22file%22%3A%20%22Dockerfile%22%2C%20%22line%22%3A%2027%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20docker%3AS8546%20and%20resolve%20the%20vulnerability%20in%20Dockerfile%20line%2027.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/docker%3AS8546%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22Dockerfile%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TCNSZVHGneKAKbH%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22vulnerability%22%2C%20%22severity%22%3A%20%22CRITICAL%22%2C%20%22rule_id%22%3A%20%22docker%3AS6470%22%2C%20%22title%22%3A%20%22%5BCRITICAL%5D%20docker%3AS6470%3A%20Copying%20recursively%20might%20inadvertently%20add%20sensitive%20data%20to%20the%20container.%20Mak%22%2C%20%22message%22%3A%20%22Copying%20recursively%20might%20inadvertently%20add%20sensitive%20data%20to%20the%20container.%20Make%20sure%20it%20is%20safe%20here.%22%2C%20%22description%22%3A%20%22SonarQube%20vulnerability%3A%20Copying%20recursively%20might%20inadvertently%20add%20sensitive%20data%20to%20the%20container.%20Make%20sure%20it%20is%20safe%20here.%22%2C%20%22file%22%3A%20%22Dockerfile%22%2C%20%22line%22%3A%2031%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20docker%3AS6470%20and%20resolve%20the%20vulnerability%20in%20Dockerfile%20line%2031.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/docker%3AS6470%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P0%22%2C%20%22suggested_file%22%3A%20%22Dockerfile%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TCHSZVHGneKAKbD%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22vulnerability%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22shell%3AS2612%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20shell%3AS2612%3A%20Make%20sure%20granting%20write%20access%20to%20others%20is%20safe%20here.%22%2C%20%22message%22%3A%20%22Make%20sure%20granting%20write%20access%20to%20others%20is%20safe%20here.%22%2C%20%22description%22%3A%20%22SonarQube%20vulnerability%3A%20Make%20sure%20granting%20write%20access%20to%20others%20is%20safe%20here.%22%2C%20%22file%22%3A%20%22docker/entrypoint.sh%22%2C%20%22line%22%3A%2033%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20shell%3AS2612%20and%20resolve%20the%20vulnerability%20in%20docker/entrypoint.sh%20line%2033.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/shell%3AS2612%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22docker/entrypoint.sh%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TCHSZVHGneKAKbE%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22vulnerability%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22shell%3AS2612%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20shell%3AS2612%3A%20Make%20sure%20granting%20write%20access%20to%20others%20is%20safe%20here.%22%2C%20%22message%22%3A%20%22Make%20sure%20granting%20write%20access%20to%20others%20is%20safe%20here.%22%2C%20%22description%22%3A%20%22SonarQube%20vulnerability%3A%20Make%20sure%20granting%20write%20access%20to%20others%20is%20safe%20here.%22%2C%20%22file%22%3A%20%22docker/entrypoint.sh%22%2C%20%22line%22%3A%2034%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20shell%3AS2612%20and%20resolve%20the%20vulnerability%20in%20docker/entrypoint.sh%20line%2034.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/shell%3AS2612%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22docker/entrypoint.sh%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB7SZVHGneKAKaw%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22bug%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AInputWithoutLabelCheck%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AInputWithoutLabelCheck%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22message%22%3A%20%22Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22description%22%3A%20%22SonarQube%20bug%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22line%22%3A%20141%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AInputWithoutLabelCheck%20and%20resolve%20the%20bug%20in%20resources/views/admin/dashboard.blade.php%20line%20141.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AInputWithoutLabelCheck%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB7SZVHGneKAKay%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22code_smell%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AS6853%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AS6853%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22message%22%3A%20%22A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22description%22%3A%20%22SonarQube%20code%20smell%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22line%22%3A%20522%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AS6853%20and%20resolve%20the%20code%20smell%20in%20resources/views/admin/dashboard.blade.php%20line%20522.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AS6853%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB7SZVHGneKAKa0%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22code_smell%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AS6853%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AS6853%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22message%22%3A%20%22A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22description%22%3A%20%22SonarQube%20code%20smell%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22line%22%3A%20527%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AS6853%20and%20resolve%20the%20code%20smell%20in%20resources/views/admin/dashboard.blade.php%20line%20527.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AS6853%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB7SZVHGneKAKa1%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22bug%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AInputWithoutLabelCheck%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AInputWithoutLabelCheck%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22message%22%3A%20%22Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22description%22%3A%20%22SonarQube%20bug%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22line%22%3A%20528%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AInputWithoutLabelCheck%20and%20resolve%20the%20bug%20in%20resources/views/admin/dashboard.blade.php%20line%20528.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AInputWithoutLabelCheck%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB2SZVHGneKAKat%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22code_smell%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AS6853%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AS6853%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22message%22%3A%20%22A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22description%22%3A%20%22SonarQube%20code%20smell%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22file%22%3A%20%22resources/views/admin/login.blade.php%22%2C%20%22line%22%3A%2020%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AS6853%20and%20resolve%20the%20code%20smell%20in%20resources/views/admin/login.blade.php%20line%2020.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AS6853%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/admin/login.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB2SZVHGneKAKau%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22code_smell%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AS9379%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AS9379%3A%20Remove%20this%20%5C%22autofocus%5C%22%20attribute%2C%20as%20it%20can%20reduce%20usability%20and%20accessibility%20%22%2C%20%22message%22%3A%20%22Remove%20this%20%5C%22autofocus%5C%22%20attribute%2C%20as%20it%20can%20reduce%20usability%20and%20accessibility%20for%20users.%22%2C%20%22description%22%3A%20%22SonarQube%20code%20smell%3A%20Remove%20this%20%5C%22autofocus%5C%22%20attribute%2C%20as%20it%20can%20reduce%20usability%20and%20accessibility%20for%20users.%22%2C%20%22file%22%3A%20%22resources/views/admin/login.blade.php%22%2C%20%22line%22%3A%2021%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AS9379%20and%20resolve%20the%20code%20smell%20in%20resources/views/admin/login.blade.php%20line%2021.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AS9379%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/admin/login.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB2SZVHGneKAKav%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22bug%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AInputWithoutLabelCheck%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AInputWithoutLabelCheck%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22message%22%3A%20%22Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22description%22%3A%20%22SonarQube%20bug%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22file%22%3A%20%22resources/views/admin/login.blade.php%22%2C%20%22line%22%3A%2021%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AInputWithoutLabelCheck%20and%20resolve%20the%20bug%20in%20resources/views/admin/login.blade.php%20line%2021.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AInputWithoutLabelCheck%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/admin/login.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB9SZVHGneKAKa4%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22code_smell%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AS6853%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AS6853%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22message%22%3A%20%22A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22description%22%3A%20%22SonarQube%20code%20smell%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22line%22%3A%20100%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AS6853%20and%20resolve%20the%20code%20smell%20in%20resources/views/checkout/show.blade.php%20line%20100.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AS6853%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB9SZVHGneKAKa5%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22bug%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AInputWithoutLabelCheck%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AInputWithoutLabelCheck%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22message%22%3A%20%22Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22description%22%3A%20%22SonarQube%20bug%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22line%22%3A%20101%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AInputWithoutLabelCheck%20and%20resolve%20the%20bug%20in%20resources/views/checkout/show.blade.php%20line%20101.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AInputWithoutLabelCheck%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB9SZVHGneKAKa6%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22code_smell%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AS6853%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AS6853%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22message%22%3A%20%22A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22description%22%3A%20%22SonarQube%20code%20smell%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22line%22%3A%20115%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AS6853%20and%20resolve%20the%20code%20smell%20in%20resources/views/checkout/show.blade.php%20line%20115.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AS6853%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB9SZVHGneKAKa7%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22bug%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AInputWithoutLabelCheck%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AInputWithoutLabelCheck%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22message%22%3A%20%22Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22description%22%3A%20%22SonarQube%20bug%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22line%22%3A%20116%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AInputWithoutLabelCheck%20and%20resolve%20the%20bug%20in%20resources/views/checkout/show.blade.php%20line%20116.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AInputWithoutLabelCheck%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB9SZVHGneKAKa8%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22code_smell%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AS6853%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AS6853%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22message%22%3A%20%22A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22description%22%3A%20%22SonarQube%20code%20smell%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22line%22%3A%20125%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AS6853%20and%20resolve%20the%20code%20smell%20in%20resources/views/checkout/show.blade.php%20line%20125.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AS6853%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB9SZVHGneKAKa9%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22bug%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AInputWithoutLabelCheck%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AInputWithoutLabelCheck%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22message%22%3A%20%22Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22description%22%3A%20%22SonarQube%20bug%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22line%22%3A%20126%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AInputWithoutLabelCheck%20and%20resolve%20the%20bug%20in%20resources/views/checkout/show.blade.php%20line%20126.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AInputWithoutLabelCheck%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB9SZVHGneKAKa-%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22code_smell%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AS6853%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AS6853%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22message%22%3A%20%22A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22description%22%3A%20%22SonarQube%20code%20smell%3A%20A%20form%20label%20must%20be%20associated%20with%20a%20control%20and%20have%20accessible%20text.%22%2C%20%22file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22line%22%3A%20136%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AS6853%20and%20resolve%20the%20code%20smell%20in%20resources/views/checkout/show.blade.php%20line%20136.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AS6853%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TB9SZVHGneKAKa_%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22bug%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22Web%3AInputWithoutLabelCheck%22%2C%20%22title%22%3A%20%22%5BHIGH%5D%20Web%3AInputWithoutLabelCheck%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22message%22%3A%20%22Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22description%22%3A%20%22SonarQube%20bug%3A%20Add%20an%20%5C%22id%5C%22%20attribute%20to%20this%20input%20field%20and%20associate%20it%20with%20a%20label.%22%2C%20%22file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22line%22%3A%20137%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20Web%3AInputWithoutLabelCheck%20and%20resolve%20the%20bug%20in%20resources/views/checkout/show.blade.php%20line%20137.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/Web%3AInputWithoutLabelCheck%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22sonar-AaIF7TCISZVHGneKAKbF%22%2C%20%22source%22%3A%20%22sonarqube%22%2C%20%22category%22%3A%20%22vulnerability%22%2C%20%22severity%22%3A%20%22LOW%22%2C%20%22rule_id%22%3A%20%22javascript%3AS5332%22%2C%20%22title%22%3A%20%22%5BLOW%5D%20javascript%3AS5332%3A%20Using%20http%20protocol%20is%20insecure.%20Use%20https%20instead.%22%2C%20%22message%22%3A%20%22Using%20http%20protocol%20is%20insecure.%20Use%20https%20instead.%22%2C%20%22description%22%3A%20%22SonarQube%20vulnerability%3A%20Using%20http%20protocol%20is%20insecure.%20Use%20https%20instead.%22%2C%20%22file%22%3A%20%22tests-k6/seat-race-condition.js%22%2C%20%22line%22%3A%2038%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Inspect%20rule%20javascript%3AS5332%20and%20resolve%20the%20vulnerability%20in%20tests-k6/seat-race-condition.js%20line%2038.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//rules.sonarsource.com/rules/javascript%3AS5332%22%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P2%22%2C%20%22suggested_file%22%3A%20%22tests-k6/seat-race-condition.js%22%2C%20%22suggested_action%22%3A%20%22modify_file%22%7D%7D%2C%20%7B%22id%22%3A%20%22zap-10038-0%22%2C%20%22source%22%3A%20%22owasp_zap%22%2C%20%22category%22%3A%20%22vulnerability%22%2C%20%22severity%22%3A%20%22MEDIUM%22%2C%20%22rule_id%22%3A%20%22ZAP-10038%22%2C%20%22title%22%3A%20%22%5BDAST%20MEDIUM%5D%20Content%20Security%20Policy%20%28CSP%29%20Header%20Not%20Set%22%2C%20%22message%22%3A%20%22Content%20Security%20Policy%20%28CSP%29%20Header%20Not%20Set%22%2C%20%22description%22%3A%20%22Content%20Security%20Policy%20%28CSP%29%20is%20an%20added%20layer%20of%20security%20that%20helps%20to%20detect%20and%20mitigate%20certain%20types%20of%20attacks%2C%20including%20Cross%20Site%20Scripting%20%28XSS%29%20and%20data%20injection%20attacks.%22%2C%20%22file%22%3A%20null%2C%20%22line%22%3A%20null%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Ensure%20that%20your%20web%20server%2C%20application%20server%2C%20load%20balancer%2C%20etc.%20is%20configured%20to%20set%20the%20Content-Security-Policy%20header.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20%22CWE-693%22%2C%20%22wasc_id%22%3A%20%22WASC-15%22%2C%20%22reference_urls%22%3A%20%5B%22https%3A//developer.mozilla.org/en-US/docs/Web/HTTP/CSP%22%5D%2C%20%22instances%22%3A%20%5B%7B%22uri%22%3A%20%22http%3A//127.0.0.1%3A8081/%22%2C%20%22method%22%3A%20%22GET%22%2C%20%22param%22%3A%20%22%22%2C%20%22attack%22%3A%20%22%22%2C%20%22evidence%22%3A%20%22%22%7D%2C%20%7B%22uri%22%3A%20%22http%3A//127.0.0.1%3A8081/admin/login%22%2C%20%22method%22%3A%20%22GET%22%2C%20%22param%22%3A%20%22%22%2C%20%22attack%22%3A%20%22%22%2C%20%22evidence%22%3A%20%22%22%7D%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P1%22%2C%20%22suggested_file%22%3A%20%22application%20middleware%20or%20configuration%22%2C%20%22suggested_action%22%3A%20%22add_security_headers_or_sanitize%22%7D%7D%2C%20%7B%22id%22%3A%20%22zap-10021-1%22%2C%20%22source%22%3A%20%22owasp_zap%22%2C%20%22category%22%3A%20%22code_smell%22%2C%20%22severity%22%3A%20%22LOW%22%2C%20%22rule_id%22%3A%20%22ZAP-10021%22%2C%20%22title%22%3A%20%22%5BDAST%20LOW%5D%20X-Content-Type-Options%20Header%20Missing%22%2C%20%22message%22%3A%20%22X-Content-Type-Options%20Header%20Missing%22%2C%20%22description%22%3A%20%22The%20Anti-MIME-Sniffing%20header%20X-Content-Type-Options%20was%20not%20set%20to%20nosniff.%22%2C%20%22file%22%3A%20null%2C%20%22line%22%3A%20null%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Ensure%20that%20the%20application/web-server%20sets%20the%20Content-Type%20header%20properly%2C%20and%20that%20the%20X-Content-Type-Options%3A%20nosniff%20header%20is%20set.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20%22CWE-16%22%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%22https%3A//learn.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/platform-apis/gg622941%28v%3Dvs.85%29%22%5D%2C%20%22instances%22%3A%20%5B%7B%22uri%22%3A%20%22http%3A//127.0.0.1%3A8081/up%22%2C%20%22method%22%3A%20%22GET%22%2C%20%22param%22%3A%20%22%22%2C%20%22attack%22%3A%20%22%22%2C%20%22evidence%22%3A%20%22%22%7D%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P2%22%2C%20%22suggested_file%22%3A%20%22application%20middleware%20or%20configuration%22%2C%20%22suggested_action%22%3A%20%22add_security_headers_or_sanitize%22%7D%7D%2C%20%7B%22id%22%3A%20%22test-failure-0%22%2C%20%22source%22%3A%20%22unit_test%22%2C%20%22category%22%3A%20%22test_failure%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22test%3Aassertion_failure%22%2C%20%22title%22%3A%20%22%5BTEST%20FAIL%5D%20Tests%5C%5C%5C%5CFeature%5C%5C%5C%5CPaymentApiTest%3A%3Atest_payment_webhook_signature_verification%22%2C%20%22message%22%3A%20%22Failed%20asserting%20that%20status%20code%20200%20matches%20expected%20201.%22%2C%20%22description%22%3A%20%22Stack%20trace%3A%5Cn%230%20/var/www/html/tests/Feature/PaymentApiTest.php%28115%29%3A%20Illuminate%5C%5CTesting%5C%5CTestResponse-%3EassertStatus%28201%29%5Cn%231%20/var/www/html/vendor/phpunit/phpunit/src/Framework/TestCase.php%281150%29%3A%20Tests%5C%5CFeature%5C%5CPaymentApiTest-%3Etest_payment_webhook_signature_verification%28%29%22%2C%20%22file%22%3A%20%22paymock/tests/Feature/PaymentApiTest.php%22%2C%20%22line%22%3A%20112%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20%22Stack%20trace%3A%5Cn%230%20/var/www/html/tests/Feature/PaymentApiTest.php%28115%29%3A%20Illuminate%5C%5CTesting%5C%5CTestResponse-%3EassertStatus%28201%29%5Cn%231%20/var/www/html/vendor/phpunit/phpunit/src/Framework/TestCase.php%281150%29%3A%20Tests%5C%5CFeature%5C%5CPaymentApiTest-%3Etest_payment_webhook_signature_verification%28%29%22%2C%20%22remediation%22%3A%20%22Verify%20test%20logic%20and%20application%20behavior%20in%20paymock/tests/Feature/PaymentApiTest.php.%22%2C%20%22test_name%22%3A%20%22Tests%5C%5C%5C%5CFeature%5C%5C%5C%5CPaymentApiTest%3A%3Atest_payment_webhook_signature_verification%22%2C%20%22expected%22%3A%20null%2C%20%22actual%22%3A%20null%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P0%22%2C%20%22suggested_file%22%3A%20%22paymock/tests/Feature/PaymentApiTest.php%22%2C%20%22suggested_action%22%3A%20%22debug_and_fix_code%22%7D%7D%2C%20%7B%22id%22%3A%20%22job-failure-0%22%2C%20%22source%22%3A%20%22github_actions%22%2C%20%22category%22%3A%20%22job_failure%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22ci%3Ajob_failure%22%2C%20%22title%22%3A%20%22%5BCI%20JOB%20FAILED%5D%201.%20Validate%20%26%20Test%22%2C%20%22message%22%3A%20%22Automated%20tests%20or%20code%20linter%20checks%20failed.%22%2C%20%22description%22%3A%20%22Dependencies%20/%20Tests%20/%20Linter%22%2C%20%22file%22%3A%20%22.github/workflows/reusable-security-pipeline.yml%22%2C%20%22line%22%3A%20null%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Review%20job%20step%20logs%20in%20GitHub%20Actions.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20%22success%22%2C%20%22actual%22%3A%20%22failure%22%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P0%22%2C%20%22suggested_file%22%3A%20%22.github/workflows/reusable-security-pipeline.yml%22%2C%20%22suggested_action%22%3A%20%22review_workflow_logs%22%7D%7D%2C%20%7B%22id%22%3A%20%22job-failure-1%22%2C%20%22source%22%3A%20%22github_actions%22%2C%20%22category%22%3A%20%22job_failure%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22ci%3Ajob_failure%22%2C%20%22title%22%3A%20%22%5BCI%20JOB%20FAILED%5D%202.%20SonarQube%20Cloud%20SAST%22%2C%20%22message%22%3A%20%22SonarQube%20Cloud%20Quality%20Gate%20conditions%20were%20not%20satisfied.%22%2C%20%22description%22%3A%20%22SonarQube%20Quality%20Gate%20Check%22%2C%20%22file%22%3A%20%22.github/workflows/reusable-security-pipeline.yml%22%2C%20%22line%22%3A%20null%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Review%20job%20step%20logs%20in%20GitHub%20Actions.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20%22success%22%2C%20%22actual%22%3A%20%22failure%22%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P0%22%2C%20%22suggested_file%22%3A%20%22.github/workflows/reusable-security-pipeline.yml%22%2C%20%22suggested_action%22%3A%20%22review_workflow_logs%22%7D%7D%2C%20%7B%22id%22%3A%20%22job-failure-2%22%2C%20%22source%22%3A%20%22github_actions%22%2C%20%22category%22%3A%20%22job_failure%22%2C%20%22severity%22%3A%20%22HIGH%22%2C%20%22rule_id%22%3A%20%22ci%3Ajob_failure%22%2C%20%22title%22%3A%20%22%5BCI%20JOB%20FAILED%5D%203.%20OWASP%20ZAP%20DAST%20Analysis%22%2C%20%22message%22%3A%20%22Dynamic%20security%20scan%20detected%20vulnerabilities%20breaching%20severity%20thresholds.%22%2C%20%22description%22%3A%20%22OWASP%20ZAP%20Scan%20/%20Policy%20Check%22%2C%20%22file%22%3A%20%22.github/workflows/reusable-security-pipeline.yml%22%2C%20%22line%22%3A%20null%2C%20%22column%22%3A%20null%2C%20%22code_snippet%22%3A%20null%2C%20%22evidence%22%3A%20null%2C%20%22remediation%22%3A%20%22Review%20job%20step%20logs%20in%20GitHub%20Actions.%22%2C%20%22test_name%22%3A%20null%2C%20%22expected%22%3A%20%22success%22%2C%20%22actual%22%3A%20%22failure%22%2C%20%22cwe_id%22%3A%20null%2C%20%22wasc_id%22%3A%20null%2C%20%22reference_urls%22%3A%20%5B%5D%2C%20%22ai_context%22%3A%20%7B%22actionable%22%3A%20true%2C%20%22fix_priority%22%3A%20%22P0%22%2C%20%22suggested_file%22%3A%20%22.github/workflows/reusable-security-pipeline.yml%22%2C%20%22suggested_action%22%3A%20%22review_workflow_logs%22%7D%7D%5D%2C%20%22ai_analysis_ready%22%3A%20%7B%22ready%22%3A%20true%2C%20%22recommended_agent_role%22%3A%20%22Security%20Remediation%20%26%20Automated%20Bug%20Fixing%20Specialist%22%2C%20%22primary_targets%22%3A%20%5B%7B%22file%22%3A%20%22Dockerfile%22%2C%20%22issue_count%22%3A%204%2C%20%22highest_severity%22%3A%20%22CRITICAL%22%2C%20%22summary%22%3A%20%22Resolve%204%20issues%20%28docker%3AS6471%2C%20docker%3AS8546%2C%20docker%3AS6470%29%22%7D%2C%20%7B%22file%22%3A%20%22resources/views/admin/dashboard.blade.php%22%2C%20%22issue_count%22%3A%208%2C%20%22highest_severity%22%3A%20%22HIGH%22%2C%20%22summary%22%3A%20%22Resolve%208%20issues%20%28Web%3AS6853%2C%20Web%3AInputWithoutLabelCheck%29%22%7D%2C%20%7B%22file%22%3A%20%22resources/views/checkout/show.blade.php%22%2C%20%22issue_count%22%3A%208%2C%20%22highest_severity%22%3A%20%22HIGH%22%2C%20%22summary%22%3A%20%22Resolve%208%20issues%20%28Web%3AS6853%2C%20Web%3AInputWithoutLabelCheck%29%22%7D%2C%20%7B%22file%22%3A%20%22resources/views/admin/login.blade.php%22%2C%20%22issue_count%22%3A%203%2C%20%22highest_severity%22%3A%20%22HIGH%22%2C%20%22summary%22%3A%20%22Resolve%203%20issues%20%28Web%3AS9379%2C%20Web%3AS6853%2C%20Web%3AInputWithoutLabelCheck%29%22%7D%2C%20%7B%22file%22%3A%20%22.github/workflows/reusable-security-pipeline.yml%22%2C%20%22issue_count%22%3A%203%2C%20%22highest_severity%22%3A%20%22HIGH%22%2C%20%22summary%22%3A%20%22Resolve%203%20issues%20%28ci%3Ajob_failure%29%22%7D%2C%20%7B%22file%22%3A%20%22tests/Feature/MagicCardTest.php%22%2C%20%22issue_count%22%3A%202%2C%20%22highest_severity%22%3A%20%22LOW%22%2C%20%22summary%22%3A%20%22Resolve%202%20issues%20%28php%3AS5332%29%22%7D%2C%20%7B%22file%22%3A%20%22docker/entrypoint.sh%22%2C%20%22issue_count%22%3A%202%2C%20%22highest_severity%22%3A%20%22HIGH%22%2C%20%22summary%22%3A%20%22Resolve%202%20issues%20%28shell%3AS2612%29%22%7D%2C%20%7B%22file%22%3A%20%22app/Http/Controllers/Admin/AdminController.php%22%2C%20%22issue_count%22%3A%201%2C%20%22highest_severity%22%3A%20%22LOW%22%2C%20%22summary%22%3A%20%22Resolve%201%20issues%20%28php%3AS5332%29%22%7D%2C%20%7B%22file%22%3A%20%22resources/views/demo/modal.blade.php%22%2C%20%22issue_count%22%3A%201%2C%20%22highest_severity%22%3A%20%22HIGH%22%2C%20%22summary%22%3A%20%22Resolve%201%20issues%20%28Web%3AInputWithoutLabelCheck%29%22%7D%2C%20%7B%22file%22%3A%20%22tests-k6/seat-race-condition.js%22%2C%20%22issue_count%22%3A%201%2C%20%22highest_severity%22%3A%20%22LOW%22%2C%20%22summary%22%3A%20%22Resolve%201%20issues%20%28javascript%3AS5332%29%22%7D%2C%20%7B%22file%22%3A%20%22paymock/tests/Feature/PaymentApiTest.php%22%2C%20%22issue_count%22%3A%201%2C%20%22highest_severity%22%3A%20%22HIGH%22%2C%20%22summary%22%3A%20%22Resolve%201%20issues%20%28test%3Aassertion_failure%29%22%7D%5D%2C%20%22prompt_summary%22%3A%20%22You%20are%20an%20expert%20software%20engineer%20and%20security%20auditor%20tasked%20with%20fixing%20CI/CD%20pipeline%20failures%20for%20repository%20%27Team3-SE/Concert-Ticket-System%27.%5CnCurrent%20status%3A%20FAILED%20on%20branch%20%27feature/payments-gateway-system%27%20%28PR%20%233%29.%5CnFindings%20Summary%3A%202%20Critical%2C%2027%20High%2C%201%20Medium%2C%201%20failed%20tests.%5Cn%5CnPlease%20inspect%20and%20remediate%20the%20following%20files%20in%20priority%20order%3A%5Cn-%20%60Dockerfile%60%3A%20CRITICAL%20priority%20%28Resolve%204%20issues%20%28docker%3AS6471%2C%20docker%3AS8546%2C%20docker%3AS6470%29%29%5Cn-%20%60resources/views/admin/dashboard.blade.php%60%3A%20HIGH%20priority%20%28Resolve%208%20issues%20%28Web%3AS6853%2C%20Web%3AInputWithoutLabelCheck%29%29%5Cn-%20%60resources/views/checkout/show.blade.php%60%3A%20HIGH%20priority%20%28Resolve%208%20issues%20%28Web%3AS6853%2C%20Web%3AInputWithoutLabelCheck%29%29%5Cn-%20%60resources/views/admin/login.blade.php%60%3A%20HIGH%20priority%20%28Resolve%203%20issues%20%28Web%3AS9379%2C%20Web%3AS6853%2C%20Web%3AInputWithoutLabelCheck%29%29%5Cn-%20%60.github/workflows/reusable-security-pipeline.yml%60%3A%20HIGH%20priority%20%28Resolve%203%20issues%20%28ci%3Ajob_failure%29%29%5Cn%5CnFailed%20Tests%3A%5Cn-%20%60Tests%5C%5C%5C%5CFeature%5C%5C%5C%5CPaymentApiTest%3A%3Atest_payment_webhook_signature_verification%60%3A%20Failed%20asserting%20that%20status%20code%20200%20matches%20expected%20201.%22%7D%2C%20%22metadata%22%3A%20%7B%22environment%22%3A%20%22local%22%2C%20%22collector_sources%22%3A%20%5B%22sonarqube%22%2C%20%22owasp_zap%22%2C%20%22junit_xml%22%2C%20%22github_actions%22%5D%7D%7D'));
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+
+      event.target.classList.add('active');
+      document.getElementById('tab-' + tabId).classList.add('active');
+    }
+
+    function filterFindings() {
+      const query = document.getElementById('findingSearch').value.toLowerCase();
+      const sevFilter = document.getElementById('severityFilter').value;
+      const srcFilter = document.getElementById('sourceFilter').value;
+      const rows = document.querySelectorAll('.finding-row');
+
+      rows.forEach(row => {
+        const rowText = row.innerText.toLowerCase();
+        const rowSev = row.getAttribute('data-severity');
+        const rowSrc = row.getAttribute('data-source');
+
+        const matchesQuery = !query || rowText.includes(query);
+        const matchesSev = (sevFilter === 'ALL') || (rowSev === sevFilter);
+        const matchesSrc = (srcFilter === 'ALL') || (rowSrc === srcFilter);
+
+        if (matchesQuery && matchesSev && matchesSrc) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    function downloadJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(reportData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "pipeline-report.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function copyPrompt() {
+      const promptEl = document.getElementById('aiPromptText');
+      navigator.clipboard.writeText(promptEl.innerText).then(() => {
+        alert("AI prompt copied to clipboard!");
+      });
+    }
+  </script>
+</body>
+</html>

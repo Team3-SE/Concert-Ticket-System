@@ -1,0 +1,85 @@
+/*
+ * resources/css/shared/pagination.css
+ * หน้าที่ : ตัวแบ่งหน้า และปุ่ม "…" พิมพ์เลขหน้า
+ * ใช้กับ : partials/pagination.blade.php (user/concerts/index, user/account/order-history)
+ * Author : ธีรเมธ พลสาย
+ * Created : 09/10/2569
+ */
+
+/* Pagination (partials/pagination) */
+.pager-bar{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+  width:100%;
+}
+.pager-summary{font-size:13px;color:#6B7280;}
+
+/* กรอบครอบตัวแบ่งหน้า (ใช้เมื่อไม่ได้อยู่ท้ายการ์ด/ตารางที่มีกรอบอยู่แล้ว) */
+.pager-bar--framed{
+  padding:12px 20px;
+  background:#F8F9FC;border:1px solid #E3E6EC;border-radius:12px;
+  box-shadow:0 1px 2px rgba(15,32,65,.04);
+}
+
+.pager{display:flex;align-items:center;flex-wrap:wrap;gap:6px;}
+
+.pg-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  height:32px;min-width:32px;padding:0 12px;
+  background:#fff;border:1px solid #E3E6EC;border-radius:8px;
+  font-family:inherit;font-size:13px;font-weight:500;color:#2A3145;
+  text-decoration:none;white-space:nowrap;cursor:pointer;
+  transition:background .15s ease,border-color .15s ease,color .15s ease,transform .1s ease;
+}
+.pg-btn.num{width:32px;padding:0;}
+a.pg-btn:hover{background:#EAF0FB;border-color:#C9D6EE;}
+a.pg-btn:active{transform:scale(.96);}
+.pg-btn:focus-visible{outline:2px solid #3B5BDB;outline-offset:2px;}
+.pg-btn.active{background:#16224A;border-color:#16224A;color:#fff;cursor:default;}
+.pg-btn[aria-disabled="true"]{opacity:.4;cursor:not-allowed;}
+
+/* ปุ่ม "…" + กล่องพิมพ์เลขหน้า */
+.pg-dots-container{position:relative;}
+.pg-dots{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:32px;height:32px;
+  background:transparent;border:1px solid transparent;border-radius:8px;
+  font-family:inherit;font-size:15px;font-weight:600;letter-spacing:1px;color:#8993A8;
+  cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease;
+}
+.pg-dots:hover,.pg-dots.open{background:#EAF0FB;border-color:#C9D6EE;color:#3B5BDB;}
+.pg-dots:focus-visible{outline:2px solid #3B5BDB;outline-offset:2px;}
+
+.pg-popover{
+  position:absolute;bottom:calc(100% + 10px);left:50%;z-index:20;
+  display:flex;align-items:center;gap:6px;padding:8px;
+  background:#fff;border:1px solid #E3E6EC;border-radius:12px;
+  box-shadow:0 8px 24px rgba(22,34,74,.14);
+  transform:translateX(-50%);
+  animation:pg-pop-in .14s ease-out;
+}
+.pg-popover::after{
+  content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  border:6px solid transparent;border-top-color:#fff;
+}
+@keyframes pg-pop-in{
+  from{opacity:0;transform:translateX(-50%) translateY(4px) scale(.96);}
+  to{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
+}
+.pg-popover input{
+  width:56px;height:32px;
+  border:1px solid #DDE1E9;border-radius:8px;
+  font-family:inherit;font-size:14px;color:#2A3145;text-align:center;
+  -moz-appearance:textfield;
+}
+.pg-popover input::-webkit-outer-spin-button,
+.pg-popover input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.pg-popover input:focus{outline:none;border-color:#3B5BDB;box-shadow:0 0 0 3px rgba(59,91,219,.15);}
+.pg-popover-go{
+  height:32px;padding:0 10px;border:0;border-radius:8px;
+  background:#16224A;color:#fff;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;
+}
+.pg-popover-go:hover{background:#223267;}
+
+@media(max-width:640px){
+  .pager-bar{justify-content:center;}
+}
