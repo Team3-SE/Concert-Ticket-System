@@ -1,0 +1,44 @@
+# Example GitHub Actions Workflow for Python / FastAPI / Django / Flask Repositories
+# Filename: .github/workflows/security.yml
+name: "Security Pipeline (Python)"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, development]
+  push:
+    branches: [main, development]
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    name: "Security Pipeline"
+    # When calling from another repo across the organization:
+    uses: Team3-SE/Concert-Ticket-System/.github/workflows/reusable-security-pipeline.yml@main
+    with:
+      app_port: 8000
+      app_start_command: "uvicorn app.main:app --host 127.0.0.1 --port 8000"
+      zap_target: "http://127.0.0.1:8000"
+      sonar_project_key: "your-org_python-api"
+      sonar_organization: "your-org"
+      runtime: "python"
+      runtime_version: "3.12"
+      working_directory: "."
+      install_command: "pip install -r requirements.txt"
+      test_command: "pytest"
+      lint_command: "flake8"
+      pre_start_command: "cp -n .env.example .env || true"
+      health_check_url: "http://127.0.0.1:8000/docs"
+      startup_timeout: 45
+      fail_on_severity: "high"
+      sonar_wait_quality_gate: true
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      APP_ENV_FILE: ${{ secrets.APP_ENV_FILE }}

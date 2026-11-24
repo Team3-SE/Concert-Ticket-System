@@ -1,0 +1,1724 @@
+{
+    "info": {
+        "name": "PayMock Gateway API Collection",
+        "description": "PayMock API collection. metadata is optional and accepts any valid JSON value; the Gateway does not inspect, validate, or rewrite metadata and passes it through unchanged. Idempotency-Key is optional and is the only way to deduplicate POST /payments; without it each request creates a new payment. The header is internal and is not returned in API responses or webhook bodies. expires_in is optional for both card and PromptPay (minimum 60 seconds, default 600). The paymock_scheduler checks pending payments every 10 seconds; after expires_at passes, EXPIRED is normally recorded within the next scheduler run. GET /payments/{id} only reads stored status.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:8081",
+            "type": "string"
+        },
+        {
+            "key": "apiKey",
+            "value": "pm_test_key_concert_system_2024",
+            "type": "string"
+        },
+        {
+            "key": "bookingId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "paymockId",
+            "value": "txn_test",
+            "type": "string",
+            "description": "Use in the path parameter named id."
+        },
+        {
+            "key": "promptPayId",
+            "value": "txn_test",
+            "type": "string",
+            "description": "Use in PromptPay path parameters named id."
+        },
+        {
+            "key": "concertUrl",
+            "value": "http://localhost:5000",
+            "type": "string"
+        },
+        {
+            "key": "cardPaymentId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "hostedCardId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "csrfToken",
+            "value": "",
+            "type": "string",
+            "description": "CSRF token extracted from the hosted checkout page before submitting the card form."
+        },
+        {
+            "key": "promptPayFailId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "promptPayBankId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "promptPayCancelId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "cardIdempotencyKey",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "bodyOnlyPaymockId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "concertPaymentId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "promptPayIdempotencyKey",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "expiryPaymentId",
+            "value": "",
+            "type": "string",
+            "description": "Provider transaction ID for the short-lived payment expiry flow."
+        },
+        {
+            "key": "magicCardNumber",
+            "value": "4242424242424242",
+            "type": "string",
+            "description": "Set this to one of the documented magic card numbers before running the hosted card flow."
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{apiKey}}",
+                "type": "string"
+            }
+        ]
+    },
+    "item": [
+        {
+            "name": "0. System Health",
+            "item": [
+                {
+                    "name": "Health Check (Docker /up)",
+                    "request": {
+                        "method": "GET",
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/up",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "up"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "1. Standard Payment Flow",
+            "item": [
+                {
+                    "name": "Create Card Payment (Hosted Checkout)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.collectionVariables.set('cardIdempotencyKey', pm.variables.replaceIn('{{$guid}}'));"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const jsonData = pm.response.json();",
+                                    "pm.test('payment created with HTTP 201', function () { pm.response.to.have.status(201); });",
+                                    "pm.test('provider transaction response does not expose idempotency key', function () {",
+                                    "  pm.expect(jsonData.id).to.be.a('string').and.match(/^txn_/);",
+                                    "  pm.expect(jsonData.status).to.eql('PENDING');",
+                                    "  pm.expect(jsonData).to.not.have.property('payment_id');",
+                                    "  pm.expect(jsonData).to.not.have.property('booking_ref');",
+                                    "  pm.expect(jsonData).to.not.have.property('idempotency_key');",
+                                    "});",
+                                    "pm.test('metadata is passed through unchanged, or omitted when absent', function () {",
+                                    "  const requestData = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                                    "  if (Object.prototype.hasOwnProperty.call(requestData, 'metadata') && requestData.metadata !== null) {",
+                                    "    pm.expect(jsonData).to.have.property('metadata');",
+                                    "    pm.expect(jsonData.metadata).to.eql(requestData.metadata);",
+                                    "  } else {",
+                                    "    pm.expect(jsonData).to.not.have.property('metadata');",
+                                    "  }",
+                                    "});",
+                                    "pm.test('expires_at is returned', function () { pm.expect(Number.isNaN(Date.parse(jsonData.expires_at))).to.eql(false); });",
+                                    "pm.test('card response returns hosted checkout URL only', function () {",
+                                    "  pm.expect(jsonData.checkout_url).to.be.a('string').and.include('/checkout/');",
+                                    "  pm.expect(jsonData).to.not.have.property('qrcode_url');",
+                                    "  pm.expect(jsonData).to.not.have.property('bank_simulator_url');",
+                                    "});",
+                                    "if (jsonData.id) { pm.collectionVariables.set('paymockId', jsonData.id); }",
+                                    "if (jsonData.id) { pm.collectionVariables.set('cardPaymentId', jsonData.id); }",
+                                    "pm.test('return_url is returned unchanged', function () {",
+                                    "  const requestData = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                                    "  pm.expect(jsonData.return_url).to.eql(requestData.return_url);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "{{cardIdempotencyKey}}",
+                                "disabled": false
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": 1500,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"expires_in\": 600,\n  \"metadata\": {\n    \"source\": \"postman\",\n    \"context\": {\n      \"attempt\": \"card-standard\"\n    }\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/payments",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create PromptPay Payment",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.collectionVariables.set('promptPayIdempotencyKey', pm.variables.replaceIn('{{$guid}}'));"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const jsonData = pm.response.json();",
+                                    "pm.test('payment created with HTTP 201', function () { pm.response.to.have.status(201); });",
+                                    "pm.test('provider transaction response does not expose idempotency key', function () {",
+                                    "  pm.expect(jsonData.id).to.be.a('string').and.match(/^txn_/);",
+                                    "  pm.expect(jsonData.status).to.eql('PENDING');",
+                                    "  pm.expect(jsonData).to.not.have.property('payment_id');",
+                                    "  pm.expect(jsonData).to.not.have.property('booking_ref');",
+                                    "  pm.expect(jsonData).to.not.have.property('idempotency_key');",
+                                    "});",
+                                    "pm.test('metadata is passed through unchanged, or omitted when absent', function () {",
+                                    "  const requestData = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                                    "  if (Object.prototype.hasOwnProperty.call(requestData, 'metadata') && requestData.metadata !== null) {",
+                                    "    pm.expect(jsonData).to.have.property('metadata');",
+                                    "    pm.expect(jsonData.metadata).to.eql(requestData.metadata);",
+                                    "  } else {",
+                                    "    pm.expect(jsonData).to.not.have.property('metadata');",
+                                    "  }",
+                                    "});",
+                                    "pm.test('expires_at is returned', function () { pm.expect(Number.isNaN(Date.parse(jsonData.expires_at))).to.eql(false); });",
+                                    "pm.test('PromptPay response returns QR and bank simulator URLs only', function () {",
+                                    "  pm.expect(jsonData.qrcode_url).to.be.a('string').and.include('/qr.svg');",
+                                    "  pm.expect(jsonData.bank_simulator_url).to.be.a('string');",
+                                    "  pm.expect(jsonData).to.not.have.property('checkout_url');",
+                                    "});",
+                                    "if (jsonData.id) pm.collectionVariables.set('bodyOnlyPaymockId', jsonData.id);",
+                                    "  pm.collectionVariables.set('promptPayId', jsonData.id);",
+                                    "  pm.collectionVariables.set('paymockId', jsonData.id);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "{{promptPayIdempotencyKey}}",
+                                "disabled": false
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": 2200,\n  \"currency\": \"THB\",\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600,\n  \"metadata\": {\n    \"source\": \"postman\",\n    \"context\": {\n      \"attempt\": \"promptpay-standard\"\n    }\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/payments",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments"
+                            ]
+                        },
+                        "description": "metadata is optional and passed through unchanged when provided."
+                    }
+                },
+                {
+                    "name": "Header Idempotency Retry (same metadata payload)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const jsonData = pm.response.json();",
+                                    "pm.test('same Idempotency-Key returns the original payment', function () {",
+                                    "  pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('bodyOnlyPaymockId'));",
+                                    "});",
+                                    "pm.test('payment created with HTTP 201', function () { pm.response.to.have.status(201); });",
+                                    "pm.test('provider transaction response does not expose idempotency key', function () {",
+                                    "  pm.expect(jsonData.id).to.be.a('string').and.match(/^txn_/);",
+                                    "  pm.expect(jsonData.status).to.eql('PENDING');",
+                                    "  pm.expect(jsonData).to.not.have.property('payment_id');",
+                                    "  pm.expect(jsonData).to.not.have.property('booking_ref');",
+                                    "  pm.expect(jsonData).to.not.have.property('idempotency_key');",
+                                    "});",
+                                    "pm.test('metadata is passed through unchanged, or omitted when absent', function () {",
+                                    "  const requestData = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                                    "  if (Object.prototype.hasOwnProperty.call(requestData, 'metadata') && requestData.metadata !== null) {",
+                                    "    pm.expect(jsonData).to.have.property('metadata');",
+                                    "    pm.expect(jsonData.metadata).to.eql(requestData.metadata);",
+                                    "  } else {",
+                                    "    pm.expect(jsonData).to.not.have.property('metadata');",
+                                    "  }",
+                                    "});",
+                                    "pm.test('expires_at is returned', function () { pm.expect(Number.isNaN(Date.parse(jsonData.expires_at))).to.eql(false); });",
+                                    "pm.test('PromptPay response returns QR and bank simulator URLs only', function () {",
+                                    "  pm.expect(jsonData.qrcode_url).to.be.a('string').and.include('/qr.svg');",
+                                    "  pm.expect(jsonData.bank_simulator_url).to.be.a('string');",
+                                    "  pm.expect(jsonData).to.not.have.property('checkout_url');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "{{promptPayIdempotencyKey}}",
+                                "disabled": false
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": 2200,\n  \"currency\": \"THB\",\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600,\n  \"metadata\": {\n    \"source\": \"postman\",\n    \"context\": {\n      \"attempt\": \"promptpay-standard\"\n    }\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/payments",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments"
+                            ]
+                        },
+                        "description": "Retries the same payment attempt using the original Idempotency-Key header. Metadata is optional and not used for idempotency."
+                    },
+                    "description": "Reuses the same Idempotency-Key header as the initial PromptPay request; metadata content does not deduplicate POST requests."
+                },
+                {
+                    "name": "Header Idempotency Retry (Idempotency-Key header)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const jsonData = pm.response.json();",
+                                    "pm.test('same Idempotency-Key returns the original payment', function () {",
+                                    "  pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('cardPaymentId'));",
+                                    "});",
+                                    "pm.test('payment created with HTTP 201', function () { pm.response.to.have.status(201); });",
+                                    "pm.test('provider transaction response does not expose idempotency key', function () {",
+                                    "  pm.expect(jsonData.id).to.be.a('string').and.match(/^txn_/);",
+                                    "  pm.expect(jsonData.status).to.eql('PENDING');",
+                                    "  pm.expect(jsonData).to.not.have.property('payment_id');",
+                                    "  pm.expect(jsonData).to.not.have.property('booking_ref');",
+                                    "  pm.expect(jsonData).to.not.have.property('idempotency_key');",
+                                    "});",
+                                    "pm.test('metadata is passed through unchanged, or omitted when absent', function () {",
+                                    "  const requestData = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                                    "  if (Object.prototype.hasOwnProperty.call(requestData, 'metadata') && requestData.metadata !== null) {",
+                                    "    pm.expect(jsonData).to.have.property('metadata');",
+                                    "    pm.expect(jsonData.metadata).to.eql(requestData.metadata);",
+                                    "  } else {",
+                                    "    pm.expect(jsonData).to.not.have.property('metadata');",
+                                    "  }",
+                                    "});",
+                                    "pm.test('expires_at is returned', function () { pm.expect(Number.isNaN(Date.parse(jsonData.expires_at))).to.eql(false); });",
+                                    "pm.test('card response returns hosted checkout URL only', function () {",
+                                    "  pm.expect(jsonData.checkout_url).to.be.a('string').and.include('/checkout/');",
+                                    "  pm.expect(jsonData).to.not.have.property('qrcode_url');",
+                                    "  pm.expect(jsonData).to.not.have.property('bank_simulator_url');",
+                                    "});",
+                                    "pm.test('return_url is returned unchanged', function () {",
+                                    "  const requestData = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                                    "  pm.expect(jsonData.return_url).to.eql(requestData.return_url);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "{{cardIdempotencyKey}}",
+                                "disabled": false
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": 1500,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"expires_in\": 600,\n  \"metadata\": {\n    \"source\": \"postman\",\n    \"context\": {\n      \"attempt\": \"card-standard\"\n    }\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/payments",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments"
+                            ]
+                        },
+                        "description": "Repeat the exact original body with the same Idempotency-Key header; the API uses this header value as the idempotency key."
+                    }
+                },
+                {
+                    "name": "Get Payment Status (Polling / Reconcile)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const jsonData = pm.response.json();",
+                                    "pm.test('payment status request succeeds with provider transaction ID', function () {",
+                                    "  pm.response.to.have.status(200);",
+                                    "  pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('paymockId'));",
+                                    "  pm.expect(jsonData.id).to.match(/^txn_/);",
+                                    "  pm.expect(jsonData).to.not.have.property('idempotency_key');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/payments/{{paymockId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments",
+                                "{{paymockId}}"
+                            ]
+                        },
+                        "description": "ใช้ id ใน path",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "Cancel Payment (Before Paid)",
+                    "request": {
+                        "method": "POST",
+                        "url": {
+                            "raw": "{{baseUrl}}/payments/{{paymockId}}/cancel",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments",
+                                "{{paymockId}}",
+                                "cancel"
+                            ]
+                        },
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "event": []
+                },
+                {
+                    "name": "Create PromptPay Payment (without metadata)",
+                    "description": "Proves metadata is optional. The response should omit metadata when this request is sent as-is.",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "PAYMOCK-{{$guid}}",
+                                "disabled": false
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": 880,\n  \"currency\": \"THB\",\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/payments",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const jsonData = pm.response.json();",
+                                    "pm.test('payment created with HTTP 201', function () { pm.response.to.have.status(201); });",
+                                    "pm.test('provider transaction response does not expose idempotency key', function () {",
+                                    "  pm.expect(jsonData.id).to.be.a('string').and.match(/^txn_/);",
+                                    "  pm.expect(jsonData.status).to.eql('PENDING');",
+                                    "  pm.expect(jsonData).to.not.have.property('payment_id');",
+                                    "  pm.expect(jsonData).to.not.have.property('booking_ref');",
+                                    "  pm.expect(jsonData).to.not.have.property('idempotency_key');",
+                                    "});",
+                                    "pm.test('metadata is passed through unchanged, or omitted when absent', function () {",
+                                    "  const requestData = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                                    "  if (Object.prototype.hasOwnProperty.call(requestData, 'metadata') && requestData.metadata !== null) {",
+                                    "    pm.expect(jsonData).to.have.property('metadata');",
+                                    "    pm.expect(jsonData.metadata).to.eql(requestData.metadata);",
+                                    "  } else {",
+                                    "    pm.expect(jsonData).to.not.have.property('metadata');",
+                                    "  }",
+                                    "});",
+                                    "pm.test('expires_at is returned', function () { pm.expect(Number.isNaN(Date.parse(jsonData.expires_at))).to.eql(false); });",
+                                    "pm.test('PromptPay response returns QR and bank simulator URLs only', function () {",
+                                    "  pm.expect(jsonData.qrcode_url).to.be.a('string').and.include('/qr.svg');",
+                                    "  pm.expect(jsonData.bank_simulator_url).to.be.a('string');",
+                                    "  pm.expect(jsonData).to.not.have.property('checkout_url');",
+                                    "});",
+                                    "if (jsonData.id) pm.collectionVariables.set('noMetadataPaymentId', jsonData.id);"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "2. Hosted Card Checkout Redirect",
+            "description": "Run create ? GET checkout page ? submit card ? GET status. Change collection variable magicCardNumber to test each configured card outcome: 4242424242424242 / 4000000000000341 = COMPLETED; 4000000000000002 = FAILED/card_declined; 4000000000009995 = FAILED/insufficient_funds; 4000000000000069 = FAILED/expired_card; 4000000000000127 = FAILED/incorrect_cvc; 4000000000000119 = FAILED/processing_error; 4100000000000019 = FAILED/fraud_suspected. These values are submitted only to the hosted checkout form, not POST /payments.",
+            "item": [
+                {
+                    "name": "Step 1 – Create Card Payment (PENDING + checkout_url)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const jsonData = pm.response.json();",
+                                    "pm.test('payment created with HTTP 201', function () { pm.response.to.have.status(201); });",
+                                    "pm.test('provider transaction response does not expose idempotency key', function () {",
+                                    "  pm.expect(jsonData.id).to.be.a('string').and.match(/^txn_/);",
+                                    "  pm.expect(jsonData.status).to.eql('PENDING');",
+                                    "  pm.expect(jsonData).to.not.have.property('payment_id');",
+                                    "  pm.expect(jsonData).to.not.have.property('booking_ref');",
+                                    "  pm.expect(jsonData).to.not.have.property('idempotency_key');",
+                                    "});",
+                                    "pm.test('metadata is passed through unchanged, or omitted when absent', function () {",
+                                    "  const requestData = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                                    "  if (Object.prototype.hasOwnProperty.call(requestData, 'metadata') && requestData.metadata !== null) {",
+                                    "    pm.expect(jsonData).to.have.property('metadata');",
+                                    "    pm.expect(jsonData.metadata).to.eql(requestData.metadata);",
+                                    "  } else {",
+                                    "    pm.expect(jsonData).to.not.have.property('metadata');",
+                                    "  }",
+                                    "});",
+                                    "pm.test('expires_at is returned', function () { pm.expect(Number.isNaN(Date.parse(jsonData.expires_at))).to.eql(false); });",
+                                    "pm.test('card response returns hosted checkout URL only', function () {",
+                                    "  pm.expect(jsonData.checkout_url).to.be.a('string').and.include('/checkout/');",
+                                    "  pm.expect(jsonData).to.not.have.property('qrcode_url');",
+                                    "  pm.expect(jsonData).to.not.have.property('bank_simulator_url');",
+                                    "});",
+                                    "if (jsonData.id) { pm.collectionVariables.set('hostedCardId', jsonData.id); }",
+                                    "pm.test('return_url is returned unchanged', function () {",
+                                    "  const requestData = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                                    "  pm.expect(jsonData.return_url).to.eql(requestData.return_url);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "PAYMOCK-{{$guid}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": 1500,\n  \"currency\": \"THB\",\n  \"method\": \"card\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"return_url\": \"{{concertUrl}}/booking/TK-260101-ABCDE\",\n  \"expires_in\": 600\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/payments",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments"
+                            ]
+                        },
+                        "description": "คัดลอก checkout_url ไปเปิดใน browser หรือรัน request ถัดไปเพื่อจำลองการ submit form จาก hosted checkout"
+                    }
+                },
+                {
+                    "name": "Step 1.5 ? GET checkout page and extract CSRF token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "var html = pm.response.text();",
+                                    "var csrfToken = null;",
+                                    "var inputs = html.match(/<input\\b[^>]*>/gi) || [];",
+                                    "inputs.some(function (input) {",
+                                    "  var nameMatch = input.match(/\\bname=['\"]_token['\"]/i);",
+                                    "  var valueMatch = input.match(/\\bvalue=['\"]([^'\"]+)['\"]/i);",
+                                    "  if (nameMatch && valueMatch) { csrfToken = valueMatch[1]; return true; }",
+                                    "  return false;",
+                                    "});",
+                                    "pm.test('Checkout page returns successfully', function () {",
+                                    "  pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test('CSRF token found in checkout form', function () {",
+                                    "  pm.expect(csrfToken, 'checkout form _token').to.be.a('string').and.not.empty;",
+                                    "});",
+                                    "if (csrfToken) pm.collectionVariables.set('csrfToken', csrfToken);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/checkout/{{hostedCardId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "checkout",
+                                "{{hostedCardId}}"
+                            ]
+                        },
+                        "description": "Run after Step 1 and before Step 2. GET the checkout HTML to establish the session cookie and save the hidden _token field as {{csrfToken}}.",
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "text/html"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "Step 2 – Submit card to POST /payments/{id}",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Redirects to the merchant return URL', function () {",
+                                    "  pm.expect(pm.response.code).to.be.oneOf([302, 303]);",
+                                    "  pm.expect(pm.response.headers.get('Location')).to.include('/booking/TK-260101-ABCDE');",
+                                    "  pm.expect(pm.response.headers.get('Location')).to.not.include('payment_id=');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "text/html"
+                            }
+                        ],
+                        "body": {
+                            "mode": "urlencoded",
+                            "urlencoded": [
+                                {
+                                    "key": "_token",
+                                    "value": "{{csrfToken}}"
+                                },
+                                {
+                                    "key": "card_number",
+                                    "value": "{{magicCardNumber}}"
+                                },
+                                {
+                                    "key": "expiry",
+                                    "value": "12/28"
+                                },
+                                {
+                                    "key": "cvc",
+                                    "value": "123"
+                                },
+                                {
+                                    "key": "cardholder",
+                                    "value": "SUCCESS USER"
+                                },
+                                {
+                                    "key": "redirect_to_return",
+                                    "value": "1"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/payments/{{hostedCardId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments",
+                                "{{hostedCardId}}"
+                            ]
+                        },
+                        "description": "route ของ Hosted Checkout ที่ใช้ settle payment เดิม; ส่ง form fields จากหน้า checkout เท่านั้น ไม่ส่ง API key",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "description": "Submit the checkout form using the session cookie from Step 1.5 and the extracted CSRF token."
+                },
+                {
+                    "name": "Step 3 ? Get final card payment status",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/payments/{{hostedCardId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments",
+                                "{{hostedCardId}}"
+                            ]
+                        },
+                        "description": "Run after submitting the card. This confirms the saved status/failure_code for the selected magicCardNumber."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const data = pm.response.json();",
+                                    "const number = (pm.collectionVariables.get('magicCardNumber') || '').replace(/\\D/g, '');",
+                                    "const outcomes = {",
+                                    "  '4242424242424242': ['COMPLETED', null],",
+                                    "  '4000000000000002': ['FAILED', 'card_declined'],",
+                                    "  '4000000000009995': ['FAILED', 'insufficient_funds'],",
+                                    "  '4000000000000069': ['FAILED', 'expired_card'],",
+                                    "  '4000000000000127': ['FAILED', 'incorrect_cvc'],",
+                                    "  '4000000000000119': ['FAILED', 'processing_error'],",
+                                    "  '4100000000000019': ['FAILED', 'fraud_suspected'],",
+                                    "  '4000000000000341': ['COMPLETED', null]",
+                                    "};",
+                                    "const expected = outcomes[number] || ['FAILED', 'card_declined'];",
+                                    "pm.test('payment status matches the selected magic card', function () {",
+                                    "  pm.response.to.have.status(200);",
+                                    "  pm.expect(data.id).to.eql(pm.collectionVariables.get('hostedCardId'));",
+                                    "  pm.expect(data.status).to.eql(expected[0]);",
+                                    "  pm.expect(data.failure_code).to.eql(expected[1]);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "3. PromptPay – All Cases",
+            "description": "สร้าง PromptPay payment ด้วย POST /payments; metadata เป็น optional และไม่ต้องใช้ fields เฉพาะ. Response มี qrcode_url และ bank_simulator_url แต่ไม่มี checkout_url. เส้นทาง simulate, bank-simulate, GET และ cancel ใช้ id ใน path.",
+            "item": [
+                {
+                    "name": "PromptPay: Create (PENDING + QR URLs)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const jsonData = pm.response.json();",
+                                    "pm.test('payment created with HTTP 201', function () { pm.response.to.have.status(201); });",
+                                    "pm.test('provider transaction response does not expose idempotency key', function () {",
+                                    "  pm.expect(jsonData.id).to.be.a('string').and.match(/^txn_/);",
+                                    "  pm.expect(jsonData.status).to.eql('PENDING');",
+                                    "  pm.expect(jsonData).to.not.have.property('payment_id');",
+                                    "  pm.expect(jsonData).to.not.have.property('booking_ref');",
+                                    "  pm.expect(jsonData).to.not.have.property('idempotency_key');",
+                                    "});",
+                                    "pm.test('metadata is passed through unchanged, or omitted when absent', function () {",
+                                    "  const requestData = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                                    "  if (Object.prototype.hasOwnProperty.call(requestData, 'metadata') && requestData.metadata !== null) {",
+                                    "    pm.expect(jsonData).to.have.property('metadata');",
+                                    "    pm.expect(jsonData.metadata).to.eql(requestData.metadata);",
+                                    "  } else {",
+                                    "    pm.expect(jsonData).to.not.have.property('metadata');",
+                                    "  }",
+                                    "});",
+                                    "pm.test('expires_at is returned', function () { pm.expect(Number.isNaN(Date.parse(jsonData.expires_at))).to.eql(false); });",
+                                    "pm.test('PromptPay response returns QR and bank simulator URLs only', function () {",
+                                    "  pm.expect(jsonData.qrcode_url).to.be.a('string').and.include('/qr.svg');",
+                                    "  pm.expect(jsonData.bank_simulator_url).to.be.a('string');",
+                                    "  pm.expect(jsonData).to.not.have.property('checkout_url');",
+                                    "});",
+                                    "  pm.collectionVariables.set('promptPayId', jsonData.id);",
+                                    "  pm.collectionVariables.set('paymockId', jsonData.id);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "PAYMOCK-{{$guid}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": 2200,\n  \"currency\": \"THB\",\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/payments",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments"
+                            ]
+                        },
+                        "description": "metadata is optional and passed through unchanged when provided."
+                    }
+                },
+                {
+                    "name": "PromptPay: GET QR SVG (no auth)",
+                    "request": {
+                        "method": "GET",
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/payments/{{promptPayId}}/qr.svg",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments",
+                                "{{promptPayId}}",
+                                "qr.svg"
+                            ]
+                        },
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "image/svg+xml"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "PromptPay: Simulate COMPLETED (POST /checkout/.../simulate)",
+                    "request": {
+                        "method": "POST",
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\": \"COMPLETED\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/checkout/{{promptPayId}}/simulate",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "checkout",
+                                "{{promptPayId}}",
+                                "simulate"
+                            ]
+                        },
+                        "description": "รันหลัง Create โดยใช้ payment id ใน path | ตั้ง paid_at=now(), ยิง webhook payment.completed"
+                    }
+                },
+                {
+                    "name": "PromptPay: Create then Simulate FAILED (payment_declined)",
+                    "item": [
+                        {
+                            "name": "Step 1 – Create PENDING",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const jsonData = pm.response.json();",
+                                            "pm.test('payment created with HTTP 201', function () { pm.response.to.have.status(201); });",
+                                            "pm.test('provider transaction response does not expose idempotency key', function () {",
+                                            "  pm.expect(jsonData.id).to.be.a('string').and.match(/^txn_/);",
+                                            "  pm.expect(jsonData.status).to.eql('PENDING');",
+                                            "  pm.expect(jsonData).to.not.have.property('payment_id');",
+                                            "  pm.expect(jsonData).to.not.have.property('booking_ref');",
+                                            "  pm.expect(jsonData).to.not.have.property('idempotency_key');",
+                                            "});",
+                                            "pm.test('metadata is passed through unchanged, or omitted when absent', function () {",
+                                            "  const requestData = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                                            "  if (Object.prototype.hasOwnProperty.call(requestData, 'metadata') && requestData.metadata !== null) {",
+                                            "    pm.expect(jsonData).to.have.property('metadata');",
+                                            "    pm.expect(jsonData.metadata).to.eql(requestData.metadata);",
+                                            "  } else {",
+                                            "    pm.expect(jsonData).to.not.have.property('metadata');",
+                                            "  }",
+                                            "});",
+                                            "pm.test('expires_at is returned', function () { pm.expect(Number.isNaN(Date.parse(jsonData.expires_at))).to.eql(false); });",
+                                            "pm.test('PromptPay response returns QR and bank simulator URLs only', function () {",
+                                            "  pm.expect(jsonData.qrcode_url).to.be.a('string').and.include('/qr.svg');",
+                                            "  pm.expect(jsonData.bank_simulator_url).to.be.a('string');",
+                                            "  pm.expect(jsonData).to.not.have.property('checkout_url');",
+                                            "});",
+                                            "if (jsonData.id) pm.collectionVariables.set('promptPayFailId', jsonData.id);"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Idempotency-Key",
+                                        "value": "PAYMOCK-{{$guid}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"amount\": 900,\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+                                },
+                                "url": {
+                                    "raw": "{{baseUrl}}/payments",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "payments"
+                                    ]
+                                },
+                                "description": "metadata is optional and passed through unchanged when provided."
+                            }
+                        },
+                        {
+                            "name": "Step 2 – Simulate FAILED",
+                            "request": {
+                                "method": "POST",
+                                "auth": {
+                                    "type": "noauth"
+                                },
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"status\": \"FAILED\",\n  \"failure_code\": \"payment_declined\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{baseUrl}}/checkout/{{promptPayFailId}}/simulate",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "checkout",
+                                        "{{promptPayFailId}}",
+                                        "simulate"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "PromptPay: Bank App Confirm (POST /bank-simulate/.../pay)",
+                    "item": [
+                        {
+                            "name": "Step 1 – Create PENDING",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const jsonData = pm.response.json();",
+                                            "pm.test('payment created with HTTP 201', function () { pm.response.to.have.status(201); });",
+                                            "pm.test('provider transaction response does not expose idempotency key', function () {",
+                                            "  pm.expect(jsonData.id).to.be.a('string').and.match(/^txn_/);",
+                                            "  pm.expect(jsonData.status).to.eql('PENDING');",
+                                            "  pm.expect(jsonData).to.not.have.property('payment_id');",
+                                            "  pm.expect(jsonData).to.not.have.property('booking_ref');",
+                                            "  pm.expect(jsonData).to.not.have.property('idempotency_key');",
+                                            "});",
+                                            "pm.test('metadata is passed through unchanged, or omitted when absent', function () {",
+                                            "  const requestData = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                                            "  if (Object.prototype.hasOwnProperty.call(requestData, 'metadata') && requestData.metadata !== null) {",
+                                            "    pm.expect(jsonData).to.have.property('metadata');",
+                                            "    pm.expect(jsonData.metadata).to.eql(requestData.metadata);",
+                                            "  } else {",
+                                            "    pm.expect(jsonData).to.not.have.property('metadata');",
+                                            "  }",
+                                            "});",
+                                            "pm.test('expires_at is returned', function () { pm.expect(Number.isNaN(Date.parse(jsonData.expires_at))).to.eql(false); });",
+                                            "pm.test('PromptPay response returns QR and bank simulator URLs only', function () {",
+                                            "  pm.expect(jsonData.qrcode_url).to.be.a('string').and.include('/qr.svg');",
+                                            "  pm.expect(jsonData.bank_simulator_url).to.be.a('string');",
+                                            "  pm.expect(jsonData).to.not.have.property('checkout_url');",
+                                            "});",
+                                            "if (jsonData.id) pm.collectionVariables.set('promptPayBankId', jsonData.id);"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Idempotency-Key",
+                                        "value": "PAYMOCK-{{$guid}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"amount\": 1800,\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+                                },
+                                "url": {
+                                    "raw": "{{baseUrl}}/payments",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "payments"
+                                    ]
+                                },
+                                "description": "metadata is optional and passed through unchanged when provided."
+                            }
+                        },
+                        {
+                            "name": "Step 2 – Bank simulate pay (redirect 302)",
+                            "request": {
+                                "method": "POST",
+                                "auth": {
+                                    "type": "noauth"
+                                },
+                                "url": {
+                                    "raw": "{{baseUrl}}/bank-simulate/{{promptPayBankId}}/pay",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "bank-simulate",
+                                        "{{promptPayBankId}}",
+                                        "pay"
+                                    ]
+                                },
+                                "description": "เทียบเท่ากดยืนยันในแอปธนาคาร → COMPLETED + paid_at",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "text/html"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Step 3 – GET status (polling)",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const jsonData = pm.response.json();",
+                                            "pm.test('payment status request succeeds with provider transaction ID', function () {",
+                                            "  pm.response.to.have.status(200);",
+                                            "  pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('promptPayBankId'));",
+                                            "  pm.expect(jsonData.id).to.match(/^txn_/);",
+                                            "  pm.expect(jsonData).to.not.have.property('idempotency_key');",
+                                            "});"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "GET",
+                                "url": {
+                                    "raw": "{{baseUrl}}/payments/{{promptPayBankId}}",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "payments",
+                                        "{{promptPayBankId}}"
+                                    ]
+                                },
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "PromptPay: Cancel while PENDING",
+                    "item": [
+                        {
+                            "name": "Step 1 – Create PENDING",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const jsonData = pm.response.json();",
+                                            "pm.test('payment created with HTTP 201', function () { pm.response.to.have.status(201); });",
+                                            "pm.test('provider transaction response does not expose idempotency key', function () {",
+                                            "  pm.expect(jsonData.id).to.be.a('string').and.match(/^txn_/);",
+                                            "  pm.expect(jsonData.status).to.eql('PENDING');",
+                                            "  pm.expect(jsonData).to.not.have.property('payment_id');",
+                                            "  pm.expect(jsonData).to.not.have.property('booking_ref');",
+                                            "  pm.expect(jsonData).to.not.have.property('idempotency_key');",
+                                            "});",
+                                            "pm.test('metadata is passed through unchanged, or omitted when absent', function () {",
+                                            "  const requestData = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                                            "  if (Object.prototype.hasOwnProperty.call(requestData, 'metadata') && requestData.metadata !== null) {",
+                                            "    pm.expect(jsonData).to.have.property('metadata');",
+                                            "    pm.expect(jsonData.metadata).to.eql(requestData.metadata);",
+                                            "  } else {",
+                                            "    pm.expect(jsonData).to.not.have.property('metadata');",
+                                            "  }",
+                                            "});",
+                                            "pm.test('expires_at is returned', function () { pm.expect(Number.isNaN(Date.parse(jsonData.expires_at))).to.eql(false); });",
+                                            "pm.test('PromptPay response returns QR and bank simulator URLs only', function () {",
+                                            "  pm.expect(jsonData.qrcode_url).to.be.a('string').and.include('/qr.svg');",
+                                            "  pm.expect(jsonData.bank_simulator_url).to.be.a('string');",
+                                            "  pm.expect(jsonData).to.not.have.property('checkout_url');",
+                                            "});",
+                                            "if (jsonData.id) pm.collectionVariables.set('promptPayCancelId', jsonData.id);"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Idempotency-Key",
+                                        "value": "PAYMOCK-{{$guid}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"amount\": 500,\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 600\n}"
+                                },
+                                "url": {
+                                    "raw": "{{baseUrl}}/payments",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "payments"
+                                    ]
+                                },
+                                "description": "metadata is optional and passed through unchanged when provided."
+                            }
+                        },
+                        {
+                            "name": "Step 2 – POST /payments/{id}/cancel",
+                            "request": {
+                                "method": "POST",
+                                "url": {
+                                    "raw": "{{baseUrl}}/payments/{{promptPayCancelId}}/cancel",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "payments",
+                                        "{{promptPayCancelId}}",
+                                        "cancel"
+                                    ]
+                                },
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ]
+                            },
+                            "event": []
+                        }
+                    ]
+                },
+                {
+                    "name": "PromptPay: GET status after pay (ใช้ {{promptPayId}})",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const jsonData = pm.response.json();",
+                                    "pm.test('payment status request succeeds with provider transaction ID', function () {",
+                                    "  pm.response.to.have.status(200);",
+                                    "  pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('promptPayId'));",
+                                    "  pm.expect(jsonData.id).to.match(/^txn_/);",
+                                    "  pm.expect(jsonData).to.not.have.property('idempotency_key');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/payments/{{promptPayId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments",
+                                "{{promptPayId}}"
+                            ]
+                        },
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "4. GET service status (chaos_mode + webhook_mode จาก Admin)",
+            "item": [
+                {
+                    "name": "GET /payments",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "pm.test('recent items use provider id and allow optional metadata', function () {",
+                                    "  pm.expect(jsonData.recent).to.be.an('array');",
+                                    "  jsonData.recent.forEach(function (p) {",
+                                    "    pm.expect(p.id).to.be.a('string').and.match(/^txn_/);",
+                                    "    pm.expect(p).to.not.have.property('payment_id');",
+                                    "    pm.expect(p.id).to.be.a('string');",
+                                    "  });",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/payments",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments"
+                            ]
+                        },
+                        "description": "ดูว่า Admin ตั้ง chaos_mode / webhook_mode อะไรอยู่ — recent[].id ต้องเป็น provider transaction ID",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "5. Concert Backend — Hosted Card Redirect + PromptPay",
+            "description": "create-booking สร้าง booking + Concert payment แรก. เมื่อ method=card ระบบคืน checkout_url เพื่อเปิด Hosted Checkout (/checkout/{id}) และหลังจ่าย Gateway กลับ /booking/{booking_ref} โดยไม่มี payment ID ใน URL; หน้าจองอ่านสถานะจาก DB ใหม่. Concert demo API ใช้ query/body.payment_id. หาก FAILED/EXPIRED ให้สร้าง Concert payment ใหม่ใน booking เดิมด้วย POST /api/bookings/{bookingId}/payments.",
+            "item": [
+                {
+                    "name": "POST create-booking",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "var j = pm.response.json();",
+                                    "pm.test('booking and payment created', function () { pm.expect(j.ok).to.eql(true); pm.expect(j.booking_id).to.be.a('number'); });",
+                                    "if (j.ok) { pm.collectionVariables.set('bookingId', String(j.booking_id)); pm.collectionVariables.set('concertPaymentId', j.payment_id); }"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"seat\": \"VIP-A1\",\n  \"amount\": 3500.00,\n  \"method\": \"card\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{concertUrl}}/api/create-booking",
+                            "host": [
+                                "{{concertUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "create-booking"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "POST /api/bookings/{bookingId}/payments — Payment ใหม่ใน Booking เดิม",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "var j = pm.response.json();",
+                                    "pm.test('same booking, new Concert payment', function () { pm.expect(j.ok).to.eql(true); pm.expect(String(j.booking_id)).to.eql(pm.collectionVariables.get('bookingId')); pm.expect(j.concert_payment_id).to.be.a('number'); });",
+                                    "if (j.ok) pm.collectionVariables.set('concertPaymentId', j.payment_id);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"method\": \"card\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{concertUrl}}/api/bookings/{{bookingId}}/payments",
+                            "host": [
+                                "{{concertUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "bookings",
+                                "{{bookingId}}",
+                                "payments"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "GET booking-status ?payment_id=",
+                    "request": {
+                        "method": "GET",
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "url": {
+                            "raw": "{{concertUrl}}/api/booking-status?payment_id={{concertPaymentId}}",
+                            "host": [
+                                "{{concertUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "booking-status"
+                            ],
+                            "query": [
+                                {
+                                    "key": "payment_id",
+                                    "value": "{{concertPaymentId}}"
+                                }
+                            ]
+                        },
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "POST reconcile-booking { payment_id }",
+                    "request": {
+                        "method": "POST",
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"payment_id\": \"{{concertPaymentId}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{concertUrl}}/api/reconcile-booking",
+                            "host": [
+                                "{{concertUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "reconcile-booking"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "POST cancel-booking { payment_id }",
+                    "request": {
+                        "method": "POST",
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"payment_id\": \"{{concertPaymentId}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{concertUrl}}/api/cancel-booking",
+                            "host": [
+                                "{{concertUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "cancel-booking"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "6. Payment Expiration Flow",
+            "description": "Manual status check demonstrating PayMock expiration: the scheduler checks every 10 seconds; GET /payments/{id} reports the stored state and does not trigger expiration.",
+            "item": [
+                {
+                    "name": "Create short-lived payment (expires_in: 60 seconds)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "PAYMOCK-EXPIRY-{{$guid}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": 100,\n  \"currency\": \"THB\",\n  \"method\": \"promptpay\",\n  \"callback_url\": \"http://concert_backend:5000/api/webhook\",\n  \"expires_in\": 60\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/payments",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments"
+                            ]
+                        },
+                        "description": "Create a PENDING payment with the minimum expires_in. Run the status request only after waiting at least 70 seconds."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const data = pm.response.json();",
+                                    "pm.test('short-lived payment created', function () { pm.response.to.have.status(201); });",
+                                    "pm.test('payment starts PENDING and exposes expiry time', function () {",
+                                    "  pm.expect(data.id).to.be.a('string').and.match(/^txn_/);",
+                                    "  pm.expect(data.status).to.eql('PENDING');",
+                                    "  pm.expect(Number.isNaN(Date.parse(data.expires_at))).to.eql(false);",
+                                    "  pm.expect(data).to.not.have.property('metadata');",
+                                    "});",
+                                    "pm.collectionVariables.set('expiryPaymentId', data.id);"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Get status after expiry window (wait 70+ seconds)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/payments/{{expiryPaymentId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments",
+                                "{{expiryPaymentId}}"
+                            ]
+                        },
+                        "description": "After creating the short-lived payment, wait at least 70 seconds (60-second expiry plus the scheduler interval) and run this request. The scheduler should have transitioned it to EXPIRED and emitted payment.expired."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const data = pm.response.json();",
+                                    "pm.test('expired payment status is returned', function () {",
+                                    "  pm.response.to.have.status(200);",
+                                    "  pm.expect(data.id).to.eql(pm.collectionVariables.get('expiryPaymentId'));",
+                                    "  pm.expect(data.status).to.eql('EXPIRED');",
+                                    "  pm.expect(data.failure_code).to.eql(null);",
+                                    "  pm.expect(data.paid_at).to.eql(null);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
