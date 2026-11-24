@@ -21,7 +21,7 @@ concurrency:
 
 permissions:
   contents: read
-กก
+
 jobs:
   call_security_pipeline:
     name: "Security Pipeline"
