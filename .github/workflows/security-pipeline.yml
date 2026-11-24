@@ -12,6 +12,7 @@ on:
     branches:
       - main
       - development
+      - test-workflow
   workflow_dispatch:
 
 concurrency:
