@@ -273,14 +273,14 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ inputs.runtime_version }}
-          extensions: mbstring, xml, ctype, iconv, intl, pdo, sqlite, pdo_sqlite, bcmath, zip, gd, curl
+          extensions: mbstring, xml, ctype, iconv, intl, pdo, pdo_mysql, sqlite, pdo_sqlite, bcmath, zip, gd, curl
           coverage: none
 
       - name: Setup Node Environment
-        if: ${{ inputs.runtime == 'node' }}
+        if: ${{ inputs.runtime == 'node' || inputs.build_command != '' }}
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ inputs.runtime_version }}
+          node-version: ${{ inputs.runtime == 'node' && inputs.runtime_version || '22' }}
 
       - name: Setup Python Environment
         if: ${{ inputs.runtime == 'python' }}
@@ -299,6 +299,11 @@ jobs:
         if: ${{ inputs.install_command != '' }}
         working-directory: ${{ inputs.working_directory }}
         run: ${{ inputs.install_command }}
+
+      - name: Build Application
+        if: ${{ inputs.build_command != '' }}
+        working-directory: ${{ inputs.working_directory }}
+        run: ${{ inputs.build_command }}
 
       - name: Configure Application Environment & Database
         if: ${{ inputs.pre_start_command != '' }}

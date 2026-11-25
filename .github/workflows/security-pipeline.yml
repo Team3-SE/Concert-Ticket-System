@@ -29,9 +29,27 @@ jobs:
       sonar_organization: "team3-se"
       runtime: "php"
       runtime_version: "8.3"
-      working_directory: "paymock"
-      install_command: "mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs database && composer install --prefer-dist --no-interaction --no-progress"
-      pre_start_command: "cp -n .env.example .env || true; php artisan key:generate --force; touch database/paymock.sqlite; php artisan migrate --force"
+      working_directory: "."
+      install_command: "mkdir -p bootstrap/cache storage/framework/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs database && composer install --prefer-dist --no-interaction --no-progress"
+      build_command: "npm ci --no-audit --no-fund && npm run build"
+      pre_start_command: |
+        cp .env.example .env
+        sed -i 's/^APP_ENV=.*/APP_ENV=testing/; s/^APP_DEBUG=.*/APP_DEBUG=false/; s/^DB_HOST=.*/DB_HOST=127.0.0.1/; s/^DB_DATABASE=.*/DB_DATABASE=concert_ticketing/; s/^DB_USERNAME=.*/DB_USERNAME=root/; s/^DB_PASSWORD=.*/DB_PASSWORD=rootsecret/; s/^SESSION_DRIVER=.*/SESSION_DRIVER=file/; s/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' .env
+        printf '\nCACHE_STORE=file\n' >> .env
+        php artisan key:generate --force
+        docker run --detach --name concert-ci-mysql --publish 3306:3306 --env MYSQL_ROOT_PASSWORD=rootsecret mysql:8.0
+        for attempt in $(seq 1 60); do
+          if docker exec concert-ci-mysql mysqladmin ping --host=127.0.0.1 --user=root --password=rootsecret --silent; then
+            break
+          fi
+          sleep 2
+        done
+        docker exec concert-ci-mysql mysqladmin ping --host=127.0.0.1 --user=root --password=rootsecret --silent
+        docker exec -i concert-ci-mysql mysql --user=root --password=rootsecret < "concert_ticketing_schema_v3_5_0 (1).sql"
+        php artisan migrate:install
+        # The checked-in schema dump replaces the legacy migrations, including the one that references a missing v3.1.0 dump.
+        docker exec concert-ci-mysql mysql --user=root --password=rootsecret concert_ticketing --execute="INSERT INTO migrations (migration, batch) VALUES ('2026_08_28_000001_create_concert_ticketing_schema', 1), ('2026_09_17_000001_add_banner_path_to_concert_table', 1), ('2026_10_21_000001_create_booking_standing_item_table', 1), ('2026_10_24_000001_add_remember_token_to_app_user_table', 1), ('2026_11_10_000001_upgrade_schema_to_v3_4_2', 1)"
+        php artisan migrate --force
       health_check_url: "http://127.0.0.1:8081/up"
       startup_timeout: 60
       zap_rules_file: ".zap/rules.tsv"
