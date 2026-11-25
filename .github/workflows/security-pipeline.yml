@@ -1,0 +1,46 @@
+name: "Security CI Pipeline"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+      - development
+      - 'feature/**'
+      - test-workflow
+  push:
+    branches:
+      - main
+      - development
+      - test-workflow 
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+กก
+jobs:
+  call_security_pipeline:
+    name: "Security Pipeline"
+    uses: ./.github/workflows/reusable-security-pipeline.yml
+    with:
+      app_port: 8081
+      app_start_command: "php -d expose_php=Off artisan serve --host=127.0.0.1 --port=8081"
+      zap_target: "http://127.0.0.1:8081"
+      sonar_project_key: "Team3-SE_Concert-Ticket-System"
+      sonar_organization: "team3-se"
+      runtime: "php"
+      runtime_version: "8.3"
+      working_directory: "paymock"
+      install_command: "mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs database && composer install --prefer-dist --no-interaction --no-progress"
+      pre_start_command: "cp -n .env.example .env || true; php artisan key:generate --force; touch database/paymock.sqlite; php artisan migrate --force"
+      health_check_url: "http://127.0.0.1:8081/up"
+      startup_timeout: 60
+      zap_rules_file: ".zap/rules.tsv"
+      fail_on_severity: "high"
+      sonar_wait_quality_gate: true
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
