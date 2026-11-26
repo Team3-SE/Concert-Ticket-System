@@ -1,21 +1,23 @@
 /**
  * concert-search.js
- * ช่องค้นหาที่แสดงคอนเสิร์ตที่ใกล้เคียงขณะพิมพ์ (user/concerts/home, user/concerts/index)
- * ใช้ route concerts.suggest, ปุ่มลูกศร ↑ ↓ เลือก, Enter เปิดคอนเสิร์ต (หรือค้นหาทั้งหมดถ้ายังไม่ได้เลือก), Esc ปิด
- * คอนเสิร์ตที่สถานะไม่ใช่ ON_SALE (ยังไม่เปิดขาย/ขายหมด ฯลฯ) แสดงในรายการได้ แต่กดเข้าไปไม่ได้
- * Author : ธีรเมธ พลสาย
+ * ช่องค้นหาที่แสดงคอนเสิร์ตที่ใกล้เคียงขณะพิมพ์ (User และ Organizer)
+ * ใช้ suggest URL ที่ระบุในฟอร์ม, ปุ่มลูกศร ↑ ↓ เลือก, Enter เปิดรายการ (หรือค้นหาทั้งหมดถ้ายังไม่ได้เลือก), Esc ปิด
+ * ฝั่ง User เปิดได้เฉพาะ ON_SALE; ฝั่ง Organizer ใช้ URL ที่ server ส่งมา
+ * Author : 67160292 ธีรเมธ พลสาย
  * Created : 08/10/2569
- * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 26/11/2569 67160279 กนกพล แซ่ตั๊น
  */
 
 (() => {
   const form = document.querySelector('[data-concert-search]');
   if (!form) return;
 
-  const input = form.querySelector('input[name="search"]');
+  const input = form.querySelector('input[name="search"], input[name="q"]');
   const box = document.getElementById(input.getAttribute('aria-controls'));
-  const wrap = form.closest('.search-box');
+  const wrap = form.querySelector('[data-suggest-wrap]') || form.closest('.search-box');
   const endpoint = form.dataset.suggestUrl;
+  const isOrganizer = form.dataset.suggestMode === 'organizer';
+  const SEARCH_DEBOUNCE_MS = 200;
 
   const cache = new Map();
   let timer = null;
@@ -31,6 +33,8 @@
     CANCELLED: ['ยกเลิก', 'is-closed'],
     COMPLETED: ['จบแล้ว', ''],
     SALE_CLOSED: ['ปิดการขาย', 'is-closed'],   // เลยวันปิดขายแล้ว (Concert::displayStatus)
+    DRAFT: ['ยังไม่เผยแพร่', ''],
+    PAUSED: ['ปิดการจำหน่ายชั่วคราว', 'is-closed'],
   };
 
   /**
@@ -137,14 +141,15 @@
     }
 
     const items = results.map((r, i) => {
-      const [label, cls] = STATUS[r.status] || ['เร็ว ๆ นี้', ''];
+      const [defaultLabel, cls] = STATUS[r.status] || ['เร็ว ๆ นี้', ''];
+      const label = r.status_label || defaultLabel;
       const initial = esc((r.artist || r.name || '?').trim().charAt(0).toUpperCase());
       const thumb = r.poster
         ? `<img src="${esc(r.poster)}" alt="" loading="lazy" data-fallback="${initial}">`
         : initial;
       const meta = [r.artist, r.venue].filter(Boolean).map((v) => highlight(v, terms)).join(' · ');
-      // กดได้เฉพาะคอนเสิร์ตที่เปิดขายแล้ว ที่เหลือแสดงเป็นรายการธรรมดา (ไม่ใช่ลิงก์)
-      const canOpen = r.status === 'ON_SALE';
+      // ฝั่ง User เปิดได้เฉพาะ ON_SALE; ฝั่ง Organizer ใช้ URL จาก server
+      const canOpen = isOrganizer ? Boolean(r.url) : r.status === 'ON_SALE';
       const openTag = canOpen
         ? `<a class="suggest-item" id="suggest-${i}" role="option" href="${esc(r.url)}">`
         : '<div class="suggest-item is-disabled" aria-disabled="true">';
@@ -159,7 +164,7 @@
           </span>
           <span class="suggest-side">
             ${r.date ? `<span class="suggest-date">${esc(r.date)}</span>` : ''}
-            <span class="suggest-status ${cls}">${label}</span>
+            <span class="suggest-status ${cls}">${esc(label)}</span>
           </span>
         ${closeTag}`;
     }).join('');
@@ -230,13 +235,17 @@
    */
   const submitAll = () => {
     close();
-    form.submit();
+    if (isOrganizer) {
+      form.requestSubmit();
+    } else {
+      form.submit();
+    }
   };
 
   input.addEventListener('input', () => {
     clearTimeout(timer);
     if (!normalize(input.value)) { current = ''; close(); return; }
-    timer = setTimeout(update, 200);
+    timer = setTimeout(update, SEARCH_DEBOUNCE_MS);
   });
 
   input.addEventListener('focus', () => {
@@ -259,6 +268,10 @@
         options[active].click();
       } else {
         close();   // ไม่ได้เลือกรายการ → ค้นหาทั้งหมดตามปกติ (submit ฟอร์ม)
+        if (isOrganizer) {
+          e.preventDefault();
+          form.requestSubmit();
+        }
       }
     } else if (e.key === 'Escape') {
       if (!box.hidden) { e.preventDefault(); close(); }

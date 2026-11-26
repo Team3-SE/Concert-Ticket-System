@@ -5,6 +5,7 @@
  * ใช้กับ : layouts/backoffice.blade.php, layouts/staff.blade.php (@vite)
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 27/10/2569
+ * Updated : 26/11/2569 67160279 กนกพล แซ่ตั๊น
  */
 
 /* shared/      ใช้ร่วมกับฝั่ง User */
@@ -18,6 +19,7 @@
 /* organizer/   views/organizer/*   (เพิ่ม @import ของหน้า Organizer ตรงนี้) */
 @import './organizer/dashboard.css';
 @import './organizer/check-in.css';
+@import './organizer/concerts/concert-management.css';
 
 /* admin/       views/admin/*       (เพิ่ม @import ของหน้า Admin ตรงนี้) */
 @import './admin/users.css';

@@ -1,19 +1,22 @@
 {{--
  * pagination.blade.php
  * ตัวแบ่งหน้า: ข้อความสรุปจำนวน และปุ่มเปลี่ยนหน้า
- * @include('partials.pagination', ['paginator' => $items, 'unit' => 'คำสั่งซื้อ', 'framed' => true])
+ * @include('partials.pagination', ['paginator' => $items, 'unit' => 'คำสั่งซื้อ', 'framed' => true, 'emphasizeTotal' => true])
  *
  * - framed = มีกรอบครอบ (ใช้เมื่อไม่ได้อยู่ท้ายการ์ด/ตารางที่มีกรอบอยู่แล้ว)
+ * - emphasizeTotal = ครอบเฉพาะยอดรวมด้วย class สำหรับปรับรูปแบบตัวเลข
  *
  * - ฝั่งซ้าย: "แสดง 1 - 10 จากทั้งหมด 50 {unit}"
  * - ฝั่งขวา: « ก่อนหน้า | เลขหน้า 3 หน้าที่เลื่อนตามหน้าปัจจุบัน | … | หน้าสุดท้าย | ถัดไป »
  * - กด "…" เพื่อพิมพ์เลขหน้าแล้วกระโดดไปได้ (resources/js/shared/pagination.js)
  * @Author 67160292 ธีรเมธ พลสาย
- * @Create Date 09-10-2569
+ * @Create Date 09/10/2569
+ * @Update Date 26/11/2569 67160279 กนกพล แซ่ตั๊น
 --}}
 @php
   $unit = $unit ?? 'รายการ';
   $framed = $framed ?? false;
+  $emphasizeTotal = $emphasizeTotal ?? false;
   $current = $paginator->currentPage();
   $last = $paginator->lastPage();
 
@@ -47,7 +50,13 @@
   <div class="pager-summary">
     @if($paginator->total() > 0)
       แสดง {{ number_format($paginator->firstItem()) }} - {{ number_format($paginator->lastItem()) }}
-      จากทั้งหมด {{ number_format($paginator->total()) }} {{ $unit }}
+      จากทั้งหมด
+      @if($emphasizeTotal)
+        <strong class="pager-summary__total">{{ number_format($paginator->total()) }}</strong>
+      @else
+        {{ number_format($paginator->total()) }}
+      @endif
+      {{ $unit }}
     @else
       ไม่มี{{ $unit }}
     @endif

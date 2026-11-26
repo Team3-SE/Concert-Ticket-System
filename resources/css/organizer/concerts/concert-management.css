@@ -1,0 +1,183 @@
+/*
+ * resources/css/organizer/concerts/concert-management.css
+ * หน้าจัดการคอนเสิร์ตของ Organizer
+ * Author : 67160279 กนกพล แซ่ตั๊น
+ * Created : 26/11/2569
+ * Updated : 26/11/2569 67160279 กนกพล แซ่ตั๊น
+ */
+.page-organizer-concert-management .cm-page{
+  display:flex;flex-direction:column;gap:16px;max-width:1600px;margin:0 auto;
+}
+.page-organizer-concert-management .cm-heading{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+}
+.page-organizer-concert-management .bo-title{margin:0;}
+
+.page-organizer-concert-management .cm-button{
+  display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 16px;
+  border:1px solid transparent;border-radius:8px;font:inherit;font-size:16px;font-weight:500;
+  line-height:1.2;text-decoration:none;white-space:nowrap;cursor:pointer;transition:background .15s,border-color .15s,color .15s;
+}
+.page-organizer-concert-management .cm-button:focus-visible,
+.page-organizer-concert-management .cm-status-toggle:focus-visible,
+.page-organizer-concert-management .cm-status-menu button:focus-visible{
+  outline:2px solid #3b5bdb;outline-offset:2px;
+}
+.page-organizer-concert-management .cm-button--primary{min-height:46px;padding:10px 20px;background:#2563eb;color:#fff;}
+.page-organizer-concert-management .cm-button--primary:hover{background:#1d4ed8;}
+.page-organizer-concert-management .cm-button--inspect{background:#1c2842;color:#fff;}
+.page-organizer-concert-management .cm-button--inspect:hover{background:#2b3b5d;}
+.page-organizer-concert-management .cm-button--edit{background:#757575;color:#fff;}
+.page-organizer-concert-management .cm-button--edit:hover{background:#616161;}
+.page-organizer-concert-management .cm-button--delete{background:#ef4444;color:#fff;}
+.page-organizer-concert-management .cm-button--delete:hover{background:#dc2626;}
+
+.page-organizer-concert-management .cm-filters{
+  display:flex;align-items:center;align-self:stretch;flex-wrap:wrap;align-content:center;gap:8px;width:100%;
+  padding:16px;background:#fff;border-radius:12px;outline:1px solid #e2e8f0;outline-offset:-1px;
+}
+.page-organizer-concert-management .cm-search{
+  display:flex;align-items:center;gap:10px;flex:1;min-width:0;height:44px;padding:0 14px;
+  background:#fff;border:1px solid #dfe4ec;border-radius:8px;
+}
+.page-organizer-concert-management .cm-search-wrap{position:relative;z-index:25;flex:1;min-width:0;}
+.page-organizer-concert-management .cm-search-wrap .cm-search{width:100%;}
+.page-organizer-concert-management .cm-search:focus-within{border-color:#315da8;box-shadow:0 0 0 3px rgba(49,93,168,.1);}
+.page-organizer-concert-management .cm-search-wrap.is-open .cm-search{border-color:#315da8;}
+.page-organizer-concert-management .cm-search svg{width:18px;height:18px;flex:none;fill:none;stroke:#7b8495;stroke-width:1.8;stroke-linecap:round;}
+.page-organizer-concert-management .cm-search input{
+  width:100%;min-width:0;border:0;outline:0;background:transparent;color:#20283a;font:inherit;font-size:16px;
+}
+.page-organizer-concert-management .cm-search input::placeholder{color:#8b93a1;}
+.page-organizer-concert-management .cm-suggestions{
+  position:absolute;top:calc(100% + 8px);right:0;left:0;z-index:30;max-height:min(460px,70vh);padding:6px;overflow-y:auto;
+  background:#fff;border:1px solid #e3e6ef;border-radius:12px;box-shadow:0 18px 40px rgba(15,32,65,.16);
+}
+.page-organizer-concert-management .cm-suggestions[hidden]{display:none;}
+.page-organizer-concert-management .cm-suggestions .suggest-label{padding:8px 12px 6px;color:#8b8fa3;font-size:12px;font-weight:600;}
+.page-organizer-concert-management .cm-suggestions .suggest-item{
+  display:flex;align-items:center;gap:14px;padding:10px 12px;border-radius:8px;color:#1c2138;text-decoration:none;cursor:pointer;
+}
+.page-organizer-concert-management .cm-suggestions .suggest-item:hover,
+.page-organizer-concert-management .cm-suggestions .suggest-item.active{background:#f1f4fb;}
+.page-organizer-concert-management .cm-suggestions .suggest-thumb{
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;width:42px;height:56px;overflow:hidden;
+  border-radius:4px;background:linear-gradient(135deg,#12297d,#2f80ed);color:#fff;font-size:17px;font-weight:700;
+}
+.page-organizer-concert-management .cm-suggestions .suggest-thumb img{display:block;width:100%;height:100%;object-fit:cover;}
+.page-organizer-concert-management .cm-suggestions .suggest-text{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px;}
+.page-organizer-concert-management .cm-suggestions .suggest-name{overflow:hidden;color:#1c2138;font-size:14px;font-weight:600;text-overflow:ellipsis;white-space:nowrap;}
+.page-organizer-concert-management .cm-suggestions .suggest-meta{overflow:hidden;color:#8b8fa3;font-size:12px;text-overflow:ellipsis;white-space:nowrap;}
+.page-organizer-concert-management .cm-suggestions mark{padding:0 1px;border-radius:3px;background:#fff1dc;color:#c25e00;}
+.page-organizer-concert-management .cm-suggestions .suggest-side{display:flex;flex-shrink:0;flex-direction:column;align-items:flex-end;gap:5px;}
+.page-organizer-concert-management .cm-suggestions .suggest-date{color:#4b4f63;font-size:12px;white-space:nowrap;}
+.page-organizer-concert-management .cm-suggestions .suggest-status{padding:0 9px;border-radius:999px;background:#eef0f5;color:#4b4f63;font-size:11px;font-weight:600;line-height:1.6;white-space:nowrap;}
+.page-organizer-concert-management .cm-suggestions .suggest-status.is-on-sale{background:#e3f6ec;color:#147a46;}
+.page-organizer-concert-management .cm-suggestions .suggest-status.is-closed{background:#fde8e8;color:#b42318;}
+.page-organizer-concert-management .cm-suggestions .suggest-empty{padding:18px 14px;color:#8b8fa3;font-size:13px;text-align:center;}
+.page-organizer-concert-management .cm-suggestions .suggest-all{
+  display:flex;align-items:center;gap:8px;width:100%;margin-top:4px;padding:12px;border:0;border-top:1px solid #eef0f5;
+  border-radius:0 0 8px 8px;background:none;color:#12297d;font-family:inherit;font-size:13px;font-weight:600;text-align:left;cursor:pointer;
+}
+.page-organizer-concert-management .cm-suggestions .suggest-all.active,
+.page-organizer-concert-management .cm-suggestions .suggest-all:hover{background:#f7f8fb;color:#e8820a;}
+.page-organizer-concert-management .cm-status-filter{position:relative;z-index:10;flex:none;}
+.page-organizer-concert-management .cm-status-toggle{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:190px;height:44px;padding:0 14px;
+  border:1px solid #dfe4ec;border-radius:8px;background:#fff;color:#2d3547;font:inherit;font-size:16px;font-weight:500;cursor:pointer;
+}
+.page-organizer-concert-management .cm-status-toggle:hover,
+.page-organizer-concert-management .cm-status-filter.is-open .cm-status-toggle{border-color:#315da8;}
+.page-organizer-concert-management .cm-status-toggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+.page-organizer-concert-management .cm-status-menu{
+  position:absolute;top:calc(100% + 6px);right:0;min-width:100%;padding:5px;background:#fff;
+  border:1px solid #e0e5ed;border-radius:10px;box-shadow:0 12px 30px rgba(22,34,74,.15);
+}
+.page-organizer-concert-management .cm-status-menu button{
+  display:block;width:100%;padding:9px 12px;border:0;border-radius:8px;background:transparent;text-align:left;
+  color:#30384a;font:inherit;font-size:16px;font-weight:500;white-space:nowrap;cursor:pointer;
+}
+.page-organizer-concert-management .cm-status-menu button:hover,
+.page-organizer-concert-management .cm-status-menu button.is-selected{background:#f0f4fb;color:#204b95;}
+
+.page-organizer-concert-management .cm-table-card{
+  overflow:hidden;background:#fff;border:1px solid #e2e7ef;border-radius:12px;
+  box-shadow:0 2px 8px rgba(11,47,97,.04);
+}
+.page-organizer-concert-management .cm-table-scroll{overflow-x:auto;}
+.page-organizer-concert-management .cm-table{width:100%;border-collapse:collapse;min-width:1050px;}
+.page-organizer-concert-management .cm-table th{
+  padding:15px 14px;background:#f7f8fb;border-bottom:1px solid #e6e9ef;color:#626c7d;
+  font-size:16px;font-weight:600;text-align:center;white-space:nowrap;
+}
+.page-organizer-concert-management .cm-table td{
+  padding:14px;border-bottom:1px solid #edf0f4;color:#434c5e;font-size:16px;text-align:center;vertical-align:middle;white-space:nowrap;
+}
+.page-organizer-concert-management .cm-table td:first-child{text-align:left;}
+.page-organizer-concert-management .cm-table tbody tr:last-child td{border-bottom:0;}
+.page-organizer-concert-management .cm-concert{display:flex;align-items:center;gap:11px;min-width:210px;}
+.page-organizer-concert-management .cm-poster{
+  display:grid;place-items:center;flex:none;width:48px;height:72px;border-radius:0;object-fit:cover;
+  background:#edf1f7;color:#758096;font-size:16px;
+}
+.page-organizer-concert-management .cm-concert__text{display:flex;flex-direction:column;gap:3px;white-space:normal;}
+.page-organizer-concert-management .cm-concert__text strong{max-width:270px;color:#242c3e;font-size:16px;font-weight:600;line-height:1.4;}
+.page-organizer-concert-management .cm-concert__text span{color:#788194;font-size:16px;}
+.page-organizer-concert-management .cm-status{
+  display:inline-flex;align-items:center;min-height:28px;padding:4px 10px;border-radius:20px;
+  background:#f1f5f9;color:#475569;font-size:14px;font-weight:500;line-height:1.4;white-space:nowrap;
+}
+.page-organizer-concert-management .cm-status--on_sale{background:#dcfce7;color:#16a34a;}
+.page-organizer-concert-management .cm-status--scheduled{background:#fffbeb;color:#b45309;}
+.page-organizer-concert-management .cm-status--sale_closed,
+.page-organizer-concert-management .cm-status--sold_out{background:#e0f2fe;color:#0b2f61;}
+.page-organizer-concert-management .cm-status--draft{background:rgba(30,41,59,.7);color:#fff;}
+.page-organizer-concert-management .cm-status--paused{background:rgba(255,93,93,.35);color:#ef4444;}
+.page-organizer-concert-management .cm-status--completed{background:#f1f5f9;color:#475569;}
+.page-organizer-concert-management .cm-status--cancelled{background:#ffeceb;color:#bd3c35;}
+.page-organizer-concert-management .cm-actions{display:flex;align-items:center;justify-content:center;gap:7px;}
+.page-organizer-concert-management .cm-actions form{margin:0;}
+.page-organizer-concert-management .cm-actions .cm-button{min-height:0;padding:8px 16px;}
+.page-organizer-concert-management .cm-pagination{padding:14px 18px;border-top:1px solid #edf0f4;}
+.page-organizer-concert-management .cm-pagination .pager-summary{font-size:16px;}
+.page-organizer-concert-management .cm-pagination .pager-summary__total{font-weight:600;}
+.page-organizer-concert-management .cm-empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:220px;padding:32px;
+  color:#778094;font-size:14px;text-align:center;
+}
+.page-organizer-concert-management .cm-empty strong{color:#283247;font-size:16px;}
+.page-organizer-concert-management .cm-empty--placeholder{
+  background:#fff;border:1px dashed #dfe4ec;border-radius:12px;
+}
+
+.page-organizer-concert-management .cm-delete-dialog{
+  width:min(420px,calc(100% - 32px));padding:24px;border:0;border-radius:6px;
+  color:#2d3748;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.15);
+}
+.page-organizer-concert-management .cm-delete-dialog[open]{
+  display:flex;flex-direction:column;align-items:center;gap:16px;
+}
+.page-organizer-concert-management .cm-delete-dialog::backdrop{background:rgba(15,23,42,.48);}
+.page-organizer-concert-management .cm-dialog-icon{
+  display:grid;place-items:center;width:55px;height:55px;border:3px solid #cbd5e1;border-radius:50%;
+  color:#94a3b8;font-size:30px;font-weight:500;line-height:1;
+}
+.page-organizer-concert-management .cm-delete-dialog h2{margin:0;font-size:18px;font-weight:700;}
+.page-organizer-concert-management .cm-delete-dialog p{margin:0;color:#4a5568;font-size:16px;line-height:1.6;}
+.page-organizer-concert-management .cm-delete-dialog [data-delete-name]{color:#2d3748;}
+.page-organizer-concert-management .cm-dialog-actions{display:flex;justify-content:center;gap:12px;width:100%;}
+.page-organizer-concert-management .cm-dialog-actions .cm-button{width:166px;height:55px;padding:0 16px;font-size:16px;font-weight:500;}
+.page-organizer-concert-management .cm-button--cancel{background:#e4e9f4;color:#5b6580;}
+.page-organizer-concert-management .cm-button--cancel:hover{background:#d7deec;}
+.page-organizer-concert-management .cm-button--confirm-delete{background:#153c7a;color:#fff;}
+.page-organizer-concert-management .cm-button--confirm-delete:hover{background:#103365;}
+
+@media(max-width:600px){
+  .page-organizer-concert-management .cm-heading{align-items:flex-start;flex-direction:column;}
+  .page-organizer-concert-management .cm-filters{align-items:stretch;flex-direction:column;}
+  .page-organizer-concert-management .cm-search-wrap{width:100%;}
+  .page-organizer-concert-management .cm-status-toggle{width:100%;}
+  .page-organizer-concert-management .cm-status-menu{left:0;right:auto;}
+  .page-organizer-concert-management .cm-suggestions .suggest-side{display:none;}
+  .page-organizer-concert-management .cm-dialog-actions .cm-button{width:auto;flex:1;}
+}
