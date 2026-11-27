@@ -8,17 +8,17 @@
 
 @extends('layouts.backoffice')
 
-@section('title', 'ตรวจสอบคอนเสิร์ต - ' . ($concert->title ?? 'TEAM 3 Ticket'))
+@section('title', 'ตรวจสอบคอนเสิร์ต - ' . ($concert->name ?? 'TEAM 3 Ticket'))
 @section('body_class', 'bo page-organizer-check-concert')
 
-@push('styles')
-    @vite(['resources/css/checkconcert/check-concert.css'])
+@push('head')
+    @vite(['resources/css/organizer/checkconcert/check-concert.css'])
 @endpush
 
 @section('content')
 <div
     class="check-concert-container"
-    data-realtime-url="{{ route('organizer.concerts.check.realtime', ['concertId' => $concert->id]) }}"
+    data-realtime-url="{{ route('organizer.concerts.check.realtime', ['concertId' => $concert->c_id]) }}"
 >
     {{-- ส่วนหัวหน้าจอและปุ่มย้อนกลับ --}}
     <div class="check-concert-header">
@@ -34,17 +34,17 @@
     <section class="concert-info-card">
         <div class="concert-info-card__poster">
             <img
-                src="{{ $concert->poster_url ?? asset('images/concert-placeholder.jpg') }}"
-                alt="{{ $concert->title }}"
+                src="{{ $concert->poster_path ? asset('storage/'.$concert->poster_path) : asset('images/concert-placeholder.jpg') }}"
+                alt="{{ $concert->name }}"
                 class="concert-poster-img"
             >
         </div>
 
         <div class="concert-info-card__details">
             <div class="concert-info-top">
-                <h2 class="concert-title">{{ $concert->title }}</h2>
+                <h2 class="concert-title">{{ $concert->name }}</h2>
                 <p class="concert-artist">
-                    ศิลปิน : <span>{{ $concert->artist_name ?? '-' }}</span>
+                    ศิลปิน : <span>{{ $concert->artist ?? '-' }}</span>
                 </p>
 
                 <ul class="concert-meta-list">
@@ -56,7 +56,7 @@
                             <line x1="3" y1="10" x2="21" y2="10"></line>
                         </svg>
                         <span>
-                            {{ \Carbon\Carbon::parse($concert->event_date)->locale('th')->translatedFormat('lที่ j F Y') }}
+                            {{ $concert->event_datetime ? $concert->event_datetime->copy()->locale('th')->translatedFormat('lที่ j F Y') : '-' }}
                         </span>
                     </li>
                     <li>
@@ -65,11 +65,7 @@
                             <polyline points="12 6 12 12 16 14"></polyline>
                         </svg>
                         <span>
-                            เวลา {{ \Carbon\Carbon::parse($concert->start_time)->format('H:i') }}
-                            @if(!empty($concert->end_time))
-                                - {{ \Carbon\Carbon::parse($concert->end_time)->format('H:i') }}
-                            @endif
-                            น.
+                            เวลา {{ $concert->event_datetime ? $concert->event_datetime->format('H:i') : '-' }} น.
                         </span>
                     </li>
                     <li>
@@ -77,13 +73,13 @@
                             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                             <circle cx="12" cy="10" r="3"></circle>
                         </svg>
-                        <span>{{ $concert->venue_name ?? '-' }}</span>
+                        <span>{{ $concert->venue ?? '-' }}</span>
                     </li>
                 </ul>
             </div>
 
             <div class="concert-info-bottom">
-                <a href="#" class="btn-edit-concert">แก้ไขคอนเสิร์ต</a>
+                <a href="{{ route('manage.images', ['concert' => $concert->c_id]) }}" class="btn-edit-concert">แก้ไขคอนเสิร์ต</a>
             </div>
         </div>
     </section>
