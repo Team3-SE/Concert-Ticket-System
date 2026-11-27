@@ -5,6 +5,7 @@
  * พนักงานตรวจบัตร (AppUser ที่ role = STAFF)
  * Author :
  * Created :
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -16,8 +17,8 @@ class Staff extends AppUser
     /**
      * boot()
      * กำหนดให้ query เฉพาะผู้ใช้ role STAFF และตั้ง role ให้อัตโนมัติเมื่อสร้าง
-     * param : -
-     * return : void
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     protected static function boot()
     {

@@ -2,8 +2,8 @@
  * booking.blade.php
  * หน้าเลือกโซนและที่นั่งของคอนเสิร์ต
  * @Author 67160434 จิตฏิยากร โสภา
- * @Create Date 2026-10-13
- * @Update Date 15/11/2569 67160292 ธีรเมธ พลสาย
+ * @Create Date 13/10/2569
+ * @Update Date 27/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 @extends('layouts.user')
 

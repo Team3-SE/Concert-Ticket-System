@@ -5,7 +5,7 @@
  * ประวัติการตรวจบัตร (ตาราง ticket_validation_log)
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -26,8 +26,8 @@ class TicketValidationLog extends Model
     /**
      * ticket()
      * ความสัมพันธ์กับบัตร
-     * param : -
-     * return : BelongsTo Ticket
+     *
+     * @return BelongsTo Ticket
      */
     public function ticket(): BelongsTo
     {
@@ -37,8 +37,8 @@ class TicketValidationLog extends Model
     /**
      * staff()
      * ความสัมพันธ์กับพนักงานที่ตรวจบัตร
-     * param : -
-     * return : BelongsTo Staff
+     *
+     * @return BelongsTo Staff
      */
     public function staff(): BelongsTo
     {

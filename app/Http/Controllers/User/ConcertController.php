@@ -5,7 +5,7 @@
  * จัดการข้อมูลคอนเสิร์ตฝั่งลูกค้า: รายการ ค้นหา (ชื่อ ศิลปิน สถานที่ ผู้จัด วันที่) รายการแนะนำขณะพิมพ์ และรายละเอียดคอนเสิร์ต
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 16/10/2569
- * Updated : 16/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -56,8 +56,8 @@ class ConcertController extends Controller
     /**
      * getConcertList()
      * ดึงรายการคอนเสิร์ตที่ลูกค้าเห็นได้ (ไม่ถูกลบ ไม่ใช่ DRAFT) เรียงตามวันเปิดขาย พร้อมจำนวนบัตรคงเหลือสำหรับป้ายสถานะ
-     * param : -
-     * return : Collection ของ Concert
+     *
+     * @return Collection ของ Concert
      */
     public function getConcertList()
     {
@@ -67,10 +67,11 @@ class ConcertController extends Controller
     }
 
     /**
-     * index(request)
+     * index($request)
      * แสดงหน้าคอนเสิร์ตทั้งหมด (ปุ่ม Show All) พร้อมค้นหา กรองสถานะ และแบ่งหน้า (เรียงตามวันแสดงที่ใกล้ที่สุด)
-     * param : request
-     * return : View concerts.index
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return View concerts.index
      */
     public function index(Request $request)
     {
@@ -108,10 +109,12 @@ class ConcertController extends Controller
     }
 
     /**
-     * searchConcert(keyword, limit)
+     * searchConcert($keyword, $limit)
      * ค้นหาคอนเสิร์ตจากชื่อ ศิลปิน สถานที่ หรือผู้จัด (ทุกคำต้องเจอ ถ้าไม่เจอเลยจะหาแบบเจอคำใดคำหนึ่ง)
-     * param : keyword, limit
-     * return : Collection ของ Concert เรียงจากใกล้เคียงที่สุด
+     *
+     * @param string $keyword คำค้นหา
+     * @param int|null $limit จำนวนสูงสุด
+     * @return Collection ของ Concert เรียงจากใกล้เคียงที่สุด
      */
     public function searchConcert(string $keyword, ?int $limit = null): Collection
     {
@@ -136,10 +139,11 @@ class ConcertController extends Controller
     }
 
     /**
-     * suggest(request)
+     * suggest($request)
      * ส่งรายการคอนเสิร์ตที่ใกล้เคียงกับคำที่กำลังพิมพ์ (ใช้กับช่องค้นหา)
-     * param : request
-     * return : JsonResponse { query, results }
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return JsonResponse { query, results }
      */
     public function suggest(Request $request): JsonResponse
     {
@@ -166,10 +170,11 @@ class ConcertController extends Controller
     }
 
     /**
-     * getConcertDetail(concertId)
+     * getConcertDetail($concertId)
      * ดึงรายละเอียดคอนเสิร์ต พร้อมผู้จัดและโซน (คอนเสิร์ตฉบับร่าง DRAFT ลูกค้าเปิดไม่ได้ ตอบ 404)
-     * param : concertId
-     * return : Concert (ถ้าไม่พบจะตอบ 404)
+     *
+     * @param int $concertId รหัสคอนเสิร์ต
+     * @return Concert (ถ้าไม่พบจะตอบ 404)
      */
     public function getConcertDetail(int $concertId)
     {
@@ -184,8 +189,8 @@ class ConcertController extends Controller
     /**
      * publicConcerts()
      * สร้าง query ของคอนเสิร์ตที่ลูกค้าเห็นได้ (ไม่ถูกลบ และไม่ใช่ DRAFT) พร้อมจำนวนบัตรคงเหลือ (available_tickets)
-     * param : -
-     * return : Builder
+     *
+     * @return Builder ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     private function publicConcerts(): Builder
     {
@@ -195,10 +200,11 @@ class ConcertController extends Controller
     }
 
     /**
-     * normalizeKeyword(keyword)
+     * normalizeKeyword($keyword)
      * ตัดช่องว่างหัวท้าย และรวมช่องว่างที่ติดกันให้เหลือช่องเดียว
-     * param : keyword
-     * return : string คำค้นที่จัดรูปแล้ว
+     *
+     * @param string $keyword คำค้นหา
+     * @return string คำค้นที่จัดรูปแล้ว
      */
     private function normalizeKeyword(string $keyword): string
     {
@@ -206,10 +212,11 @@ class ConcertController extends Controller
     }
 
     /**
-     * searchTerms(keyword)
+     * searchTerms($keyword)
      * แยกคำค้นด้วยช่องว่าง ตัดคำซ้ำ และจำกัดไม่เกิน MAX_SEARCH_TERMS คำ
-     * param : keyword
-     * return : array ของคำค้น
+     *
+     * @param string $keyword คำค้นหา
+     * @return array ของคำค้น
      */
     private function searchTerms(string $keyword): array
     {
@@ -217,10 +224,11 @@ class ConcertController extends Controller
     }
 
     /**
-     * likeValue(text)
+     * likeValue($text)
      * สร้างค่าสำหรับเงื่อนไข LIKE แบบ %คำค้น% โดย escape ตัว % และ _ ที่ผู้ใช้พิมพ์
-     * param : text
-     * return : string
+     *
+     * @param string $text ข้อความ
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     private function likeValue(string $text): string
     {
@@ -228,10 +236,13 @@ class ConcertController extends Controller
     }
 
     /**
-     * applyKeyword(query, terms, matchAll)
+     * applyKeyword($query, $terms, $matchAll)
      * เพิ่มเงื่อนไขค้นหาลงใน query (matchAll = true ทุกคำต้องเจอ, false เจอคำใดคำหนึ่ง)
-     * param : query, terms, matchAll
-     * return : Builder
+     *
+     * @param Builder $query คำค้นหา
+     * @param array $terms การยอมรับเงื่อนไข
+     * @param bool $matchAll true = ทุกคำต้องเจอ, false = เจอคำใดคำหนึ่ง
+     * @return Builder ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     private function applyKeyword(Builder $query, array $terms, bool $matchAll): Builder
     {
@@ -264,11 +275,12 @@ class ConcertController extends Controller
     }
 
     /**
-     * parseDateKeyword(keyword)
+     * parseDateKeyword($keyword)
      * แปลงคำค้นที่เป็นวันที่ให้เป็นส่วนของวันที่ (รองรับปี พ.ศ./ค.ศ.)
      * รูปแบบ: 16/11/2569, 16-11-2025, 2025-11-16, 11/2569, 16/11, 16 พฤศจิกายน 2569, 16 พ.ย., พฤศจิกายน 2569, พฤศจิกายน
-     * param : keyword
-     * return : array ['day' => ?int, 'month' => ?int, 'year' => ?int] หรือ null ถ้าไม่ใช่วันที่
+     *
+     * @param string $keyword คำค้นหา
+     * @return array ['day' => ?int, 'month' => ?int, 'year' => ?int] หรือ null ถ้าไม่ใช่วันที่
      */
     private function parseDateKeyword(string $keyword): ?array
     {
@@ -316,10 +328,13 @@ class ConcertController extends Controller
     }
 
     /**
-     * searchQuery(keyword, terms, matchAll)
+     * searchQuery($keyword, $terms, $matchAll)
      * สร้าง query ค้นหาที่เรียงตามความใกล้เคียง และคอนเสิร์ตที่ยังไม่จัดขึ้นก่อน
-     * param : keyword, terms, matchAll
-     * return : Builder
+     *
+     * @param string $keyword คำค้นหา
+     * @param array $terms การยอมรับเงื่อนไข
+     * @param bool $matchAll true = ทุกคำต้องเจอ, false = เจอคำใดคำหนึ่ง
+     * @return Builder ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     private function searchQuery(string $keyword, array $terms, bool $matchAll): Builder
     {

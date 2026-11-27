@@ -1,9 +1,9 @@
 {{--
- * main.blade.php
+ * user.blade.php
  * โครงหน้าหลักของทุกหน้า: head, navbar, เนื้อหา และ footer
  * @Author 67160292 ธีรเมธ พลสาย
  * @Create Date 07-10-2569
- * @Update Date 23/10/2569 67160292 ธีรเมธ พลสาย
+ * @Update Date 27/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 <!DOCTYPE html>
 <html lang="th">

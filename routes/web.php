@@ -3,11 +3,16 @@
 /**
  * routes/web.php
  * route ฝั่ง User (ลูกค้า + คนที่ยังไม่ login) และเข้าสู่ระบบ/ออกจากระบบ
+ * Author :
+ * Created :
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
+/*
  * หลังบ้านแยกไฟล์ (require ท้ายไฟล์นี้): routes/organizer.php, routes/admin.php, routes/staff.php
  * role ของแต่ละ route ตรวจด้วย middleware role (app/Http/Middleware/EnsureRole.php)
  *   - role:GUEST,USER = ลูกค้าและคนที่ยังไม่ login เท่านั้น (Organizer/Admin/Staff ถูกพากลับหน้าแรกของ role ตัวเอง)
  *   - role:GUEST = เฉพาะคนที่ยังไม่ login (หน้าต่างลืมรหัสผ่าน)
- * Updated : 15/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 use Illuminate\Support\Facades\Route;

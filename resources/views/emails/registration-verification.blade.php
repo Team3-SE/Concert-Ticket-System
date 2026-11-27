@@ -1,11 +1,14 @@
 {{--
  * registration-verification.blade.php
  * อีเมลลิงก์ยืนยันการสมัครสมาชิก (HTML) แบบหัวไล่สี + ไอคอน + 3 ขั้นตอน
+ * @Author 67160292 ธีรเมธ พลสาย
+ * @Create Date 27/10/2569
+ * @Update Date 27/11/2569 67160292 ธีรเมธ พลสาย
+--}}
+{{--
  * เขียนด้วยตาราง + สไตล์ในบรรทัด ให้ Gmail / Outlook / แอปมือถือแสดงได้ (Outlook บนคอมเห็นหัวเป็นสีกรมท่าเรียบ)
  * ใช้กับ : App\Notifications\RegistrationVerification (คู่กับ registration-verification-text สำหรับอีเมลแบบข้อความล้วน)
  * ข้อมูล : $url (ลิงก์ยืนยันแบบ signed), $firstName (ชื่อผู้สมัคร), $ttl (อายุลิงก์ นาที)
- * @Author 67160292 ธีรเมธ พลสาย
- * @Create Date 27/10/2569
 --}}
 <!DOCTYPE html>
 <html lang="th">

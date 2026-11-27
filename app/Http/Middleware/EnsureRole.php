@@ -3,13 +3,17 @@
 /**
  * EnsureRole
  * จำกัดว่า route ใช้ได้กับ role ไหน ใช้ใน route เป็น ->middleware('role:ORGANIZER') หรือ 'role:GUEST,USER'
+ * Author : 67160292 ธีรเมธ พลสาย
+ * Created : 27/10/2569
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
+/*
  * - GUEST = คนที่ยังไม่เข้าสู่ระบบ (หน้าฝั่ง User ที่เปิดดูได้โดยไม่ต้อง login)
  * - เข้าสู่ระบบแล้วแต่ role ไม่ตรง → พากลับหน้าแรกของ role ตัวเอง (AppUser::homeUrl)
  *   เช่น Organizer เปิดหน้า Home ของลูกค้า → ไป /organizer/dashboard
  * - ยังไม่เข้าสู่ระบบและ route ไม่รับ GUEST → ให้ระบบ auth จัดการ (กลับหน้าแรกพร้อมเปิดหน้าต่าง login)
  * ลงชื่อ alias 'role' ไว้ที่ bootstrap/app.php
- * Author : 67160292 ธีรเมธ พลสาย
- * Created : 27/10/2569
  */
 
 namespace App\Http\Middleware;
@@ -25,10 +29,13 @@ class EnsureRole
     public const GUEST = 'GUEST';
 
     /**
-     * handle(request, next, roles)
+     * handle($request, $next, $roles)
      * ตรวจ role ของผู้ใช้กับรายการที่ route อนุญาต
-     * param : request, next, roles – role ที่อนุญาต (USER, ORGANIZER, STAFF, ADMIN, GUEST)
-     * return : Response ไปต่อ หรือ redirect ไปหน้าแรกของ role ตัวเอง
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @param Closure $next ค่าถัดไป
+     * @param string[] $roles role ที่อนุญาต (USER, ORGANIZER, STAFF, ADMIN, GUEST
+     * @return Response ไปต่อ หรือ redirect ไปหน้าแรกของ role ตัวเอง
      */
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {

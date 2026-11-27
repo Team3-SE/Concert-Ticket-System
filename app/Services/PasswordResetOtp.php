@@ -3,11 +3,14 @@
 /**
  * PasswordResetOtp
  * รหัสยืนยัน 6 หลักสำหรับลืมรหัสผ่าน เก็บใน Cache (Redis) แบบ hash ตามอีเมล หมดอายุเองตาม TTL
- * - ขอรหัสใหม่แล้วรหัสเดิมใช้ไม่ได้ทันที (เขียนทับคีย์เดิม)
- * - กรอกผิดครบ MAX_ATTEMPTS ครั้ง รหัสนั้นถูกลบ ต้องขอรหัสใหม่
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 29/10/2569
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
+/*
+ * - ขอรหัสใหม่แล้วรหัสเดิมใช้ไม่ได้ทันที (เขียนทับคีย์เดิม)
+ * - กรอกผิดครบ MAX_ATTEMPTS ครั้ง รหัสนั้นถูกลบ ต้องขอรหัสใหม่
  */
 
 namespace App\Services;
@@ -40,10 +43,11 @@ class PasswordResetOtp
     public const EXPIRED = 'expired';
 
     /**
-     * key(email)
+     * key($email)
      * คีย์ Cache ของรหัสที่ส่งไปยังอีเมลนี้
-     * param : email
-     * return : string
+     *
+     * @param string $email อีเมล
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     private static function key(string $email): string
     {
@@ -51,10 +55,11 @@ class PasswordResetOtp
     }
 
     /**
-     * send(user)
+     * send($user)
      * สร้างรหัสใหม่ (แทนรหัสเดิม) แล้วส่งอีเมลไปยังผู้ใช้
-     * param : user – บัญชีที่มีอีเมล
-     * return : void (ส่งอีเมลไม่สำเร็จจะ throw ให้ผู้เรียกจัดการ และลบรหัสที่เพิ่งสร้าง)
+     *
+     * @param AppUser $user บัญชีที่มีอีเมล
+     * @return void (ส่งอีเมลไม่สำเร็จจะ throw ให้ผู้เรียกจัดการ และลบรหัสที่เพิ่งสร้าง)
      */
     public static function send(AppUser $user): void
     {
@@ -79,10 +84,12 @@ class PasswordResetOtp
     }
 
     /**
-     * check(email, code)
+     * check($email, $code)
      * ตรวจรหัสที่ผู้ใช้กรอก (ผิดแล้วนับครั้ง ถูกแล้วลบรหัสทิ้ง ใช้ซ้ำไม่ได้)
-     * param : email, code (ตัวเลข 6 หลัก)
-     * return : array ['status' => OK|INVALID|LOCKED|EXPIRED, 'user_id' => int|null, 'left' => จำนวนครั้งที่เหลือ]
+     *
+     * @param string $email อีเมล
+     * @param string $code ตัวเลข 6 หลัก
+     * @return array ['status' => OK|INVALID|LOCKED|EXPIRED, 'user_id' => int|null, 'left' => จำนวนครั้งที่เหลือ]
      */
     public static function check(string $email, string $code): array
     {
@@ -113,10 +120,11 @@ class PasswordResetOtp
     }
 
     /**
-     * secondsLeft(email)
+     * secondsLeft($email)
      * เวลาที่รหัสปัจจุบันยังใช้ได้
-     * param : email
-     * return : int วินาที (0 = ไม่มีรหัสหรือหมดอายุแล้ว)
+     *
+     * @param string $email อีเมล
+     * @return int วินาที (0 = ไม่มีรหัสหรือหมดอายุแล้ว)
      */
     public static function secondsLeft(string $email): int
     {
@@ -126,10 +134,11 @@ class PasswordResetOtp
     }
 
     /**
-     * cooldownLeft(email)
+     * cooldownLeft($email)
      * ต้องรออีกกี่วินาทีจึงขอรหัสใหม่ได้ (นับจากครั้งล่าสุดที่ส่ง)
-     * param : email
-     * return : int วินาที (0 = ขอได้เลย)
+     *
+     * @param string $email อีเมล
+     * @return int วินาที (0 = ขอได้เลย)
      */
     public static function cooldownLeft(string $email): int
     {
@@ -139,10 +148,11 @@ class PasswordResetOtp
     }
 
     /**
-     * forget(email)
+     * forget($email)
      * ลบรหัสของอีเมลนี้
-     * param : email
-     * return : void
+     *
+     * @param string $email อีเมล
+     * @return void ไม่มีค่าส่งกลับ
      */
     public static function forget(string $email): void
     {

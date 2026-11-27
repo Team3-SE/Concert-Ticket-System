@@ -5,8 +5,7 @@
  * สร้างและดึงข้อมูลบัตร (E-Ticket) ของคำสั่งซื้อ
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 18/20.2569
- * Updated : 21/10/2569 67160279 กนกพล แซ่ตั๊น
- * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -55,10 +54,11 @@ class TicketController extends Controller
     ];
 
     /**
-     * generateTickets(orderId)
+     * generateTickets($orderId)
      * สร้างบัตรจากคำสั่งซื้อ 1 ใบต่อ 1 ที่นั่ง/บัตรยืน พร้อม ticketCode และ slot_no (ที่นั่งเปลี่ยนเป็น sold ตอน Booking::confirmBooking แล้ว)
-     * param : orderId
-     * return : Collection ของ Ticket
+     *
+     * @param int $orderId รหัสคำสั่งซื้อ
+     * @return Collection ของ Ticket
      */
     public function generateTickets(int $orderId): Collection
     {
@@ -66,10 +66,11 @@ class TicketController extends Controller
     }
 
     /**
-     * createTicketsForOrder(orderId)
+     * createTicketsForOrder($orderId)
      * สร้างตั๋วและเลขลำดับขณะล็อกคอนเสิร์ตใน transaction
-     * param : orderId
-     * return : Collection ของ Ticket
+     *
+     * @param int $orderId รหัสคำสั่งซื้อ
+     * @return Collection ของ Ticket
      */
     private function createTicketsForOrder(int $orderId): Collection
     {
@@ -125,10 +126,11 @@ class TicketController extends Controller
     }
 
     /**
-     * findLastTicketSequence(concertCode)
+     * findLastTicketSequence($concertCode)
      * หาเลข ticket sequence ล่าสุดเพื่อเริ่ม counter สำหรับคอนเสิร์ตนี้
-     * param : concertCode
-     * return : int
+     *
+     * @param string $concertCode รหัสคอนเสิร์ต
+     * @return int ค่าจำนวนตามที่อธิบายข้างต้น
      */
     private function findLastTicketSequence(string $concertCode): int
     {
@@ -148,10 +150,11 @@ class TicketController extends Controller
     }
 
     /**
-     * getTickets(customerId)
+     * getTickets($customerId)
      * ดึงบัตรทั้งหมดของลูกค้าที่การจองได้รับการยืนยันแล้ว
-     * param : customerId
-     * return : Collection ของ Ticket
+     *
+     * @param int $customerId รหัสลูกค้า
+     * @return Collection ของ Ticket
      */
     public function getTickets(int $customerId): Collection
     {
@@ -167,8 +170,8 @@ class TicketController extends Controller
     /**
      * index()
      * แสดงตั๋วของผู้ใช้ที่เข้าสู่ระบบ โดยเรียงตามวันที่สร้างบัตร
-     * param : -
-     * return : View account.my-ticket
+     *
+     * @return View account.my-ticket
      */
     public function index(): View
     {
@@ -203,10 +206,11 @@ class TicketController extends Controller
     }
 
     /**
-     * show(ticketCode)
+     * show($ticketCode)
      * ส่งข้อมูลและ QR ของตั๋วให้เจ้าของตั๋วที่เข้าสู่ระบบเท่านั้น
-     * param : ticketCode
-     * return : JsonResponse
+     *
+     * @param string $ticketCode รหัสตั๋ว
+     * @return JsonResponse ข้อมูล JSON ที่ตอบกลับ
      */
     public function show(string $ticketCode): JsonResponse
     {
@@ -253,10 +257,11 @@ class TicketController extends Controller
     }
 
     /**
-     * generateTicketQrCode(ticketCode)
+     * generateTicketQrCode($ticketCode)
      * สร้าง QR Code ที่เข้ารหัส ticket_code และคืนค่าเป็น data URI
-     * param : ticketCode
-     * return : string
+     *
+     * @param string $ticketCode รหัสตั๋ว
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     private function generateTicketQrCode(string $ticketCode): string
     {
@@ -272,8 +277,8 @@ class TicketController extends Controller
     /**
      * history()
      * แสดงประวัติการสั่งซื้อของผู้ใช้ที่เข้าสู่ระบบ แบบแบ่งหน้า
-     * param : -
-     * return : View account.order-history
+     *
+     * @return View account.order-history
      */
     public function history()
     {

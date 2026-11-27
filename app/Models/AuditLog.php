@@ -5,7 +5,7 @@
  * ประวัติการใช้งานระบบ (ตาราง audit_log)
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -42,8 +42,8 @@ class AuditLog extends Model
     /**
      * getDetails()
      * สรุปรายละเอียดของ log (ประเภท เวลา IP และ metadata)
-     * param : -
-     * return : string
+     *
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     public function getDetails(): string
     {
@@ -57,8 +57,8 @@ class AuditLog extends Model
     /**
      * user()
      * ความสัมพันธ์กับผู้ใช้ที่ทำรายการ
-     * param : -
-     * return : BelongsTo AppUser
+     *
+     * @return BelongsTo AppUser
      */
     public function user(): BelongsTo
     {

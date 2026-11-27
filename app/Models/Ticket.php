@@ -3,12 +3,15 @@
 /**
  * Ticket
  * บัตรเข้างาน (ตาราง ticket) 1 แถว = บัตร 1 ใบ
+ * Author :
+ * Created :
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
+/*
  * schema 3.4.2: มี status (valid / void / refunded) และออกบัตรใหม่แทนใบเดิมได้ (t_replaced_by_ticket_id)
  * slot_no = ลำดับบัตรในคำสั่งซื้อ 1..quantity (บัตรที่ออกใหม่แทนใบเดิมใช้เลขเดิม)
  * active_seat_id / active_slot เป็น generated column + UNIQUE กันบัตร valid ซ้ำที่นั่งหรือซ้ำลำดับ
- * Author :
- * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -62,8 +65,8 @@ class Ticket extends Model
     /**
      * generateQR()
      * สร้าง QR code ของบัตรแล้วบันทึก
-     * param : -
-     * return : string QR code
+     *
+     * @return string QR code
      */
     public function generateQR(): string
     {
@@ -76,8 +79,8 @@ class Ticket extends Model
     /**
      * validateTicket()
      * ตรวจว่าบัตรใช้ได้ (สถานะ valid มีโซน) และยังไม่ถูกใช้
-     * param : -
-     * return : bool
+     *
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public function validateTicket(): bool
     {
@@ -87,8 +90,8 @@ class Ticket extends Model
     /**
      * markAsUsed()
      * บันทึกว่าบัตรถูกใช้แล้ว
-     * param : -
-     * return : void
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function markAsUsed(): void
     {
@@ -98,8 +101,8 @@ class Ticket extends Model
     /**
      * zoneName()
      * ชื่อโซน ณ เวลาที่ซื้อ (schema 3.4.2 เก็บไว้ที่คำสั่งซื้อ user_order.zone_name_snapshot)
-     * param : -
-     * return : string
+     *
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     public function zoneName(): string
     {
@@ -109,8 +112,8 @@ class Ticket extends Model
     /**
      * unitPrice()
      * ราคาต่อใบ ณ เวลาที่ซื้อ (schema 3.4.2 เก็บไว้ที่คำสั่งซื้อ user_order.unit_price_snapshot)
-     * param : -
-     * return : float
+     *
+     * @return float ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     public function unitPrice(): float
     {
@@ -124,8 +127,8 @@ class Ticket extends Model
     /**
      * order()
      * ความสัมพันธ์กับคำสั่งซื้อ
-     * param : -
-     * return : BelongsTo CustomerOrder
+     *
+     * @return BelongsTo CustomerOrder
      */
     public function order(): BelongsTo
     {
@@ -135,8 +138,8 @@ class Ticket extends Model
     /**
      * zone()
      * ความสัมพันธ์กับโซน
-     * param : -
-     * return : BelongsTo Zone
+     *
+     * @return BelongsTo Zone
      */
     public function zone(): BelongsTo
     {
@@ -146,8 +149,8 @@ class Ticket extends Model
     /**
      * seat()
      * ความสัมพันธ์กับที่นั่ง (บัตรยืนจะเป็น null)
-     * param : -
-     * return : BelongsTo Seat
+     *
+     * @return BelongsTo Seat
      */
     public function seat(): BelongsTo
     {
@@ -157,8 +160,8 @@ class Ticket extends Model
     /**
      * replacedBy()
      * ความสัมพันธ์กับบัตรใบใหม่ที่ออกแทนใบนี้
-     * param : -
-     * return : BelongsTo Ticket
+     *
+     * @return BelongsTo Ticket
      */
     public function replacedBy(): BelongsTo
     {
@@ -168,8 +171,8 @@ class Ticket extends Model
     /**
      * replaces()
      * ความสัมพันธ์กับบัตรใบเดิมที่ใบนี้ออกมาแทน
-     * param : -
-     * return : HasOne Ticket
+     *
+     * @return HasOne Ticket
      */
     public function replaces(): HasOne
     {
@@ -179,8 +182,8 @@ class Ticket extends Model
     /**
      * validationLog()
      * ความสัมพันธ์กับประวัติการตรวจบัตร
-     * param : -
-     * return : HasOne TicketValidationLog
+     *
+     * @return HasOne TicketValidationLog
      */
     public function validationLog(): HasOne
     {

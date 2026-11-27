@@ -3,10 +3,13 @@
 /**
  * BookingSeat
  * ที่นั่งในแต่ละการจอง (ตาราง booking_seat)
- * schema 3.4.2: ชื่อโซนและราคาเก็บที่ booking แล้ว ตารางนี้เหลือแค่ชื่อที่นั่ง ณ เวลาที่จอง
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
+/*
+ * schema 3.4.2: ชื่อโซนและราคาเก็บที่ booking แล้ว ตารางนี้เหลือแค่ชื่อที่นั่ง ณ เวลาที่จอง
  */
 
 namespace App\Models;
@@ -29,8 +32,8 @@ class BookingSeat extends Model
     /**
      * booking()
      * ความสัมพันธ์กับการจอง
-     * param : -
-     * return : BelongsTo Booking
+     *
+     * @return BelongsTo Booking
      */
     public function booking(): BelongsTo
     {
@@ -40,8 +43,8 @@ class BookingSeat extends Model
     /**
      * seat()
      * ความสัมพันธ์กับที่นั่ง
-     * param : -
-     * return : BelongsTo Seat
+     *
+     * @return BelongsTo Seat
      */
     public function seat(): BelongsTo
     {

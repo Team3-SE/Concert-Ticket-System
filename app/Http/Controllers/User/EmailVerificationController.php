@@ -5,7 +5,7 @@
  * ยืนยันอีเมลก่อนสร้างบัญชี: หน้าต่างแจ้งให้ตรวจอีเมล (user/auth/partials/verify-email-modal), หน้ากดปุ่มยืนยันจากลิงก์ในอีเมล, สร้างบัญชีจริง และส่งลิงก์ซ้ำ
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 17/10/2569
- * Updated : 16/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -24,11 +24,12 @@ class EmailVerificationController extends Controller
     public const RESEND_COOLDOWN_SECONDS = 60;
 
     /**
-     * notice(request)
+     * notice($request)
      * ลิงก์เดิมของหน้า "กรุณาตรวจอีเมล": พาไปหน้าแรกแล้วเปิดหน้าต่างตรวจอีเมล (ข้อมูลในหน้าต่างมาจาก AuthModalComposer)
      * ไม่มีอีเมลรอยืนยันใน session = เปิดหน้าต่างสมัครสมาชิกแทน
-     * param : request
-     * return : RedirectResponse
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return RedirectResponse เปลี่ยนเส้นทางไปหน้าที่เกี่ยวข้อง
      */
     public function notice(Request $request)
     {
@@ -38,11 +39,13 @@ class EmailVerificationController extends Controller
     }
 
     /**
-     * confirm(request, token)
+     * confirm($request, $token)
      * หน้าที่เปิดจากลิงก์ในอีเมล: หน้าว่างที่ส่งฟอร์มยืนยันเอง (ยังไม่สร้างบัญชีตอน GET)
      * เพื่อไม่ให้โปรแกรมสแกนลิงก์ของอีเมลที่เปิดลิงก์ล่วงหน้า (GET) ใช้ลิงก์ไปก่อนผู้ใช้
-     * param : request, token
-     * return : View user.auth.verify-confirm หรือ RedirectResponse ถ้าข้อมูลสมัครหมดอายุ
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @param string $token โทเค็น
+     * @return View user.auth.verify-confirm หรือ RedirectResponse ถ้าข้อมูลสมัครหมดอายุ
      */
     public function confirm(Request $request, string $token)
     {
@@ -60,10 +63,12 @@ class EmailVerificationController extends Controller
     }
 
     /**
-     * verify(request, token)
+     * verify($request, $token)
      * (POST จากปุ่มในหน้า confirm) ตรวจลิงก์ยืนยัน (signed URL) แล้วสร้างบัญชีจากข้อมูลที่เก็บไว้ชั่วคราว และเข้าสู่ระบบให้
-     * param : request, token
-     * return : RedirectResponse กลับหน้าที่ผู้ใช้อยู่ตอนสมัคร (ไม่มี = หน้าแรกพร้อมหน้าต่างยืนยันสำเร็จ)
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @param string $token โทเค็น
+     * @return RedirectResponse กลับหน้าที่ผู้ใช้อยู่ตอนสมัคร (ไม่มี = หน้าแรกพร้อมหน้าต่างยืนยันสำเร็จ)
      */
     public function verify(Request $request, string $token)
     {
@@ -120,10 +125,11 @@ class EmailVerificationController extends Controller
     }
 
     /**
-     * resend(request)
+     * resend($request)
      * ส่งลิงก์ยืนยันอีกครั้งจากข้อมูลสมัครที่ยังรอยืนยัน (จำกัดความถี่ที่ route)
-     * param : request
-     * return : RedirectResponse กลับหน้าเดิมพร้อมเปิดหน้าต่างตรวจอีเมล
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return RedirectResponse กลับหน้าเดิมพร้อมเปิดหน้าต่างตรวจอีเมล
      */
     public function resend(Request $request)
     {
@@ -166,10 +172,11 @@ class EmailVerificationController extends Controller
     }
 
     /**
-     * backToRegister(message)
+     * backToRegister($message)
      * กลับหน้าแรกพร้อมเปิดโมดัลสมัครสมาชิกและแสดงข้อความผิดพลาด
-     * param : message
-     * return : RedirectResponse
+     *
+     * @param string $message ข้อความ
+     * @return RedirectResponse เปลี่ยนเส้นทางไปหน้าที่เกี่ยวข้อง
      */
     private function backToRegister(string $message)
     {

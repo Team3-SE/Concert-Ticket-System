@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * AppServiceProvider
+ * ตั้งค่าบริการเริ่มต้นของแอปพลิเคชัน เช่น View Composer และรูปแบบวันเวลา (พ.ศ.)
+ * Author :
+ * Created :
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
 namespace App\Providers;
 
 use App\View\Composers\AuthModalComposer;
@@ -12,7 +20,10 @@ use Illuminate\Support\ServiceProvider;
 class AppServiceProvider extends ServiceProvider
 {
     /**
+     * register()
      * Register any application services.
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function register(): void
     {
@@ -20,7 +31,10 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
+     * boot()
      * Bootstrap any application services.
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function boot(): void
     {

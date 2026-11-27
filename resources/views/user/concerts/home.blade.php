@@ -1,9 +1,9 @@
 {{--
  * home.blade.php
  * หน้า Home: ช่องค้นหา แบนเนอร์ไฮไลต์ และคอนเสิร์ตแนะนำ (หน้าต่างเข้าสู่ระบบ/สมัครสมาชิกย้ายไป user/partials/auth-modals)
- * @Author ธีรเมธ พลสาย
+ * @Author 67160292 ธีรเมธ พลสาย
  * @Create Date
- * @Update Date 10/11/2569 67160292 ธีรเมธ พลสาย
+ * @Update Date 27/11/2569 67160292 ธีรเมธ พลสาย
 --}}
 @extends('layouts.user')
 

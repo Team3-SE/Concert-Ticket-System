@@ -5,7 +5,7 @@
  * แสดงประวัติการสั่งซื้อของผู้ใช้ที่เข้าสู่ระบบ
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 16/10/2569
- * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย 
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -24,8 +24,8 @@ class OrderController extends Controller
     /**
      * history()
      * แสดงประวัติการสั่งซื้อของผู้ใช้ที่เข้าสู่ระบบ แบบแบ่งหน้า
-     * param : -
-     * return : View account.order-history
+     *
+     * @return View account.order-history
      */
     public function history()
     {
@@ -72,10 +72,11 @@ class OrderController extends Controller
     }
 
     /**
-     * formatThaiDateTime(value)
+     * formatThaiDateTime($value)
      * แปลงวันเวลาเป็นรูปแบบไทย เช่น 11 พ.ย. 2569 16:30 (ระบบเก็บเวลาเป็นเวลาไทยอยู่แล้ว)
-     * param : value
-     * return : string
+     *
+     * @param mixed $value ค่าที่ส่งมา
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     private function formatThaiDateTime(mixed $value): string
     {

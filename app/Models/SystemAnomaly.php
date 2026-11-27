@@ -5,7 +5,7 @@
  * ความผิดปกติของระบบที่ตรวจพบ (ตาราง system_anomaly)
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -45,8 +45,8 @@ class SystemAnomaly extends Model
     /**
      * booking()
      * ความสัมพันธ์กับการจองที่เกิดความผิดปกติ
-     * param : -
-     * return : BelongsTo Booking
+     *
+     * @return BelongsTo Booking
      */
     public function booking(): BelongsTo
     {
@@ -56,8 +56,8 @@ class SystemAnomaly extends Model
     /**
      * managedBy()
      * ความสัมพันธ์กับผู้ดูแลระบบที่จัดการรายการนี้
-     * param : -
-     * return : BelongsTo AppUser
+     *
+     * @return BelongsTo AppUser
      */
     public function managedBy(): BelongsTo
     {
@@ -67,8 +67,8 @@ class SystemAnomaly extends Model
     /**
      * causedBy()
      * ความสัมพันธ์กับผู้ใช้ที่ทำให้เกิดความผิดปกติ
-     * param : -
-     * return : BelongsTo AppUser
+     *
+     * @return BelongsTo AppUser
      */
     public function causedBy(): BelongsTo
     {
@@ -78,8 +78,8 @@ class SystemAnomaly extends Model
     /**
      * attachments()
      * ความสัมพันธ์กับไฟล์แนบของรายการนี้
-     * param : -
-     * return : HasMany AnomalyAttachment
+     *
+     * @return HasMany AnomalyAttachment
      */
     public function attachments(): HasMany
     {

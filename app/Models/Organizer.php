@@ -5,7 +5,7 @@
  * ผู้จัดคอนเสิร์ต (AppUser ที่ role = ORGANIZER)
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -18,8 +18,8 @@ class Organizer extends AppUser
     /**
      * boot()
      * กำหนดให้ query เฉพาะผู้ใช้ role ORGANIZER และตั้ง role ให้อัตโนมัติเมื่อสร้าง
-     * param : -
-     * return : void
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     protected static function boot()
     {
@@ -46,8 +46,8 @@ class Organizer extends AppUser
     /**
      * concerts()
      * ความสัมพันธ์กับคอนเสิร์ตขององค์กรที่ผู้จัดสังกัด (concert.c_organization_id = app_user.u_organization_id)
-     * param : -
-     * return : HasMany Concert
+     *
+     * @return HasMany Concert
      */
     public function concerts(): HasMany
     {
@@ -57,8 +57,8 @@ class Organizer extends AppUser
     /**
      * staff()
      * ความสัมพันธ์กับพนักงานที่ผู้จัดสร้าง
-     * param : -
-     * return : HasMany Staff
+     *
+     * @return HasMany Staff
      */
     public function staff(): HasMany
     {

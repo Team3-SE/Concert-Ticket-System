@@ -3,13 +3,16 @@
 /**
  * routes/organizer.php
  * หลังบ้านของ Organizer: ทุก route ขึ้นต้น /organizer ชื่อขึ้นต้น organizer. ต้อง login และ role = ORGANIZER
+ * Author : 67160292 ธีรเมธ พลสาย
+ * Created : 27/10/2569
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
+/*
  * โหลดจาก routes/web.php
  * เมนูใน sidebar (partials/backoffice/sidebar) ผูกกับชื่อ route ไว้แล้ว เพิ่ม route ชื่อเหล่านี้แล้วเมนูจะกดได้เอง:
  *   organizer.concerts.index (จัดการคอนเสิร์ต), organizer.buyers.index (รายการผู้ซื้อตั๋ว),
  *   organizer.staff.index (จัดการเจ้าหน้าที่)
- * Author : 67160292 ธีรเมธ พลสาย
- * Created : 27/10/2569
- * Updated : 26/11/2569 67160279 กนกพล แซ่ตั๊น
  */
 
 use App\Http\Controllers\CheckInController;

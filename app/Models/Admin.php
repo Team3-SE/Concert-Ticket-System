@@ -5,6 +5,7 @@
  * ผู้ดูแลระบบ (AppUser ที่ role = ADMIN)
  * Author :
  * Created :
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -16,8 +17,8 @@ class Admin extends AppUser
     /**
      * boot()
      * กำหนดให้ query เฉพาะผู้ใช้ role ADMIN และตั้ง role ให้อัตโนมัติเมื่อสร้าง
-     * param : -
-     * return : void
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     protected static function boot()
     {
@@ -37,10 +38,12 @@ class Admin extends AppUser
     // ==========================================
 
     /**
-     * manageUser(userID, action)
+     * manageUser($userID, $action)
      * จัดการบัญชีผู้ใช้ตาม action ที่กำหนด (ยังไม่ได้พัฒนา)
-     * param : userID, action
-     * return : void
+     *
+     * @param mixed $userID รหัสผู้ใช้
+     * @param mixed $action การกระทำที่ต้องการ
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function manageUser($userID, $action): void
     {
@@ -48,10 +51,11 @@ class Admin extends AppUser
     }
 
     /**
-     * viewAnomalies(filters)
+     * viewAnomalies($filters)
      * ดูรายการความผิดปกติของระบบ (ตอนนี้ยังไม่กรองตาม filters)
-     * param : filters
-     * return : Collection ของ SystemAnomaly
+     *
+     * @param array $filters เงื่อนไขการกรอง
+     * @return Collection ของ SystemAnomaly
      */
     public function viewAnomalies($filters = [])
     {
@@ -60,10 +64,11 @@ class Admin extends AppUser
     }
 
     /**
-     * acknowledgeAnomaly(anomalyID)
+     * acknowledgeAnomaly($anomalyID)
      * รับทราบรายการความผิดปกติ (ยังไม่ได้พัฒนา)
-     * param : anomalyID
-     * return : void
+     *
+     * @param mixed $anomalyID รหัสรายการผิดปกติ
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function acknowledgeAnomaly($anomalyID): void
     {
@@ -71,10 +76,13 @@ class Admin extends AppUser
     }
 
     /**
-     * resolveAnomaly(anomalyID, reason, files)
+     * resolveAnomaly($anomalyID, $reason, $files)
      * ปิดรายการความผิดปกติพร้อมเหตุผลและไฟล์แนบ (ยังไม่ได้พัฒนา)
-     * param : anomalyID, reason, files
-     * return : void
+     *
+     * @param mixed $anomalyID รหัสรายการผิดปกติ
+     * @param mixed $reason เหตุผล
+     * @param mixed $files ไฟล์ที่อัปโหลด
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function resolveAnomaly($anomalyID, $reason, $files): void
     {

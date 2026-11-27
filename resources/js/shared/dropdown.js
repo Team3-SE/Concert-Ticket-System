@@ -1,9 +1,13 @@
 /**
  * dropdown.js
  * เมนู dropdown ทั่วไป: กดปุ่มเพื่อเปิด/ปิด, คลิกที่อื่นหรือกด Esc เพื่อปิด, ใช้ปุ่มลูกศรเลื่อนเลือกรายการได้
- * วิธีใช้ : <div data-dropdown> <button data-dropdown-toggle> ... <div data-dropdown-menu hidden> ลิงก์/ปุ่ม </div> </div>
- * Author : ธีรเมธ พลสาย
+ * Author : 67160292 ธีรเมธ พลสาย
  * Created : 10/10/2569
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
+/*
+ * วิธีใช้ : <div data-dropdown> <button data-dropdown-toggle> ... <div data-dropdown-menu hidden> ลิงก์/ปุ่ม </div> </div>
  */
 
 (() => {

@@ -1,12 +1,15 @@
 {{--
  * forgot-modal.blade.php
  * หน้าต่างลืมรหัสผ่าน 3 ขั้น (กรอกอีเมล → กรอกรหัส 6 หลักจากอีเมล → ตั้งรหัสผ่านใหม่) แทนหน้าแยก forgot-password, verify-code, reset-password เดิม
+ * @Author 67160292 ธีรเมธ พลสาย
+ * @Create Date 15/11/2569
+ * @Update Date 27/11/2569 67160292 ธีรเมธ พลสาย
+--}}
+{{--
  * แต่ละขั้นส่งฟอร์มไป PasswordResetController แล้วกลับหน้าเดิมพร้อมเปิดหน้าต่างนี้ที่ขั้นถัดไป (session open_modal)
  * แสดงทีละขั้น (<section data-forgot-step>) ขั้นที่ 2–3 มีเฉพาะตอนที่ยังทำค้างอยู่ใน session
  * ใช้ใน : user/partials/auth-modals  ข้อมูลจาก View/Composers/AuthModalComposer : $authOpen, $forgot (step, email, code, reset)
  * สไตล์ : resources/css/user/auth/verify-notice.css + password-reset.css  สคริปต์ : resources/js/user/auth-modal.js + auth-flow.js
- * @Author 67160292 ธีรเมธ พลสาย
- * @Create Date 15/11/2569
 --}}
 @php
   $forgotOpen = $authOpen === 'forgot';

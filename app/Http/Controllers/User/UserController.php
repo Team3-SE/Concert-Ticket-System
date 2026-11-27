@@ -3,9 +3,9 @@
 /**
  * UserController
  * จัดการข้อมูลบัญชีผู้ใช้: ดึงโปรไฟล์ แก้ไขโปรไฟล์ และเปลี่ยนรหัสผ่าน
- * Author :  67160292 ธีรเมธ พลสาย
+ * Author : 67160292 ธีรเมธ พลสาย
  * Created : 04/09/2569
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -20,10 +20,11 @@ use Illuminate\Support\Facades\Hash;
 class UserController extends Controller
 {
     /**
-     * getProfile(userId)
+     * getProfile($userId)
      * ดึงข้อมูลบัญชีผู้ใช้พร้อมองค์กรที่สังกัด
-     * param : userId
-     * return : AppUser
+     *
+     * @param int $userId รหัสผู้ใช้
+     * @return AppUser ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     public function getProfile(int $userId): AppUser
     {
@@ -31,10 +32,12 @@ class UserController extends Controller
     }
 
     /**
-     * updateProfile(request, userId)
+     * updateProfile($request, $userId)
      * ตรวจสอบแล้วบันทึกชื่อ นามสกุล และเบอร์โทรศัพท์ของผู้ใช้
-     * param : request, userId
-     * return : void
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @param int $userId รหัสผู้ใช้
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function updateProfile(Request $request, int $userId): void
     {
@@ -58,10 +61,12 @@ class UserController extends Controller
     }
 
     /**
-     * changePassword(request, userId)
+     * changePassword($request, $userId)
      * ตรวจรหัสผ่านปัจจุบัน แล้วเปลี่ยนเป็นรหัสผ่านใหม่ (เก็บแบบ hash)
-     * param : request, userId
-     * return : void
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @param int $userId รหัสผู้ใช้
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function changePassword(Request $request, int $userId): void
     {

@@ -5,7 +5,7 @@
  * การมอบหมายพนักงานให้คอนเสิร์ต (ตาราง staff_concert)
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -40,8 +40,8 @@ class StaffConcert extends Model
     /**
      * staff()
      * ความสัมพันธ์กับพนักงาน
-     * param : -
-     * return : BelongsTo Staff
+     *
+     * @return BelongsTo Staff
      */
     public function staff(): BelongsTo
     {
@@ -51,8 +51,8 @@ class StaffConcert extends Model
     /**
      * concert()
      * ความสัมพันธ์กับคอนเสิร์ต
-     * param : -
-     * return : BelongsTo Concert
+     *
+     * @return BelongsTo Concert
      */
     public function concert(): BelongsTo
     {

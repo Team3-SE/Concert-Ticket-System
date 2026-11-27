@@ -5,7 +5,7 @@
  * การชำระเงิน (ตาราง payment)
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -52,8 +52,8 @@ class Payment extends Model
     /**
      * processPayment()
      * เริ่มการชำระเงิน (PROMPTPAY หรือ CREDIT_CARD)
-     * param : -
-     * return : bool – true ถ้ารายการยังรอชำระ (PENDING)
+     *
+     * @return bool true ถ้ารายการยังรอชำระ (PENDING)
      */
     public function processPayment(): bool
     {
@@ -65,8 +65,8 @@ class Payment extends Model
     /**
      * verifyStatus()
      * ตรวจสอบสถานะธุรกรรมการชำระเงิน
-     * param : -
-     * return : bool – true ถ้าชำระเงินสำเร็จ (COMPLETED)
+     *
+     * @return bool true ถ้าชำระเงินสำเร็จ (COMPLETED)
      */
     public function verifyStatus(): bool
     {
@@ -81,8 +81,8 @@ class Payment extends Model
     /**
      * booking()
      * ความสัมพันธ์กับการจอง
-     * param : -
-     * return : BelongsTo Booking
+     *
+     * @return BelongsTo Booking
      */
     public function booking(): BelongsTo
     {
@@ -92,8 +92,8 @@ class Payment extends Model
     /**
      * customerOrder()
      * ความสัมพันธ์กับคำสั่งซื้อ
-     * param : -
-     * return : HasOne CustomerOrder
+     *
+     * @return HasOne CustomerOrder
      */
     public function customerOrder(): HasOne
     {

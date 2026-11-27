@@ -1,11 +1,13 @@
 {{--
  * concert-card.blade.php
  * การ์ดคอนเสิร์ต ใช้ในหน้า Home และหน้าคอนเสิร์ตทั้งหมด
- * @include('user.partials.concert-card', ['concert' => $concert, 'index' => $loop->index, 'detailed' => true])
- * detailed = แสดงสถานที่
  * @Author 67160292 ธีรเมธ พลสาย
  * @Create Date 09-10-2569
- * @Update Date 11/11/2569 67160292 ธีรเมธ พลสาย
+ * @Update Date 27/11/2569 67160292 ธีรเมธ พลสาย
+--}}
+{{--
+ * @include('user.partials.concert-card', ['concert' => $concert, 'index' => $loop->index, 'detailed' => true])
+ * detailed = แสดงสถานที่
 --}}
 @php
   $detailed = $detailed ?? false;

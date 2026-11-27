@@ -3,9 +3,13 @@
 /**
  * PendingRegistration
  * เก็บข้อมูลสมัครสมาชิกชั่วคราวใน Cache จนกว่าผู้ใช้จะกดลิงก์ยืนยันอีเมล
- * (ยังไม่สร้างแถวใน app_user ก่อนยืนยัน)
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 17/10/2569
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
+/*
+ * (ยังไม่สร้างแถวใน app_user ก่อนยืนยัน)
  */
 
 namespace App\Services;
@@ -22,10 +26,11 @@ class PendingRegistration
     public const TTL_MINUTES = 60;
 
     /**
-     * emailKey(email)
+     * emailKey($email)
      * คีย์ Cache ที่ใช้หา token จากอีเมล
-     * param : email
-     * return : string
+     *
+     * @param string $email อีเมล
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     private static function emailKey(string $email): string
     {
@@ -33,10 +38,11 @@ class PendingRegistration
     }
 
     /**
-     * tokenKey(token)
+     * tokenKey($token)
      * คีย์ Cache ที่เก็บข้อมูลสมัครของ token
-     * param : token
-     * return : string
+     *
+     * @param string $token โทเค็น
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     private static function tokenKey(string $token): string
     {
@@ -44,10 +50,11 @@ class PendingRegistration
     }
 
     /**
-     * hasEmail(email)
+     * hasEmail($email)
      * ตรวจว่าอีเมลนี้มีการสมัครที่รอยืนยันอยู่หรือไม่
-     * param : email
-     * return : bool
+     *
+     * @param string $email อีเมล
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public static function hasEmail(string $email): bool
     {
@@ -55,10 +62,11 @@ class PendingRegistration
     }
 
     /**
-     * store(data)
+     * store($data)
      * เก็บข้อมูลสมัคร (รหัสผ่านต้อง hash มาแล้ว) พร้อมสร้าง token ใหม่
-     * param : data – email, password_hash, first_name, last_name, phone
-     * return : string token
+     *
+     * @param array $data email
+     * @return string token
      */
     public static function store(array $data): string
     {
@@ -69,10 +77,11 @@ class PendingRegistration
     }
 
     /**
-     * find(token)
+     * find($token)
      * ดึงข้อมูลสมัครจาก token
-     * param : token
-     * return : array|null – null ถ้าไม่พบหรือหมดอายุ
+     *
+     * @param string $token โทเค็น
+     * @return array|null null ถ้าไม่พบหรือหมดอายุ
      */
     public static function find(string $token): ?array
     {
@@ -80,10 +89,11 @@ class PendingRegistration
     }
 
     /**
-     * tokenForEmail(email)
+     * tokenForEmail($email)
      * หา token ของการสมัครที่รอยืนยันจากอีเมล
-     * param : email
-     * return : string|null
+     *
+     * @param string $email อีเมล
+     * @return string|null ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     public static function tokenForEmail(string $email): ?string
     {
@@ -91,10 +101,12 @@ class PendingRegistration
     }
 
     /**
-     * forget(token, email)
+     * forget($token, $email)
      * ลบข้อมูลสมัครชั่วคราวหลังยืนยันสำเร็จ
-     * param : token, email
-     * return : void
+     *
+     * @param string $token โทเค็น
+     * @param string $email อีเมล
+     * @return void ไม่มีค่าส่งกลับ
      */
     public static function forget(string $token, string $email): void
     {
@@ -103,10 +115,12 @@ class PendingRegistration
     }
 
     /**
-     * send(token, data)
+     * send($token, $data)
      * ต่ออายุข้อมูลชั่วคราว แล้วส่งอีเมลลิงก์ยืนยัน (signed URL)
-     * param : token, data
-     * return : void
+     *
+     * @param string $token โทเค็น
+     * @param array $data ข้อมูล
+     * @return void ไม่มีค่าส่งกลับ
      */
     public static function send(string $token, array $data): void
     {
@@ -123,10 +137,12 @@ class PendingRegistration
     }
 
     /**
-     * put(token, data)
+     * put($token, $data)
      * บันทึกข้อมูลสมัครและตัวชี้จากอีเมลไปยัง token พร้อมอายุ
-     * param : token, data
-     * return : void
+     *
+     * @param string $token โทเค็น
+     * @param array $data ข้อมูล
+     * @return void ไม่มีค่าส่งกลับ
      */
     private static function put(string $token, array $data): void
     {

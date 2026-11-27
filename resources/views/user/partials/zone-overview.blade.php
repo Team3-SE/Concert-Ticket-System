@@ -1,11 +1,14 @@
 {{--
  * zone-overview.blade.php
  * ส่วน "โซนทั้งหมด": รูปผังที่นั่ง (กรอบ 1:1) + ตารางโซน ราคา และที่นั่งว่าง ใช้ร่วมกันในหน้า booking และ concert-detail
+ * @Author 67160292 ธีรเมธ พลสาย
+ * @Create Date 21/10/2569
+ * @Update Date 27/11/2569 67160292 ธีรเมธ พลสาย
+--}}
+{{--
  * @include('user.partials.zone-overview', ['concert' => $concert, 'zones' => $zones, 'selectable' => true])
  * zones      = [['name', 'price', 'color', 'seats', 'capacity'], ...] จาก BookingController
  * selectable = กดแถวเพื่อเลือกโซนได้ (ใช้ในหน้า booking ที่อยู่ใน Alpine bookingApp)
- * @Author 67160292 ธีรเมธ พลสาย
- * @Create Date 21/10/2569
 --}}
 @php
   $selectable = $selectable ?? false;

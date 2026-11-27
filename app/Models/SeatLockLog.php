@@ -3,11 +3,14 @@
 /**
  * SeatLockLog
  * ประวัติการล็อกที่นั่ง (ตาราง seat_lock_log)
- * schema 3.4.2 ไม่มีคอลัมน์ status แล้ว: ล็อกที่ยังมีผลคือแถวที่ released_at และ sold_at ยังว่าง
- * (คอลัมน์ active_seat_id เป็น generated column + UNIQUE กันไม่ให้ที่นั่งเดียวกันถูกล็อกซ้อน 2 แถว)
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
+/*
+ * schema 3.4.2 ไม่มีคอลัมน์ status แล้ว: ล็อกที่ยังมีผลคือแถวที่ released_at และ sold_at ยังว่าง
+ * (คอลัมน์ active_seat_id เป็น generated column + UNIQUE กันไม่ให้ที่นั่งเดียวกันถูกล็อกซ้อน 2 แถว)
  */
 
 namespace App\Models;
@@ -40,10 +43,11 @@ class SeatLockLog extends Model
     ];
 
     /**
-     * scopeActive(query)
+     * scopeActive($query)
      * เฉพาะล็อกที่ยังมีผล (ยังไม่ปล่อยและยังไม่ขาย)
-     * param : query
-     * return : Builder
+     *
+     * @param Builder $query คำค้นหา
+     * @return Builder ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     public function scopeActive(Builder $query): Builder
     {
@@ -53,8 +57,8 @@ class SeatLockLog extends Model
     /**
      * isActive()
      * ตรวจว่าล็อกนี้ยังมีผลอยู่
-     * param : -
-     * return : bool
+     *
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public function isActive(): bool
     {
@@ -66,8 +70,8 @@ class SeatLockLog extends Model
     /**
      * booking()
      * ความสัมพันธ์กับการจอง
-     * param : -
-     * return : BelongsTo Booking
+     *
+     * @return BelongsTo Booking
      */
     public function booking(): BelongsTo
     {
@@ -77,8 +81,8 @@ class SeatLockLog extends Model
     /**
      * seat()
      * ความสัมพันธ์กับที่นั่ง
-     * param : -
-     * return : BelongsTo Seat
+     *
+     * @return BelongsTo Seat
      */
     public function seat(): BelongsTo
     {

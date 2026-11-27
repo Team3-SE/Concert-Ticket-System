@@ -1,10 +1,13 @@
 {{--
  * registration-verification-text.blade.php
  * อีเมลลิงก์ยืนยันการสมัครสมาชิก แบบข้อความล้วน (สำหรับโปรแกรมที่ไม่แสดง HTML และช่วยไม่ให้ตกสแปม)
- * ใช้กับ : App\Notifications\RegistrationVerification (คู่กับ registration-verification)
- * ข้อมูล : $url, $firstName, $ttl
  * @Author 67160292 ธีรเมธ พลสาย
  * @Create Date 27/10/2569
+ * @Update Date 27/11/2569 67160292 ธีรเมธ พลสาย
+--}}
+{{--
+ * ใช้กับ : App\Notifications\RegistrationVerification (คู่กับ registration-verification)
+ * ข้อมูล : $url, $firstName, $ttl
 --}}
 {{ $firstName !== '' ? "สวัสดีคุณ{$firstName}" : 'สวัสดี' }}
 

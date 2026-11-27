@@ -4,7 +4,8 @@
  * WebmailLink
  * ลิงก์เปิดเว็บเมลตามโดเมนของอีเมล (ปุ่ม "เปิด Gmail" ในหน้ายืนยันอีเมลและหน้ากรอกรหัสลืมรหัสผ่าน)
  * Author : 67160292 ธีรเมธ พลสาย
- * Created : 29/10/2569 
+ * Created : 29/10/2569
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Services;
@@ -12,9 +13,11 @@ namespace App\Services;
 class WebmailLink
 {
     /**
-     * for(email)
-     * param : email
-     * return : array|null – ['label' => ชื่อบริการ, 'url' => ลิงก์] หรือ null ถ้าไม่รู้จักโดเมน (ไม่แสดงปุ่ม)
+     * for($email)
+     * หาบริการเว็บเมลจากโดเมนอีเมล เพื่อแสดงปุ่มเปิดกล่องจดหมาย
+     *
+     * @param string $email อีเมล
+     * @return array|null ['label' => ชื่อบริการ, 'url' => ลิงก์] หรือ null ถ้าไม่รู้จักโดเมน (ไม่แสดงปุ่ม)
      */
     public static function for(string $email): ?array
     {

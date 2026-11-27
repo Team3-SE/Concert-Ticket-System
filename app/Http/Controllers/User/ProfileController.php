@@ -5,6 +5,7 @@
  * หน้าแก้ไขข้อมูลส่วนตัวและเปลี่ยนรหัสผ่าน (ส่งต่องานบันทึกให้ UserController)
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 04/09/2569
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -19,10 +20,10 @@ class ProfileController extends Controller
     protected UserController $userController;
 
     /**
-     * __construct(userController)
+     * __construct($userController)
      * รับ UserController ผ่าน dependency injection
-     * param : userController
-     * return : -
+     *
+     * @param UserController $userController ตัวควบคุมผู้ใช้
      */
     public function __construct(UserController $userController)
     {
@@ -32,8 +33,8 @@ class ProfileController extends Controller
     /**
      * edit()
      * แสดงหน้าแก้ไขข้อมูลส่วนตัวของผู้ใช้ที่เข้าสู่ระบบ
-     * param : -
-     * return : View account.edit-profile
+     *
+     * @return View account.edit-profile
      */
     public function edit()
     {
@@ -42,10 +43,11 @@ class ProfileController extends Controller
     }
 
     /**
-     * update(request)
+     * update($request)
      * บันทึกข้อมูลส่วนตัวที่แก้ไข
-     * param : request
-     * return : RedirectResponse กลับหน้าแก้ไขข้อมูลพร้อมข้อความสำเร็จ
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return RedirectResponse กลับหน้าแก้ไขข้อมูลพร้อมข้อความสำเร็จ
      */
     public function update(Request $request)
     {
@@ -54,10 +56,11 @@ class ProfileController extends Controller
     }
 
     /**
-     * updatePassword(request)
+     * updatePassword($request)
      * เปลี่ยนรหัสผ่านของผู้ใช้ที่เข้าสู่ระบบ
-     * param : request
-     * return : RedirectResponse กลับหน้าแก้ไขข้อมูลพร้อมข้อความสำเร็จ
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return RedirectResponse กลับหน้าแก้ไขข้อมูลพร้อมข้อความสำเร็จ
      */
     public function updatePassword(Request $request)
     {

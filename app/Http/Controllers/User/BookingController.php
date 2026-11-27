@@ -5,7 +5,7 @@
  * จัดการการจองบัตรของลูกค้า: หน้าเลือกที่นั่ง ตรวจความปลอดภัย สร้างการจอง และประวัติการจอง
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 04/09/2569
- * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -29,13 +29,20 @@ use Throwable;
 
 class BookingController extends Controller
 {
+    /**
+     * __construct($seatLockService)
+     * รับบริการล็อกที่นั่งมาใช้ในคลาสนี้
+     *
+     * @param SeatLockService $seatLockService บริการล็อกที่นั่ง
+     */
     public function __construct(private readonly SeatLockService $seatLockService) {}
 
     /**
-     * index(request)
+     * index($request)
      * แสดงหน้าเลือกโซน/ที่นั่งของคอนเสิร์ต พร้อมจำนวนที่ว่างและที่นั่งที่ถูกจองแล้ว
-     * param : request
-     * return : View booking.booking
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return View booking.booking
      */
     public function index(Request $request)
     {
@@ -124,7 +131,11 @@ class BookingController extends Controller
     }
 
     /**
+     * detail($request)
      * แสดงรายละเอียดคอนเสิร์ต ราคา และจำนวนบัตรที่ยังว่าง
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return View หน้ารายละเอียดคอนเสิร์ต
      */
     public function detail(Request $request)
     {
@@ -159,10 +170,13 @@ class BookingController extends Controller
     }
 
     /**
-     * validateBookingSecurity(customerId, deviceFingerprint, captchaToken)
+     * validateBookingSecurity($customerId, $deviceFingerprint, $captchaToken)
      * ตรวจความปลอดภัยก่อนสร้างการจอง (บัญชีถูกระงับ, CAPTCHA, device fingerprint)
-     * param : customerId, deviceFingerprint, captchaToken
-     * return : bool – true ถ้าอนุญาตให้จองได้
+     *
+     * @param int $customerId รหัสลูกค้า
+     * @param string|null $deviceFingerprint ลายนิ้วมืออุปกรณ์
+     * @param string|null $captchaToken โทเค็น CAPTCHA
+     * @return bool true ถ้าอนุญาตให้จองได้
      */
     public function validateBookingSecurity(int $customerId, ?string $deviceFingerprint, ?string $captchaToken): bool
     {
@@ -178,12 +192,16 @@ class BookingController extends Controller
     }
 
     /**
-     * createBooking(customerId, concertId, seatIds, standingItems)
+     * createBooking($customerId, $concertId, $seatIds, $standingItems)
      * สร้างการจอง 1 รายการต่อ 1 โซน (schema 3.4.2) พร้อม snapshot ชื่อโซนและราคาไว้ที่ booking
      * - โซนที่นั่ง: ล็อกที่นั่ง บันทึก BookingSeat และ SeatLockLog (UNIQUE active_seat_id กันล็อกซ้อนที่ระดับฐานข้อมูล)
      * - โซนยืน: ล็อกแถว zone_inventory ตรวจจำนวนคงเหลือ แล้วเพิ่ม held ตามจำนวนที่จอง
-     * param : customerId, concertId, seatIds (โซนเดียวกันทั้งหมด), standingItems ([['zone_id' => ..., 'quantity' => ...]] ได้ 1 โซน)
-     * return : Booking ที่สร้างขึ้น
+     *
+     * @param int $customerId รหัสลูกค้า
+     * @param int $concertId รหัสคอนเสิร์ต
+     * @param array $seatIds โซนเดียวกันทั้งหมด
+     * @param array $standingItems [['zone_id' => ..., 'quantity' => ...]] ได้ 1 โซน
+     * @return Booking ที่สร้างขึ้น
      */
     public function createBooking(int $customerId, int $concertId, array $seatIds = [], array $standingItems = []): Booking
     {
@@ -294,11 +312,12 @@ class BookingController extends Controller
     }
 
     /**
-     * store(request)
+     * store($request)
      * สร้างการจองจากหน้า booking: โซนนั่งรับป้ายที่นั่ง (เช่น A1, A2) แปลงเป็นรหัสที่นั่ง (s_id) แล้วล็อกที่นั่ง
      * โซนยืนรับจำนวนบัตร (quantity) แล้วกันจำนวนไว้จนกว่าจะชำระเงินหรือหมดเวลา
-     * param : request (concert_id, zone_id, seats[] หรือ quantity)
-     * return : JsonResponse { booking_id, redirect } หรือข้อความผิดพลาด
+     *
+     * @param Request $request concert_id, zone_id, seats[] หรือ quantity
+     * @return JsonResponse { booking_id, redirect } หรือข้อความผิดพลาด
      */
     public function store(Request $request): JsonResponse
     {
@@ -380,10 +399,11 @@ class BookingController extends Controller
     }
 
     /**
-     * getBookingHistory(customerId)
+     * getBookingHistory($customerId)
      * ดึงประวัติการจองของลูกค้า เรียงจากล่าสุด
-     * param : customerId
-     * return : Collection ของ Booking
+     *
+     * @param int $customerId รหัสลูกค้า
+     * @return Collection ของ Booking
      */
     public function getBookingHistory(int $customerId)
     {

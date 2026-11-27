@@ -5,7 +5,7 @@
  * แสดงหน้า Home: คอนเสิร์ตแนะนำ ผลการค้นหา และคอนเสิร์ตไฮไลต์
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 16/10/2569
- * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -25,10 +25,10 @@ class HomeController extends Controller
     protected ConcertController $concertController;
 
     /**
-     * __construct(concertController)
+     * __construct($concertController)
      * รับ ConcertController ผ่าน dependency injection
-     * param : concertController
-     * return : -
+     *
+     * @param ConcertController $concertController ตัวควบคุมคอนเสิร์ต
      */
     public function __construct(ConcertController $concertController)
     {
@@ -36,10 +36,11 @@ class HomeController extends Controller
     }
 
     /**
-     * index(request)
+     * index($request)
      * แสดงหน้า Home พร้อมรายการคอนเสิร์ต (หรือผลการค้นหา) และคอนเสิร์ตไฮไลต์
-     * param : request
-     * return : View concerts.home
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return View concerts.home
      */
     public function index(Request $request)
     {

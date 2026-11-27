@@ -3,15 +3,18 @@
 /**
  * PasswordResetController
  * ลืมรหัสผ่าน 3 ขั้น: กรอกอีเมล → กรอกรหัส 6 หลักที่ส่งไปทางอีเมล → ตั้งรหัสผ่านใหม่
+ * Author : 67160292 ธีรเมธ พลสาย
+ * Created : 29/10/2569
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
+/*
  * ใช้ได้ทุกบัญชีที่มีอีเมล (User / Organizer / Admin) ยกเว้น Staff ซึ่งให้ Organizer รีเซ็ตรหัสผ่านให้
  * เปิดได้เฉพาะคนที่ยังไม่ได้เข้าสู่ระบบ (routes/web.php กลุ่ม role:GUEST)
  * รหัสเก็บใน Cache ผ่าน Services/PasswordResetOtp
  * ทุกขั้นเป็นหน้าต่าง (user/auth/partials/forgot-modal ใน user/partials/auth-modals): ส่งฟอร์มแล้วกลับหน้าเดิม
  * พร้อมเปิดหน้าต่างที่ขั้นถัดไปผ่าน session open_modal (forgot / forgot-code / forgot-reset)
  * ข้อมูลที่แสดงในหน้าต่างมาจาก View/Composers/AuthModalComposer
- * Author : 67160292 ธีรเมธ พลสาย
- * Created : 29/10/2569
- * Updated : 15/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers;
@@ -35,10 +38,11 @@ class PasswordResetController extends Controller
     private const PASSWORD_REGEX = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)\S{8,32}$/';
 
     /**
-     * showForgot(request)
+     * showForgot($request)
      * ลิงก์เดิมของหน้าลืมรหัสผ่าน: พาไปหน้าแรกแล้วเปิดหน้าต่างลืมรหัสผ่านขั้นที่ 1 (เติมอีเมลให้ถ้ามี ?email=)
-     * param : request
-     * return : RedirectResponse
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return RedirectResponse เปลี่ยนเส้นทางไปหน้าที่เกี่ยวข้อง
      */
     public function showForgot(Request $request)
     {
@@ -48,10 +52,11 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * sendCode(request)
+     * sendCode($request)
      * ตรวจอีเมลแล้วส่งรหัส 6 หลัก (ถ้าเพิ่งส่งไปไม่ถึง 60 วินาที จะไม่ส่งซ้ำ พาไปขั้นกรอกรหัสเลย)
-     * param : request – email
-     * return : RedirectResponse กลับหน้าเดิมพร้อมเปิดขั้นกรอกรหัส หรือขั้นที่ 1 พร้อม error
+     *
+     * @param Request $request email
+     * @return RedirectResponse กลับหน้าเดิมพร้อมเปิดขั้นกรอกรหัส หรือขั้นที่ 1 พร้อม error
      */
     public function sendCode(Request $request)
     {
@@ -95,10 +100,11 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * showVerify(request)
+     * showVerify($request)
      * ลิงก์เดิมของหน้ากรอกรหัส: พาไปหน้าแรกแล้วเปิดหน้าต่างลืมรหัสผ่านขั้นที่ 2 (ยังไม่ได้ขอรหัส = ขั้นที่ 1)
-     * param : request
-     * return : RedirectResponse
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return RedirectResponse เปลี่ยนเส้นทางไปหน้าที่เกี่ยวข้อง
      */
     public function showVerify(Request $request)
     {
@@ -106,10 +112,11 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * verifyCode(request)
+     * verifyCode($request)
      * ตรวจรหัสที่กรอก (ช่อง digits[] 6 ช่อง หรือ code) ถูกแล้วให้สิทธิ์ตั้งรหัสผ่านใหม่ภายใน RESET_WINDOW_MINUTES นาที
-     * param : request
-     * return : RedirectResponse กลับหน้าเดิมพร้อมเปิดขั้นที่ 3 หรือขั้นกรอกรหัสพร้อม error
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return RedirectResponse กลับหน้าเดิมพร้อมเปิดขั้นที่ 3 หรือขั้นกรอกรหัสพร้อม error
      */
     public function verifyCode(Request $request)
     {
@@ -154,10 +161,11 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * resend(request)
+     * resend($request)
      * ส่งรหัสใหม่ไปที่อีเมลเดิม (รหัสเดิมใช้ไม่ได้ทันที) จำกัดให้ห่างกันอย่างน้อย 60 วินาที
-     * param : request
-     * return : RedirectResponse กลับหน้าเดิมพร้อมเปิดขั้นกรอกรหัส
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return RedirectResponse กลับหน้าเดิมพร้อมเปิดขั้นกรอกรหัส
      */
     public function resend(Request $request)
     {
@@ -190,10 +198,11 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * showReset(request)
+     * showReset($request)
      * ลิงก์เดิมของหน้าตั้งรหัสผ่านใหม่: พาไปหน้าแรกแล้วเปิดหน้าต่างลืมรหัสผ่านขั้นที่ 3 (ยังไม่ได้ยืนยันรหัสหรือหมดเวลา = ขั้นที่ 1)
-     * param : request
-     * return : RedirectResponse
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return RedirectResponse เปลี่ยนเส้นทางไปหน้าที่เกี่ยวข้อง
      */
     public function showReset(Request $request)
     {
@@ -201,10 +210,11 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * reset(request)
+     * reset($request)
      * บันทึกรหัสผ่านใหม่ (hash) และสุ่ม remember_token ใหม่ ให้เครื่องอื่นที่เลือก "จำฉันไว้" ต้องเข้าสู่ระบบใหม่
-     * param : request – password, password_confirmation
-     * return : RedirectResponse กลับหน้าเดิมพร้อมหน้าต่างเข้าสู่ระบบ (เติมอีเมลให้) หรือขั้นตั้งรหัสใหม่พร้อม error
+     *
+     * @param Request $request password
+     * @return RedirectResponse กลับหน้าเดิมพร้อมหน้าต่างเข้าสู่ระบบ (เติมอีเมลให้) หรือขั้นตั้งรหัสใหม่พร้อม error
      */
     public function reset(Request $request)
     {
@@ -244,10 +254,11 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * verifiedState(request)
+     * verifiedState($request)
      * อ่านสิทธิ์ตั้งรหัสผ่านใหม่จาก session (ได้หลังยืนยันรหัสสำเร็จ)
-     * param : request
-     * return : array ['user_id', 'email', 'expires_at'] หรือ RedirectResponse กลับขั้นที่ 1 ถ้าไม่มีสิทธิ์/หมดเวลา
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return array ['user_id', 'email', 'expires_at'] หรือ RedirectResponse กลับขั้นที่ 1 ถ้าไม่มีสิทธิ์/หมดเวลา
      */
     private function verifiedState(Request $request)
     {
@@ -265,10 +276,11 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * cannotReset(user)
+     * cannotReset($user)
      * เหตุผลที่บัญชีนี้ขอรีเซ็ตรหัสผ่านเองไม่ได้
-     * param : user (null = ไม่พบบัญชี)
-     * return : string|null ข้อความแจ้ง หรือ null ถ้ารีเซ็ตได้
+     *
+     * @param AppUser|null $user null = ไม่พบบัญชี
+     * @return string|null ข้อความแจ้ง หรือ null ถ้ารีเซ็ตได้
      */
     private function cannotReset(?AppUser $user): ?string
     {
@@ -286,10 +298,13 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * restart(request, message, email)
+     * restart($request, $message, $email)
      * ล้างขั้นตอนที่ค้างอยู่ แล้วกลับไปขั้นที่ 1 พร้อมข้อความ
-     * param : request, message, email (เติมให้ในช่องอีเมล)
-     * return : RedirectResponse
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @param string $message ข้อความ
+     * @param string|null $email เติมให้ในช่องอีเมล
+     * @return RedirectResponse เปลี่ยนเส้นทางไปหน้าที่เกี่ยวข้อง
      */
     private function restart(Request $request, string $message, ?string $email = null)
     {
@@ -302,10 +317,11 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * toStep(modal)
+     * toStep($modal)
      * กลับหน้าที่ผู้ใช้อยู่ แล้วเปิดหน้าต่างลืมรหัสผ่านที่ขั้นนั้น
-     * param : modal – forgot (ขั้นที่ 1 กรอกอีเมล), forgot-code (ขั้นที่ 2 กรอกรหัส), forgot-reset (ขั้นที่ 3 ตั้งรหัสใหม่)
-     * return : RedirectResponse
+     *
+     * @param string $modal forgot (ขั้นที่ 1 กรอกอีเมล
+     * @return RedirectResponse เปลี่ยนเส้นทางไปหน้าที่เกี่ยวข้อง
      */
     private function toStep(string $modal)
     {
@@ -313,11 +329,14 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * openOnHome(request, modal, input)
+     * openOnHome($request, $modal, $input)
      * ลิงก์เดิมของหน้าแยก (ตอนนี้เป็นหน้าต่างแล้ว): พาไปหน้าแรกพร้อมเปิดหน้าต่างลืมรหัสผ่าน
      * เก็บข้อความ/error ที่ส่งมากับ redirect ก่อนหน้าไว้ด้วย (reflash) เผื่อมาจากหน้าเก่าที่เปิดค้างไว้
-     * param : request, modal (ใช้เมื่อไม่มี open_modal ส่งมาก่อน), input (ค่าเริ่มต้นในช่องกรอก)
-     * return : RedirectResponse
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @param string $modal ใช้เมื่อไม่มี open_modal ส่งมาก่อน
+     * @param array $input ค่าเริ่มต้นในช่องกรอก
+     * @return RedirectResponse เปลี่ยนเส้นทางไปหน้าที่เกี่ยวข้อง
      */
     private function openOnHome(Request $request, string $modal, array $input = [])
     {
@@ -330,8 +349,8 @@ class PasswordResetController extends Controller
     /**
      * previousPath()
      * path ของหน้าที่ผู้ใช้อยู่ (เช่น /concert-detail?concert_id=1) ใช้เป็นช่อง redirect ของหน้าต่างเข้าสู่ระบบ
-     * param : -
-     * return : string
+     *
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     private function previousPath(): string
     {

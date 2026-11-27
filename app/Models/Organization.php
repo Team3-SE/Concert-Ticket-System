@@ -5,7 +5,7 @@
  * องค์กรผู้จัดคอนเสิร์ต (ตาราง organization)
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -40,8 +40,8 @@ class Organization extends Model
     /**
      * getOrganizationInfo()
      * สรุปข้อมูลองค์กร (schema 3.4.2 เหลือแค่ชื่อองค์กร)
-     * param : -
-     * return : string
+     *
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     public function getOrganizationInfo(): string
     {
@@ -51,8 +51,8 @@ class Organization extends Model
     /**
      * listEvents()
      * ดึงคอนเสิร์ตขององค์กร
-     * param : -
-     * return : HasMany Concert
+     *
+     * @return HasMany Concert
      */
     public function listEvents(): HasMany
     {
@@ -66,8 +66,8 @@ class Organization extends Model
     /**
      * organizers()
      * ความสัมพันธ์กับผู้จัด (role ORGANIZER) ในองค์กร
-     * param : -
-     * return : HasMany AppUser
+     *
+     * @return HasMany AppUser
      */
     public function organizers(): HasMany
     {
@@ -78,8 +78,8 @@ class Organization extends Model
     /**
      * staff()
      * ความสัมพันธ์กับพนักงาน (role STAFF) ในองค์กร
-     * param : -
-     * return : HasMany AppUser
+     *
+     * @return HasMany AppUser
      */
     public function staff(): HasMany
     {
@@ -90,8 +90,8 @@ class Organization extends Model
     /**
      * concerts()
      * ความสัมพันธ์กับคอนเสิร์ตขององค์กร
-     * param : -
-     * return : HasMany Concert
+     *
+     * @return HasMany Concert
      */
     public function concerts(): HasMany
     {

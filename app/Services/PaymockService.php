@@ -3,10 +3,13 @@
 /**
  * PaymockService
  * ติดต่อ PayMock (mock payment gateway ในโฟลเดอร์ paymentsgateway) สร้างรายการชำระเงิน ตรวจลายเซ็น webhook
- * และนำผลการชำระเงินมาปรับสถานะ payment/booking (ใช้ร่วมกันทั้ง webhook, scheduler และการ poll จากหน้าชำระเงิน)
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 20/11/2569
- * Updated : 20/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
+/*
+ * และนำผลการชำระเงินมาปรับสถานะ payment/booking (ใช้ร่วมกันทั้ง webhook, scheduler และการ poll จากหน้าชำระเงิน)
  */
 
 namespace App\Services;
@@ -27,8 +30,8 @@ class PaymockService
     /**
      * enabled()
      * ตรวจว่าตั้งค่า PayMock ไว้ครบหรือไม่ (ไม่ครบ = ใช้การจำลองแบบเดิม)
-     * param : -
-     * return : bool
+     *
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public function enabled(): bool
     {
@@ -36,11 +39,13 @@ class PaymockService
     }
 
     /**
-     * createPayment(payment, booking, attempt)
+     * createPayment($payment, $booking, $attempt)
      * สร้างรายการชำระเงินที่ PayMock แล้วเก็บ id / qrcode_url / checkout_url ไว้ใน payment
-     * param : payment (PENDING), booking, attempt (ครั้งที่สร้างที่ gateway ของ payment นี้)
-     * return : array ข้อมูล gateway { id, qrcode_url, checkout_url, attempt }
-     * throws : \RuntimeException เมื่อติดต่อ gateway ไม่ได้หรือถูกปฏิเสธ
+     *
+     * @param Payment $payment PENDING
+     * @param Booking $booking ข้อมูลการจอง
+     * @param int $attempt ครั้งที่สร้างที่ gateway ของ payment นี้
+     * @return array ข้อมูล gateway { id, qrcode_url, checkout_url, attempt } throws : \RuntimeException เมื่อติดต่อ gateway ไม่ได้หรือถูกปฏิเสธ
      */
     public function createPayment(Payment $payment, Booking $booking, int $attempt): array
     {
@@ -77,11 +82,12 @@ class PaymockService
     }
 
     /**
-     * publicUrl(url)
+     * publicUrl($url)
      * แปลง URL ที่ PayMock ส่งมา (สร้างจาก host ที่ server เรียก เช่น host.docker.internal ซึ่งเบราว์เซอร์เปิดไม่ได้)
      * ให้เป็น URL ที่เบราว์เซอร์ผู้ใช้เปิดได้ โดยคงเฉพาะ path/query แล้วใช้ PAYMOCK_PUBLIC_URL เป็นฐาน
-     * param : url (null ได้)
-     * return : string|null
+     *
+     * @param string|null $url null ได้
+     * @return string|null ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     public function publicUrl(?string $url): ?string
     {
@@ -96,11 +102,12 @@ class PaymockService
     }
 
     /**
-     * fetchQrImage(providerId)
+     * fetchQrImage($providerId)
      * ดึงภาพ QR (SVG) ที่ PayMock สร้างให้รายการนี้ผ่าน server-to-server แล้วแปลงเป็น data URI ให้หน้าเว็บแสดงได้โดยไม่ต้องเข้า PayMock เอง
      * PayMock สร้างภาพใหม่ทุกครั้งที่ถูกเรียก แต่เนื้อหา QR ผูกกับรายการ (payment) เดียวกัน จึงเหมือนเดิมเสมอ
-     * param : providerId
-     * return : string|null data URI หรือ null ถ้าดึงไม่ได้/ไม่ใช่ SVG
+     *
+     * @param string $providerId รหัสผู้ให้บริการ
+     * @return string|null data URI หรือ null ถ้าดึงไม่ได้/ไม่ใช่ SVG
      */
     public function fetchQrImage(string $providerId): ?string
     {
@@ -121,10 +128,11 @@ class PaymockService
     }
 
     /**
-     * cancelPayment(providerId)
+     * cancelPayment($providerId)
      * ยกเลิกรายการที่ PayMock (ใช้เมื่อผู้ใช้เปลี่ยนช่องทาง/ยอด จึงต้องสร้างรายการใหม่) ผิดพลาดแล้วข้ามได้
-     * param : providerId
-     * return : void
+     *
+     * @param string $providerId รหัสผู้ให้บริการ
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function cancelPayment(string $providerId): void
     {
@@ -136,10 +144,11 @@ class PaymockService
     }
 
     /**
-     * fetchPayment(providerId)
+     * fetchPayment($providerId)
      * ดูสถานะรายการที่ PayMock (ใช้ตอน reconcile/poll)
-     * param : providerId
-     * return : array|null ข้อมูลรายการ หรือ null ถ้าติดต่อไม่ได้
+     *
+     * @param string $providerId รหัสผู้ให้บริการ
+     * @return array|null ข้อมูลรายการ หรือ null ถ้าติดต่อไม่ได้
      */
     public function fetchPayment(string $providerId): ?array
     {
@@ -155,10 +164,12 @@ class PaymockService
     }
 
     /**
-     * verifySignature(header, rawBody)
+     * verifySignature($header, $rawBody)
      * ตรวจลายเซ็น webhook: X-Signature = t={timestamp},v1={HMAC-SHA256("t.rawBody")} และ timestamp ต้องไม่เก่าเกินที่กำหนด
-     * param : header (ค่า X-Signature), rawBody (body ดิบ)
-     * return : bool
+     *
+     * @param string|null $header ค่า X-Signature
+     * @param string $rawBody body ดิบ
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public function verifySignature(?string $header, string $rawBody): bool
     {
@@ -186,11 +197,12 @@ class PaymockService
     }
 
     /**
-     * findPayment(data)
+     * findPayment($data)
      * หา payment ของระบบหลักจากข้อมูลที่ PayMock ส่งมา (ใช้ id ของ gateway ก่อน ไม่เจอค่อยใช้ payment_id รูปแบบ "{p_id}-{attempt}")
      * รายการที่ถูกแทนที่ด้วยครั้งใหม่แล้ว provider_transaction_id จะเปลี่ยน จึงไม่ตรงและถูกข้าม
-     * param : data
-     * return : Payment|null
+     *
+     * @param array $data ข้อมูล
+     * @return Payment|null ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     public function findPayment(array $data): ?Payment
     {
@@ -202,12 +214,15 @@ class PaymockService
     }
 
     /**
-     * applyResult(payment, data, source)
+     * applyResult($payment, $data, $source)
      * นำสถานะจาก gateway มาปรับ payment/booking (idempotent: ทำเฉพาะ payment ที่ยัง PENDING)
      * COMPLETED → ยืนยันผ่าน completePayment() (ยอดไม่ตรง/การจองหมดเวลาแล้ว = บันทึก SystemAnomaly ไม่ออกบัตร)
      * FAILED → ตั้ง payment เป็น FAILED (การจองยังอยู่จนหมดเวลา ผู้ใช้ชำระใหม่ได้)
-     * param : payment, data (ข้อมูลจาก gateway), source (webhook|reconcile|poll)
-     * return : string completed|failed|anomaly|pending|ignored
+     *
+     * @param Payment $payment ข้อมูลการชำระเงิน
+     * @param array $data ข้อมูลจาก gateway
+     * @param string $source webhook|reconcile|poll
+     * @return string completed|failed|anomaly|pending|ignored
      */
     public function applyResult(Payment $payment, array $data, string $source): string
     {
@@ -259,10 +274,12 @@ class PaymockService
     }
 
     /**
-     * syncPayment(payment, source)
+     * syncPayment($payment, $source)
      * ถาม gateway ถึงสถานะล่าสุดของ payment แล้วปรับสถานะ (ใช้ตอน reconcile/poll เมื่อ webhook ไม่มา)
-     * param : payment, source
-     * return : string ผลเหมือน applyResult() หรือ unreachable
+     *
+     * @param Payment $payment ข้อมูลการชำระเงิน
+     * @param string $source แหล่งที่มา
+     * @return string ผลเหมือน applyResult() หรือ unreachable
      */
     public function syncPayment(Payment $payment, string $source): string
     {
@@ -276,10 +293,14 @@ class PaymockService
     }
 
     /**
-     * recordAnomaly(booking, type, paymentId, message)
+     * recordAnomaly($booking, $type, $paymentId, $message)
      * บันทึกความผิดปกติของการชำระเงินให้ผู้ดูแลระบบตรวจ (anomaly_code ซ้ำไม่ได้ จึงบันทึกครั้งเดียวต่อ payment)
-     * param : booking (null ได้ = ข้าม), type, paymentId, message
-     * return : void
+     *
+     * @param Booking|null $booking null ได้ = ข้าม
+     * @param string $type ประเภท
+     * @param int $paymentId รหัสการชำระเงิน
+     * @param string $message ข้อความ
+     * @return void ไม่มีค่าส่งกลับ
      */
     private function recordAnomaly(?Booking $booking, string $type, int $paymentId, string $message): void
     {
@@ -305,8 +326,8 @@ class PaymockService
     /**
      * client()
      * HTTP client ไป PayMock (Bearer API key, timeout สั้น ไม่ให้หน้าเว็บค้าง)
-     * param : -
-     * return : PendingRequest
+     *
+     * @return PendingRequest ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     private function client(): \Illuminate\Http\Client\PendingRequest
     {

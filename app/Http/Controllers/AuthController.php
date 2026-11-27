@@ -5,7 +5,7 @@
  * จัดการการสมัครสมาชิก เข้าสู่ระบบ และออกจากระบบของผู้ใช้
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 04/09/2569
- * Updated : 15/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers;
@@ -20,12 +20,13 @@ use Illuminate\Support\Facades\Validator;
 class AuthController extends Controller
 {
     /**
-     * register(request)
+     * register($request)
      * ตรวจสอบข้อมูลสมัครสมาชิก แล้วเก็บข้อมูลชั่วคราวพร้อมส่งลิงก์ยืนยันอีเมล
      * (ยังไม่สร้างบัญชี บัญชี role = USER จะถูกสร้างและเข้าสู่ระบบเมื่อกดลิงก์ที่ EmailVerificationController::verify)
      * เก็บค่า redirect (หน้าที่ผู้ใช้อยู่ตอนกดสมัคร) ไปด้วย เพื่อพากลับหลังยืนยันอีเมลสำเร็จ
-     * param : request
-     * return : RedirectResponse กลับหน้าเดิมพร้อมเปิดหน้าต่างตรวจอีเมล ถ้าข้อมูลไม่ถูกต้องจะเปิดหน้าต่างสมัครสมาชิกพร้อม error
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return RedirectResponse กลับหน้าเดิมพร้อมเปิดหน้าต่างตรวจอีเมล ถ้าข้อมูลไม่ถูกต้องจะเปิดหน้าต่างสมัครสมาชิกพร้อม error
      */
     public function register(Request $request)
     {
@@ -100,11 +101,12 @@ class AuthController extends Controller
     }
 
     /**
-     * login(request)
+     * login($request)
      * ตรวจสอบอีเมล เบอร์โทร หรือชื่อผู้ใช้ (ช่อง email ใส่ได้ทั้งสามแบบ) รหัสผ่าน และสถานะบัญชี (ถูกระงับหรือไม่) แล้วเข้าสู่ระบบ
      * ใช้หน้าต่างเข้าสู่ระบบเดียวกันทุก role แล้วพาไปหน้าแรกของ role นั้น (ดู redirectAfterLogin)
-     * param : request
-     * return : RedirectResponse ไปหน้าตาม role ถ้าไม่ผ่านจะกลับหน้าเดิมพร้อม error
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return RedirectResponse ไปหน้าตาม role ถ้าไม่ผ่านจะกลับหน้าเดิมพร้อม error
      */
     public function login(Request $request)
     {
@@ -168,10 +170,11 @@ class AuthController extends Controller
     }
 
     /**
-     * logout(request)
+     * logout($request)
      * ออกจากระบบ ยกเลิก session และสร้าง CSRF token ใหม่
-     * param : request
-     * return : RedirectResponse ไปหน้าแรก
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return RedirectResponse ไปหน้าแรก
      */
     public function logout(Request $request)
     {
@@ -183,13 +186,15 @@ class AuthController extends Controller
     }
 
     /**
-     * redirectAfterLogin(request, user)
+     * redirectAfterLogin($request, $user)
      * หน้าที่จะพาไปหลังเข้าสู่ระบบ
      * - ลูกค้า (USER): หน้าที่ส่งมาในช่อง redirect เหมือนเดิม (เช่นกลับหน้าจองบัตร) ไม่มี = หน้าแรก
      * - Organizer / Admin / Staff: หน้าแรกของ role (AppUser::homeUrl) ยกเว้น redirect ชี้ไปหน้าในส่วนของตัวเอง
      *   (เช่นเปิด /organizer/check-in ไว้ก่อน login) เพราะเปิดหน้าฝั่งลูกค้าไม่ได้
-     * param : request, user
-     * return : path (string)
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @param AppUser $user ข้อมูลผู้ใช้
+     * @return path (string)
      */
     private function redirectAfterLogin(Request $request, AppUser $user): string
     {
@@ -206,11 +211,12 @@ class AuthController extends Controller
     }
 
     /**
-     * redirectTarget(request)
+     * redirectTarget($request)
      * หน้าที่จะพาไปหลัง login หรือหลังยืนยันอีเมลตอนสมัครสมาชิก จากช่อง redirect ในหน้าต่าง (เช่น /booking?concert_id=1)
      * รับเฉพาะ path ภายในเว็บ (ขึ้นต้นด้วย / ตัวเดียว) กันการพาออกไปเว็บอื่น (open redirect)
-     * param : request
-     * return : path (string) ถ้าไม่มีหรือไม่ถูกต้อง = '/'
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @return path (string) ถ้าไม่มีหรือไม่ถูกต้อง = '/'
      */
     private function redirectTarget(Request $request): string
     {

@@ -5,7 +5,7 @@
  * บัญชีผู้ใช้ทุกประเภท (CUSTOMER / ORGANIZER / STAFF / ADMIN) ในตาราง app_user
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -65,8 +65,8 @@ class AppUser extends Authenticatable
     /**
      * boot()
      * ตั้งค่าเริ่มต้นตอนสร้างผู้ใช้ (created_at และ account_status = ACTIVE)
-     * param : -
-     * return : void
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     protected static function boot()
     {
@@ -85,8 +85,8 @@ class AppUser extends Authenticatable
     /**
      * getAuthPassword()
      * ส่งรหัสผ่านที่ hash แล้วให้ระบบ Auth ของ Laravel ใช้ตรวจสอบ
-     * param : -
-     * return : string password_hash
+     *
+     * @return string password_hash
      */
     public function getAuthPassword()
     {
@@ -96,8 +96,8 @@ class AppUser extends Authenticatable
     /**
      * getAuthPasswordName()
      * ระบุชื่อคอลัมน์รหัสผ่านให้ระบบ Auth ของ Laravel
-     * param : -
-     * return : string 'password_hash'
+     *
+     * @return string 'password_hash'
      */
     public function getAuthPasswordName()
     {
@@ -109,10 +109,11 @@ class AppUser extends Authenticatable
     // ==========================================
 
     /**
-     * login(password)
+     * login($password)
      * ตรวจสอบสถานะบัญชีและรหัสผ่าน แล้วเข้าสู่ระบบ
-     * param : password
-     * return : bool – true ถ้าเข้าสู่ระบบสำเร็จ
+     *
+     * @param string|null $password รหัสผ่าน
+     * @return bool true ถ้าเข้าสู่ระบบสำเร็จ
      */
     public function login(?string $password = null): bool
     {
@@ -131,8 +132,8 @@ class AppUser extends Authenticatable
     /**
      * logout()
      * ออกจากระบบ และยกเลิก session / token
-     * param : -
-     * return : void
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function logout(): void
     {
@@ -150,8 +151,8 @@ class AppUser extends Authenticatable
     /**
      * organization()
      * ความสัมพันธ์กับองค์กรที่ผู้ใช้สังกัด
-     * param : -
-     * return : BelongsTo Organization
+     *
+     * @return BelongsTo Organization
      */
     public function organization(): BelongsTo
     {
@@ -161,8 +162,8 @@ class AppUser extends Authenticatable
     /**
      * createdBy()
      * ความสัมพันธ์กับผู้ใช้ที่สร้างบัญชีนี้
-     * param : -
-     * return : BelongsTo AppUser
+     *
+     * @return BelongsTo AppUser
      */
     public function createdBy(): BelongsTo
     {
@@ -172,8 +173,8 @@ class AppUser extends Authenticatable
     /**
      * auditLogs()
      * ความสัมพันธ์กับประวัติการใช้งานของผู้ใช้
-     * param : -
-     * return : HasMany AuditLog
+     *
+     * @return HasMany AuditLog
      */
     public function auditLogs(): HasMany
     {
@@ -187,8 +188,8 @@ class AppUser extends Authenticatable
     /**
      * isActive()
      * ตรวจว่าบัญชีอยู่ในสถานะใช้งานได้ (ACTIVE)
-     * param : -
-     * return : bool
+     *
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public function isActive(): bool
     {
@@ -198,8 +199,8 @@ class AppUser extends Authenticatable
     /**
      * isSuspended()
      * ตรวจว่าบัญชีถูกระงับ (ชื่อเดิม ให้ใช้ isBanned() แทน)
-     * param : -
-     * return : bool
+     *
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      * @deprecated ใช้ isBanned() แทน
      */
     public function isSuspended(): bool
@@ -210,8 +211,8 @@ class AppUser extends Authenticatable
     /**
      * isBanned()
      * ตรวจว่าบัญชีถูกระงับ (BANNED)
-     * param : -
-     * return : bool
+     *
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public function isBanned(): bool
     {
@@ -221,8 +222,8 @@ class AppUser extends Authenticatable
     /**
      * isCustomer()
      * ตรวจว่าผู้ใช้มี role เป็น USER (ลูกค้าทั่วไป)
-     * param : -
-     * return : bool
+     *
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public function isCustomer(): bool
     {
@@ -232,8 +233,8 @@ class AppUser extends Authenticatable
     /**
      * isOrganizer()
      * ตรวจว่าผู้ใช้มี role เป็น ORGANIZER
-     * param : -
-     * return : bool
+     *
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public function isOrganizer(): bool
     {
@@ -243,8 +244,8 @@ class AppUser extends Authenticatable
     /**
      * isStaff()
      * ตรวจว่าผู้ใช้มี role เป็น STAFF
-     * param : -
-     * return : bool
+     *
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public function isStaff(): bool
     {
@@ -254,8 +255,8 @@ class AppUser extends Authenticatable
     /**
      * isAdmin()
      * ตรวจว่าผู้ใช้มี role เป็น ADMIN
-     * param : -
-     * return : bool
+     *
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public function isAdmin(): bool
     {
@@ -265,8 +266,8 @@ class AppUser extends Authenticatable
     /**
      * homeUrl()
      * หน้าแรกของแต่ละ role: หลังเข้าสู่ระบบ และเวลาเปิดหน้าที่ role นี้เข้าไม่ได้ (middleware role)
-     * param : -
-     * return : string path เช่น '/', '/organizer/dashboard'
+     *
+     * @return string path เช่น '/', '/organizer/dashboard'
      */
     public function homeUrl(): string
     {
@@ -281,8 +282,8 @@ class AppUser extends Authenticatable
     /**
      * areaPrefix()
      * path ขึ้นต้นของส่วนที่ role นี้ใช้งาน (ใช้ตรวจว่าหน้าที่จะพาไปหลัง login อยู่ในส่วนของตัวเองไหม)
-     * param : -
-     * return : string|null – null = ลูกค้า (ใช้หน้าฝั่ง User)
+     *
+     * @return string|null null = ลูกค้า (ใช้หน้าฝั่ง User)
      */
     public function areaPrefix(): ?string
     {
@@ -297,8 +298,8 @@ class AppUser extends Authenticatable
     /**
      * displayName()
      * ชื่อที่แสดงบนแถบด้านบน: ชื่อ-นามสกุล ถ้าไม่มี (บัญชี Organizer/Staff) ใช้ username แล้วค่อยอีเมล
-     * param : -
-     * return : string
+     *
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     public function displayName(): string
     {

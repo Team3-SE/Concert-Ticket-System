@@ -5,7 +5,7 @@
  * ที่นั่ง (ตาราง seat)
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -57,8 +57,8 @@ class Seat extends Model
     /**
      * label()
      * ชื่อที่นั่งสำหรับแสดงผล (แถว + เลขที่นั่ง เช่น A1)
-     * param : -
-     * return : string
+     *
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     public function label(): string
     {
@@ -68,8 +68,8 @@ class Seat extends Model
     /**
      * lockSeat()
      * ล็อกที่นั่งชั่วคราวระหว่างการจอง (locked)
-     * param : -
-     * return : void
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function lockSeat(): void
     {
@@ -79,8 +79,8 @@ class Seat extends Model
     /**
      * unlockSeat()
      * ปลดล็อกที่นั่งกลับเป็น available เมื่อยกเลิกหรือหมดเวลา
-     * param : -
-     * return : void
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function unlockSeat(): void
     {
@@ -90,8 +90,8 @@ class Seat extends Model
     /**
      * confirmSeat()
      * ยืนยันที่นั่งหลังชำระเงินสำเร็จ (sold)
-     * param : -
-     * return : void
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function confirmSeat(): void
     {
@@ -105,8 +105,8 @@ class Seat extends Model
     /**
      * zone()
      * ความสัมพันธ์กับโซนของที่นั่ง
-     * param : -
-     * return : BelongsTo Zone
+     *
+     * @return BelongsTo Zone
      */
     public function zone(): BelongsTo
     {
@@ -116,8 +116,8 @@ class Seat extends Model
     /**
      * bookingSeats()
      * ความสัมพันธ์กับรายการจองของที่นั่ง
-     * param : -
-     * return : HasMany BookingSeat
+     *
+     * @return HasMany BookingSeat
      */
     public function bookingSeats(): HasMany
     {
@@ -127,8 +127,8 @@ class Seat extends Model
     /**
      * ticket()
      * ความสัมพันธ์กับบัตรที่ยังใช้ได้ (status = valid) ของที่นั่ง ที่นั่งหนึ่งมีบัตร valid ได้ใบเดียว
-     * param : -
-     * return : HasOne Ticket
+     *
+     * @return HasOne Ticket
      */
     public function ticket(): HasOne
     {
@@ -138,8 +138,8 @@ class Seat extends Model
     /**
      * tickets()
      * ความสัมพันธ์กับบัตรทั้งหมดของที่นั่ง รวมบัตรที่ถูกยกเลิก/ออกใหม่แทน
-     * param : -
-     * return : HasMany Ticket
+     *
+     * @return HasMany Ticket
      */
     public function tickets(): HasMany
     {
@@ -149,8 +149,8 @@ class Seat extends Model
     /**
      * seatLockLogs()
      * ความสัมพันธ์กับประวัติการล็อกที่นั่ง
-     * param : -
-     * return : HasMany SeatLockLog
+     *
+     * @return HasMany SeatLockLog
      */
     public function seatLockLogs(): HasMany
     {

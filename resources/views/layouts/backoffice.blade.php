@@ -1,12 +1,15 @@
 {{--
  * backoffice.blade.php
  * โครงหน้าหลังบ้านของ Organizer และ Admin (ใช้ร่วมกัน): sidebar ซ้าย + แถบด้านบน + เนื้อหา ตามแบบ Figma
+ * @Author 67160292 ธีรเมธ พลสาย
+ * @Create Date 27/10/2569
+ * @Update Date 27/11/2569 67160292 ธีรเมธ พลสาย
+--}}
+{{--
  * เมนูใน sidebar เปลี่ยนตาม role อัตโนมัติ (partials/backoffice/sidebar)
  * วิธีใช้ : @extends('layouts.backoffice') แล้วใส่ @section('title'), @section('content')
  *          สไตล์เฉพาะหน้าใส่ใน resources/css/organizer/* หรือ admin/* แล้ว @import ใน backoffice.css
  * มือถือ/แท็บเล็ต (< 1024px): sidebar ซ่อน กดปุ่มเมนูที่แถบด้านบนเพื่อเปิด
- * @Author 67160292 ธีรเมธ พลสาย
- * @Create Date 27/10/2569
 --}}
 <!DOCTYPE html>
 <html lang="th">

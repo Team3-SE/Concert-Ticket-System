@@ -5,7 +5,7 @@
  * ไฟล์แนบของรายการความผิดปกติ (ตาราง anomaly_attachment)
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -36,8 +36,8 @@ class AnomalyAttachment extends Model
     /**
      * anomaly()
      * ความสัมพันธ์กับรายการความผิดปกติ
-     * param : -
-     * return : BelongsTo SystemAnomaly
+     *
+     * @return BelongsTo SystemAnomaly
      */
     public function anomaly(): BelongsTo
     {

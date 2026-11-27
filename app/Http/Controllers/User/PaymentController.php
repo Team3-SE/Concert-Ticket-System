@@ -5,7 +5,7 @@
  * จัดการการชำระเงิน: หน้าชำระเงิน ตรวจ rate limit สร้าง/ยืนยันการชำระเงิน และสร้างคำสั่งซื้อ
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 04/09/2569
- * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Http\Controllers\User;
@@ -48,10 +48,11 @@ class PaymentController extends Controller
     private const METHOD_MAP = ['promptpay' => 'PROMPTPAY', 'credit' => 'CREDIT_CARD'];
 
     /**
-     * index(request)
+     * index($request)
      * แสดงหน้าชำระเงิน ถ้ามี booking_id จะใช้ข้อมูลการจองจริง (ที่นั่ง ยอดเงิน เวลาที่เหลือ ผู้ซื้อ)
-     * param : request (booking_id หรือ concert_id)
-     * return : View booking.payment หรือ Redirect เมื่อการจองหมดเวลา
+     *
+     * @param Request $request booking_id หรือ concert_id
+     * @return View booking.payment หรือ Redirect เมื่อการจองหมดเวลา
      */
     public function index(Request $request)
     {
@@ -123,11 +124,12 @@ class PaymentController extends Controller
     }
 
     /**
-     * store(request)
+     * store($request)
      * สร้างรายการชำระเงินของการจอง และออกหมายเลขคำสั่งซื้อไว้แสดงในหน้าต่าง QR
      * (ถ้ามีรายการชำระเงินที่รออยู่แล้ว จะใช้รายการเดิม หมายเลขคำสั่งซื้อจึงไม่เปลี่ยน)
-     * param : request (booking_id, method, protection = array ของ show/travel จะว่างก็ได้)
-     * return : JsonResponse { payment_id, order_code, amount }
+     *
+     * @param Request $request booking_id, method, protection = array ของ show/travel จะว่างก็ได้
+     * @return JsonResponse { payment_id, order_code, amount }
      */
     public function store(Request $request): JsonResponse
     {
@@ -200,10 +202,13 @@ class PaymentController extends Controller
     }
 
     /**
-     * ensureGatewayPayment(paymock, payment, booking)
+     * ensureGatewayPayment($paymock, $payment, $booking)
      * ให้ payment มีรายการที่ PayMock ตรงกับช่องทางและยอดปัจจุบัน (ใช้รายการเดิมถ้ายังตรง ไม่ตรงก็ยกเลิกแล้วสร้างใหม่)
-     * param : paymock, payment (PENDING), booking
-     * return : array { method, qr_image, qrcode_url, checkout_url, bank_simulator_url }
+     *
+     * @param PaymockService $paymock ข้อมูลจาก PayMock
+     * @param Payment $payment PENDING
+     * @param Booking $booking ข้อมูลการจอง
+     * @return array { method, qr_image, qrcode_url, checkout_url, bank_simulator_url }
      */
     private function ensureGatewayPayment(PaymockService $paymock, Payment $payment, Booking $booking): array
     {
@@ -241,10 +246,12 @@ class PaymentController extends Controller
     }
 
     /**
-     * mockComplete(request, paymentId)
+     * mockComplete($request, $paymentId)
      * จำลองว่าธนาคารยืนยันการชำระเงินสำเร็จ (ใช้ได้เฉพาะเครื่อง dev ที่ APP_ENV=local แทน webhook ของ payment provider)
-     * param : request, paymentId
-     * return : JsonResponse { order_code, redirect }
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @param int $paymentId รหัสการชำระเงิน
+     * @return JsonResponse { order_code, redirect }
      */
     public function mockComplete(Request $request, int $paymentId): JsonResponse
     {
@@ -266,10 +273,13 @@ class PaymentController extends Controller
     }
 
     /**
-     * checkRateLimit(customerId, ipAddress, deviceFingerprint)
+     * checkRateLimit($customerId, $ipAddress, $deviceFingerprint)
      * ตรวจว่าการชำระเงินล้มเหลวเกินจำนวนที่กำหนดในช่วงเวลาหรือไม่ (ตามผู้ใช้ IP และอุปกรณ์)
-     * param : customerId, ipAddress, deviceFingerprint
-     * return : bool – true ถ้ายังชำระเงินได้
+     *
+     * @param int $customerId รหัสลูกค้า
+     * @param string $ipAddress ที่อยู่ IP
+     * @param string|null $deviceFingerprint ลายนิ้วมืออุปกรณ์
+     * @return bool true ถ้ายังชำระเงินได้
      */
     public function checkRateLimit(int $customerId, string $ipAddress, ?string $deviceFingerprint): bool
     {
@@ -288,10 +298,13 @@ class PaymentController extends Controller
     }
 
     /**
-     * processPayment(request, bookingId, protection)
+     * processPayment($request, $bookingId, $protection)
      * ตรวจ rate limit แล้วสร้างรายการชำระเงิน (บันทึก IP, device fingerprint, ค่าธรรมเนียม และหมายเลขคำสั่งซื้อใน payment_metadata)
-     * param : request, bookingId, protection (array ของ show/travel)
-     * return : Payment ที่สร้างขึ้น
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @param int $bookingId รหัสการจอง
+     * @param array $protection array ของ show/travel
+     * @return Payment ที่สร้างขึ้น
      */
     public function processPayment(Request $request, int $bookingId, array $protection = []): \App\Models\Payment
     {
@@ -331,10 +344,11 @@ class PaymentController extends Controller
     }
 
     /**
-     * verifyPayment(paymentId)
+     * verifyPayment($paymentId)
      * ตรวจสอบสถานะธุรกรรมการชำระเงิน
-     * param : paymentId
-     * return : bool – true ถ้าชำระเงินสำเร็จ
+     *
+     * @param int $paymentId รหัสการชำระเงิน
+     * @return bool true ถ้าชำระเงินสำเร็จ
      */
     public function verifyPayment(int $paymentId): bool
     {
@@ -345,10 +359,11 @@ class PaymentController extends Controller
     }
 
     /**
-     * completePayment(paymentId)
+     * completePayment($paymentId)
      * ยืนยันการชำระเงินและการจอง สร้างคำสั่งซื้อพร้อม snapshot แล้วสร้างบัตร
-     * param : paymentId
-     * return : CustomerOrder ที่สร้างขึ้น
+     *
+     * @param int $paymentId รหัสการชำระเงิน
+     * @return CustomerOrder ที่สร้างขึ้น
      */
     public function completePayment(int $paymentId): \App\Models\CustomerOrder
     {
@@ -404,10 +419,12 @@ class PaymentController extends Controller
     }
 
     /**
-     * status(request, bookingId)
+     * status($request, $bookingId)
      * ตรวจสถานะการจองกับ server (หน้าชำระเงินเรียกตอนตัวนับเวลาถึง 0 ก่อนแจ้งว่าไม่สำเร็จ)
-     * param : request, bookingId
-     * return : JsonResponse { status, seconds_left }
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @param int $bookingId รหัสการจอง
+     * @return JsonResponse { status, seconds_left }
      */
     public function status(Request $request, int $bookingId): JsonResponse
     {
@@ -430,11 +447,13 @@ class PaymentController extends Controller
     }
 
     /**
-     * cancel(request, bookingId)
+     * cancel($request, $bookingId)
      * ยกเลิกการจองที่ยังรอชำระเงิน (กดย้อนกลับจากหน้าชำระเงิน) แล้วปลดล็อกที่นั่งกลับเป็น AVAILABLE
      * ไม่ยกเลิกถ้าการจองไม่ได้อยู่ในสถานะรอชำระ หรือมีรายการชำระเงินที่รอยืนยันอยู่ (เปิด QR แล้ว)
-     * param : request, bookingId
-     * return : JsonResponse { cancelled }
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @param int $bookingId รหัสการจอง
+     * @return JsonResponse { cancelled }
      */
     public function cancel(Request $request, int $bookingId): JsonResponse
     {
@@ -454,10 +473,12 @@ class PaymentController extends Controller
     }
 
     /**
-     * calculateProtectionFee(booking, protection)
+     * calculateProtectionFee($booking, $protection)
      * คำนวณค่าประกัน = 5% ของราคาบัตรรวม ต่อประกัน 1 ตัวเลือกที่เลือก (เลือกทั้งสองอย่างจะคิดสองเท่า)
-     * param : booking, protection (array ของ show/travel)
-     * return : float ค่าประกันรวม
+     *
+     * @param Booking $booking ข้อมูลการจอง
+     * @param array $protection array ของ show/travel
+     * @return float ค่าประกันรวม
      */
     private function calculateProtectionFee(Booking $booking, array $protection): float
     {
@@ -467,10 +488,12 @@ class PaymentController extends Controller
     }
 
     /**
-     * calculateAmount(booking, protection)
+     * calculateAmount($booking, $protection)
      * คำนวณยอดที่ต้องชำระ = ราคาบัตร + ค่าธรรมเนียมบริการ + ค่าประกัน (ถ้าเลือก)
-     * param : booking, protection (array ของ show/travel)
-     * return : float ยอดที่ต้องชำระ
+     *
+     * @param Booking $booking ข้อมูลการจอง
+     * @param array $protection array ของ show/travel
+     * @return float ยอดที่ต้องชำระ
      */
     private function calculateAmount(Booking $booking, array $protection): float
     {
@@ -478,12 +501,13 @@ class PaymentController extends Controller
     }
 
     /**
-     * generateOrderCode(concert)
+     * generateOrderCode($concert)
      * สร้างหมายเลขคำสั่งซื้อ ORD-[รหัสคอนเสิร์ต 7 ตัว]-[ลำดับ 6 หลัก] เช่น ORD-C000024-000038 (Public Code Format Specification V2.0.0)
      * ลำดับนับต่อคอนเสิร์ต ไม่ผูกกับวันที่ รวมเลขที่ออกไว้แล้วในรายการชำระเงินทุกรายการ จึงไม่ออกเลขซ้ำกับที่เคยแสดงให้ผู้ใช้เห็น
      * ต้องเรียกระหว่างที่ล็อกแถวคอนเสิร์ต (lockForUpdate ใน transaction) เพื่อให้ออกเลขแบบ atomic
-     * param : concert
-     * return : string หมายเลขคำสั่งซื้อ
+     *
+     * @param Concert $concert ข้อมูลคอนเสิร์ต
+     * @return string หมายเลขคำสั่งซื้อ
      */
     private function generateOrderCode(Concert $concert): string
     {
@@ -513,10 +537,12 @@ class PaymentController extends Controller
     }
 
     /**
-     * findOwnBooking(request, bookingId)
+     * findOwnBooking($request, $bookingId)
      * ดึงการจองที่เป็นของผู้ใช้ที่ล็อกอินอยู่ (ไม่ใช่ของตัวเองตอบ 404)
-     * param : request, bookingId
-     * return : Booking
+     *
+     * @param Request $request คำขอ HTTP ที่ส่งมา
+     * @param int $bookingId รหัสการจอง
+     * @return Booking ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     private function findOwnBooking(Request $request, int $bookingId): Booking
     {
@@ -526,10 +552,11 @@ class PaymentController extends Controller
     }
 
     /**
-     * expireBooking(booking)
+     * expireBooking($booking)
      * ยกเลิกการจองที่หมดเวลา และปลดล็อกที่นั่งกลับเป็น AVAILABLE
-     * param : booking
-     * return : void
+     *
+     * @param Booking $booking ข้อมูลการจอง
+     * @return void ไม่มีค่าส่งกลับ
      */
     private function expireBooking(Booking $booking): void
     {

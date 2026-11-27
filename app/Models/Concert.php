@@ -5,7 +5,7 @@
  * คอนเสิร์ต (ตาราง concert)
  * Author :
  * Created :
- * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -88,8 +88,8 @@ class Concert extends Model
      * publicCode()
      * รหัสคอนเสิร์ตแบบ Public Code (ตัวอักษร 1 ตัว + ตัวเลข 6 หลัก เช่น C0024 -> C000024)
      * ใช้เป็นส่วน CONCERT ของรหัส ORD / TKT / ERR ตามเอกสาร Public Code Format Specification V2.0.0
-     * param : -
-     * return : string
+     *
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     public function publicCode(): string
     {
@@ -97,10 +97,11 @@ class Concert extends Model
     }
 
     /**
-     * normalizePublicCode(concertCode)
+     * normalizePublicCode($concertCode)
      * แปลง concert_code เป็นรูปแบบ [A-Z][0-9]{6} (เลข 000000 ใช้ไม่ได้ตามเอกสาร)
-     * param : concertCode
-     * return : string
+     *
+     * @param string $concertCode รหัสคอนเสิร์ต
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     public static function normalizePublicCode(string $concertCode): string
     {
@@ -114,8 +115,8 @@ class Concert extends Model
     /**
      * getDetails()
      * สรุปรายละเอียดคอนเสิร์ต (รหัส ศิลปิน สถานที่ วันเวลา สถานะ)
-     * param : -
-     * return : string
+     *
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     public function getDetails(): string
     {
@@ -125,8 +126,8 @@ class Concert extends Model
     /**
      * contacts()
      * ช่องทางติดต่อของคอนเสิร์ตที่กรอกไว้ (schema 3.4.2 ย้ายมาจากตาราง organization)
-     * param : -
-     * return : array ['phone' => ..., 'email' => ..., 'facebook' => ..., 'line' => ...] เฉพาะช่องที่มีค่า
+     *
+     * @return array ['phone' => ..., 'email' => ..., 'facebook' => ..., 'line' => ...] เฉพาะช่องที่มีค่า
      */
     public function contacts(): array
     {
@@ -147,8 +148,8 @@ class Concert extends Model
      * SQL นับบัตรที่ยังจองได้ของคอนเสิร์ต (อ้างคอลัมน์ concert.c_id ของ query หลัก)
      * = ที่นั่งว่างที่เปิดใช้งานในโซนที่นั่ง + (ความจุ - held - sold) ของโซนยืน
      * ที่นั่งที่ล็อกรอชำระเงินนับว่าไม่ว่าง เมื่อหมดเวลาแล้วถูกปล่อย (Booking::releaseExpired) จะกลับมานับเป็นว่าง
-     * param : -
-     * return : string
+     *
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     private static function availableTicketsSql(): string
     {
@@ -162,8 +163,8 @@ class Concert extends Model
     /**
      * availableTicketsBindings()
      * ค่าที่ใช้แทน ? ใน availableTicketsSql()
-     * param : -
-     * return : array
+     *
+     * @return array ข้อมูลอาร์เรย์ตามที่อธิบายข้างต้น
      */
     private static function availableTicketsBindings(): array
     {
@@ -171,11 +172,12 @@ class Concert extends Model
     }
 
     /**
-     * scopeWithAvailability(query)
+     * scopeWithAvailability($query)
      * เพิ่มคอลัมน์ available_tickets (บัตรที่ยังจองได้) และ zones_count ในผลลัพธ์ ใช้กับหน้ารายการคอนเสิร์ต
      * ให้ displayStatus() ไม่ต้อง query ทีละคอนเสิร์ต
-     * param : query
-     * return : Builder
+     *
+     * @param Builder $query คำค้นหา
+     * @return Builder ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     public function scopeWithAvailability(Builder $query): Builder
     {
@@ -188,10 +190,12 @@ class Concert extends Model
     }
 
     /**
-     * scopeWhereDisplayStatus(query, displayStatus)
+     * scopeWhereDisplayStatus($query, $displayStatus)
      * กรองคอนเสิร์ตตามสถานะที่แสดงผล (เงื่อนไขเดียวกับ displayStatus()) ใช้กับตัวกรองหน้าคอนเสิร์ตทั้งหมด
-     * param : query, displayStatus (ON_SALE / SCHEDULED / SOLD_OUT)
-     * return : Builder
+     *
+     * @param Builder $query คำค้นหา
+     * @param string $displayStatus ON_SALE / SCHEDULED / SOLD_OUT
+     * @return Builder ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     public function scopeWhereDisplayStatus(Builder $query, string $displayStatus): Builder
     {
@@ -219,8 +223,8 @@ class Concert extends Model
     /**
      * availableTickets()
      * จำนวนบัตรที่ยังจองได้ทั้งคอนเสิร์ต (ใช้ค่าจาก scopeWithAvailability ถ้ามี ไม่งั้น query ใหม่ 1 ครั้ง)
-     * param : -
-     * return : int
+     *
+     * @return int ค่าจำนวนตามที่อธิบายข้างต้น
      */
     public function availableTickets(): int
     {
@@ -242,8 +246,8 @@ class Concert extends Model
     /**
      * isSoldOut()
      * ตรวจว่าที่นั่ง/บัตรของทุกโซนถูกจองหมดแล้ว (คอนเสิร์ตที่ยังไม่มีโซนไม่นับว่าขายหมด)
-     * param : -
-     * return : bool
+     *
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public function isSoldOut(): bool
     {
@@ -256,8 +260,8 @@ class Concert extends Model
     /**
      * hasEnded()
      * ตรวจว่าเลยเวลาแสดงแล้ว
-     * param : -
-     * return : bool
+     *
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public function hasEnded(): bool
     {
@@ -269,8 +273,8 @@ class Concert extends Model
      * สถานะที่ใช้แสดงผลและตัดสินว่าจองได้ไหม คำนวณจาก status + วันแสดง + ช่วงขายบัตร + บัตรคงเหลือ
      * CANCELLED / DRAFT > เลยวันแสดง (COMPLETED) > SOLD_OUT / SCHEDULED ตาม status >
      * ON_SALE แต่ยังไม่ถึงวันเปิดขาย (SCHEDULED) > เลยวันปิดขาย (SALE_CLOSED) > บัตรหมด (SOLD_OUT) > ON_SALE
-     * param : -
-     * return : string
+     *
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     public function displayStatus(): string
     {
@@ -296,8 +300,8 @@ class Concert extends Model
     /**
      * canBook()
      * ตรวจว่าลูกค้าจองบัตรคอนเสิร์ตนี้ได้ตอนนี้หรือไม่
-     * param : -
-     * return : bool
+     *
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public function canBook(): bool
     {
@@ -307,8 +311,8 @@ class Concert extends Model
     /**
      * bookingBlockedMessage()
      * ข้อความบอกเหตุผลที่จองไม่ได้ ตามสถานะที่แสดงผล
-     * param : -
-     * return : string
+     *
+     * @return string ข้อความตามที่อธิบายข้างต้น
      */
     public function bookingBlockedMessage(): string
     {
@@ -328,8 +332,8 @@ class Concert extends Model
     /**
      * organization()
      * ความสัมพันธ์กับองค์กรผู้จัด
-     * param : -
-     * return : BelongsTo Organization
+     *
+     * @return BelongsTo Organization
      */
     public function organization(): BelongsTo
     {
@@ -339,8 +343,8 @@ class Concert extends Model
     /**
      * zones()
      * ความสัมพันธ์กับโซนของคอนเสิร์ต
-     * param : -
-     * return : HasMany Zone
+     *
+     * @return HasMany Zone
      */
     public function zones(): HasMany
     {
@@ -350,8 +354,8 @@ class Concert extends Model
     /**
      * bookings()
      * ความสัมพันธ์กับการจองของคอนเสิร์ต (schema 3.4.2: booking ผูกกับโซน จึงดึงผ่านตาราง zone)
-     * param : -
-     * return : HasManyThrough Booking
+     *
+     * @return HasManyThrough Booking
      */
     public function bookings(): HasManyThrough
     {
@@ -361,8 +365,8 @@ class Concert extends Model
     /**
      * tickets()
      * ความสัมพันธ์กับบัตรของคอนเสิร์ต (ดึงผ่านตาราง zone)
-     * param : -
-     * return : HasManyThrough Ticket
+     *
+     * @return HasManyThrough Ticket
      */
     public function tickets(): HasManyThrough
     {
@@ -372,8 +376,8 @@ class Concert extends Model
     /**
      * staffConcerts()
      * ความสัมพันธ์กับพนักงานที่ได้รับมอบหมาย
-     * param : -
-     * return : HasMany StaffConcert
+     *
+     * @return HasMany StaffConcert
      */
     public function staffConcerts(): HasMany
     {

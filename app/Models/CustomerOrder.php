@@ -3,10 +3,13 @@
 /**
  * CustomerOrder
  * คำสั่งซื้อหลังชำระเงินสำเร็จ (ตาราง user_order)
- * schema 3.4.2: เก็บ snapshot ชื่อโซน ราคาต่อใบ ยอดรวม จำนวนบัตร และอีเมลผู้ซื้อไว้ที่คำสั่งซื้อ
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
+/*
+ * schema 3.4.2: เก็บ snapshot ชื่อโซน ราคาต่อใบ ยอดรวม จำนวนบัตร และอีเมลผู้ซื้อไว้ที่คำสั่งซื้อ
  */
 
 namespace App\Models;
@@ -53,8 +56,8 @@ class CustomerOrder extends Model
     /**
      * booking()
      * ความสัมพันธ์กับการจอง
-     * param : -
-     * return : BelongsTo Booking
+     *
+     * @return BelongsTo Booking
      */
     public function booking(): BelongsTo
     {
@@ -64,8 +67,8 @@ class CustomerOrder extends Model
     /**
      * payment()
      * ความสัมพันธ์กับการชำระเงิน
-     * param : -
-     * return : BelongsTo Payment
+     *
+     * @return BelongsTo Payment
      */
     public function payment(): BelongsTo
     {
@@ -75,8 +78,8 @@ class CustomerOrder extends Model
     /**
      * tickets()
      * ความสัมพันธ์กับบัตรของคำสั่งซื้อ (รวมบัตรที่ถูกยกเลิก/ออกใหม่แทน)
-     * param : -
-     * return : HasMany Ticket
+     *
+     * @return HasMany Ticket
      */
     public function tickets(): HasMany
     {
@@ -86,8 +89,8 @@ class CustomerOrder extends Model
     /**
      * validTickets()
      * ความสัมพันธ์กับบัตรที่ยังใช้ได้ (status = valid)
-     * param : -
-     * return : HasMany Ticket
+     *
+     * @return HasMany Ticket
      */
     public function validTickets(): HasMany
     {
@@ -97,8 +100,8 @@ class CustomerOrder extends Model
     /**
      * booted()
      * ตั้งค่าเริ่มต้นตอนสร้างคำสั่งซื้อ (order_code และ order_date)
-     * param : -
-     * return : void
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     protected static function booted(): void
     {

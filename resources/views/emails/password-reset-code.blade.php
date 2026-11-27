@@ -1,11 +1,14 @@
 {{--
  * password-reset-code.blade.php
  * อีเมลรหัสยืนยัน 6 หลักสำหรับตั้งรหัสผ่านใหม่ (HTML) แบบเดียวกับอีเมลยืนยันการสมัคร (หัวไล่สี + ไอคอน)
+ * @Author 67160292 ธีรเมธ พลสาย
+ * @Create Date 29/10/2569
+ * @Update Date 27/11/2569 67160292 ธีรเมธ พลสาย
+--}}
+{{--
  * เขียนด้วยตาราง + สไตล์ในบรรทัด ให้ Gmail / Outlook / แอปมือถือแสดงได้ (Outlook บนคอมเห็นหัวเป็นสีกรมท่าเรียบ)
  * ใช้กับ : App\Notifications\PasswordResetCode (คู่กับ password-reset-code-text สำหรับอีเมลแบบข้อความล้วน)
  * ข้อมูล : $code (รหัส 6 หลัก), $firstName (ชื่อผู้ใช้ ว่างได้), $ttl (อายุรหัส นาที), $maxAttempts (กรอกผิดได้กี่ครั้ง)
- * @Author 67160292 ธีรเมธ พลสาย
- * @Create Date 29/10/2569
 --}}
 <!DOCTYPE html>
 <html lang="th">

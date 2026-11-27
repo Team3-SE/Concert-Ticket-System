@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * console.php
+ * คำสั่ง Artisan และงานตามเวลา (Schedule) เช่น ปล่อยที่นั่งที่หมดเวลาและตรวจรายการชำระเงินที่ค้าง
+ * Author :
+ * Created :
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;

@@ -5,7 +5,7 @@
  * ลูกค้า (AppUser ที่ role = USER)
  * Author :
  * Created :
- * Updated : 10/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -19,8 +19,8 @@ class Customer extends AppUser
     /**
      * boot()
      * กำหนดให้ query เฉพาะผู้ใช้ role USER และตั้ง role ให้อัตโนมัติเมื่อสร้าง
-     * param : -
-     * return : void
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     protected static function boot()
     {
@@ -42,8 +42,8 @@ class Customer extends AppUser
     /**
      * register()
      * สมัครบัญชีลูกค้า (บันทึกข้อมูลผู้ใช้)
-     * param : -
-     * return : void
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function register(): void
     {
@@ -51,10 +51,11 @@ class Customer extends AppUser
     }
 
     /**
-     * searchConcert(keyword)
+     * searchConcert($keyword)
      * ค้นหาคอนเสิร์ตจากชื่อ ศิลปิน หรือสถานที่
-     * param : keyword
-     * return : Collection ของ Concert
+     *
+     * @param string $keyword คำค้นหา
+     * @return Collection ของ Concert
      */
     public function searchConcert(string $keyword)
     {
@@ -69,10 +70,13 @@ class Customer extends AppUser
     }
 
     /**
-     * createBooking(concert, seats, standingItems)
+     * createBooking($concert, $seats, $standingItems)
      * สร้างการจอง (logic หลักอยู่ที่ BookingController)
-     * param : concert, seats, standingItems
-     * return : Booking
+     *
+     * @param mixed $concert ข้อมูลคอนเสิร์ต
+     * @param mixed $seats ที่นั่ง
+     * @param mixed $standingItems รายการโซนยืน
+     * @return Booking ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     public function createBooking($concert, $seats, $standingItems): Booking
     {
@@ -83,8 +87,8 @@ class Customer extends AppUser
     /**
      * viewHistory()
      * ดึงประวัติการจองของลูกค้า
-     * param : -
-     * return : Collection ของ Booking
+     *
+     * @return Collection ของ Booking
      */
     public function viewHistory()
     {
@@ -94,8 +98,8 @@ class Customer extends AppUser
     /**
      * viewTickets()
      * ดึงบัตรทั้งหมดของลูกค้า
-     * param : -
-     * return : Collection ของ Ticket
+     *
+     * @return Collection ของ Ticket
      */
     public function viewTickets()
     {
@@ -113,8 +117,8 @@ class Customer extends AppUser
     /**
      * bookings()
      * ความสัมพันธ์กับการจองของลูกค้า
-     * param : -
-     * return : HasMany Booking
+     *
+     * @return HasMany Booking
      */
     public function bookings(): HasMany
     {

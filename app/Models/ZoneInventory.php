@@ -3,9 +3,13 @@
 /**
  * ZoneInventory
  * ตัวนับบัตรของโซนยืน (ตาราง zone_inventory) 1 แถวต่อ 1 โซน
- * held = จำนวนที่จองไว้รอชำระเงิน, sold = จำนวนที่ชำระเงินแล้ว
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 10/11/2569
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
+/*
+ * held = จำนวนที่จองไว้รอชำระเงิน, sold = จำนวนที่ชำระเงินแล้ว
  */
 
 namespace App\Models;
@@ -34,10 +38,11 @@ class ZoneInventory extends Model
     ];
 
     /**
-     * lockForZone(zoneId)
+     * lockForZone($zoneId)
      * ดึงแถวตัวนับของโซนพร้อมล็อกแถว (SELECT ... FOR UPDATE) ถ้ายังไม่มีให้สร้างใหม่ ต้องเรียกภายใน DB::transaction
-     * param : zoneId
-     * return : ZoneInventory
+     *
+     * @param int $zoneId รหัสโซน
+     * @return ZoneInventory ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     public static function lockForZone(int $zoneId): self
     {
@@ -52,10 +57,11 @@ class ZoneInventory extends Model
     }
 
     /**
-     * available(capacity)
+     * available($capacity)
      * จำนวนบัตรที่ยังจองได้ = ความจุโซน - held - sold
-     * param : capacity
-     * return : int
+     *
+     * @param int $capacity ความจุ
+     * @return int ค่าจำนวนตามที่อธิบายข้างต้น
      */
     public function available(int $capacity): int
     {
@@ -63,10 +69,11 @@ class ZoneInventory extends Model
     }
 
     /**
-     * hold(quantity)
+     * hold($quantity)
      * จองบัตรไว้รอชำระเงิน (held + quantity)
-     * param : quantity
-     * return : void
+     *
+     * @param int $quantity จำนวน
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function hold(int $quantity): void
     {
@@ -75,10 +82,11 @@ class ZoneInventory extends Model
     }
 
     /**
-     * release(quantity)
+     * release($quantity)
      * คืนบัตรที่จองไว้เมื่อการจองหมดเวลาหรือถูกยกเลิก (held - quantity ไม่ต่ำกว่า 0)
-     * param : quantity
-     * return : void
+     *
+     * @param int $quantity จำนวน
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function release(int $quantity): void
     {
@@ -87,10 +95,11 @@ class ZoneInventory extends Model
     }
 
     /**
-     * sell(quantity)
+     * sell($quantity)
      * ย้ายบัตรจากที่จองไว้เป็นขายแล้วหลังชำระเงินสำเร็จ (held - quantity, sold + quantity)
-     * param : quantity
-     * return : void
+     *
+     * @param int $quantity จำนวน
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function sell(int $quantity): void
     {
@@ -102,8 +111,8 @@ class ZoneInventory extends Model
     /**
      * zone()
      * ความสัมพันธ์กับโซน
-     * param : -
-     * return : BelongsTo Zone
+     *
+     * @return BelongsTo Zone
      */
     public function zone(): BelongsTo
     {

@@ -5,7 +5,7 @@
  * โซนที่นั่งของคอนเสิร์ต (ตาราง zone)
  * Author :
  * Created :
- * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Models;
@@ -64,8 +64,8 @@ class Zone extends Model
     /**
      * isStanding()
      * ตรวจว่าเป็นโซนยืน (ไม่มีที่นั่ง นับจำนวนผ่าน zone_inventory)
-     * param : -
-     * return : bool
+     *
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public function isStanding(): bool
     {
@@ -75,8 +75,8 @@ class Zone extends Model
     /**
      * getAvailableSeats()
      * ดึงที่นั่งที่ยังว่างและเปิดใช้งานอยู่ในโซน (สำหรับโซน SEATED) ที่นั่งที่ปิดใช้งาน (disabled / blocked) ไม่นับ
-     * param : -
-     * return : HasMany Seat
+     *
+     * @return HasMany Seat
      */
     public function getAvailableSeats(): HasMany
     {
@@ -89,8 +89,8 @@ class Zone extends Model
      * getAvailableCapacity()
      * คำนวณจำนวนบัตรที่ยังจองได้ในโซน
      * STANDING ใช้ capacity ลบจำนวนที่จองรอชำระ (held) และที่ขายแล้ว (sold) ใน zone_inventory, SEATED นับที่นั่งว่าง
-     * param : -
-     * return : int
+     *
+     * @return int ค่าจำนวนตามที่อธิบายข้างต้น
      */
     public function getAvailableCapacity(): int
     {
@@ -110,8 +110,8 @@ class Zone extends Model
     /**
      * concert()
      * ความสัมพันธ์กับคอนเสิร์ต
-     * param : -
-     * return : BelongsTo Concert
+     *
+     * @return BelongsTo Concert
      */
     public function concert(): BelongsTo
     {
@@ -121,8 +121,8 @@ class Zone extends Model
     /**
      * inventory()
      * ความสัมพันธ์กับตัวนับบัตรของโซนยืน (held / sold)
-     * param : -
-     * return : HasOne ZoneInventory
+     *
+     * @return HasOne ZoneInventory
      */
     public function inventory(): HasOne
     {
@@ -132,8 +132,8 @@ class Zone extends Model
     /**
      * seats()
      * ความสัมพันธ์กับที่นั่งในโซน
-     * param : -
-     * return : HasMany Seat
+     *
+     * @return HasMany Seat
      */
     public function seats(): HasMany
     {
@@ -143,8 +143,8 @@ class Zone extends Model
     /**
      * bookings()
      * ความสัมพันธ์กับการจองของโซน (schema 3.4.2: 1 การจอง = 1 โซน)
-     * param : -
-     * return : HasMany Booking
+     *
+     * @return HasMany Booking
      */
     public function bookings(): HasMany
     {
@@ -154,8 +154,8 @@ class Zone extends Model
     /**
      * tickets()
      * ความสัมพันธ์กับบัตรในโซน
-     * param : -
-     * return : HasMany Ticket
+     *
+     * @return HasMany Ticket
      */
     public function tickets(): HasMany
     {

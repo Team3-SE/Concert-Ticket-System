@@ -5,7 +5,7 @@
  * อีเมลลิงก์ยืนยันการสมัครสมาชิก (ส่งไปยังอีเมลที่ยังไม่มีบัญชี)
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 17/10/2569
- * Updated : 27/10/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
  */
 
 namespace App\Notifications;
@@ -17,17 +17,22 @@ use Illuminate\Notifications\Notification;
 class RegistrationVerification extends Notification
 {
     /**
-     * __construct(url, firstName)
-     * param : url – ลิงก์ยืนยัน (signed), firstName – ชื่อผู้สมัคร
+     * __construct($url, $firstName)
+     * สร้างการแจ้งเตือนลิงก์ยืนยันอีเมลตอนสมัครสมาชิก
+     *
+     * @param string $url ลิงก์ยืนยัน (signed
+     * @param string $firstName ชื่อผู้สมัคร
      */
     public function __construct(private string $url, private string $firstName = '')
     {
     }
 
     /**
-     * via(notifiable)
-     * param : notifiable
-     * return : array ช่องทางส่ง
+     * via($notifiable)
+     * กำหนดช่องทางส่งการแจ้งเตือน (อีเมล)
+     *
+     * @param mixed $notifiable ผู้รับการแจ้งเตือน
+     * @return array ช่องทางส่ง
      */
     public function via($notifiable): array
     {
@@ -35,11 +40,12 @@ class RegistrationVerification extends Notification
     }
 
     /**
-     * toMail(notifiable)
+     * toMail($notifiable)
      * สร้างอีเมลภาษาไทยพร้อมปุ่มยืนยัน จาก template ของเราเอง
      * (HTML: emails/registration-verification, ข้อความล้วน: emails/registration-verification-text)
-     * param : notifiable
-     * return : MailMessage
+     *
+     * @param mixed $notifiable ผู้รับการแจ้งเตือน
+     * @return MailMessage ค่าที่ส่งกลับตามที่อธิบายข้างต้น
      */
     public function toMail($notifiable): MailMessage
     {

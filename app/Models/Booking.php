@@ -3,11 +3,14 @@
 /**
  * Booking
  * การจองบัตรคอนเสิร์ต (ตาราง booking)
- * schema 3.4.2: 1 การจอง = 1 โซน (b_zone_id) เก็บ snapshot ชื่อโซน/ราคาไว้ที่ booking
- * โซนที่นั่งเก็บที่นั่งใน booking_seat, โซนยืนเก็บจำนวนใน standing_quantity และนับใน zone_inventory
  * Author :
  * Created :
- * Updated : 11/11/2569 67160292 ธีรเมธ พลสาย
+ * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย
+ */
+
+/*
+ * schema 3.4.2: 1 การจอง = 1 โซน (b_zone_id) เก็บ snapshot ชื่อโซน/ราคาไว้ที่ booking
+ * โซนที่นั่งเก็บที่นั่งใน booking_seat, โซนยืนเก็บจำนวนใน standing_quantity และนับใน zone_inventory
  */
 
 namespace App\Models;
@@ -72,8 +75,8 @@ class Booking extends Model
     /**
      * isStanding()
      * ตรวจว่าเป็นการจองโซนยืน (มีจำนวนใน standing_quantity)
-     * param : -
-     * return : bool
+     *
+     * @return bool true หรือ false ตามที่อธิบายข้างต้น
      */
     public function isStanding(): bool
     {
@@ -83,8 +86,8 @@ class Booking extends Model
     /**
      * ticketQuantity()
      * จำนวนบัตรในการจอง (โซนยืน = standing_quantity, โซนที่นั่ง = จำนวนที่นั่งใน booking_seat)
-     * param : -
-     * return : int
+     *
+     * @return int ค่าจำนวนตามที่อธิบายข้างต้น
      */
     public function ticketQuantity(): int
     {
@@ -94,8 +97,8 @@ class Booking extends Model
     /**
      * concertId()
      * รหัสคอนเสิร์ตของการจอง (schema 3.4.2 ไม่มี concert_id ในตาราง booking จึงดูจากโซนที่จอง)
-     * param : -
-     * return : int
+     *
+     * @return int ค่าจำนวนตามที่อธิบายข้างต้น
      */
     public function concertId(): int
     {
@@ -105,8 +108,8 @@ class Booking extends Model
     /**
      * calculateTotal()
      * คำนวณยอดรวม = จำนวนบัตร x ราคาโซน ณ เวลาที่จอง (zone_price_snapshot)
-     * param : -
-     * return : float ยอดรวม
+     *
+     * @return float ยอดรวม
      */
     public function calculateTotal(): float
     {
@@ -116,8 +119,8 @@ class Booking extends Model
     /**
      * confirmBooking()
      * ยืนยันการจองหลังชำระเงินสำเร็จ: สถานะ CONFIRMED, ที่นั่งเป็น sold, ปิดล็อกที่นั่ง (sold_at), โซนยืนย้ายจำนวนจาก held ไป sold
-     * param : -
-     * return : void
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function confirmBooking(): void
     {
@@ -139,8 +142,8 @@ class Booking extends Model
     /**
      * cancelBooking()
      * ยกเลิกการจอง (สถานะ CANCELLED)
-     * param : -
-     * return : void
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function cancelBooking(): void
     {
@@ -150,8 +153,8 @@ class Booking extends Model
     /**
      * checkExpiry()
      * ตรวจว่าการจองที่รอชำระเงินหมดเวลาแล้วหรือยัง
-     * param : -
-     * return : bool – true ถ้าหมดเวลาแล้ว
+     *
+     * @return bool true ถ้าหมดเวลาแล้ว
      */
     public function checkExpiry(): bool
     {
@@ -165,8 +168,8 @@ class Booking extends Model
      * ยกเลิกการจองที่หมดเวลา/ถูกยกเลิก: ปลดล็อกที่นั่งกลับเป็น available, ปิดล็อกที่นั่ง (released_at),
      * คืนจำนวนบัตรยืนใน zone_inventory (held) และตั้งการจองเป็น CANCELLED
      * ทำเฉพาะการจองที่ยังรอชำระเงิน (ล็อกแถวก่อนตรวจ กันการปล่อยซ้ำตอน scheduler กับผู้ใช้กดพร้อมกัน)
-     * param : -
-     * return : void
+     *
+     * @return void ไม่มีค่าส่งกลับ
      */
     public function releaseSeats(): void
     {
@@ -196,6 +199,12 @@ class Booking extends Model
         $this->releaseRedisSeatLocks();
     }
 
+    /**
+     * releaseRedisSeatLocks()
+     * ปล่อยการล็อกที่นั่งใน Redis ของการจองนี้
+     *
+     * @return void ไม่มีค่าส่งกลับ
+     */
     public function releaseRedisSeatLocks(): void
     {
         if (! $this->booking_code) {
@@ -207,11 +216,12 @@ class Booking extends Model
     }
 
     /**
-     * releaseExpired(concertId)
+     * releaseExpired($concertId)
      * ปล่อยที่นั่งของทุกการจองที่รอชำระเงินและเลยเวลา (10 นาที) แล้ว
      * การจองที่มีรายการชำระเงินรอยืนยันอยู่ จะรอเพิ่มอีก PAYMENT_GRACE_MINUTES นาที
-     * param : concertId (ไม่ระบุ = ทุกคอนเสิร์ต)
-     * return : int จำนวนการจองที่ถูกปล่อย
+     *
+     * @param int|null $concertId ไม่ระบุ = ทุกคอนเสิร์ต
+     * @return int จำนวนการจองที่ถูกปล่อย
      */
     public static function releaseExpired(?int $concertId = null): int
     {
@@ -240,8 +250,8 @@ class Booking extends Model
     /**
      * customer()
      * ความสัมพันธ์กับผู้ใช้ที่จอง
-     * param : -
-     * return : BelongsTo AppUser
+     *
+     * @return BelongsTo AppUser
      */
     public function customer(): BelongsTo
     {
@@ -251,8 +261,8 @@ class Booking extends Model
     /**
      * zone()
      * ความสัมพันธ์กับโซนที่จอง
-     * param : -
-     * return : BelongsTo Zone
+     *
+     * @return BelongsTo Zone
      */
     public function zone(): BelongsTo
     {
@@ -262,8 +272,8 @@ class Booking extends Model
     /**
      * concert()
      * ความสัมพันธ์กับคอนเสิร์ตที่จอง (booking -> zone -> concert)
-     * param : -
-     * return : HasOneThrough Concert
+     *
+     * @return HasOneThrough Concert
      */
     public function concert(): HasOneThrough
     {
@@ -273,8 +283,8 @@ class Booking extends Model
     /**
      * bookingSeats()
      * ความสัมพันธ์กับที่นั่งในการจองนี้ (เฉพาะโซนที่นั่ง)
-     * param : -
-     * return : HasMany BookingSeat
+     *
+     * @return HasMany BookingSeat
      */
     public function bookingSeats(): HasMany
     {
@@ -284,8 +294,8 @@ class Booking extends Model
     /**
      * payments()
      * ความสัมพันธ์กับรายการชำระเงินของการจองนี้
-     * param : -
-     * return : HasMany Payment
+     *
+     * @return HasMany Payment
      */
     public function payments(): HasMany
     {
@@ -295,8 +305,8 @@ class Booking extends Model
     /**
      * customerOrder()
      * ความสัมพันธ์กับคำสั่งซื้อของการจองนี้
-     * param : -
-     * return : HasOne CustomerOrder
+     *
+     * @return HasOne CustomerOrder
      */
     public function customerOrder(): HasOne
     {
@@ -306,8 +316,8 @@ class Booking extends Model
     /**
      * seatLockLogs()
      * ความสัมพันธ์กับประวัติการล็อกที่นั่งของการจองนี้
-     * param : -
-     * return : HasMany SeatLockLog
+     *
+     * @return HasMany SeatLockLog
      */
     public function seatLockLogs(): HasMany
     {
@@ -317,8 +327,8 @@ class Booking extends Model
     /**
      * systemAnomalies()
      * ความสัมพันธ์กับความผิดปกติที่เกี่ยวกับการจองนี้
-     * param : -
-     * return : HasMany SystemAnomaly
+     *
+     * @return HasMany SystemAnomaly
      */
     public function systemAnomalies(): HasMany
     {

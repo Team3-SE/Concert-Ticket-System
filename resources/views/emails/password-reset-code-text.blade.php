@@ -1,10 +1,13 @@
 {{--
  * password-reset-code-text.blade.php
  * อีเมลรหัสยืนยันตั้งรหัสผ่านใหม่ แบบข้อความล้วน (สำหรับโปรแกรมที่ไม่แสดง HTML และช่วยไม่ให้ตกสแปม)
- * ใช้กับ : App\Notifications\PasswordResetCode (คู่กับ password-reset-code)
- * ข้อมูล : $code, $firstName, $ttl, $maxAttempts
  * @Author 67160292 ธีรเมธ พลสาย
  * @Create Date 29/10/2569
+ * @Update Date 27/11/2569 67160292 ธีรเมธ พลสาย
+--}}
+{{--
+ * ใช้กับ : App\Notifications\PasswordResetCode (คู่กับ password-reset-code)
+ * ข้อมูล : $code, $firstName, $ttl, $maxAttempts
 --}}
 {{ $firstName !== '' ? "สวัสดีคุณ{$firstName}" : 'สวัสดี' }}
 
