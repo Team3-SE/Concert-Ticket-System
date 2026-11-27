@@ -50,6 +50,7 @@
 | `organizer/concerts/manage-images.css` | `organizer/concerts/manage-images` | หน้าจัดการรูปคอนเสิร์ต (ยังใช้ `layouts/user` จึงรวมอยู่ใน `user.css`) |
 | `organizer/dashboard.css` | `organizer/dashboard` | แผงควบคุมของ Organizer (ไฟล์ตั้งต้น) |
 | `organizer/check-in.css` | `organizer/check-in` | ตรวจสอบสิทธิ์เข้างานของ Organizer (ไฟล์ตั้งต้น) |
+| `organizer/concerts/concert-management.css` | `organizer/concerts/concert-management` | หน้าจัดการคอนเสิร์ต |
 | `admin/users.css` | `admin/users/index` | จัดการผู้ใช้ของ Admin (ไฟล์ตั้งต้น) |
 | `backoffice/layout.css` | `layouts/backoffice`, `partials/backoffice/*` | โครงหลังบ้าน Organizer + Admin: sidebar, แถบด้านบน, `.bo-title`, `.bo-card`, `.bo-empty` |
 | `staff/layout.css` | `layouts/staff` | โครงหน้า Staff (โทนมืด มือถือก่อน) |
@@ -68,6 +69,7 @@
 | `page-account` | `user/account/account.css` |
 | `page-organizer-dashboard` | `organizer/dashboard.css` |
 | `page-organizer-check-in` | `organizer/check-in.css` |
+| `page-organizer-concert-management` | `organizer/concerts/concert-management.css` |
 | `page-admin-users` | `admin/users.css` |
 | `bo` (ใส่ให้อัตโนมัติ) | `backoffice/layout.css` — หน้า Organizer/Admin เพิ่ม class ของหน้าเองต่อท้ายได้ |
 | `st` (ใส่ให้อัตโนมัติ) | `staff/layout.css`, `staff/check-in.css` |
