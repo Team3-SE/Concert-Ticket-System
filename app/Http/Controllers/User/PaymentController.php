@@ -266,6 +266,46 @@ class PaymentController extends Controller
     }
 
     /**
+     * gatewayReturn(request, bookingId)
+     * จุดกลับจาก Hosted Checkout ของบัตรเครดิต Redirect ไม่ใช่หลักฐานการชำระเงิน:
+     * อ่านสถานะล่าสุดจาก gateway อีกครั้งก่อนเลือกหน้าปลายทางเสมอ เพื่อรองรับ webhook
+     * ที่ยังรอ queue อยู่หรือผู้ใช้ปิดหน้า checkout ก่อน webhook มาถึง.
+     */
+    public function gatewayReturn(Request $request, int $bookingId): \Illuminate\Http\RedirectResponse
+    {
+        $booking = $this->findOwnBooking($request, $bookingId);
+        $payment = $booking->payments()->latest('p_id')->first();
+
+        if ($payment
+            && $payment->method === 'CREDIT_CARD'
+            && $payment->status === Payment::STATUS_PENDING
+            && $payment->provider_transaction_id
+            && app(PaymockService::class)->enabled()) {
+            // ไม่อ่านผลใด ๆ จาก redirect; GET นี้ใช้ API key ระหว่าง backend กับ gateway.
+            app(PaymockService::class)->syncPayment($payment, 'return');
+            $booking->refresh();
+            $payment->refresh();
+        }
+
+        if ($booking->status === Booking::STATUS_CONFIRMED) {
+            return redirect()->route('tickets.index');
+        }
+
+        if ($booking->checkExpiry()) {
+            $this->expireBooking($booking);
+
+            return redirect('/booking?concert_id=' . $booking->concertId())
+                ->with('error', 'หมดเวลาชำระเงิน กรุณาเลือกที่นั่งใหม่');
+        }
+
+        $message = $payment?->status === Payment::STATUS_FAILED
+            ? 'การชำระเงินไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
+            : 'กำลังยืนยันผลการชำระเงิน กรุณาตรวจสอบสถานะอีกครั้ง';
+
+        return redirect('/payment?booking_id=' . $booking->b_id)->with('error', $message);
+    }
+
+    /**
      * checkRateLimit(customerId, ipAddress, deviceFingerprint)
      * ตรวจว่าการชำระเงินล้มเหลวเกินจำนวนที่กำหนดในช่วงเวลาหรือไม่ (ตามผู้ใช้ IP และอุปกรณ์)
      * param : customerId, ipAddress, deviceFingerprint

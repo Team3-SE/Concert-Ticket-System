@@ -88,6 +88,11 @@ Route::middleware(['auth', 'role:USER'])->group(function () {
     // สร้างรายการชำระเงิน + ออกหมายเลขคำสั่งซื้อ (แสดงในหน้าต่าง QR)
     Route::post('/payments', [\App\Http\Controllers\User\PaymentController::class, 'store'])->name('payments.store');
 
+    // Hosted card checkout กลับมาที่นี่เพื่อ reconcile กับ gateway ฝั่ง backend ก่อนแสดงผล
+    Route::get('/bookings/{bookingId}/payment-return', [\App\Http\Controllers\User\PaymentController::class, 'gatewayReturn'])
+        ->whereNumber('bookingId')
+        ->name('payments.gateway-return');
+
     // สถานะการจอง (หน้าชำระเงินใช้ตรวจตอนหมดเวลา)
     Route::get('/bookings/{bookingId}/status', [\App\Http\Controllers\User\PaymentController::class, 'status'])
         ->whereNumber('bookingId')

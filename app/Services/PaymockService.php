@@ -53,7 +53,10 @@ class PaymockService
             'amount'       => (float) $payment->amount,
             'method'       => self::METHOD_MAP[$payment->method] ?? 'promptpay',
             'callback_url' => config('services.paymock.callback_url'),
-            'return_url'   => route('tickets.index'),
+            // Redirect กลับเป็นเพียงจุดให้ browser กลับเข้าเว็บเราเท่านั้น
+            // ปลายทางจะอ่านสถานะจาก PayMock ซ้ำก่อนตัดสินผล จึงไม่เชื่อ
+            // query string หรือผลของ redirect จาก browser.
+            'return_url'   => route('payments.gateway-return', ['bookingId' => $booking->b_id]),
             'expires_in'   => max(60, $expiresIn),
             'metadata'     => ['p_id' => $payment->p_id, 'b_id' => $booking->b_id],
         ];
@@ -62,7 +65,16 @@ class PaymockService
             ->withHeaders(['Idempotency-Key' => $body['payment_id']])
             ->post('/v1/payments', $body);
 
-        if (! $response->successful() || ! $response->json('id')) {
+        $responseData = $response->json();
+        $expectedMethod = self::METHOD_MAP[$payment->method] ?? null;
+        $isValidResponse = $response->successful()
+            && is_array($responseData)
+            && filled($responseData['id'] ?? null)
+            && ($responseData['method'] ?? null) === $expectedMethod
+            && strtoupper((string) ($responseData['currency'] ?? 'THB')) === 'THB'
+            && abs((float) ($responseData['amount'] ?? -1) - (float) $payment->amount) < 0.01;
+
+        if (! $isValidResponse) {
             Log::warning('PayMock create failed', ['p_id' => $payment->p_id, 'status' => $response->status(), 'body' => $response->body()]);
             throw new \RuntimeException('PayMock create payment failed: HTTP ' . $response->status());
         }
