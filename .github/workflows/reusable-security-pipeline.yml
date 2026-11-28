@@ -243,6 +243,64 @@ jobs:
               "total_hotspots": len(hotspots.get("hotspots", [])) if hotspots else 0,
           }
           save("sonarqube-summary.json", summary)
+
+          view_params = {"id": project}
+          issue_params = {"id": project}
+          if pr_number:
+              view_params["pullRequest"] = pr_number
+              issue_params["pullRequest"] = pr_number
+          elif branch:
+              view_params["branch"] = branch
+              issue_params["branch"] = branch
+
+          project_url = f"{base_url}/project/overview?{urllib.parse.urlencode(view_params)}"
+          issues_url = f"{base_url}/project/issues?{urllib.parse.urlencode(issue_params)}"
+          step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if step_summary:
+              project_status = qg.get("projectStatus", {}) if qg else {}
+              qg_status = project_status.get("status", "UNAVAILABLE")
+              status_label = {
+                  "OK": "✅ PASSED",
+                  "ERROR": "❌ FAILED",
+                  "NONE": "⚠️ NOT COMPUTED",
+              }.get(qg_status, f"⚠️ {qg_status}")
+
+              markdown = [
+                  "## 1. SonarQube Cloud SAST\n\n",
+                  f"- **Quality Gate:** {status_label}\n",
+                  f"- **Project:** [Open SonarCloud]({project_url})\n",
+                  f"- **Issues:** [View issues in SonarCloud]({issues_url})",
+              ]
+
+              failed_conditions = [
+                  condition for condition in project_status.get("conditions", [])
+                  if condition.get("status") == "ERROR"
+              ]
+              if failed_conditions:
+                  markdown.extend([
+                      "\n\n### Quality Gate conditions that failed\n\n",
+                      "| Condition | Current value | Required |\n|---|---:|---:|\n",
+                  ])
+                  for condition in failed_conditions:
+                      metric = condition.get("metricKey", "Unknown metric").replace("_", " ")
+                      actual = condition.get("actualValue", "N/A")
+                      comparator = condition.get("comparator", "")
+                      threshold = condition.get("errorThreshold", "N/A")
+                      markdown.append(f"| {metric} | {actual} | {comparator} {threshold} |\n")
+              elif qg_status == "ERROR":
+                  markdown.append("\n\nSonarCloud reported a failed Quality Gate but returned no failed condition details.")
+              elif not project_status:
+                  markdown.append("\n\nQuality Gate details could not be fetched by the workflow. Check the SonarCloud scan step logs.")
+
+              if issues:
+                  markdown.append(f"\n\n**Issues found:** {issues.get('total', 0)}  ")
+              if hotspots:
+                  markdown.append(f"\n**Security hotspots:** {len(hotspots.get('hotspots', []))}  ")
+              markdown.append("\n")
+
+              with open(step_summary, "a", encoding="utf-8") as f:
+                  f.write("".join(markdown))
+
           print("Done fetching SonarCloud data.")
           PYEOF
 

@@ -11,6 +11,9 @@
     volumes:
       - .:/var/www/html
       - ./storage:/var/www/html/storage
+      # Keep Composer dependencies on Docker's Linux filesystem.  A bind mount
+      # of vendor from Windows is both slow and can hide the container's deps.
+      - concert_vendor:/var/www/html/vendor
     environment:
       - APP_ENV=${APP_ENV:-local}
     extra_hosts:
@@ -113,6 +116,8 @@ volumes:
   concert_redis_data:
     driver: local
   concert_node_modules:
+    driver: local
+  concert_vendor:
     driver: local
 
 # --- Network -------------------------------------------------------------------

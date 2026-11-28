@@ -66,8 +66,8 @@ When you open or update a Pull Request targeting `development-security`, the pip
 ## 5. How to Resolve a Failed Security Check
 
 ### If SonarQube Cloud SAST Fails:
-- Click the **SonarQube Code Analysis** link on the PR or open [SonarCloud](https://sonarcloud.io).
-- Look at the failed Quality Gate criteria (e.g. security hotspot, hardcoded secret, new bugs).
+- Open the **1. SonarQube Cloud SAST** job summary and use its SonarCloud project or issues links.
+- Review the failed Quality Gate conditions shown in the summary (e.g. security rating, coverage, or duplication).
 - Fix the flagged code lines, commit, and push.
 
 ### If OWASP ZAP DAST Analysis Fails:
