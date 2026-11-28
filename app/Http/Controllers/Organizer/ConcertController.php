@@ -1,11 +1,11 @@
 <?php
 
 /**
- * app/Http/Controllers/Organizer/ConcertController.php
+ * ConcertController
  * จัดการข้อมูลคอนเสิร์ตฝั่ง Organizer รวมถึงหน้าจอตรวจสอบรายละเอียดคอนเสิร์ต ผังที่นั่ง และรายงานยอดขาย
  * Author : 67160434 จิตฏิยากร โสภา
  * Created : 25/11/2569
- * Updated : 27/11/2569 67160292 ธีรเมธ พลสาย (แก้ให้ตรง schema 3.4.2)
+ * Updated : 28/11/2569 67160434 จิตฏิยากร โสภา
  */
 
 namespace App\Http\Controllers\Organizer;
@@ -13,48 +13,54 @@ namespace App\Http\Controllers\Organizer;
 use App\Http\Controllers\Controller;
 use App\Models\Concert;
 use App\Models\Seat;
+use App\Models\Ticket;
 use App\Models\Zone;
 use App\Models\ZoneInventory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ConcertController extends Controller
 {
     /**
-     * index()
-     * เส้นทางสำรองสำหรับเมนูจัดการคอนเสิร์ต พาไปยังหน้าตรวจสอบคอนเสิร์ตแรกขององค์กรผู้จัด
-     *
-     * @return RedirectResponse เปลี่ยนเส้นทางไปยังหน้าตรวจสอบคอนเสิร์ตหรือแดชบอร์ด
+     * จำนวนที่นั่งสูงสุดต่อแถวก่อนสลับการแสดงผลเป็นแบบเรียงซ้อน (Stacked Layout)
      */
-    public function index(): RedirectResponse
-    {
-        $firstConcert = $this->buildOwnedConcertQuery()->orderBy('c_id')->first();
-
-        if ($firstConcert) {
-            return redirect()->route('organizer.concerts.check', ['concertId' => $firstConcert->c_id]);
-        }
-
-        return redirect()->route('organizer.dashboard');
-    }
+    private const WIDE_LAYOUT_SEAT_THRESHOLD = 20;
 
     /**
-     * checkConcert(concertId)
+     * รหัสสีเริ่มต้นของโซนกรณีไม่ได้ระบุสีในฐานข้อมูล
+     */
+    private const DEFAULT_ZONE_COLOR = '#3b82f6';
+
+    private const SEAT_DISPLAY_AVAILABLE = 'AVAILABLE';
+    private const SEAT_DISPLAY_LOCKED = 'LOCKED';
+    private const SEAT_DISPLAY_SOLD = 'SOLD';
+    private const SEAT_DISPLAY_DISABLED = 'DISABLED';
+
+    private const COLOR_RED_WEIGHT = 299;
+    private const COLOR_GREEN_WEIGHT = 587;
+    private const COLOR_BLUE_WEIGHT = 114;
+    private const COLOR_WEIGHT_TOTAL = 1000;
+    private const LIGHT_COLOR_THRESHOLD = 150;
+
+    /**
+     * checkConcert($concertId)
      * แสดงหน้าจอตรวจสอบรายละเอียดคอนเสิร์ต ผังที่นั่งสถานะปัจจุบัน และรายงานจำนวนตั๋วแยกตามโซน
      *
-     * @param  int  $concertId  รหัสประจำคอนเสิร์ต (c_id)
+     * @param int $concertId รหัสประจำคอนเสิร์ต
      * @return View หน้าจอตรวจสอบคอนเสิร์ต
      */
     public function checkConcert(int $concertId): View
     {
         $concert = $this->buildOwnedConcertQuery()->with('zones')->findOrFail($concertId);
         $summary = $this->buildSummary($concert);
-        $seatMapData = $this->buildSeatMapData($concert->c_id);
+        $seatMapData = $this->buildSeatMapData($concert);
         $maxSeatsPerRow = $seatMapData['maxSeatsPerRow'];
+        $displayStatus = $concert->displayStatus();
 
         return view('organizer.checkconcert.check-concert', [
             'concert' => $concert,
@@ -62,46 +68,99 @@ class ConcertController extends Controller
             'soldTickets' => $summary['soldTickets'],
             'remainingSeats' => $summary['remainingSeats'],
             'totalSeats' => $summary['totalSeats'],
-            'statusConfig' => $this->getConcertStatusConfig($concert->displayStatus()),
+            'statusConfig' => $this->getConcertStatusConfig(
+                $displayStatus,
+                $concert->event_datetime?->isToday() ?? false
+            ),
             'zoneReports' => $summary['zoneReports'],
             'seatRows' => $seatMapData['rows'],
+            'seatMapsByZone' => $seatMapData['seatMapsByZone'],
             'maxSeatsPerRow' => $maxSeatsPerRow,
-            'isWideLayout' => $maxSeatsPerRow > 12,
+            'isWideLayout' => $maxSeatsPerRow > self::WIDE_LAYOUT_SEAT_THRESHOLD,
         ]);
     }
 
     /**
-     * getRealtimeConcertStatus(concertId)
+     * updateStatus($request, $concertId)
+     * อัปเดตสถานะการจำหน่ายคอนเสิร์ตโดยยืนยันว่าเป็นขององค์กรผู้จัด
+     *
+     * @param Request $request ข้อมูลสถานะเป้าหมาย
+     * @param int $concertId รหัสประจำคอนเสิร์ต
+     * @return RedirectResponse กลับไปยังหน้ารายละเอียดคอนเสิร์ต
+     */
+    public function updateStatus(Request $request, int $concertId): RedirectResponse
+    {
+        $concert = $this->buildOwnedConcertQuery()->findOrFail($concertId);
+        $targetStatus = strtoupper((string) $request->input('target_status', ''));
+        $statusConfig = $this->getConcertStatusConfig(
+            $concert->displayStatus(),
+            $concert->event_datetime?->isToday() ?? false
+        );
+        abort_unless(
+            in_array($targetStatus, [
+                Concert::STATUS_ON_SALE,
+                Concert::STATUS_SCHEDULED,
+                Concert::STATUS_SOLD_OUT,
+            ], true)
+            && $statusConfig['targetStatus'] === $targetStatus,
+            422,
+            'สถานะเป้าหมายไม่ถูกต้อง'
+        );
+
+        $concertAttributes = ['status' => $targetStatus];
+        if (
+            $targetStatus === Concert::STATUS_ON_SALE
+            && $concert->sale_end_datetime !== null
+            && $concert->sale_end_datetime->isPast()
+            && $concert->event_datetime !== null
+            && $concert->event_datetime->isFuture()
+        ) {
+            $concertAttributes['sale_end_datetime'] = $concert->event_datetime;
+        }
+
+        $concert->update($concertAttributes);
+
+        return redirect()
+            ->route('organizer.concerts.check', ['concertId' => $concert->c_id])
+            ->with('status', 'อัปเดตสถานะคอนเสิร์ตเรียบร้อยแล้ว');
+    }
+
+    /**
+     * getRealtimeConcertStatus($concertId)
      * ส่งข้อมูลสรุปยอดขาย ผังที่นั่ง และสถานะคอนเสิร์ตล่าสุดเป็น JSON สำหรับอัปเดตหน้าจอแบบ Real-time
      *
-     * @param  int  $concertId  รหัสประจำคอนเสิร์ต (c_id)
+     * @param int $concertId รหัสประจำคอนเสิร์ต
      * @return JsonResponse ข้อมูลสถานะล่าสุดของคอนเสิร์ต
      */
     public function getRealtimeConcertStatus(int $concertId): JsonResponse
     {
         $concert = $this->buildOwnedConcertQuery()->with('zones')->findOrFail($concertId);
         $summary = $this->buildSummary($concert);
-        $seatMapData = $this->buildSeatMapData($concert->c_id);
+        $seatMapData = $this->buildSeatMapData($concert);
         $statusConfig = $this->getConcertStatusConfig($concert->displayStatus());
 
         return response()->json([
-            'totalRevenue' => number_format($summary['totalRevenue']).' บาท',
-            'soldTickets' => number_format($summary['soldTickets']).' ใบ',
-            'remainingSeats' => number_format($summary['remainingSeats']).' ที่นั่ง',
-            'totalSeats' => number_format($summary['totalSeats']).' ที่นั่ง',
+            'totalRevenue' => number_format($summary['totalRevenue']) . ' บาท',
+            'soldTickets' => number_format($summary['soldTickets']) . ' ใบ',
+            'remainingSeats' => number_format($summary['remainingSeats']) . ' ที่นั่ง',
+            'totalSeats' => number_format($summary['totalSeats']) . ' ที่นั่ง',
             'statusLabel' => $statusConfig['label'],
             'statusTextClass' => $statusConfig['textClass'],
             'isCheckInMode' => $statusConfig['isCheckInMode'],
+            'actionTargetStatus' => $statusConfig['targetStatus'],
+            'actionButtonLabel' => $statusConfig['actionButtonLabel'],
+            'actionButtonClass' => $statusConfig['actionButtonClass'],
             'zoneReports' => $summary['zoneReports']->values(),
             'seatRows' => $seatMapData['rows'],
+            'seatMapsByZone' => $seatMapData['seatMapsByZone'],
         ]);
     }
 
     /**
      * buildOwnedConcertQuery()
-     * สร้าง query คอนเสิร์ตที่เป็นขององค์กรผู้ใช้ปัจจุบัน (กันดูคอนเสิร์ตขององค์กรอื่น)
+     * สร้างชุดคำสั่งค้นหาคอนเสิร์ตที่เป็นขององค์กรผู้ใช้ปัจจุบัน
      *
-     * @return Builder Query ของคอนเสิร์ตในองค์กรผู้ใช้
+     * @return Builder ชุดคำสั่งค้นหาคอนเสิร์ตในองค์กรผู้ใช้
      */
     private function buildOwnedConcertQuery(): Builder
     {
@@ -113,196 +172,349 @@ class ConcertController extends Controller
     }
 
     /**
-     * buildSummary(concert)
+     * buildSummary($concert)
      * รวมยอดขาย ที่นั่งคงเหลือ และรายได้รวมของคอนเสิร์ตจากรายงานรายโซน
      *
-     * @param  Concert  $concert  คอนเสิร์ตพร้อมความสัมพันธ์ zones
-     * @return array ตัวเลขสรุปและรายงานรายโซน
+     * @param Concert $concert ข้อมูลคอนเสิร์ตพร้อมความสัมพันธ์โซน
+     * @return array ข้อมูลตัวเลขสรุปและรายงานรายโซน
      */
     private function buildSummary(Concert $concert): array
     {
         $zoneReports = $this->buildZoneReportData($concert);
         $totalSeats = (int) $zoneReports->sum('totalSeats');
-        $soldTickets = (int) $zoneReports->sum('soldSeats');
+        $soldTickets = (int) $zoneReports->sum('soldTickets');
+        $remainingSeats = (int) $zoneReports->sum('remainingSeats');
+        $totalRevenue = (float) $zoneReports->sum('revenue');
 
         return [
-            'zoneReports' => $zoneReports,
             'totalSeats' => $totalSeats,
             'soldTickets' => $soldTickets,
-            'remainingSeats' => max(0, $totalSeats - $soldTickets),
-            'totalRevenue' => (float) $zoneReports->sum('zoneRevenue'),
+            'remainingSeats' => $remainingSeats,
+            'totalRevenue' => $totalRevenue,
+            'zoneReports' => $zoneReports,
         ];
     }
 
     /**
-     * buildZoneReportData(concert)
-     * คำนวณยอดขาย ที่นั่งคงเหลือ และรายได้รวมแยกตามโซนของคอนเสิร์ต
-     * โซนนั่ง (SEATED) นับจาก seat.seat_booking_status = sold, โซนยืน (STANDING) นับจาก zone_inventory.sold
+     * buildZoneReportData($concert)
+     * คำนวณข้อมูลสรุปรายโซนทั้งโซนนั่งและโซนยืนตามโครงสร้างฐานข้อมูล Schema 3.4.2
      *
-     * @param  Concert  $concert  คอนเสิร์ตพร้อมความสัมพันธ์ zones
-     * @return Collection รายการข้อมูลสรุปแยกตามโซน
+     * @param Concert $concert ข้อมูลคอนเสิร์ตพร้อมความสัมพันธ์โซน
+     * @return Collection รายการสรุปแยกตามโซน
      */
     private function buildZoneReportData(Concert $concert): Collection
     {
         $zoneIds = $concert->zones->pluck('z_id');
 
-        $soldSeatedByZone = DB::table('seat')
+        if ($zoneIds->isEmpty()) {
+            return collect();
+        }
+
+        /* Start: ดึงข้อมูลสถิติที่นั่งจากตาราง seat และตัวนับโซนยืนจาก zone_inventory */
+        $seatStatistics = Seat::query()
             ->whereIn('s_zone_id', $zoneIds)
-            ->where('seat_booking_status', Seat::STATUS_SOLD)
-            ->select('s_zone_id', DB::raw('COUNT(*) AS total'))
+            ->where('seat_status', Seat::SEAT_ACTIVE)
+            ->select('s_zone_id')
+            ->selectRaw('COUNT(*) AS total_seats')
+            ->selectRaw(
+                'SUM(CASE WHEN seat_booking_status = ? THEN 1 ELSE 0 END) AS sold_tickets',
+                [Seat::STATUS_SOLD]
+            )
+            ->selectRaw(
+                'SUM(CASE WHEN seat_booking_status = ? THEN 1 ELSE 0 END) AS available_seats',
+                [Seat::STATUS_AVAILABLE]
+            )
             ->groupBy('s_zone_id')
-            ->pluck('total', 's_zone_id');
+            ->get()
+            ->keyBy('s_zone_id');
 
-        $soldInventoryByZone = ZoneInventory::query()
+        $standingInventories = ZoneInventory::query()
             ->whereIn('zi_zone_id', $zoneIds)
-            ->pluck('sold', 'zi_zone_id');
+            ->get()
+            ->keyBy('zi_zone_id');
+        $ticketsByZone = Ticket::query()
+            ->whereIn('t_zone_id', $zoneIds)
+            ->where('status', Ticket::STATUS_VALID)
+            ->with('order')
+            ->get()
+            ->groupBy('t_zone_id');
 
-        return $concert->zones->map(function (Zone $zone) use ($soldSeatedByZone, $soldInventoryByZone) {
-            $soldSeats = $zone->zone_type === Zone::TYPE_STANDING
-                ? (int) ($soldInventoryByZone[$zone->z_id] ?? 0)
-                : (int) ($soldSeatedByZone[$zone->z_id] ?? 0);
+        return $concert->zones->map(function (Zone $zone) use ($seatStatistics, $standingInventories, $ticketsByZone) {
+            $isStandingZone = $zone->isStanding();
+            $zoneTickets = $ticketsByZone->get($zone->z_id, collect());
 
-            $totalZoneSeats = (int) ($zone->capacity ?? 0);
+            if ($isStandingZone) {
+                $inventory = $standingInventories->get($zone->z_id);
+                $totalSeats = (int) ($zone->capacity ?? 0);
+                $soldTickets = (int) ($inventory->sold ?? 0);
+                $heldTickets = (int) ($inventory->held ?? 0);
+                $remainingSeats = max(0, $totalSeats - $soldTickets - $heldTickets);
+            } else {
+                $seatStatistic = $seatStatistics->get($zone->z_id);
+                $totalSeats = (int) ($seatStatistic->total_seats ?? $zone->capacity ?? 0);
+                $soldTickets = (int) ($seatStatistic->sold_tickets ?? 0);
+                $remainingSeats = (int) ($seatStatistic->available_seats ?? 0);
+            }
+
+            $zoneColor = $zone->color ?: self::DEFAULT_ZONE_COLOR;
+            $zonePrice = (float) $zone->price;
+            $revenue = (float) $zoneTickets->sum(
+                fn (Ticket $ticket) => $ticket->unitPrice()
+            );
+            $checkedInTickets = $zoneTickets->filter(
+                fn (Ticket $ticket) => $ticket->is_used
+            )->count();
 
             return [
                 'id' => $zone->z_id,
+                'z_id' => $zone->z_id,
                 'name' => $zone->name,
-                'colorHex' => $zone->color ?: '#2F46C4',
-                'price' => (float) $zone->price,
-                'totalSeats' => $totalZoneSeats,
-                'soldSeats' => $soldSeats,
-                'remainingSeats' => max(0, $totalZoneSeats - $soldSeats),
-                'zoneRevenue' => $soldSeats * (float) $zone->price,
+                'colorHex' => $zoneColor,
+                'color' => $zoneColor,
+                'textColor' => $this->getContrastingTextColor($zoneColor),
+                'zoneType' => $isStandingZone ? Zone::TYPE_STANDING : Zone::TYPE_SEATED,
+                'price' => $zonePrice,
+                'totalSeats' => $totalSeats,
+                'soldTickets' => $soldTickets,
+                'soldSeats' => $soldTickets,
+                'remainingSeats' => $remainingSeats,
+                'checkedInTickets' => $checkedInTickets,
+                'revenue' => $revenue,
+                'zoneRevenue' => $revenue,
             ];
         });
     }
 
     /**
-     * buildSeatMapData(concertId)
-     * จัดกลุ่มข้อมูลที่นั่งรายแถว พร้อมสถานะการเช็กอิน (ticket.is_used) ของแต่ละที่นั่ง
-     * สถานะที่ส่งให้ view ใช้ตัวพิมพ์ใหญ่: AVAILABLE / LOCKED / SOLD / DISABLED
+     * buildSeatMapData($concert)
+     * จัดกลุ่มที่นั่งรายแถวและรายโซนสำหรับแสดงผลบนผังที่นั่งจำลอง
      *
-     * @param  int  $concertId  รหัสประจำคอนเสิร์ต (c_id)
-     * @return array ข้อมูลผังที่นั่งรายแถวและจำนวนที่นั่งสูงสุดต่อแถว
+     * @param Concert $concert ข้อมูลคอนเสิร์ตพร้อมความสัมพันธ์โซน
+     * @return array ข้อมูลแถวที่นั่งและจำนวนที่นั่งสูงสุดต่อแถว
      */
-    private function buildSeatMapData(int $concertId): array
+    private function buildSeatMapData(Concert $concert): array
     {
-        $seats = DB::table('seat')
-            ->join('zone', 'seat.s_zone_id', '=', 'zone.z_id')
-            ->leftJoin('ticket', function ($join) {
-                $join->on('ticket.t_seat_id', '=', 'seat.s_id')
-                    ->where('ticket.status', '=', 'valid');
-            })
-            ->where('zone.z_concert_id', $concertId)
-            ->select([
-                'seat.s_id as id',
-                'seat.s_zone_id as zoneId',
-                'seat.row as rowLabel',
-                'seat.number as seatNumber',
-                'seat.seat_booking_status as bookingStatus',
-                'seat.seat_status as seatStatus',
-                'ticket.is_used as isUsed',
-            ])
-            ->orderBy('zone.z_id')
-            ->orderBy('seat.row')
-            ->orderBy('seat.number')
+        $zonesById = $concert->zones->keyBy('z_id');
+        $zoneIds = $zonesById->keys();
+
+        if ($zoneIds->isEmpty()) {
+            return [
+                'rows' => [],
+                'seatMapsByZone' => [],
+                'maxSeatsPerRow' => 0,
+            ];
+        }
+
+        $seats = Seat::query()
+            ->with('ticket')
+            ->whereIn('s_zone_id', $zoneIds)
+            ->orderBy('row')
+            ->orderBy('number')
             ->get();
 
-        $rows = [];
+        /* Start: จัดกลุ่มรายการที่นั่งตามชื่อแถวให้ตรงกับโครงสร้างหน้าผังที่นั่ง */
+        $groupedRows = [];
+        $seatMapsByZone = [];
         $maxSeatsPerRow = 0;
 
         foreach ($seats as $seat) {
-            $rowKey = (string) $seat->rowLabel;
-            $rows[$rowKey][] = [
-                'id' => $seat->id,
-                'zoneId' => $seat->zoneId,
-                'number' => $seat->seatNumber,
-                'status' => $this->mapSeatStatus($seat->bookingStatus, $seat->seatStatus),
-                'isCheckedIn' => (bool) $seat->isUsed,
+            $zone = $zonesById->get($seat->s_zone_id);
+            $rowLabel = (string) ($seat->row ?? '-');
+            $seatNumber = (string) ($seat->number ?? '');
+            $zoneColor = $zone?->color ?: self::DEFAULT_ZONE_COLOR;
+            $seatDisplayInfo = $this->resolveSeatDisplayInfo($seat);
+
+            $zoneKey = (string) $seat->s_zone_id;
+            if (! isset($seatMapsByZone[$zoneKey])) {
+                $seatMapsByZone[$zoneKey] = [];
+            }
+
+            if (! isset($seatMapsByZone[$zoneKey][$rowLabel])) {
+                $seatMapsByZone[$zoneKey][$rowLabel] = [];
+            }
+
+            $seatData = [
+                'id' => $seat->s_id,
+                's_id' => $seat->s_id,
+                'zoneId' => $seat->s_zone_id,
+                'zoneName' => $zone?->name ?? '-',
+                'zoneColor' => $zoneColor,
+                'rowLabel' => $rowLabel,
+                'number' => $seatNumber,
+                'seatNumber' => $seatNumber,
+                'label' => $rowLabel . $seatNumber,
+                'status' => $seatDisplayInfo['status'],
+                'isCheckedIn' => (bool) ($seat->ticket?->is_used ?? false),
             ];
 
-            $maxSeatsPerRow = max($maxSeatsPerRow, count($rows[$rowKey]));
+            $seatMapsByZone[$zoneKey][$rowLabel][] = $seatData;
+            $groupedRows[$zoneKey] = $seatMapsByZone[$zoneKey];
         }
 
+        foreach ($seatMapsByZone as $zoneSeatRows) {
+            foreach ($zoneSeatRows as $seatRow) {
+                $seatCountInRow = count($seatRow);
+                if ($seatCountInRow > $maxSeatsPerRow) {
+                    $maxSeatsPerRow = $seatCountInRow;
+                }
+            }
+        }
+        /* End: จัดกลุ่มรายการที่นั่งตามชื่อแถวให้ตรงกับโครงสร้างหน้าผังที่นั่ง */
+
         return [
-            'rows' => $rows,
+            'rows' => $groupedRows,
+            'seatMapsByZone' => $seatMapsByZone,
             'maxSeatsPerRow' => $maxSeatsPerRow,
         ];
     }
 
     /**
-     * mapSeatStatus(bookingStatus, seatStatus)
-     * แปลงสถานะที่นั่งใน schema (ตัวพิมพ์เล็ก) เป็นรหัสที่หน้า view ใช้
+     * resolveSeatDisplayInfo($seat)
+     * แปลงค่า seat_status และ seat_booking_status จากฐานข้อมูลให้เป็นสถานะมาตรฐานสำหรับหน้าผังที่นั่ง
      *
-     * @param  string|null  $bookingStatus  seat.seat_booking_status
-     * @param  string|null  $seatStatus  seat.seat_status
-     * @return string AVAILABLE, LOCKED, SOLD หรือ DISABLED
+     * @param Seat $seat ข้อมูลที่นั่งจากฐานข้อมูล
+     * @return array สถานะที่นั่งสำหรับแสดงผลบนผังที่นั่ง
      */
-    private function mapSeatStatus(?string $bookingStatus, ?string $seatStatus): string
+    private function resolveSeatDisplayInfo(Seat $seat): array
     {
-        if ($seatStatus !== null && $seatStatus !== Seat::SEAT_ACTIVE) {
-            return 'DISABLED';
+        if (strtolower((string) $seat->seat_status) !== Seat::SEAT_ACTIVE) {
+            return [
+                'status' => self::SEAT_DISPLAY_DISABLED,
+            ];
         }
 
+        $bookingStatus = strtolower((string) $seat->seat_booking_status);
+
         return match ($bookingStatus) {
-            Seat::STATUS_SOLD => 'SOLD',
-            Seat::STATUS_LOCKED, Seat::STATUS_RESERVED => 'LOCKED',
-            default => 'AVAILABLE',
+            Seat::STATUS_SOLD => ['status' => self::SEAT_DISPLAY_SOLD],
+            Seat::STATUS_LOCKED, Seat::STATUS_RESERVED => ['status' => self::SEAT_DISPLAY_LOCKED],
+            Seat::STATUS_AVAILABLE => ['status' => self::SEAT_DISPLAY_AVAILABLE],
+            default => ['status' => self::SEAT_DISPLAY_DISABLED],
         };
     }
 
     /**
-     * getConcertStatusConfig($status)
-     * แปลงรหัสสถานะคอนเสิร์ตเป็นข้อความภาษาไทย คลาสสี และโหมดการแสดงผลผังที่นั่ง
+     * getConcertStatusConfig($displayStatus)
+     * แปลงสถานะของคอนเสิร์ตเป็นข้อความ สีตัวอักษร และโหมดแสดงผลผังที่นั่ง
      *
-     * @param string $status สถานะจากฐานข้อมูล
-     * @return array ค่าตั้งต้นสำหรับแสดงผลสถานะ
+     * @param string $displayStatus สถานะการแสดงผลของคอนเสิร์ต
+     * @return array ค่าคอนฟิกสำหรับแสดงผลในหน้าตรวจสอบคอนเสิร์ต
      */
-    private function getConcertStatusConfig(string $status): array
+    private function getConcertStatusConfig(string $displayStatus, bool $isEventDay = false): array
     {
-        $normalizedStatus = strtoupper(trim($status));
-
-        return match ($normalizedStatus) {
-            'DRAFT', 'SCHEDULED', 'PENDING_APPROVAL', 'UPCOMING', 'ยังไม่เปิดขาย' => [
-                'label' => 'ยังไม่เปิดขาย',
+        $normalizedStatus = strtoupper($displayStatus);
+        $statusConfig = match ($normalizedStatus) {
+            Concert::STATUS_ON_SALE => [
+                'label' => 'กำลังเปิดขาย',
+                'textClass' => 'status-text--on-sale',
+                'isCheckInMode' => false,
+                'targetStatus' => Concert::STATUS_SCHEDULED,
+                'actionButtonLabel' => 'ปิดการจำหน่ายชั่วคราว',
+                'actionButtonClass' => 'btn-status-action--pause',
+            ],
+            Concert::STATUS_SCHEDULED => [
+                'label' => 'ปิดการจำหน่ายชั่วคราว',
+                'textClass' => 'status-text--paused',
+                'isCheckInMode' => false,
+                'targetStatus' => Concert::STATUS_ON_SALE,
+                'actionButtonLabel' => 'ดำเนินการจำหน่าย',
+                'actionButtonClass' => 'btn-status-action--resume',
+            ],
+            Concert::STATUS_SOLD_OUT => [
+                'label' => 'ปิดการจำหน่าย',
+                'textClass' => 'status-text--closed',
+                'isCheckInMode' => true,
+                'targetStatus' => Concert::STATUS_ON_SALE,
+                'actionButtonLabel' => 'เปิดคอนเสิร์ต',
+                'actionButtonClass' => 'btn-status-action--open-concert',
+            ],
+            Concert::DISPLAY_COMPLETED => [
+                'label' => 'เสร็จสิ้น',
+                'textClass' => 'status-text--ended',
+                'isCheckInMode' => true,
+                'targetStatus' => null,
+                'actionButtonLabel' => null,
+                'actionButtonClass' => null,
+            ],
+            Concert::STATUS_DRAFT => [
+                'label' => 'ฉบับร่าง',
                 'textClass' => 'status-text--pending',
                 'isCheckInMode' => false,
+                'targetStatus' => null,
+                'actionButtonLabel' => null,
+                'actionButtonClass' => null,
             ],
-            'ON_SALE', 'PUBLISHED', 'กำลังเปิดขาย' => [
-                'label' => 'กำลังเปิดขาย',
-                'textClass' => 'status-text--on-sale',
-                'isCheckInMode' => false,
-            ],
-            'SOLD_OUT', 'บัตรหมด' => [
-                'label' => 'บัตรหมด',
-                'textClass' => 'status-text--sold-out',
-                'isCheckInMode' => false,
-            ],
-            'SALE_CLOSED' => [
+            Concert::DISPLAY_SALE_CLOSED => [
                 'label' => 'ปิดการจำหน่าย',
+                'textClass' => 'status-text--closed',
+                'isCheckInMode' => true,
+                'targetStatus' => Concert::STATUS_SOLD_OUT,
+                'actionButtonLabel' => 'ปิดคอนเสิร์ต',
+                'actionButtonClass' => 'btn-status-action--open-concert',
+            ],
+            Concert::STATUS_CANCELLED => [
+                'label' => 'ยกเลิกการแสดง',
                 'textClass' => 'status-text--sold-out',
                 'isCheckInMode' => false,
-            ],
-            'CANCELLED' => [
-                'label' => 'ยกเลิกการแสดง',
-                'textClass' => 'status-text--ended',
-                'isCheckInMode' => false,
-            ],
-            'EVENT_DAY', 'CHECK_IN', 'วันแสดง' => [
-                'label' => 'วันแสดง',
-                'textClass' => 'status-text--event-day',
-                'isCheckInMode' => true,
-            ],
-            'ENDED', 'COMPLETED', 'สิ้นสุดการแสดง' => [
-                'label' => 'สิ้นสุดการแสดง',
-                'textClass' => 'status-text--ended',
-                'isCheckInMode' => true,
+                'targetStatus' => null,
+                'actionButtonLabel' => null,
+                'actionButtonClass' => null,
             ],
             default => [
-                'label' => 'กำลังเปิดขาย',
-                'textClass' => 'status-text--on-sale',
+                'label' => 'รอเปิดจำหน่าย',
+                'textClass' => 'status-text--pending',
                 'isCheckInMode' => false,
+                'targetStatus' => null,
+                'actionButtonLabel' => null,
+                'actionButtonClass' => null,
             ],
         };
+
+        if (
+            $isEventDay
+            && in_array($normalizedStatus, [
+                Concert::STATUS_ON_SALE,
+                Concert::STATUS_SCHEDULED,
+                Concert::STATUS_SOLD_OUT,
+                Concert::DISPLAY_SALE_CLOSED,
+            ], true)
+        ) {
+            $statusConfig['isCheckInMode'] = true;
+        }
+
+        return $statusConfig;
+    }
+
+    /**
+     * getContrastingTextColor($hexColor)
+     * เลือกสีข้อความปุ่มโซนให้ตัดกับสีพื้นหลังจากฐานข้อมูล
+     *
+     * @param string $hexColor สีพื้นหลังแบบ hexadecimal
+     * @return string สีข้อความ
+     */
+    private function getContrastingTextColor(string $hexColor): string
+    {
+        $normalizedColor = ltrim($hexColor, '#');
+        if (strlen($normalizedColor) === 3) {
+            $normalizedColor = implode('', array_map(
+                static fn (string $digit): string => $digit . $digit,
+                str_split($normalizedColor)
+            ));
+        }
+
+        if (! preg_match('/^[a-f0-9]{6}$/i', $normalizedColor)) {
+            return '#ffffff';
+        }
+
+        $red = hexdec(substr($normalizedColor, 0, 2));
+        $green = hexdec(substr($normalizedColor, 2, 2));
+        $blue = hexdec(substr($normalizedColor, 4, 2));
+        $luminance = (
+            $red * self::COLOR_RED_WEIGHT
+            + $green * self::COLOR_GREEN_WEIGHT
+            + $blue * self::COLOR_BLUE_WEIGHT
+        ) / self::COLOR_WEIGHT_TOTAL;
+
+        return $luminance >= self::LIGHT_COLOR_THRESHOLD ? '#0f172a' : '#ffffff';
     }
 }

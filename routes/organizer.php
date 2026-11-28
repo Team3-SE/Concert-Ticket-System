@@ -9,7 +9,7 @@
  * organizer.staff.index (จัดการเจ้าหน้าที่)
  * Author : 67160292 ธีรเมธ พลสาย
  * Created : 27/10/2569
- * Updated : 26/11/2569 67160434 จิตฏิยากร โสภา
+ * Updated : 28/11/2569 67160434 จิตฏิยากร โสภา
  */
 
 use App\Http\Controllers\CheckInController;
@@ -27,14 +27,28 @@ Route::prefix('organizer')
         // แผงควบคุม (Dashboard) – หน้าแรกหลัง login
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-        // จัดการคอนเสิร์ต (หน้ารายการคอนเสิร์ต - ปลดล็อกเมนู sidebar)
-        Route::get('/concerts', [ConcertController::class, 'index'])->name('concerts.index');
+        // รองรับลิงก์จากหน้าอื่นแบบ /organizer/concert?concert_id={id}
+        Route::get('/concert', function (\Illuminate\Http\Request $request) {
+            $concertId = (int) $request->query('concert_id');
+
+            if ($concertId > 0) {
+                return redirect()->route('organizer.concerts.check', ['concertId' => $concertId]);
+            }
+
+            return redirect()->route('organizer.concerts.index');
+        })->name('concert.detail');
+
+        // คง route name ให้ Sidebar และส่งต่อไปหน้าจัดการคอนเสิร์ตที่มีอยู่แล้ว
+        Route::redirect('/concerts', '/manage-images')->name('concerts.index');
 
         // ตรวจสอบรายละเอียดคอนเสิร์ต ผังที่นั่ง และรายงานยอดขาย
         Route::get('/concerts/{concertId}/check', [ConcertController::class, 'checkConcert'])->name('concerts.check');
 
         // ดึงข้อมูลสถานะคอนเสิร์ตและผังที่นั่งแบบ Real-time (JSON)
         Route::get('/concerts/{concertId}/check/realtime', [ConcertController::class, 'getRealtimeConcertStatus'])->name('concerts.check.realtime');
+
+        // เปลี่ยนสถานะการเปิดหรือหยุดจำหน่ายคอนเสิร์ต
+        Route::post('/concerts/{concertId}/status', [ConcertController::class, 'updateStatus'])->name('concerts.update-status');
 
         // ตรวจสอบสิทธิ์เข้างาน (แบบจอคอม) – ใช้ระบบตรวจตั๋วเดียวกับหน้า Staff
         Route::get('/check-in', [CheckInController::class, 'organizer'])->name('check-in');
